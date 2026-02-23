@@ -1,16 +1,16 @@
 <?php
 /**
- * Commission tracking — periods, calculations, tiers, bonuses
+ * Team chat / internal messaging
  * 
- * Shortcode: [hearmed_commissions]
+ * Shortcode: [hearmed_team_chat]
  * Page: see blueprint for URL
  */
 if (!defined("ABSPATH")) exit;
 
-class HearMed_Commissions {
+class HearMed_TeamChat {
 
     public static function init() {
-        add_shortcode("hearmed_commissions", [__CLASS__, "render"]);
+        add_shortcode("hearmed_team_chat", [__CLASS__, "render"]);
     }
 
     public static function render($atts = []): string {
@@ -18,9 +18,9 @@ class HearMed_Commissions {
         
         ob_start();
         ?>
-        <div id="hm-app" data-view="hearmed_commissions">
+        <div id="hm-app" data-view="hearmed_team_chat">
             <div class="hm-page-header">
-                <h1 class="hm-page-title">" . esc_html(ucwords(str_replace('_', ' ', 'hearmed_commissions'))) . "</h1>
+                <h1 class="hm-page-title">" . esc_html(ucwords(str_replace('_', ' ', 'hearmed_team_chat'))) . "</h1>
             </div>
             <div class="hm-placeholder">
                 <p>Module not yet built. See blueprint.</p>
@@ -31,4 +31,4 @@ class HearMed_Commissions {
     }
 }
 
-HearMed_Commissions::init();
+HearMed_TeamChat::init();
