@@ -267,6 +267,85 @@
 /* ═══════════════════════════════════════
    CLINICS
    ═══════════════════════════════════════ */
+
+/* Modal overlay + shell (shared by clinics/users etc.) */
+.hm-modal-bg {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: radial-gradient(circle at top left, rgba(148, 163, 184, 0.45), rgba(15, 23, 42, 0.75));
+    backdrop-filter: blur(8px);
+    z-index: 9000;
+}
+
+.hm-modal-bg.open { display: flex; }
+
+.hm-modal {
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+    background: rgba(248, 250, 252, 0.98);
+    border-radius: 18px;
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.55);
+    overflow: hidden;
+}
+
+.hm-modal-hd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 28px 12px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.hm-modal-body {
+    padding: 12px 28px 20px;
+}
+
+.hm-modal-ft {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 14px 28px 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.hm-modal-x {
+    border: none;
+    background: none;
+    font-size: 20px;
+    line-height: 1;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 999px;
+    transition: background 0.12s, color 0.12s, transform 0.08s;
+}
+
+.hm-modal-x:hover {
+    background: rgba(148, 163, 184, 0.12);
+    color: #64748b;
+    transform: translateY(-0.5px);
+}
+
+.hm-form-row {
+    display: flex;
+    gap: 16px;
+}
+
+.hm-form-row .hm-form-group {
+    flex: 1;
+}
+
+.hm-form-group.hm-form-sm {
+    max-width: 220px;
+}
+
 .hm-colour-dot {
     display: inline-block;
     width: 22px;

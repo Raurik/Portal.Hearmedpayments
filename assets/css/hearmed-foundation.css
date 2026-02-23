@@ -66,3 +66,14 @@ body.hm-portal-page .site-main {
    - Elementor containers: see hearmed-layout.css for the height chain
   - .hm-main and #hm-app: see hearmed-layout.css
    ============================================================================ */
+
+/*
+ * Hide WordPress/Elementor header & footer chrome on portal pages
+ * so the HearMed app can own the full viewport without extra bars.
+ */
+body.hm-portal-page .site-header,
+body.hm-portal-page .site-footer,
+body.hm-portal-page .elementor-location-header,
+body.hm-portal-page .elementor-location-footer {
+   display: none !important;
+}

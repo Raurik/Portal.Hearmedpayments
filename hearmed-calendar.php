@@ -93,9 +93,6 @@ add_action( 'shutdown', function() {
     }
 } );
 
-// REMOVE THEME FOOTER
-remove_action( 'wp_footer', 'wp_footer' );
-
 // INITIALIZE PLUGIN
 function hearmed_initialize_plugin() {
     require_once HEARMED_PATH . 'core/class-hearmed-core.php';
