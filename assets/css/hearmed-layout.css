@@ -1,557 +1,259 @@
-/* ============================================================================
-   HEARMED PORTAL - DESIGN SYSTEM v4.0
-   ============================================================================
-   
-   THIS FILE CONTAINS:
-   - Design tokens (colors, spacing, typography)
-   - Component styles (buttons, cards, tables, forms)
-   - Utility classes
-   
-   THIS FILE DOES NOT CONTAIN:
-   - Viewport dimensions (vh/vw)
-   - Body/HTML modifications
-   - #hm-app dimensions
-   - Overflow control
-   
-   All components are scoped to #hm-app to override Elementor.
-   ============================================================================ */
+/* ============================================================
+   HEARMED LAYOUT CSS v7.1 — HM-CONTENT CHAIN
+   ============================================================
 
-/* ============================================================================
-   DESIGN TOKENS - CSS Custom Properties
-   ============================================================================ */
+   Controls the height/overflow chain from Elementor wrappers
+   down to #hm-app through .hm-content.
 
-:root {
-  /* Brand Colors */
-  --hm-teal: #0BB4C4;
-  --hm-teal-hover: #0a9eac;
-  --hm-teal-light: #e6f7f9;
-  
-  --hm-navy: #151B33;
-  --hm-navy-light: #1e293b;
-  
-  /* Text Colors */
-  --hm-text: #334155;
-  --hm-text-light: #64748b;
-  --hm-text-muted: #94a3b8;
-  --hm-text-faint: #cbd5e0;
-  
-  /* Background Colors */
-  --hm-bg: #ffffff;
-  --hm-bg-alt: #f8fafc;
-  --hm-bg-hover: #f1f5f9;
-  
-  /* Border Colors */
-  --hm-border: #e2e8f0;
-  --hm-border-light: #f1f5f9;
-  
-  /* Status Colors */
-  --hm-success: #10b981;
-  --hm-warning: #f59e0b;
-  --hm-error: #ef4444;
-  --hm-info: #3b82f6;
-  
-  /* Spacing Scale */
-  --hm-space-xs: 4px;
-  --hm-space-sm: 8px;
-  --hm-space-md: 16px;
-  --hm-space-lg: 24px;
-  --hm-space-xl: 32px;
-  --hm-space-2xl: 48px;
-  
-  /* Border Radius */
-  --hm-radius-sm: 4px;
-  --hm-radius: 6px;
-  --hm-radius-md: 8px;
-  --hm-radius-lg: 12px;
-  --hm-radius-xl: 16px;
-  --hm-radius-full: 9999px;
-  
-  /* Shadows */
-  --hm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --hm-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --hm-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --hm-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-  --hm-shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
-  
-  /* Typography */
-  --hm-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --hm-font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, monospace;
-  
-  --hm-font-size-xs: 11px;
-  --hm-font-size-sm: 13px;
-  --hm-font-size-base: 14px;
-  --hm-font-size-lg: 16px;
-  --hm-font-size-xl: 18px;
-  --hm-font-size-2xl: 24px;
-  
-  /* Transitions */
-  --hm-transition: all 0.15s ease;
-  --hm-transition-slow: all 0.3s ease;
+   NOTE:
+   - hm-main is managed in Elementor only (no CSS ownership here).
+   - This file only controls hm-content + post-content wrappers.
+   ============================================================ */
+
+
+/* ============================================================
+   ELEMENTOR PAGE WRAPPER
+
+   The .elementor div wraps all Elementor content on the page.
+   It sits inside the WordPress theme wrappers (.site-main etc)
+   which foundation.css locks to 100vh flex columns.
+   This must grow to fill and pass the height down.
+   ============================================================ */
+
+body.hm-portal-page .elementor {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
-/* ============================================================================
-   BASE RESET (Scoped to #hm-app)
-   ============================================================================ */
+/* Older Elementor versions wrap content in .elementor-inner
+   and/or .elementor-section-wrap. Target both in case they exist. */
+body.hm-portal-page .elementor > .elementor-inner,
+body.hm-portal-page .elementor > .elementor-section-wrap {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Theme Builder templates use .elementor-location-content */
+body.hm-portal-page .elementor-location-content {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+
+/* ============================================================
+   .hm-app-shell — outer app container
+
+   Elementor .e-con with class .hm-app-shell. Contains the
+   sidebar column + content column (and possibly topbar).
+   Elementor sets display:flex on .e-con by default, so we
+   only need to ensure it fills height and allows shrinking.
+   We do NOT override flex-direction (Elementor may use row).
+   ============================================================ */
+
+body.hm-portal-page .hm-app-shell {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+
+body.hm-portal-page .hm-app-shell > .e-con-inner {
+  min-height: 0 !important;
+}
+
+
+/* ============================================================
+   .hm-content — content area inside Elementor hm-main
+
+  hm-content is NOT the scroll owner.
+  Scrolling is handled by Elementor hm-main.
+   ============================================================ */
+
+.hm-content {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* .e-con-inner inside .hm-content */
+.hm-content > .e-con-inner {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: visible !important;
+}
+
+
+/* ============================================================
+  Elementor widget wrappers INSIDE .hm-content
+
+   Elementor wraps shortcode output in several nested divs:
+   .elementor-element > .elementor-widget-wrap (optional in
+   Container mode) > .elementor-widget-container.
+
+  Each wrapper must allow content growth so .hm-content can scroll.
+  Only targets wrappers INSIDE .hm-content — sidebar/topbar widgets
+   are unaffected.
+   ============================================================ */
+
+.hm-content .elementor-element,
+.hm-content .elementor-widget-wrap,
+.hm-content .elementor-widget-theme-post-content,
+.hm-content .elementor-widget-container {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.hm-content .elementor-widget-container > * {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  align-self: stretch !important;
+}
+
+.hm-content .elementor-shortcode,
+.hm-content .elementor-shortcode > * {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+
+/* ============================================================
+   #hm-app — content root only (no forced chrome)
+   ============================================================ */
 
 #hm-app {
-  font-family: var(--hm-font-sans);
-  font-size: var(--hm-font-size-base);
-  line-height: 1.5;
-  color: var(--hm-text);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  align-self: stretch !important;
+  overflow: visible !important;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
-#hm-app *,
-#hm-app *::before,
-#hm-app *::after {
+
+/* ============================================================
+   END OF LAYOUT CSS
+   ============================================================ */
+
+/* ============================================================
+   HM-MAIN SCROLLBAR SYSTEM (GLOBAL)
+   ============================================================ */
+
+.hm-main {
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+  min-height: 0;
+  max-width: 98vw;
+  max-height: 98vh;
+
+  --hm-scroll-thumb: rgba(125, 211, 252, 0.95);
+  --hm-scroll-thumb-h: rgba(56, 189, 248, 0.95);
+  --hm-scroll-track: rgba(186, 230, 253, 0.24);
+  --hm-scroll-width: 6px;
+
+  scrollbar-width: thin;
+  scrollbar-color: var(--hm-scroll-thumb) var(--hm-scroll-track);
+}
+
+.hm-app,
+#hm-app {
+  width: 100%;
   box-sizing: border-box;
+  min-height: 0;
 }
 
-#hm-app img {
-  max-width: 100%;
-  height: auto;
+.hm-main::-webkit-scrollbar {
+  width: var(--hm-scroll-width);
+  height: var(--hm-scroll-width);
 }
 
-/* ============================================================================
-   PAGE HEADERS
-   ============================================================================ */
-
-#hm-app .hm-page-title {
-  font-size: var(--hm-font-size-2xl);
-  font-weight: 600;
-  color: var(--hm-navy);
-  margin: 0 0 4px 0;
-  padding-left: 14px;
-  border-left: 3px solid var(--hm-teal);
+.hm-main::-webkit-scrollbar-track {
+  background: var(--hm-scroll-track);
+  border-radius: 999px;
+  margin: 2px 0;
 }
 
-#hm-app .hm-page-subtitle {
-  font-size: var(--hm-font-size-sm);
-  color: var(--hm-text-muted);
-  margin: 0 0 0 14px;
+.hm-main::-webkit-scrollbar-thumb {
+  background: var(--hm-scroll-thumb);
+  border-radius: 999px;
+  min-height: 22px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  box-shadow: inset 0 0 2px rgba(12, 74, 110, 0.18);
 }
 
-/* ============================================================================
-   CARDS
-   ============================================================================ */
-
-#hm-app .hm-card {
-  background: var(--hm-bg);
-  border: 1px solid var(--hm-border);
-  border-radius: var(--hm-radius-lg);
-  box-shadow: var(--hm-shadow);
-  margin-bottom: var(--hm-space-md);
-  transition: var(--hm-transition);
+.hm-main::-webkit-scrollbar-thumb:hover,
+.hm-main::-webkit-scrollbar-thumb:active,
+.hm-main:focus-within::-webkit-scrollbar-thumb {
+  background: var(--hm-scroll-thumb-h);
+  box-shadow: inset 0 0 3px rgba(12, 74, 110, 0.22);
 }
 
-#hm-app .hm-card:hover {
-  box-shadow: var(--hm-shadow-md);
+.hm-main::-webkit-scrollbar-button,
+.hm-main::-webkit-scrollbar-button:vertical:decrement,
+.hm-main::-webkit-scrollbar-button:vertical:increment {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  -webkit-appearance: none !important;
+  background: transparent !important;
+  border: 0 !important;
 }
 
-#hm-app .hm-card-header {
-  padding: var(--hm-space-md) var(--hm-space-lg);
-  border-bottom: 1px solid var(--hm-border-light);
-  font-weight: 600;
-}
+.hm-main::-webkit-scrollbar-corner { background: transparent; }
 
-#hm-app .hm-card-body {
-  padding: var(--hm-space-md) var(--hm-space-lg);
-}
-
-#hm-app .hm-card-footer {
-  padding: var(--hm-space-md) var(--hm-space-lg);
-  border-top: 1px solid var(--hm-border-light);
-  background: var(--hm-bg-alt);
-  border-radius: 0 0 var(--hm-radius-lg) var(--hm-radius-lg);
-}
-
-/* ============================================================================
-   BUTTONS
-   ============================================================================ */
-
-#hm-app .hm-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 0;
-  font-size: var(--hm-font-size-sm);
-  font-weight: 600;
-  line-height: 1;
-  border-radius: var(--hm-radius);
-  border: none;
-  cursor: pointer;
-  transition: var(--hm-transition);
-  background: transparent;
-  color: var(--hm-teal);
-  text-decoration: none;
-}
-
-#hm-app .hm-btn:hover {
-  background: transparent;
-  color: var(--hm-teal-hover);
-  text-decoration: underline;
-}
-
-#hm-app .hm-btn-outline,
-#hm-app .hm-btn-teal {
-  background: transparent;
-  color: var(--hm-teal);
-  box-shadow: none;
-}
-
-#hm-app .hm-btn-outline:hover,
-#hm-app .hm-btn-teal:hover {
-  background: transparent;
-  color: var(--hm-teal-hover);
-}
-
-#hm-app .hm-btn-danger,
-#hm-app .hm-btn-red {
-  background: transparent;
-  color: var(--hm-error);
-}
-
-#hm-app .hm-btn-danger:hover,
-#hm-app .hm-btn-red:hover {
-  background: transparent;
-  color: #b91c1c;
-}
-
-#hm-app .hm-btn-primary {
-  background: var(--hm-teal);
-  color: #fff;
-}
-
-#hm-app .hm-btn-primary:hover {
-  background: var(--hm-teal-hover);
-}
-
-#hm-app .hm-btn.hm-btn-link {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  color: var(--hm-teal);
-  padding: 0;
-  text-decoration: none;
-}
-
-#hm-app .hm-btn.hm-btn-link:hover {
-  background: transparent;
-  color: var(--hm-teal-hover);
-  text-decoration: underline;
-}
-
-#hm-app .hm-btn-success {
-  background: var(--hm-success);
-  color: #fff;
-}
-
-#hm-app .hm-btn-error {
-  background: var(--hm-error);
-  color: #fff;
-}
-
-#hm-app .hm-btn-sm {
-  padding: 6px 12px;
-  font-size: var(--hm-font-size-xs);
-}
-
-#hm-app .hm-btn-lg {
-  padding: 12px 24px;
-  font-size: var(--hm-font-size-base);
-}
-
-/* ============================================================================
-   FORMS
-   ============================================================================ */
-
-#hm-app .hm-form-group {
-  margin-bottom: var(--hm-space-md);
-}
-
-#hm-app .hm-label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: var(--hm-font-size-sm);
-  font-weight: 500;
-  color: var(--hm-text);
-}
-
-#hm-app input[type="text"],
-#hm-app input[type="email"],
-#hm-app input[type="password"],
-#hm-app input[type="number"],
-#hm-app input[type="tel"],
-#hm-app input[type="date"],
-#hm-app select,
-#hm-app textarea {
-  width: 100%;
-  padding: 9px 12px;
-  font-size: var(--hm-font-size-sm);
-  line-height: 1.5;
-  background: var(--hm-bg);
-  border: 1px solid var(--hm-border);
-  border-radius: var(--hm-radius-md);
-  transition: var(--hm-transition);
-}
-
-#hm-app input:focus,
-#hm-app select:focus,
-#hm-app textarea:focus {
+.hm-main:focus-within {
   outline: none;
-  border-color: var(--hm-teal);
-  box-shadow: 0 0 0 3px rgba(11, 180, 196, 0.1);
 }
 
-/* ============================================================================
-   TABLES
-   ============================================================================ */
-
-#hm-app .hm-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--hm-font-size-sm);
+.hm-main:focus-within::-webkit-scrollbar-thumb {
+  box-shadow: 0 0 0 2px rgba(186, 230, 253, 0.35), inset 0 0 3px rgba(12, 74, 110, 0.22);
 }
 
-#hm-app .hm-table th {
-  padding: 10px 14px;
-  text-align: left;
-  font-size: var(--hm-font-size-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--hm-text-light);
-  background: var(--hm-bg-alt);
-  border-bottom: 2px solid var(--hm-border);
+@media (max-width: 480px) {
+  .hm-main { --hm-scroll-width: 5px; }
 }
-
-#hm-app .hm-table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--hm-border-light);
-}
-
-#hm-app .hm-table tbody tr:hover {
-  background: var(--hm-bg-alt);
-}
-
-/* ============================================================================
-   TABS
-   ============================================================================ */
-
-#hm-app .hm-tabs {
-  display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--hm-border);
-  margin-bottom: var(--hm-space-lg);
-  overflow-x: auto;
-}
-
-#hm-app .hm-tab {
-  padding: 10px 18px;
-  font-size: var(--hm-font-size-sm);
-  font-weight: 500;
-  color: var(--hm-text-muted);
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  transition: var(--hm-transition);
-  white-space: nowrap;
-}
-
-#hm-app .hm-tab:hover {
-  color: var(--hm-text);
-}
-
-#hm-app .hm-tab.active {
-  color: var(--hm-teal);
-  border-bottom-color: var(--hm-teal);
-  font-weight: 600;
-}
-
-/* ============================================================================
-   BADGES
-   ============================================================================ */
-
-#hm-app .hm-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  font-size: var(--hm-font-size-xs);
-  font-weight: 600;
-  border-radius: var(--hm-radius-full);
-  background: var(--hm-bg-hover);
-  color: var(--hm-text-light);
-}
-
-#hm-app .hm-badge-success {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--hm-success);
-}
-
-#hm-app .hm-badge-warning {
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--hm-warning);
-}
-
-#hm-app .hm-badge-error {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--hm-error);
-}
-
-/* ============================================================================
-   UTILITY CLASSES
-   ============================================================================ */
-
-#hm-app .hm-flex { display: flex; }
-#hm-app .hm-flex-col { display: flex; flex-direction: column; }
-#hm-app .hm-flex-between { display: flex; justify-content: space-between; align-items: center; }
-#hm-app .hm-flex-center { display: flex; justify-content: center; align-items: center; }
-#hm-app .hm-gap-sm { gap: var(--hm-space-sm); }
-#hm-app .hm-gap-md { gap: var(--hm-space-md); }
-#hm-app .hm-gap-lg { gap: var(--hm-space-lg); }
-
-#hm-app .hm-mt-sm { margin-top: var(--hm-space-sm); }
-#hm-app .hm-mt-md { margin-top: var(--hm-space-md); }
-#hm-app .hm-mt-lg { margin-top: var(--hm-space-lg); }
-#hm-app .hm-mb-sm { margin-bottom: var(--hm-space-sm); }
-#hm-app .hm-mb-md { margin-bottom: var(--hm-space-md); }
-#hm-app .hm-mb-lg { margin-bottom: var(--hm-space-lg); }
-
-#hm-app .hm-text-center { text-align: center; }
-#hm-app .hm-text-muted { color: var(--hm-text-muted); }
-#hm-app .hm-text-sm { font-size: var(--hm-font-size-sm); }
-#hm-app .hm-text-lg { font-size: var(--hm-font-size-lg); }
-
-#hm-app .hm-hidden { display: none; }
-#hm-app .hm-truncate { 
-  overflow: hidden; 
-  text-overflow: ellipsis; 
-  white-space: nowrap; 
-}
-
-/* ============================================================================
-   TOAST NOTIFICATIONS
-   ============================================================================ */
-
-.hm-toast-container {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 10001;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  pointer-events: none;
-}
-
-.hm-toast {
-  background: var(--hm-bg);
-  border: 1px solid var(--hm-border);
-  border-radius: var(--hm-radius-md);
-  padding: 12px 18px;
-  box-shadow: var(--hm-shadow-lg);
-  min-width: 300px;
-  max-width: 400px;
-  font-size: var(--hm-font-size-sm);
-  opacity: 0;
-  transform: translateX(400px);
-  transition: all 0.3s ease;
-  pointer-events: all;
-}
-
-.hm-toast.show {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.hm-toast-success {
-  border-left: 4px solid var(--hm-success);
-}
-
-.hm-toast-error {
-  border-left: 4px solid var(--hm-error);
-}
-
-.hm-toast-warning {
-  border-left: 4px solid var(--hm-warning);
-}
-
-.hm-toast-info {
-  border-left: 4px solid var(--hm-info);
-}
-
-/* ============================================================================
-   MODAL SYSTEM
-   ============================================================================ */
-
-.hm-modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
-}
-
-.hm-modal-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--hm-border);
-  font-size: var(--hm-font-size-lg);
-  font-weight: 600;
-}
-
-.hm-modal-body {
-  padding: 24px;
-}
-
-.hm-modal-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: none;
-  font-size: 24px;
-  line-height: 1;
-  color: var(--hm-text-muted);
-  cursor: pointer;
-  transition: var(--hm-transition);
-  border-radius: var(--hm-radius);
-}
-
-.hm-modal-close:hover {
-  background: var(--hm-bg-hover);
-  color: var(--hm-text);
-}
-
-/* ============================================================================
-   LOADING OVERLAY
-   ============================================================================ */
-
-.hm-loading-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.hm-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--hm-border);
-  border-top-color: var(--hm-teal);
-  border-radius: 50%;
-  animation: hm-spin 0.8s linear infinite;
-}
-
-@keyframes hm-spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ============================================================================
-   END OF DESIGN SYSTEM
-   ============================================================================ */

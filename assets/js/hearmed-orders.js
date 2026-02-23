@@ -1,779 +1,1043 @@
 /**
- * HearMed Calendar v2.1
- * Renders views based on #hm-app[data-view]
+ * HearMed Portal — Orders JS
+ * Handles: Create Order modal — product search, line items, totals, PRSI, submit
+ *
+ * Depends on: HM.ajax_url, HM.nonce, HM.toast(), jQuery
+ * Blueprint 01 — Section 1
  */
-(function($){
-'use strict';
 
-var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function pad(n){return String(n).padStart(2,'0');}
-function fmt(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
-function isToday(d){var t=new Date();return d.getDate()===t.getDate()&&d.getMonth()===t.getMonth()&&d.getFullYear()===t.getFullYear();}
-function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-function post(action,data){data=data||{};data.action='hm_'+action;data.nonce=HM.nonce;return $.post(HM.ajax_url,data);}
+(function ($) {
+    'use strict';
 
-// ═══ SVG Icons ═══
-var IC={
-    chevL:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>',
-    chevR:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>',
-    plus:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>',
-    cog:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
-    print:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
-    cal:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
-    user:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-    clock:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-    x:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>',
-};
+    // -----------------------------------------------------------------------
+    // STATE
+    // -----------------------------------------------------------------------
+    var OrderModal = {
+        patientId   : null,
+        patientName : null,
+        lineIndex   : 0,   // ever-incrementing counter for unique line IDs
 
-// ═══ ROUTER ═══
-var App={
-    init:function(){
-        var $el=$('#hm-app');
-        if(!$el.length)return;
-        var v=$el.data('view')||'';
-        if(v==='calendar')Cal.init($el);
-        else if(v==='settings')Settings.init($el);
-        else if(v==='appointment-types')ApptTypes.init($el);
-        else if(v==='blockouts')Blockouts.init($el);
-        else if(v==='holidays')Holidays.init($el);
-    }
-};
+        // Cached DOM refs (set on open)
+        $bg     : null,
+        $lines  : null,
+    };
 
-// ═══════════════════════════════════════
-// CALENDAR VIEW
-// ═══════════════════════════════════════
-var Cal={
-    $el:null,date:new Date(),mode:'week',viewMode:'people',
-    dispensers:[],services:[],clinics:[],appts:[],holidays:[],blockouts:[],
-    selClinic:0,selDisp:0,svcMap:{},cfg:{},
+    // -----------------------------------------------------------------------
+    // PUBLIC API — attach to HM namespace so patient profile can call it
+    // -----------------------------------------------------------------------
+    window.HM = window.HM || {};
 
-    init:function($el){
-        this.$el=$el;
-        var s=HM.settings||{};
-        this.cfg={
-            slotMin:parseInt(s.time_interval)||30,
-            startH:parseInt((s.start_time||'09:00').split(':')[0]),
-            endH:parseInt((s.end_time||'18:00').split(':')[0]),
-            slotHt:s.slot_height||'regular',
-            showTimeInline:s.show_time_inline==='yes',
-            hideEndTime:s.hide_end_time!=='no',
-            outcomeStyle:s.outcome_style||'default',
-            hideCancelled:s.hide_cancelled!=='no',
-            displayFull:s.display_full_name==='yes',
-            enabledDays:(s.enabled_days||'mon,tue,wed,thu,fri').split(','),
-        };
-        this.mode=s.default_view||'week';
-        this.viewMode=s.default_mode||'people';
-        this.cfg.totalSlots=Math.ceil((this.cfg.endH-this.cfg.startH)*60/this.cfg.slotMin);
-        this.render();
-        this.bind();
-        this.loadData();
-    },
+    /**
+     * Open the Create Order modal.
+     * @param {number} patientId
+     * @param {string} patientName
+     */
+    HM.openOrderModal = function (patientId, patientName) {
+        OrderModal.patientId   = patientId;
+        OrderModal.patientName = patientName;
+        OrderModal.lineIndex   = 0;
 
-    render:function(){
-        this.$el.html(
-        '<div class="hm-cal-wrap">'+
-            '<div class="hm-toolbar">'+
-                '<div class="hm-tb-left">'+
-                    '<button class="hm-nav-btn" id="hm-prev">'+IC.chevL+'</button>'+
-                    '<button class="hm-nav-btn" id="hm-next">'+IC.chevR+'</button>'+
-                    '<div class="hm-date-box" id="hm-dateBox">'+IC.cal+' <span id="hm-dateLbl"></span><input type="date" id="hm-datePick" style="position:absolute;opacity:0;width:1px;height:1px;"></div>'+
-                '</div>'+
-                '<div class="hm-tb-right">'+
-                    '<div class="hm-view-tog"><button class="hm-view-btn" data-v="day">Day</button><button class="hm-view-btn" data-v="week">Week</button></div>'+
-                    '<button class="hm-icon-btn" id="hm-cog" title="Settings">'+IC.cog+'</button>'+
-                    '<button class="hm-icon-btn" onclick="window.print()" title="Print">'+IC.print+'</button>'+
-                    '<div class="hm-sep"></div>'+
-                    '<select class="hm-dd" id="hm-clinicF"><option value="">All Clinics</option></select>'+
-                    '<select class="hm-dd" id="hm-dispF"><option value="">All Assignees</option></select>'+
-                    '<div style="position:relative"><button class="hm-plus-btn" id="hm-plusBtn">'+IC.plus+'</button>'+
-                        '<div class="hm-plus-menu" id="hm-plusMenu">'+
-                            '<div class="hm-plus-item" data-act="appointment">'+IC.cal+' Appointment</div>'+
-                            '<div class="hm-plus-item" data-act="patient">'+IC.user+' Patient</div>'+
-                            '<div class="hm-plus-item" data-act="holiday">'+IC.clock+' Holiday / Unavailability</div>'+
-                        '</div>'+
-                    '</div>'+
-                '</div>'+
-            '</div>'+
-            '<div class="hm-grid-wrap" id="hm-gridWrap"><div class="hm-grid" id="hm-grid"></div></div>'+
-        '</div>'+
-        '<div class="hm-pop" id="hm-pop"></div>'+
-        '<div class="hm-cog-panel" id="hm-cogPanel">'+
-            '<h3>Settings <button class="hm-cog-x" id="hm-cogX">'+IC.x+'</button></h3>'+
-            '<div class="hm-cog-section"><div class="hm-cog-label">Mode</div><div class="hm-cog-tog" id="hm-cogMode"><button class="hm-cog-tog-btn" data-v="people">People</button><button class="hm-cog-tog-btn" data-v="clinics">Clinics</button></div></div>'+
-            '<div class="hm-cog-section"><div class="hm-cog-label">Timeframe</div><div class="hm-cog-tog" id="hm-cogTime"><button class="hm-cog-tog-btn" data-v="day">Day</button><button class="hm-cog-tog-btn" data-v="week">Week</button></div></div>'+
-            '<div class="hm-cog-ft"><button class="hm-btn" id="hm-cogCancel">Cancel</button><button class="hm-btn hm-btn-teal" id="hm-cogSave">Save</button></div>'+
-        '</div>'
-        );
-    },
+        var $bg = $('#hm-order-modal-bg');
+        OrderModal.$bg    = $bg;
+        OrderModal.$lines = $bg.find('#hm-order-lines');
 
-    bind:function(){
-        var self=this;
-        $(document).on('click','#hm-prev',function(){self.nav(-1);});
-        $(document).on('click','#hm-next',function(){self.nav(1);});
-        $(document).on('click','#hm-dateBox',function(){var dp=$('#hm-datePick');dp[0].showPicker?dp[0].showPicker():dp.trigger('click');});
-        $(document).on('change','#hm-datePick',function(){var v=$(this).val();if(v){self.date=new Date(v+'T12:00:00');self.refresh();}});
-        $(document).on('click','.hm-view-btn',function(){self.mode=$(this).data('v');self.refreshUI();});
-        $(document).on('change','#hm-clinicF',function(){self.selClinic=parseInt($(this).val())||0;self.loadDispensers().then(function(){self.refresh();});});
-        $(document).on('change','#hm-dispF',function(){self.selDisp=parseInt($(this).val())||0;self.refresh();});
-        $(document).on('click','#hm-plusBtn',function(e){e.stopPropagation();$('#hm-plusMenu').toggleClass('open');});
-        $(document).on('click',function(){$('#hm-plusMenu').removeClass('open');});
-        $(document).on('click','.hm-plus-item',function(){$('#hm-plusMenu').removeClass('open');self.onPlusAction($(this).data('act'));});
-        $(document).on('click','#hm-cog',function(){$('#hm-cogPanel').toggleClass('open');self.updateCogUI();});
-        $(document).on('click','#hm-cogX, #hm-cogCancel',function(){$('#hm-cogPanel').removeClass('open');});
-        $(document).on('click','#hm-cogSave',function(){$('#hm-cogPanel').removeClass('open');self.refresh();});
-        $(document).on('click','#hm-cogMode .hm-cog-tog-btn',function(){self.viewMode=$(this).data('v');self.updateCogUI();self.refresh();});
-        $(document).on('click','#hm-cogTime .hm-cog-tog-btn',function(){self.mode=$(this).data('v');self.updateCogUI();self.refreshUI();});
-        $(document).on('click',function(e){if(!$(e.target).closest('.hm-pop,.hm-appt').length)$('#hm-pop').removeClass('open');});
-        $(document).on('click','.hm-pop-x',function(){$('#hm-pop').removeClass('open');});
-        $(document).on('click','.hm-pop-edit',function(){self.editPop();});
-        $(document).on('dblclick','.hm-slot',function(){self.onSlot(this);});
-        var rt;$(window).on('resize',function(){clearTimeout(rt);rt=setTimeout(function(){self.refresh();},150);});
-        $(document).on('keydown',function(e){if(e.key==='Escape'){$('#hm-pop').removeClass('open');$('#hm-cogPanel').removeClass('open');}});
-    },
+        // Reset form
+        $bg.find('#hm-order-patient-id').val(patientId);
+        $bg.find('#hm-order-patient-name').text(patientName);
+        $bg.find('#hm-order-clinic').val('');
+        $bg.find('#hm-order-prsi').prop('checked', false);
+        $bg.find('#hm-order-prsi-note').hide();
+        $bg.find('#hm-order-notes').val('');
+        $bg.find('#hm-order-dup-warning').hide();
+        OrderModal.$lines.empty();
 
-    loadData:function(){
-        var self=this;
-        this.loadClinics().then(function(){return self.loadDispensers();}).then(function(){return self.loadServices();}).then(function(){self.refresh();});
-    },
-    loadClinics:function(){
-        return post('get_clinics').then(function(r){
-            if(!r.success)return;
-            Cal.clinics=r.data;
-            var $f=$('#hm-clinicF');$f.find('option:not(:first)').remove();
-            r.data.forEach(function(c){$f.append('<option value="'+c.id+'">'+esc(c.name)+'</option>');});
-        });
-    },
-    loadDispensers:function(){
-        return post('get_dispensers',{clinic:this.selClinic}).then(function(r){
-            if(!r.success)return;
-            Cal.dispensers=r.data;
-            var $f=$('#hm-dispF');$f.find('option:not(:first)').remove();
-            r.data.forEach(function(d){$f.append('<option value="'+d.id+'">'+esc(d.initials)+' — '+esc(d.name)+'</option>');});
-            if(Cal.selDisp)$f.val(Cal.selDisp);
-        });
-    },
-    loadServices:function(){
-        return post('get_services').then(function(r){
-            if(!r.success)return;
-            Cal.services=r.data;Cal.svcMap={};
-            r.data.forEach(function(s){Cal.svcMap[s.id]=s;});
-        });
-    },
-    loadAppts:function(){
-        var dates=this.visDates();
-        return post('get_appointments',{start:fmt(dates[0]),end:fmt(dates[dates.length-1]),clinic:this.selClinic})
-            .then(function(r){if(r.success)Cal.appts=r.data;});
-    },
+        // Reset totals
+        OrderModal.recalcTotals();
 
-    refresh:function(){var self=this;this.loadAppts().then(function(){self.renderGrid();self.renderAppts();self.renderNow();});},
-    refreshUI:function(){this.renderGrid();this.renderAppts();this.renderNow();this.updateViewBtns();},
+        // Add first empty line
+        OrderModal.addLine();
 
-    updateViewBtns:function(){$('.hm-view-btn').removeClass('on');$('.hm-view-btn[data-v="'+this.mode+'"]').addClass('on');},
-    updateCogUI:function(){
-        $('#hm-cogMode .hm-cog-tog-btn').removeClass('on');$('#hm-cogMode .hm-cog-tog-btn[data-v="'+this.viewMode+'"]').addClass('on');
-        $('#hm-cogTime .hm-cog-tog-btn').removeClass('on');$('#hm-cogTime .hm-cog-tog-btn[data-v="'+this.mode+'"]').addClass('on');
-    },
-    nav:function(dir){this.date.setDate(this.date.getDate()+dir*(this.mode==='week'?7:1));$('#hm-pop').removeClass('open');this.refresh();},
+        // Show modal
+        $bg.fadeIn(180);
+        $bg.find('.hm-modal').css({ transform: 'translateY(-12px)', opacity: 0 })
+           .animate({ opacity: 1 }, 200)
+           .css('transform', 'translateY(0)');
+        document.body.style.overflow = 'hidden';
+    };
 
-    renderGrid:function(){
-        var g=document.getElementById('hm-grid');if(!g)return;
-        var dates=this.visDates(),disps=this.visDisps(),cfg=this.cfg;
-        this.updateDateLbl(dates);this.updateViewBtns();
+    /**
+     * Close the modal.
+     */
+    HM.closeOrderModal = function () {
+        $('#hm-order-modal-bg').fadeOut(160);
+        document.body.style.overflow = '';
+    };
 
-        var wrap=document.getElementById('hm-gridWrap');
-	// Fixed slot heights based on setting
-	var slotMap = {
-    		compact: 20,
-   		regular: 28,
-    		large: 38
-	};
+    // -----------------------------------------------------------------------
+    // LINE ITEM MANAGEMENT
+    // -----------------------------------------------------------------------
+    OrderModal.addLine = function () {
+        var idx  = ++OrderModal.lineIndex;
+        var tpl  = document.getElementById('hm-order-line-tpl');
+        var node = tpl.content.cloneNode(true);
+        var $el  = $(node.querySelector('.hm-order-line'));
+        $el.attr('data-line-index', idx);
 
-var slotH = slotMap[cfg.slotHt] || 28;
-cfg.slotHpx = slotH;
+        OrderModal.$lines.append($el);
 
-        if(!disps.length){g.innerHTML='<div style="text-align:center;padding:80px;color:var(--hm-text-faint);font-size:15px">No dispensers found. Add dispensers in your Dispenser post type.</div>';g.style.gridTemplateColumns='';return;}
+        // Wire up events on this new line
+        var $line = OrderModal.$lines.find('[data-line-index="' + idx + '"]');
+        OrderModal.wireLineEvents($line);
+    };
 
-        var colW=Math.max(80,Math.min(140,Math.floor(900/disps.length)));
-        var tc=disps.length*dates.length;
-        g.style.gridTemplateColumns='44px repeat('+tc+',minmax('+colW+'px,1fr))';
-
-        var h='<div class="hm-time-corner"></div>';
-
-        dates.forEach(function(d){
-            var td=isToday(d);
-            h+='<div class="hm-day-hd'+(td?' today':'')+'" style="grid-column:span '+disps.length+'">';
-            h+='<span class="hm-day-lbl">'+DAYS[d.getDay()]+'</span> <span class="hm-day-num">'+d.getDate()+'</span> <span class="hm-day-lbl">'+MO[d.getMonth()]+'</span>';
-            h+='<div class="hm-prov-row">';
-            disps.forEach(function(p){
-                var lbl=Cal.cfg.displayFull?esc(p.name):esc(p.initials);
-                h+='<div class="hm-prov-cell"><div class="hm-prov-ini">'+lbl+'</div></div>';
-            });
-            h+='</div></div>';
-        });
-
-        for(var s=0;s<cfg.totalSlots;s++){
-            var tm=cfg.startH*60+s*cfg.slotMin;
-            var hr=Math.floor(tm/60),mn=tm%60;
-            var isHr=mn===0;
-            h+='<div class="hm-time-cell'+(isHr?' hr':'')+'">'+(isHr?pad(hr)+':00':'')+'</div>';
-            dates.forEach(function(d,di){
-                disps.forEach(function(p,pi){
-                    var cls='hm-slot'+(isHr?' hr':'')+(pi===disps.length-1?' dl':'');
-                    h+='<div class="'+cls+'" data-date="'+fmt(d)+'" data-time="'+pad(hr)+':'+pad(mn)+'" data-disp="'+p.id+'" data-day="'+di+'" data-slot="'+s+'" style="height:'+slotH+'px"></div>';
-                });
-            });
+    OrderModal.removeLine = function ($line) {
+        if (OrderModal.$lines.find('.hm-order-line').length <= 1) {
+            HM.toast('At least one line item is required.', 'error');
+            return;
         }
-        g.innerHTML=h;
-    },
-
-    renderAppts:function(){
-        $('.hm-appt,.hm-lunch').remove();
-        var dates=this.visDates(),disps=this.visDisps(),cfg=this.cfg,slotH=cfg.slotHpx;
-        if(!disps.length)return;
-
-        // Lunch default 13:00 - 13:30
-        var lStart=13*60,lDur=30;
-        var lH=(lDur/cfg.slotMin)*slotH;
-        var lSlot=Math.floor((lStart-cfg.startH*60)/cfg.slotMin);
-        if(lSlot>=0&&lSlot<cfg.totalSlots){
-            dates.forEach(function(d,di){
-                disps.forEach(function(p){
-                    var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+lSlot+'"][data-disp="'+p.id+'"]');
-                    if($t.length)$t.append('<div class="hm-lunch" style="top:0;height:'+lH+'px">Lunch</div>');
-                });
-            });
-        }
-
-        this.appts.forEach(function(a){
-            if(Cal.selDisp&&parseInt(a.dispenser_id)!==Cal.selDisp)return;
-            var di=-1;
-            for(var i=0;i<dates.length;i++){if(fmt(dates[i])===a.appointment_date){di=i;break;}}
-            if(di===-1)return;
-            var found=false;
-            for(var j=0;j<disps.length;j++){if(parseInt(disps[j].id)===parseInt(a.dispenser_id)){found=true;break;}}
-            if(!found)return;
-
-            var tp=a.start_time.split(':');
-            var aMn=parseInt(tp[0])*60+parseInt(tp[1]);
-            if(aMn<cfg.startH*60||aMn>=cfg.endH*60)return;
-
-            var si=Math.floor((aMn-cfg.startH*60)/cfg.slotMin);
-            var off=((aMn-cfg.startH*60)%cfg.slotMin)/cfg.slotMin*slotH;
-            var dur=parseInt(a.duration)||30;
-            var h=Math.max(slotH*0.7-2,(dur/cfg.slotMin)*slotH*0.7-2);
-
-            var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+a.dispenser_id+'"]');
-            if(!$t.length)return;
-
-            var col=a.service_colour||'#3B82F6';
-            var stCls=a.status==='Pending'?' pending':a.status==='Cancelled'?' cancelled':'';
-            var tmLbl=cfg.showTimeInline?(a.start_time.substring(0,5)+' '):'';
-
-            var el=$('<div class="hm-appt'+stCls+'" data-id="'+a._ID+'" style="background:'+col+';height:'+h+'px;top:'+off+'px">'+
-                '<div class="hm-appt-svc">'+esc(a.service_name)+'</div>'+
-                '<div class="hm-appt-pt">'+tmLbl+esc(a.patient_name||'No patient')+'</div>'+
-                (h>36&&!cfg.hideEndTime?'<div class="hm-appt-tm">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>':
-                 h>36?'<div class="hm-appt-tm">'+a.start_time.substring(0,5)+'</div>':'')+
-            '</div>');
-            $t.append(el);
-            el.on('click',function(e){e.stopPropagation();Cal.showPop(a,this);});
+        $line.fadeOut(150, function () {
+            $(this).remove();
+            OrderModal.recalcTotals();
         });
-    },
+    };
 
-    renderNow:function(){
-        $('.hm-now').remove();
-        var now=new Date(),dates=this.visDates(),disps=this.visDisps(),cfg=this.cfg;
-        var di=-1;
-        for(var i=0;i<dates.length;i++){if(isToday(dates[i])){di=i;break;}}
-        if(di===-1)return;
-        var nm=now.getHours()*60+now.getMinutes();
-        if(nm<cfg.startH*60||nm>=cfg.endH*60)return;
-        var si=Math.floor((nm-cfg.startH*60)/cfg.slotMin);
-        var off=((nm-cfg.startH*60)%cfg.slotMin)/cfg.slotMin*cfg.slotHpx;
-        disps.forEach(function(p){
-            var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+p.id+'"]');
-            if($t.length)$t.append('<div class="hm-now" style="top:'+off+'px"><div class="hm-now-dot"></div></div>');
-        });
-    },
-
-    showPop:function(a,el){
-        this._popAppt=a;
-        var r=el.getBoundingClientRect();
-        var col=a.service_colour||'#3B82F6';
-        var html='<div class="hm-pop-bar" style="background:'+col+'"></div>'+
-            '<div class="hm-pop-hd"><span>'+esc(a.service_name||'Appointment')+'</span><button class="hm-pop-x">'+IC.x+'</button></div>'+
-            '<div class="hm-pop-body">'+
-                '<div><span class="hm-pop-lbl">Patient</span><span>'+esc(a.patient_name||'—')+'</span></div>'+
-                '<div><span class="hm-pop-lbl">Time</span><span>'+(a.start_time||'').substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</span></div>'+
-                '<div><span class="hm-pop-lbl">Assignee</span><span>'+esc(a.dispenser_name||'—')+'</span></div>'+
-                '<div><span class="hm-pop-lbl">Clinic</span><span>'+esc(a.clinic_name||'—')+'</span></div>'+
-                '<div><span class="hm-pop-lbl">Status</span><span>'+esc(a.status||'—')+'</span></div>'+
-                (a.notes?'<div><span class="hm-pop-lbl">Notes</span><span>'+esc(a.notes)+'</span></div>':'')+
-            '</div>'+
-            '<div class="hm-pop-ft"><button class="hm-btn hm-btn-teal hm-btn-sm hm-pop-edit">Edit</button></div>';
-
-        var $pop=$('#hm-pop');
-        $pop.html(html);
-        var l=r.right+10,t=r.top;
-        if(l+290>window.innerWidth)l=r.left-290;
-        if(t+260>window.innerHeight)t=window.innerHeight-270;
-        if(t<10)t=10;
-        $pop.css({left:l,top:t}).addClass('open');
-    },
-
-    editPop:function(){
-        if(!this._popAppt)return;
-        Cal.openEditModal(this._popAppt);
-        $('#hm-pop').removeClass('open');
-    },
-
-    openEditModal:function(a){
-        var self=this;
-        var html='<div class="hm-modal-bg open"><div class="hm-modal">'+
-            '<div class="hm-modal-hd"><h3>Edit Appointment</h3><button class="hm-modal-x hm-edit-close">'+IC.x+'</button></div>'+
-            '<div class="hm-modal-body">'+
-                '<div class="hm-fld"><label>Patient</label><input class="hm-inp" id="hme-patient" value="'+esc(a.patient_name||'')+'" readonly></div>'+
-                '<div class="hm-row">'+
-                    '<div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hme-service">'+self.services.map(function(s){return'<option value="'+s.id+'"'+(s.id==a.service_id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
-                    '<div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hme-clinic">'+self.clinics.map(function(c){return'<option value="'+c.id+'"'+(c.id==a.clinic_id?' selected':'')+'>'+esc(c.name)+'</option>';}).join('')+'</select></div>'+
-                '</div>'+
-                '<div class="hm-row">'+
-                    '<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hme-disp">'+self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(d.id==a.dispenser_id?' selected':'')+'>'+esc(d.name)+'</option>';}).join('')+'</select></div>'+
-                    '<div class="hm-fld"><label>Status</label><select class="hm-inp" id="hme-status">'+['Confirmed','Pending','Completed','Cancelled','No Show','Rescheduled'].map(function(s){return'<option'+(s===a.status?' selected':'')+'>'+s+'</option>';}).join('')+'</select></div>'+
-                '</div>'+
-                '<div class="hm-row">'+
-                    '<div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hme-date" value="'+a.appointment_date+'"></div>'+
-                    '<div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hme-time" value="'+(a.start_time||'').substring(0,5)+'"></div>'+
-                '</div>'+
-                '<div class="hm-fld"><label>Notes</label><textarea class="hm-inp" id="hme-notes">'+esc(a.notes||'')+'</textarea></div>'+
-            '</div>'+
-            '<div class="hm-modal-ft">'+
-                '<button class="hm-btn hm-btn-red hm-edit-del">Delete</button>'+
-                '<div class="hm-modal-acts"><button class="hm-btn hm-edit-close">Cancel</button><button class="hm-btn hm-btn-teal hm-edit-save">Save</button></div>'+
-            '</div>'+
-        '</div></div>';
-        $('body').append(html);
-
-        $(document).off('click.editclose').on('click.editclose','.hm-edit-close',function(e){
-            e.stopPropagation();
-            $('.hm-modal-bg').remove();$(document).off('.editmodal .editclose');
-        });
-        $(document).off('.editmodal').on('click.editmodal','.hm-modal-bg',function(e){
-            if($(e.target).hasClass('hm-modal-bg')){$('.hm-modal-bg').remove();$(document).off('.editmodal .editclose');}
-        });
-        $(document).off('click.editsave').on('click.editsave','.hm-edit-save',function(){
-            post('update_appointment',{
-                appointment_id:a._ID,patient_id:a.patient_id,
-                service_id:$('#hme-service').val(),clinic_id:$('#hme-clinic').val(),
-                dispenser_id:$('#hme-disp').val(),status:$('#hme-status').val(),
-                appointment_date:$('#hme-date').val(),start_time:$('#hme-time').val(),
-                notes:$('#hme-notes').val()
-            }).then(function(r){if(r.success){$('.hm-modal-bg').remove();$(document).off('.editmodal .editclose .editsave .editdel');self.refresh();}else{alert('Error saving');}});
-        });
-        $(document).off('click.editdel').on('click.editdel','.hm-edit-del',function(){
-            if(!confirm('Delete this appointment?'))return;
-            var reason=prompt('Reason for cancellation:')||'Deleted';
-            post('delete_appointment',{appointment_id:a._ID,reason:reason}).then(function(r){
-                if(r.success){$('.hm-modal-bg').remove();$(document).off('.editmodal .editclose .editsave .editdel');self.refresh();}else{alert(r.data||'Error');}
-            });
-        });
-    },
-
-    onSlot:function(el){
-        var d=el.dataset;
-        this.openNewApptModal(d.date,d.time,parseInt(d.disp));
-    },
-
-    openNewApptModal:function(date,time,dispId){
-        var self=this;
-        var html='<div class="hm-modal-bg open"><div class="hm-modal" style="width:540px">'+
-            '<div class="hm-modal-hd"><h3>New Appointment</h3><button class="hm-modal-x hm-new-close">'+IC.x+'</button></div>'+
-            '<div class="hm-modal-body">'+
-                '<div class="hm-fld"><label>Patient search</label><input class="hm-inp" id="hmn-ptsearch" placeholder="Search by name..." autocomplete="off"><div class="hm-pt-results" id="hmn-ptresults"></div><input type="hidden" id="hmn-patientid" value="0"></div>'+
-                '<div class="hm-row">'+
-                    '<div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hmn-service">'+self.services.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
-                    '<div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hmn-clinic">'+self.clinics.map(function(c){return'<option value="'+c.id+'">'+esc(c.name)+'</option>';}).join('')+'</select></div>'+
-                '</div>'+
-                '<div class="hm-row">'+
-                    '<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hmn-disp">'+self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(d.id===dispId?' selected':'')+'>'+esc(d.name)+'</option>';}).join('')+'</select></div>'+
-                    '<div class="hm-fld"><label>Status</label><select class="hm-inp" id="hmn-status"><option>Confirmed</option><option>Pending</option></select></div>'+
-                '</div>'+
-                '<div class="hm-row">'+
-                    '<div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hmn-date" value="'+date+'"></div>'+
-                    '<div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hmn-time" value="'+time+'"></div>'+
-                '</div>'+
-                '<div class="hm-fld"><label>Location</label><select class="hm-inp" id="hmn-loc"><option>Clinic</option><option>Home</option></select></div>'+
-                '<div class="hm-fld"><label>Notes</label><textarea class="hm-inp" id="hmn-notes" placeholder="Optional notes..."></textarea></div>'+
-            '</div>'+
-            '<div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hm-new-close">Cancel</button><button class="hm-btn hm-btn-teal hm-new-save">Create Appointment</button></div></div>'+
-        '</div></div>';
-        $('body').append(html);
-
-        // Patient search
+    // -----------------------------------------------------------------------
+    // PRODUCT SEARCH (autocomplete)
+    // -----------------------------------------------------------------------
+    OrderModal.wireLineEvents = function ($line) {
+        var $search   = $line.find('.hm-line-product-search');
+        var $results  = $line.find('.hm-line-product-results');
+        var $prodId   = $line.find('.hm-line-product-id');
+        var $prodName = $line.find('.hm-line-product-name');
+        var $costPx   = $line.find('.hm-line-cost-price');
+        var $selected = $line.find('.hm-line-product-selected');
+        var $badge    = $line.find('.hm-line-product-badge');
+        var $clear    = $line.find('.hm-line-product-clear');
         var searchTimer;
-        $(document).on('input.newmodal','#hmn-ptsearch',function(){
-            var q=$(this).val();
+
+        // ── Product search input ──────────────────────────────────────────
+        $search.on('input', function () {
             clearTimeout(searchTimer);
-            if(q.length<2){$('#hmn-ptresults').removeClass('open').empty();return;}
-            searchTimer=setTimeout(function(){
-                post('search_patients',{query:q}).then(function(r){
-                    if(!r.success||!r.data.length){$('#hmn-ptresults').removeClass('open').empty();return;}
-                    var h='';
-                    r.data.forEach(function(p){
-                        h+='<div class="hm-pt-item" data-id="'+p.id+'"><span>'+esc(p.name)+'</span><span class="hm-pt-newtab">Select</span></div>';
-                    });
-                    $('#hmn-ptresults').html(h).addClass('open');
+            var q = $.trim($(this).val());
+            if (q.length < 2) {
+                $results.hide().empty();
+                return;
+            }
+            searchTimer = setTimeout(function () {
+                OrderModal.searchProducts(q, $results, function (product) {
+                    OrderModal.selectProduct($line, product);
                 });
-            },300);
-        });
-        $(document).on('click.newmodal','.hm-pt-item',function(){
-            var id=$(this).data('id'),name=$(this).find('span:first').text();
-            $('#hmn-ptsearch').val(name);$('#hmn-patientid').val(id);$('#hmn-ptresults').removeClass('open');
+            }, 280);
         });
 
-        $(document).off('click.newclose').on('click.newclose','.hm-new-close',function(e){
-            e.stopPropagation();
-            $('.hm-modal-bg').remove();$(document).off('.newmodal .newclose');
+        $search.on('keydown', function (e) {
+            if (e.key === 'Escape') $results.hide().empty();
         });
-        $(document).off('click.newbg').on('click.newbg','.hm-modal-bg',function(e){
-            if($(e.target).hasClass('hm-modal-bg')){
-                $('.hm-modal-bg').remove();$(document).off('.newmodal .newclose .newbg');
+
+        // Hide dropdown on outside click
+        $(document).on('click.hm-product-search', function (e) {
+            if (!$(e.target).closest($line.find('.hm-line-product-search').parent()).length) {
+                $results.hide();
             }
         });
-        $(document).off('click.newsave').on('click.newsave','.hm-new-save',function(){
-            post('create_appointment',{
-                patient_id:$('#hmn-patientid').val(),service_id:$('#hmn-service').val(),
-                clinic_id:$('#hmn-clinic').val(),dispenser_id:$('#hmn-disp').val(),
-                status:$('#hmn-status').val(),appointment_date:$('#hmn-date').val(),
-                start_time:$('#hmn-time').val(),location_type:$('#hmn-loc').val(),
-                notes:$('#hmn-notes').val()
-            }).then(function(r){
-                if(r.success){$('.hm-modal-bg').remove();$(document).off('.newmodal .newclose .newbg .newsave');self.refresh();}
-                else{alert('Error creating appointment');}
+
+        // ── Clear product selection ───────────────────────────────────────
+        $clear.on('click', function () {
+            $prodId.val('');
+            $prodName.val('');
+            $costPx.val(0);
+            $selected.hide();
+            $search.val('').show().focus();
+            $line.find('.hm-line-price').val('');
+            $line.find('.hm-line-vat').val('0');
+            OrderModal.recalcLine($line);
+        });
+
+        // ── Recalc on any value change ────────────────────────────────────
+        $line.on('change input', '.hm-line-qty, .hm-line-price, .hm-line-discount, .hm-line-discount-type, .hm-line-vat', function () {
+            OrderModal.recalcLine($line);
+        });
+
+        // ── Remove line ───────────────────────────────────────────────────
+        $line.find('.hm-line-remove').on('click', function () {
+            OrderModal.removeLine($line);
+        });
+    };
+
+    OrderModal.searchProducts = function (q, $results, onSelect) {
+        $results.html('<div style="padding:10px 14px;color:#94a3b8;font-size:.85rem;">Searching…</div>').show();
+
+        $.post(HM.ajax_url, {
+            action  : 'hm_search_products',
+            nonce   : HM.nonce,
+            q       : q,
+        }, function (r) {
+            $results.empty();
+            if (!r.success || !r.data.length) {
+                $results.html('<div style="padding:10px 14px;color:#94a3b8;font-size:.85rem;">No products found.</div>');
+                return;
+            }
+            r.data.forEach(function (p) {
+                var sub = [p.manufacturer, p.style, p.range].filter(Boolean).join(' · ');
+                var $item = $(
+                    '<div class="hm-product-item" style="padding:9px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;">' +
+                        '<div style="font-weight:600;font-size:.875rem;color:#1e293b;">' + escHtml(p.name) + '</div>' +
+                        (sub ? '<div style="font-size:.78rem;color:#94a3b8;margin-top:2px;">' + escHtml(sub) + '</div>' : '') +
+                        '<div style="font-size:.8rem;color:#0BB4C4;margin-top:2px;">€' + (p.retail_price || 0).toFixed(2) + '</div>' +
+                    '</div>'
+                );
+                $item.on('mouseenter', function () { $(this).css('background', '#f8fafc'); });
+                $item.on('mouseleave', function () { $(this).css('background', ''); });
+                $item.on('click', function () {
+                    $results.hide().empty();
+                    onSelect(p);
+                });
+                $results.append($item);
+            });
+        }).fail(function () {
+            $results.html('<div style="padding:10px 14px;color:#e53e3e;font-size:.85rem;">Search failed. Try again.</div>');
+        });
+    };
+
+    OrderModal.selectProduct = function ($line, product) {
+        $line.find('.hm-line-product-id').val(product.id);
+        $line.find('.hm-line-product-name').val(product.name);
+        $line.find('.hm-line-cost-price').val(product.cost_price || 0);
+
+        // Pre-fill price + VAT from product data
+        if (product.retail_price) {
+            $line.find('.hm-line-price').val(product.retail_price.toFixed(2));
+        }
+        if (product.vat_rate !== undefined) {
+            $line.find('.hm-line-vat').val(product.vat_rate);
+        }
+
+        // Show selected badge, hide search input
+        var label = [product.manufacturer, product.name, product.style].filter(Boolean).join(' · ');
+        $line.find('.hm-line-product-badge').text(label);
+        $line.find('.hm-line-product-selected').show();
+        $line.find('.hm-line-product-search').hide();
+
+        OrderModal.recalcLine($line);
+    };
+
+    // -----------------------------------------------------------------------
+    // CALCULATIONS
+    // -----------------------------------------------------------------------
+    OrderModal.recalcLine = function ($line) {
+        var qty          = Math.max(1, parseFloat($line.find('.hm-line-qty').val()) || 1);
+        var unitPrice    = parseFloat($line.find('.hm-line-price').val()) || 0;
+        var discountVal  = parseFloat($line.find('.hm-line-discount').val()) || 0;
+        var discountType = $line.find('.hm-line-discount-type').val();
+        var vatRate      = parseFloat($line.find('.hm-line-vat').val()) || 0;
+        var costPrice    = parseFloat($line.find('.hm-line-cost-price').val()) || 0;
+
+        var gross = unitPrice * qty;
+
+        var discountEur = (discountType === 'pct')
+            ? (discountVal / 100) * gross
+            : discountVal;
+
+        var net       = Math.max(0, gross - discountEur);
+        var vatAmount = net * (vatRate / 100);
+        var lineTotal = net + vatAmount;
+
+        $line.find('.hm-line-total').text('€' + lineTotal.toFixed(2));
+
+        // Gross margin (only rendered in DOM for finance roles)
+        var $marginEl = $line.find('.hm-line-margin-pct');
+        if ($marginEl.length && lineTotal > 0 && costPrice > 0) {
+            var totalCost = costPrice * qty;
+            var margin    = ((lineTotal - totalCost) / lineTotal) * 100;
+            $marginEl.text(margin.toFixed(1) + '%')
+                     .css('color', margin >= 40 ? '#16a34a' : margin >= 20 ? '#d97706' : '#dc2626');
+        }
+
+        OrderModal.recalcTotals();
+    };
+
+    OrderModal.recalcTotals = function () {
+        var subtotal      = 0;
+        var totalDiscount = 0;
+        var totalVat      = 0;
+        var totalCost     = 0;
+
+        OrderModal.$lines.find('.hm-order-line').each(function () {
+            var $l        = $(this);
+            var qty       = Math.max(1, parseFloat($l.find('.hm-line-qty').val()) || 1);
+            var unitPrice = parseFloat($l.find('.hm-line-price').val()) || 0;
+            var discVal   = parseFloat($l.find('.hm-line-discount').val()) || 0;
+            var discType  = $l.find('.hm-line-discount-type').val();
+            var vatRate   = parseFloat($l.find('.hm-line-vat').val()) || 0;
+            var costPx    = parseFloat($l.find('.hm-line-cost-price').val()) || 0;
+
+            var gross   = unitPrice * qty;
+            var discEur = (discType === 'pct') ? (discVal / 100) * gross : discVal;
+            var net     = Math.max(0, gross - discEur);
+            var vat     = net * (vatRate / 100);
+
+            subtotal      += gross;
+            totalDiscount += discEur;
+            totalVat      += vat;
+            totalCost     += costPx * qty;
+        });
+
+        // PRSI
+        var prsiChecked = $('#hm-order-prsi').is(':checked');
+        var prsiAmount  = 0;
+        if (prsiChecked) {
+            var ears = [];
+            OrderModal.$lines.find('.hm-line-ear').each(function () {
+                var v = $(this).val();
+                if (v) ears.push(v);
+            });
+            var earCount = 0;
+            ears.forEach(function (e) { earCount += (e === 'Binaural') ? 2 : 1; });
+            prsiAmount = Math.min(500 * earCount, 1000);
+        }
+
+        var grandPrePrsi = subtotal - totalDiscount + totalVat;
+        var grand        = Math.max(0, grandPrePrsi - prsiAmount);
+
+        $('#hm-total-subtotal').text('€' + subtotal.toFixed(2));
+        $('#hm-total-discount').text('−€' + totalDiscount.toFixed(2));
+        $('#hm-total-vat').text('€' + totalVat.toFixed(2));
+        $('#hm-total-prsi').text(prsiChecked ? '−€' + prsiAmount.toFixed(2) : '—');
+        $('#hm-total-grand').text('€' + grand.toFixed(2));
+
+        // Gross margin total (finance roles only — element may not exist)
+        var $margEl = $('#hm-total-margin');
+        if ($margEl.length && grand > 0 && totalCost > 0) {
+            var gm = ((grand - totalCost) / grand) * 100;
+            $margEl.text(gm.toFixed(1) + '%')
+                   .css('color', gm >= 40 ? '#16a34a' : gm >= 20 ? '#d97706' : '#dc2626');
+        }
+    };
+
+    // -----------------------------------------------------------------------
+    // SUBMIT
+    // -----------------------------------------------------------------------
+    OrderModal.submit = function () {
+        // Validate
+        var clinicId = $('#hm-order-clinic').val();
+        if (!clinicId) {
+            HM.toast('Please select a clinic.', 'error');
+            return;
+        }
+
+        var lines = [];
+        var valid = true;
+
+        OrderModal.$lines.find('.hm-order-line').each(function () {
+            var $l       = $(this);
+            var prodId   = $l.find('.hm-line-product-id').val();
+            var prodName = $l.find('.hm-line-product-name').val();
+            var ear      = $l.find('.hm-line-ear').val();
+
+            if (!prodId || !ear) {
+                HM.toast('Each line item needs a product and ear selection.', 'error');
+                valid = false;
+                return false; // break
+            }
+
+            lines.push({
+                product_id     : prodId,
+                product_name   : prodName,
+                ear            : ear,
+                qty            : $l.find('.hm-line-qty').val(),
+                unit_price     : $l.find('.hm-line-price').val(),
+                discount       : $l.find('.hm-line-discount').val(),
+                discount_type  : $l.find('.hm-line-discount-type').val(),
+                vat_rate       : $l.find('.hm-line-vat').val(),
+                cost_price     : $l.find('.hm-line-cost-price').val(),
             });
         });
-    },
 
-    onPlusAction:function(act){
-        if(act==='appointment')this.openNewApptModal(fmt(this.date),pad(this.cfg.startH)+':00',this.dispensers.length?this.dispensers[0].id:0);
-        else if(act==='patient')alert('Navigate to your patient admin page to add a new patient');
-        else if(act==='holiday')window.location.href='/adminconsole/holidays';
-    },
+        if (!valid || !lines.length) return;
 
-    visDates:function(){
-        var d=new Date(this.date);
-        if(this.mode==='day')return[new Date(d)];
-        var day=d.getDay();var diff=d.getDate()-day+(day===0?-6:1);
-        var mon=new Date(d);mon.setDate(diff);
-        var dayMap={mon:1,tue:2,wed:3,thu:4,fri:5,sat:6,sun:0};
-        var en=this.cfg.enabledDays.map(function(x){return dayMap[x.trim()]||0;});
-        var arr=[];
-        for(var i=0;i<7;i++){var dd=new Date(mon);dd.setDate(mon.getDate()+i);if(en.indexOf(dd.getDay())!==-1)arr.push(dd);}
-        return arr;
-    },
-    visDisps:function(){
-        var d=this.dispensers;
-        if(this.selDisp)d=d.filter(function(x){return parseInt(x.id)===Cal.selDisp;});
-        return d;
-    },
-    updateDateLbl:function(dates){
-        var s=dates[0],e=dates[dates.length-1];
-        var txt=this.mode==='day'?DAYS[s.getDay()]+', '+s.getDate()+' '+MO[s.getMonth()]+' '+s.getFullYear():
-            s.getDate()+' '+MO[s.getMonth()]+' – '+e.getDate()+' '+MO[e.getMonth()]+' '+e.getFullYear();
-        $('#hm-dateLbl').text(txt);
-    },
-};
+        // Disable submit while in flight
+        var $btn   = $('#hm-order-submit');
+        var $label = $('#hm-order-submit-label');
+        var $spin  = $('#hm-order-submit-spinner');
+        $btn.prop('disabled', true);
+        $label.hide();
+        $spin.show();
 
-// ═══════════════════════════════════════
-// SETTINGS VIEW
-// ═══════════════════════════════════════
-var Settings={
-    $el:null,data:{},dispensers:[],
-    init:function($el){this.$el=$el;this.load();},
-    load:function(){
-        var self=this;
-        post('get_settings').then(function(r){
-            self.data=r.success?r.data:{};
-            post('get_dispensers').then(function(r2){
-                self.dispensers=r2.success?r2.data:[];
-                self.render();self.bind();
-            });
-        });
-    },
-    render:function(){
-        var d=this.data,v=function(k,def){return(d[k]!==undefined&&d[k]!=='')?d[k]:def;};
-        var h='<div class="hm-settings">';
+        $.post(HM.ajax_url, {
+            action          : 'hm_create_order',
+            nonce           : $('#hm-order-nonce').val(),
+            patient_id      : OrderModal.patientId,
+            clinic_id       : clinicId,
+            prsi_applicable : $('#hm-order-prsi').is(':checked') ? 1 : 0,
+            notes           : $('#hm-order-notes').val(),
+            line_items      : lines,
+        }, function (r) {
+            $btn.prop('disabled', false);
+            $label.show();
+            $spin.hide();
 
-        // Header
-        h+='<div class="hm-admin-hd"><div><h2>Calendar Settings</h2><div class="hm-admin-subtitle">Adjust your scheduling and display preferences.</div></div></div>';
-
-        // Card grid
-        h+='<div class="hm-card-grid">';
-
-        // ── Card 1: Time & View ──
-        h+='<div class="hm-card">';
-        h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">🕐</span><h3>Time &amp; View</h3></div>';
-        h+='<div class="hm-card-body">';
-        h+=this.row('Start time','<input type="time" class="hm-inp" id="hs-start" value="'+esc(v('start_time','09:00'))+'" style="width:130px">');
-        h+=this.row('End time','<input type="time" class="hm-inp" id="hs-end" value="'+esc(v('end_time','18:00'))+'" style="width:130px">');
-        h+=this.row('Time interval','<select class="hm-dd" id="hs-interval">'+[15,20,30,45,60].map(function(m){return'<option value="'+m+'"'+(parseInt(v('time_interval',30))===m?' selected':'')+'>'+m+' minutes</option>';}).join('')+'</select>');
-        h+=this.row('Slot height','<select class="hm-dd" id="hs-slotH">'+['compact','regular','large'].map(function(s){return'<option value="'+s+'"'+(v('slot_height','regular')===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';}).join('')+'</select>');
-        h+=this.row('Default timeframe','<select class="hm-dd" id="hs-view">'+['day','week'].map(function(s){return'<option value="'+s+'"'+(v('default_view','week')===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';}).join('')+'</select>');
-        h+='</div></div>';
-
-        // ── Card 2: Display Preferences ──
-        h+='<div class="hm-card">';
-        h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">👁</span><h3>Display Preferences</h3></div>';
-        h+='<div class="hm-card-body">';
-        h+=this.tog('Display time inline with patient name','hs-timeInline',v('show_time_inline','no')==='yes');
-        h+=this.tog('Hide appointment end time','hs-hideEnd',v('hide_end_time','yes')==='yes');
-        h+='<div class="hm-srow" style="flex-direction:column;align-items:stretch"><span class="hm-slbl">Outcome style</span><div class="hm-radio-grp" style="margin-top:8px">';
-        ['default','small','tag','popover'].forEach(function(s){h+='<label><input type="radio" name="hs-outcome" value="'+s+'"'+(v('outcome_style','default')===s?' checked':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</label>';});
-        h+='</div></div>';
-        h+=this.tog('Display full resource name','hs-fullName',v('display_full_name','no')==='yes');
-        h+='</div></div>';
-
-        // ── Card 3: Rules & Safety ──
-        h+='<div class="hm-card">';
-        h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">🛡</span><h3>Rules &amp; Safety</h3></div>';
-        h+='<div class="hm-card-body">';
-        h+=this.tog('Require cancellation reason','hs-cancelReason',v('require_cancel_reason','yes')==='yes','Patients will be prompted when cancelling online.');
-        h+=this.tog('Hide cancelled appointments','hs-hideCancelled',v('hide_cancelled','yes')==='yes');
-        h+=this.tog('Require reschedule note','hs-reschedNote',v('require_reschedule_note','no')==='yes');
-        h+=this.tog('Prevent mismatched location bookings','hs-locMismatch',v('prevent_location_mismatch','no')==='yes');
-        h+='</div></div>';
-
-        // ── Card 4: Availability ──
-        h+='<div class="hm-card">';
-        h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">📅</span><h3>Availability</h3></div>';
-        h+='<div class="hm-card-body">';
-        var enDays=(v('enabled_days','mon,tue,wed,thu,fri')).split(',');
-        h+='<div class="hm-srow" style="flex-direction:column;align-items:stretch"><span class="hm-slbl" style="margin-bottom:8px">Enabled days</span><div class="hm-day-checks">';
-        ['mon','tue','wed','thu','fri','sat','sun'].forEach(function(d){h+='<label><input type="checkbox" class="hs-day" value="'+d+'"'+(enDays.indexOf(d)!==-1?' checked':'')+'>'+d.charAt(0).toUpperCase()+d.slice(1)+'</label>';});
-        h+='</div></div>';
-        h+=this.tog('Apply clinic colour to working times','hs-clinicColour',v('apply_clinic_colour','no')==='yes');
-        h+='</div></div>';
-
-        // ── Card 5: Calendar Order (full width) ──
-        h+='<div class="hm-card hm-card-grid-full">';
-        h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">⠿</span><h3>Calendar Order</h3></div>';
-        h+='<div class="hm-card-body">';
-        h+='<div style="font-size:12px;color:#94a3b8;margin-bottom:10px">Drag to reorder how dispensers appear on the calendar.</div>';
-        h+='<ul class="hm-sort-list" id="hs-sortList">';
-        this.dispensers.forEach(function(d){
-            var ini=esc(d.initials||'');
-            h+='<li class="hm-sort-item" data-id="'+d.id+'">';
-            h+='<span class="hm-sort-grip">⠿</span>';
-            h+='<span class="hm-sort-avatar">'+ini+'</span>';
-            h+='<span class="hm-sort-info"><span class="hm-sort-name">'+esc(d.name)+'</span><span class="hm-sort-role">'+ini+' · '+(esc(d.role_type)||'Dispenser')+'</span></span>';
-            h+='</li>';
-        });
-        h+='</ul></div></div>';
-
-        // Close grid
-        h+='</div>';
-
-        // Save area
-        h+='<div class="hm-save-area"><span class="hm-toast" id="hs-toast" style="display:none"><span class="hm-toast-icon">✓</span> Calendar updated successfully</span><button class="hm-btn hm-btn-teal" id="hs-save">Save Changes</button></div>';
-
-        h+='</div>';
-        this.$el.html(h);
-        $('#hs-sortList').sortable({handle:'.hm-sort-grip'});
-    },
-    bind:function(){var self=this;$(document).on('click','#hs-save',function(){self.save();});},
-    save:function(){
-        var days=[];$('.hs-day:checked').each(function(){days.push($(this).val());});
-        var order=[];$('#hs-sortList .hm-sort-item').each(function(){order.push($(this).data('id'));});
-        var $btn=$('#hs-save');
-        $btn.text('Saving...').prop('disabled',true);
-        post('save_settings',{
-            start_time:$('#hs-start').val(),end_time:$('#hs-end').val(),
-            time_interval:$('#hs-interval').val(),slot_height:$('#hs-slotH').val(),
-            default_view:$('#hs-view').val(),default_mode:'people',
-            show_time_inline:$('#hs-timeInline').is(':checked')?'yes':'no',
-            hide_end_time:$('#hs-hideEnd').is(':checked')?'yes':'no',
-            outcome_style:$('input[name="hs-outcome"]:checked').val()||'default',
-            require_cancel_reason:$('#hs-cancelReason').is(':checked')?'yes':'no',
-            hide_cancelled:$('#hs-hideCancelled').is(':checked')?'yes':'no',
-            require_reschedule_note:$('#hs-reschedNote').is(':checked')?'yes':'no',
-            apply_clinic_colour:$('#hs-clinicColour').is(':checked')?'yes':'no',
-            display_full_name:$('#hs-fullName').is(':checked')?'yes':'no',
-            prevent_location_mismatch:$('#hs-locMismatch').is(':checked')?'yes':'no',
-            enabled_days:days.join(','),calendar_order:JSON.stringify(order),
-        }).then(function(r){
-            if(r.success){
-                post('save_dispenser_order',{order:JSON.stringify(order)});
-                $btn.text('Save Changes').prop('disabled',false);
-                $('#hs-toast').fadeIn(200);setTimeout(function(){$('#hs-toast').fadeOut(400);},3000);
+            if (r.success) {
+                if (r.data.duplicate_flag) {
+                    // Show warning but still close — order was saved
+                    $('#hm-order-dup-warning').show();
+                    setTimeout(function () {
+                        HM.closeOrderModal();
+                        HM.toast('Order ' + r.data.order_number + ' submitted — duplicate flag added.', 'success');
+                        $(document).trigger('hm:orderCreated', [r.data]);
+                    }, 2000);
+                } else {
+                    HM.closeOrderModal();
+                    HM.toast('Order ' + r.data.order_number + ' submitted for approval.', 'success');
+                    $(document).trigger('hm:orderCreated', [r.data]);
+                }
             } else {
-                alert('Error saving');
-                $btn.text('Save Changes').prop('disabled',false);
+                HM.toast(r.data.msg || 'Error submitting order. Please try again.', 'error');
+            }
+        }).fail(function () {
+            $btn.prop('disabled', false);
+            $label.show();
+            $spin.hide();
+            HM.toast('Network error. Please check your connection and try again.', 'error');
+        });
+    };
+
+    // -----------------------------------------------------------------------
+    // DOCUMENT READY — wire static modal controls
+    // -----------------------------------------------------------------------
+    $(document).ready(function () {
+
+        // Close buttons
+        $(document).on('click', '#hm-order-modal-close, #hm-order-cancel', function () {
+            HM.closeOrderModal();
+        });
+
+        // Click outside modal to close
+        $(document).on('click', '#hm-order-modal-bg', function (e) {
+            if ($(e.target).is('#hm-order-modal-bg')) {
+                HM.closeOrderModal();
             }
         });
-    },
-    row:function(lbl,ctrl){return'<div class="hm-srow"><span class="hm-slbl">'+lbl+'</span><div class="hm-sval">'+ctrl+'</div></div>';},
-    tog:function(lbl,id,on,hint){
-        var h='<div class="hm-srow"><span class="hm-slbl">'+lbl;
-        if(hint)h+='<span class="hm-slbl-hint">'+hint+'</span>';
-        h+='</span><label class="hm-tog"><input type="checkbox" id="'+id+'"'+(on?' checked':'')+'><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>';
-        return h;
-    },
-};
 
-// ═══════════════════════════════════════
-// APPOINTMENT TYPES VIEW
-// ═══════════════════════════════════════
-var ApptTypes={
-    $el:null,data:[],
-    init:function($el){this.$el=$el;this.load();},
-    load:function(){var self=this;post('get_services').then(function(r){self.data=r.success?r.data:[];self.render();});},
-    render:function(){
-        var h='<div class="hm-admin"><div class="hm-admin-hd"><h2>Appointment Types</h2><button class="hm-btn hm-btn-teal" id="hat-add">+ Add Type</button></div>';
-        h+='<div class="hm-filter-bar"><div class="hm-filter-row"><input class="hm-inp" id="hat-search" placeholder="Filter by name..." style="max-width:260px"></div></div>';
-        h+='<table class="hm-table"><thead><tr><th>Name</th><th>Colour</th><th>Duration</th><th>Sales Opp.</th><th>Reminders</th><th>Confirmation</th><th style="width:60px"></th></tr></thead><tbody id="hat-body">';
-        if(!this.data.length)h+='<tr><td colspan="7" class="hm-no-data">No appointment types found</td></tr>';
-        else this.data.forEach(function(s){
-            h+='<tr><td><strong>'+esc(s.name)+'</strong></td><td><span class="hm-colour-dot" style="background:'+s.colour+'"></span> <span style="color:var(--hm-text-light)">'+s.colour+'</span></td><td>'+s.duration+' min</td><td>'+(s.sales_opportunity==='yes'?'<span style="color:var(--hm-teal);font-weight:600">Yes</span>':'No')+'</td><td>'+s.reminders+'</td><td>'+(s.confirmation==='yes'?'<span style="color:var(--hm-teal);font-weight:600">Yes</span>':'No')+'</td><td><button class="hm-act-btn hm-act-edit hat-edit" data-id="'+s.id+'">✏️</button></td></tr>';
+        // Escape key
+        $(document).on('keydown', function (e) {
+            if (e.key === 'Escape' && $('#hm-order-modal-bg').is(':visible')) {
+                HM.closeOrderModal();
+            }
         });
-        h+='</tbody></table></div>';
-        this.$el.html(h);this.bind();
-    },
-    bind:function(){
-        var self=this;
-        $(document).on('click','#hat-add',function(){self.openForm(null);});
-        $(document).on('click','.hat-edit',function(){var id=$(this).data('id');var s=self.data.find(function(x){return x.id==id;});if(s)self.openForm(s);});
-        $(document).on('input','#hat-search',function(){var q=$(this).val().toLowerCase();$('#hat-body tr').each(function(){$(this).toggle($(this).text().toLowerCase().includes(q));});});
-    },
-    openForm:function(svc){
-        var isEdit=!!svc,self=this;
-        var h='<div class="hm-modal-bg open"><div class="hm-modal"><div class="hm-modal-hd"><h3>'+(isEdit?'Edit':'New')+' Appointment Type</h3><button class="hm-modal-x hat-close">'+IC.x+'</button></div><div class="hm-modal-body">';
-        h+='<div class="hm-fld"><label>Name</label><input class="hm-inp" id="hatf-name" value="'+esc(svc?svc.name:'')+'" placeholder="e.g. Hearing Test"></div>';
-        h+='<div class="hm-row"><div class="hm-fld"><label>Colour</label><div style="display:flex;align-items:center;gap:10px"><input type="color" id="hatf-colour" value="'+(svc?svc.colour:'#3B82F6')+'" style="width:48px;height:40px;border:1px solid var(--hm-border);border-radius:var(--hm-radius-sm);cursor:pointer;padding:2px"><span id="hatf-colval" style="color:var(--hm-text-light);font-size:13px">'+(svc?svc.colour:'#3B82F6')+'</span></div></div>';
-        h+='<div class="hm-fld"><label>Duration (minutes)</label><input type="number" class="hm-inp" id="hatf-dur" value="'+(svc?svc.duration:30)+'" min="5" step="5"></div></div>';
-        h+='<div class="hm-row"><div class="hm-fld"><label>Sales opportunity</label><select class="hm-inp" id="hatf-sales"><option value="no"'+(svc&&svc.sales_opportunity==='yes'?'':' selected')+'>No</option><option value="yes"'+(svc&&svc.sales_opportunity==='yes'?' selected':'')+'>Yes</option></select></div>';
-        h+='<div class="hm-fld"><label>Reminders</label><input type="number" class="hm-inp" id="hatf-remind" value="'+(svc?svc.reminders:0)+'" min="0"></div></div>';
-        h+='<div class="hm-fld"><label>Send confirmation</label><select class="hm-inp" id="hatf-confirm"><option value="no"'+(svc&&svc.confirmation==='yes'?'':' selected')+'>No</option><option value="yes"'+(svc&&svc.confirmation==='yes'?' selected':'')+'>Yes</option></select></div>';
-        h+='</div><div class="hm-modal-ft">'+(isEdit?'<button class="hm-btn hm-btn-red hat-del" data-id="'+svc.id+'">Delete</button>':'<span></span>')+'<div class="hm-modal-acts"><button class="hm-btn hat-close">Cancel</button><button class="hm-btn hm-btn-teal hat-save" data-id="'+(svc?svc.id:0)+'">Save</button></div></div></div></div>';
-        $('body').append(h);
-        $('#hatf-colour').on('input',function(){$('#hatf-colval').text($(this).val());});
-        $(document).on('click','.hat-close',function(){$('.hm-modal-bg').remove();});
-        $(document).on('click','.hat-save',function(){
-            post('save_service',{id:$(this).data('id'),name:$('#hatf-name').val(),colour:$('#hatf-colour').val(),duration:$('#hatf-dur').val(),sales_opportunity:$('#hatf-sales').val(),reminders:$('#hatf-remind').val(),confirmation:$('#hatf-confirm').val()})
-            .then(function(r){if(r.success){$('.hm-modal-bg').remove();self.load();}else alert('Error');});
+
+        // Add line button
+        $(document).on('click', '#hm-order-add-line', function () {
+            OrderModal.addLine();
         });
-        $(document).on('click','.hat-del',function(){
-            if(!confirm('Delete this appointment type?'))return;
-            post('delete_service',{id:$(this).data('id')}).then(function(r){if(r.success){$('.hm-modal-bg').remove();self.load();}});
+
+        // PRSI toggle
+        $(document).on('change', '#hm-order-prsi', function () {
+            $('#hm-order-prsi-note').toggle(this.checked);
+            OrderModal.recalcTotals();
+        });
+
+        // Submit
+        $(document).on('click', '#hm-order-submit', function () {
+            OrderModal.submit();
+        });
+
+        // ── "Create Order" trigger from patient profile ───────────────────
+        // Patient profile injects a button like:
+        // <button class="hm-btn hm-btn-teal hm-btn-sm hm-create-order"
+        //         data-patient-id="123" data-patient-name="John Doe">
+        //   + Create Order
+        // </button>
+        $(document).on('click', '.hm-create-order', function () {
+            var pid  = $(this).data('patient-id');
+            var name = $(this).data('patient-name');
+            HM.openOrderModal(pid, name);
+        });
+    });
+
+    // -----------------------------------------------------------------------
+    // UTILITY
+    // -----------------------------------------------------------------------
+    function escHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+})(jQuery);
+
+// ==========================================================================
+// ORDER STATUS PAGE — table, filters, actions
+// ==========================================================================
+
+(function ($) {
+    'use strict';
+
+    var OrdersPage = {
+        page      : 1,
+        filters   : { status: '', clinic_id: '', search: '', date_from: '', date_to: '' },
+        debounce  : null,
+    };
+
+    // Status → badge class mapping
+    var STATUS_BADGE = {
+        'Awaiting Approval': 'hm-badge-amber',
+        'Approved'         : 'hm-badge-teal',
+        'Ordered'          : 'hm-badge-teal',
+        'Received'         : 'hm-badge-green',
+        'Fitting Scheduled': 'hm-badge-teal',
+        'Fitted'           : 'hm-badge-green',
+        'Cancelled'        : 'hm-badge-red',
+    };
+
+    function eur(n) { return '€' + parseFloat(n || 0).toFixed(2); }
+    function fmtDate(dt) {
+        if (!dt) return '—';
+        var d = new Date(dt);
+        return d.toLocaleDateString('en-IE', {day:'2-digit', month:'short', year:'numeric'});
+    }
+    function esc(str) {
+        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function loadOrders() {
+        if (!$('#hm-orders-tbody').length) return;
+
+        $('#hm-orders-loading').show();
+        $('#hm-orders-table-wrap').hide();
+        $('#hm-orders-empty').hide();
+        $('#hm-orders-pagination').hide();
+
+        $.post(HM.ajax_url, $.extend({ action: 'hm_get_orders', nonce: HM.nonce, paged: OrdersPage.page }, OrdersPage.filters),
+        function (r) {
+            $('#hm-orders-loading').hide();
+            if (!r.success) { HM.toast(r.data.msg || 'Could not load orders', 'error'); return; }
+
+            var orders = r.data.orders;
+            if (!orders || !orders.length) {
+                $('#hm-orders-empty').show();
+                return;
+            }
+
+            var rows = '';
+            orders.forEach(function (o) {
+                var badge   = '<span class="hm-badge ' + (STATUS_BADGE[o.status] || 'hm-badge-gray') + '">' + esc(o.status) + '</span>';
+                var dup     = o.duplicate_flag ? '<span class="hm-badge hm-badge-red" title="Possible duplicate" style="margin-left:4px;">⚠ DUP</span>' : '';
+                var actions = buildOrderActions(o);
+                rows += '<tr data-order-id="' + o.id + '">' +
+                    '<td>' + esc(o.patient_name) + '</td>' +
+                    '<td><code>' + esc(o.patient_number) + '</code></td>' +
+                    '<td><a href="#" class="hm-order-detail-link" data-id="' + o.id + '" style="color:#0BB4C4;text-decoration:none;">' + esc(o.order_number) + '</a></td>' +
+                    '<td style="max-width:200px;white-space:normal;">' + esc(o.product_summary) + '</td>' +
+                    '<td>' + eur(o.grand_total) + '</td>' +
+                    '<td>' + (o.prsi_applicable ? '<span class="hm-badge hm-badge-teal">PRSI −' + eur(o.prsi_amount) + '</span>' : '—') + '</td>' +
+                    '<td>' + badge + dup + '</td>' +
+                    '<td style="white-space:nowrap;">' + fmtDate(o.created_at) + '</td>' +
+                    '<td>' + actions + '</td>' +
+                    '</tr>';
+            });
+
+            $('#hm-orders-tbody').html(rows);
+            $('#hm-orders-table-wrap').show();
+
+            // Pagination
+            var total    = r.data.total;
+            var perPage  = r.data.per_page;
+            var pages    = Math.ceil(total / perPage);
+            if (pages > 1) {
+                buildPagination('#hm-orders-pagination', OrdersPage.page, pages, function(p) {
+                    OrdersPage.page = p;
+                    loadOrders();
+                });
+                $('#hm-orders-pagination').show();
+            }
+        }).fail(function () {
+            $('#hm-orders-loading').hide();
+            HM.toast('Network error loading orders.', 'error');
         });
     }
-};
 
-// ═══════════════════════════════════════
-// BLOCKOUTS VIEW
-// ═══════════════════════════════════════
-var Blockouts={
-    $el:null,data:[],services:[],dispensers:[],
-    init:function($el){this.$el=$el;this.load();},
-    load:function(){
-        var self=this;
-        $.when(post('get_blockouts'),post('get_services'),post('get_dispensers'))
-        .then(function(r1,r2,r3){
-            self.data=r1[0].success?r1[0].data:[];
-            self.services=r2[0].success?r2[0].data:[];
-            self.dispensers=r3[0].success?r3[0].data:[];
-            self.render();
-        });
-    },
-    render:function(){
-        var self=this;
-        var h='<div class="hm-admin"><div class="hm-admin-hd"><h2>Appointment Type Blockouts</h2><button class="hm-btn hm-btn-teal" id="hbl-add">+ Add Blockout</button></div>';
-        h+='<table class="hm-table"><thead><tr><th>Appointment Type</th><th>Assignee</th><th>Dates</th><th>Time</th><th style="width:80px"></th></tr></thead><tbody>';
-        if(!this.data.length)h+='<tr><td colspan="5" class="hm-no-data">No blockouts configured</td></tr>';
-        else this.data.forEach(function(b){
-            h+='<tr><td><strong>'+esc(b.service_name)+'</strong></td><td>'+esc(b.dispenser_name)+'</td><td>'+b.start_date+' → '+b.end_date+'</td><td>'+(b.start_time||'—')+' – '+(b.end_time||'—')+'</td><td class="hm-table-acts"><button class="hm-act-btn hm-act-edit hbl-edit" data-id="'+b._ID+'">✏️</button><button class="hm-act-btn hm-act-del hbl-del" data-id="'+b._ID+'">🗑️</button></td></tr>';
-        });
-        h+='</tbody></table></div>';
-        this.$el.html(h);
-        $(document).on('click','#hbl-add',function(){self.openForm(null);});
-        $(document).on('click','.hbl-edit',function(){var id=$(this).data('id');var b=self.data.find(function(x){return x._ID==id;});if(b)self.openForm(b);});
-        $(document).on('click','.hbl-del',function(){if(confirm('Delete this blockout?'))post('delete_blockout',{_ID:$(this).data('id')}).then(function(){self.load();});});
-    },
-    openForm:function(bo){
-        var isEdit=!!bo,self=this;
-        var h='<div class="hm-modal-bg open"><div class="hm-modal"><div class="hm-modal-hd"><h3>'+(isEdit?'Edit':'New')+' Blockout</h3><button class="hm-modal-x hbl-close">'+IC.x+'</button></div><div class="hm-modal-body">';
-        h+='<div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hblf-svc">'+self.services.map(function(s){return'<option value="'+s.id+'"'+(bo&&bo.service_id==s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>';
-        h+='<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hblf-disp"><option value="0">All</option>'+self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(bo&&bo.dispenser_id==d.id?' selected':'')+'>'+esc(d.name)+'</option>';}).join('')+'</select></div>';
-        h+='<div class="hm-row"><div class="hm-fld"><label>Start Date</label><input type="date" class="hm-inp" id="hblf-sd" value="'+(bo?bo.start_date:'')+'"></div><div class="hm-fld"><label>End Date</label><input type="date" class="hm-inp" id="hblf-ed" value="'+(bo?bo.end_date:'')+'"></div></div>';
-        h+='<div class="hm-row"><div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hblf-st" value="'+(bo?bo.start_time:'09:00')+'"></div><div class="hm-fld"><label>End Time</label><input type="time" class="hm-inp" id="hblf-et" value="'+(bo?bo.end_time:'17:00')+'"></div></div>';
-        h+='</div><div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hbl-close">Cancel</button><button class="hm-btn hm-btn-teal hbl-save" data-id="'+(bo?bo._ID:0)+'">Save</button></div></div></div></div>';
-        $('body').append(h);
-        $(document).on('click','.hbl-close',function(){$('.hm-modal-bg').remove();});
-        $(document).on('click','.hbl-save',function(){
-            post('save_blockout',{_ID:$(this).data('id'),service_id:$('#hblf-svc').val(),dispenser_id:$('#hblf-disp').val(),start_date:$('#hblf-sd').val(),end_date:$('#hblf-ed').val(),start_time:$('#hblf-st').val(),end_time:$('#hblf-et').val()})
-            .then(function(r){if(r.success){$('.hm-modal-bg').remove();self.load();}else alert('Error');});
+    function buildOrderActions(o) {
+        var out = '';
+        var isAdmin = HM.is_admin;
+
+        if (o.status === 'Awaiting Approval' && isAdmin) {
+            out += '<a href="' + (window.HM.approvals_url || '#') + '" class="hm-btn hm-btn-outline hm-btn-sm">Go to Approvals</a> ';
+        }
+        if (o.status === 'Approved' && isAdmin) {
+            out += '<button class="hm-btn hm-btn-teal hm-btn-sm hm-mark-ordered-btn" data-id="' + o.id + '" data-num="' + esc(o.order_number) + '">Mark Ordered</button> ';
+        }
+        if (o.status === 'Ordered') {
+            out += '<button class="hm-btn hm-btn-teal hm-btn-sm hm-mark-received-btn" data-id="' + o.id + '" data-num="' + esc(o.order_number) + '">Mark Received</button> ';
+        }
+        return out || '<span style="color:#94a3b8;font-size:.8rem;">—</span>';
+    }
+
+    function buildPagination(selector, current, total, onClick) {
+        var $el  = $(selector);
+        var html = '';
+        for (var i = 1; i <= total; i++) {
+            var cls = (i === current) ? 'hm-page-btn active' : 'hm-page-btn';
+            html += '<button class="' + cls + '" data-page="' + i + '">' + i + '</button>';
+        }
+        $el.html(html);
+        $el.off('click').on('click', '.hm-page-btn', function () {
+            onClick(parseInt($(this).data('page')));
         });
     }
-};
 
-// ═══════════════════════════════════════
-// HOLIDAYS VIEW
-// ═══════════════════════════════════════
-var Holidays={
-    $el:null,data:[],dispensers:[],
-    init:function($el){this.$el=$el;this.load();},
-    load:function(){
-        var self=this;
-        $.when(post('get_holidays'),post('get_dispensers'))
-        .then(function(r1,r2){
-            self.data=r1[0].success?r1[0].data:[];
-            self.dispensers=r2[0].success?r2[0].data:[];
-            self.render();
+    // ── Order Status Page — DOM ready ──────────────────────────────────────
+    $(document).ready(function () {
+        if (!$('#hm-orders-tbody').length) return;
+
+        loadOrders();
+
+        // Status pills
+        $(document).on('click', '.hm-status-pill', function () {
+            $('.hm-status-pill').removeClass('active hm-btn-teal').addClass('hm-btn-outline');
+            $(this).addClass('active hm-btn-teal').removeClass('hm-btn-outline');
+            OrdersPage.filters.status = $(this).data('status');
+            OrdersPage.page = 1;
+            loadOrders();
         });
-    },
-    render:function(){
-        var self=this;
-        var h='<div class="hm-admin"><div class="hm-admin-hd"><h2>Holidays &amp; Unavailability</h2><button class="hm-btn hm-btn-teal" id="hhl-add">+ Add New</button></div>';
-        h+='<div class="hm-filter-bar"><div class="hm-filter-row"><select class="hm-dd" id="hhl-dispF"><option value="">All Assignees</option>';
-        this.dispensers.forEach(function(d){h+='<option value="'+d.id+'">'+esc(d.name)+'</option>';});
-        h+='</select></div></div>';
-        h+='<table class="hm-table"><thead><tr><th>Assignee</th><th>Reason</th><th>Repeats</th><th>Dates</th><th>Time</th><th style="width:80px"></th></tr></thead><tbody id="hhl-body">';
-        if(!this.data.length)h+='<tr><td colspan="6" class="hm-no-data">No holidays or unavailability configured</td></tr>';
-        else this.data.forEach(function(ho){
-            h+='<tr><td><strong>'+esc(ho.dispenser_name)+'</strong></td><td>'+esc(ho.reason)+'</td><td>'+(ho.repeats==='no'?'—':ho.repeats)+'</td><td>'+ho.start_date+' → '+ho.end_date+'</td><td>'+(ho.start_time||'—')+' – '+(ho.end_time||'—')+'</td><td class="hm-table-acts"><button class="hm-act-btn hm-act-edit hhl-edit" data-id="'+ho._ID+'">✏️</button><button class="hm-act-btn hm-act-del hhl-del" data-id="'+ho._ID+'">🗑️</button></td></tr>';
+
+        // Clinic filter
+        $(document).on('change', '#hm-orders-clinic', function () {
+            OrdersPage.filters.clinic_id = $(this).val();
+            OrdersPage.page = 1;
+            loadOrders();
         });
-        h+='</tbody></table></div>';
-        this.$el.html(h);
-        $(document).on('click','#hhl-add',function(){self.openForm(null);});
-        $(document).on('click','.hhl-edit',function(){var id=$(this).data('id');var ho=self.data.find(function(x){return x._ID==id;});if(ho)self.openForm(ho);});
-        $(document).on('click','.hhl-del',function(){if(confirm('Delete?'))post('delete_holiday',{_ID:$(this).data('id')}).then(function(){self.load();});});
-        $(document).on('change','#hhl-dispF',function(){
-            var did=parseInt($(this).val())||0;
-            post('get_holidays',{dispenser_id:did}).then(function(r){self.data=r.success?r.data:[];self.render();});
+
+        // Date filters
+        $(document).on('change', '#hm-orders-date-from', function () {
+            OrdersPage.filters.date_from = $(this).val();
+            OrdersPage.page = 1;
+            loadOrders();
         });
-    },
-    openForm:function(ho){
-        var isEdit=!!ho,self=this;
-        var h='<div class="hm-modal-bg open"><div class="hm-modal"><div class="hm-modal-hd"><h3>'+(isEdit?'Edit':'New')+' Holiday / Unavailability</h3><button class="hm-modal-x hhl-close">'+IC.x+'</button></div><div class="hm-modal-body">';
-        h+='<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hhlf-disp"><option value="">Select...</option>';
-        this.dispensers.forEach(function(d){h+='<option value="'+d.id+'"'+(ho&&ho.dispenser_id==d.id?' selected':'')+'>'+esc(d.name)+'</option>';});
-        h+='</select></div>';
-        h+='<div class="hm-fld"><label>Reason</label><input class="hm-inp" id="hhlf-reason" value="'+esc(ho?ho.reason:'')+'" placeholder="e.g. Annual leave, Pharmacy admin"></div>';
-        h+='<div class="hm-row"><div class="hm-fld"><label>Start Date</label><input type="date" class="hm-inp" id="hhlf-sd" value="'+(ho?ho.start_date:'')+'"></div><div class="hm-fld"><label>End Date</label><input type="date" class="hm-inp" id="hhlf-ed" value="'+(ho?ho.end_date:'')+'"></div></div>';
-        h+='<div class="hm-row"><div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hhlf-st" value="'+(ho?ho.start_time:'09:00')+'"></div><div class="hm-fld"><label>End Time</label><input type="time" class="hm-inp" id="hhlf-et" value="'+(ho?ho.end_time:'17:00')+'"></div></div>';
-        h+='<div class="hm-fld"><label>Repeats</label><select class="hm-inp" id="hhlf-rep"><option value="no"'+(ho&&ho.repeats!=='no'?'':' selected')+'>No</option><option value="weekly"'+(ho&&ho.repeats==='weekly'?' selected':'')+'>Weekly</option><option value="monthly"'+(ho&&ho.repeats==='monthly'?' selected':'')+'>Monthly</option><option value="yearly"'+(ho&&ho.repeats==='yearly'?' selected':'')+'>Yearly</option></select></div>';
-        h+='</div><div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hhl-close">Cancel</button><button class="hm-btn hm-btn-teal hhl-save" data-id="'+(ho?ho._ID:0)+'">Save</button></div></div></div></div>';
-        $('body').append(h);
-        $(document).on('click','.hhl-close',function(){$('.hm-modal-bg').remove();});
-        $(document).on('click','.hhl-save',function(){
-            post('save_holiday',{_ID:$(this).data('id'),dispenser_id:$('#hhlf-disp').val(),reason:$('#hhlf-reason').val(),start_date:$('#hhlf-sd').val(),end_date:$('#hhlf-ed').val(),start_time:$('#hhlf-st').val(),end_time:$('#hhlf-et').val(),repeats:$('#hhlf-rep').val()})
-            .then(function(r){if(r.success){$('.hm-modal-bg').remove();self.load();}else alert('Error');});
+        $(document).on('change', '#hm-orders-date-to', function () {
+            OrdersPage.filters.date_to = $(this).val();
+            OrdersPage.page = 1;
+            loadOrders();
+        });
+
+        // Search (debounced)
+        $(document).on('input', '#hm-orders-search', function () {
+            var q = $(this).val();
+            clearTimeout(OrdersPage.debounce);
+            OrdersPage.debounce = setTimeout(function () {
+                OrdersPage.filters.search = q;
+                OrdersPage.page = 1;
+                loadOrders();
+            }, 350);
+        });
+
+        // "Create Order" button with no patient context → search modal
+        $(document).on('click', '#hm-order-new-btn', function () {
+            HM.openOrderModal(0, '');
+        });
+
+        // ── Mark Ordered modal ──────────────────────────────────────────
+        $(document).on('click', '.hm-mark-ordered-btn', function () {
+            $('#hm-mark-ordered-id').val($(this).data('id'));
+            $('#hm-mark-ordered-num').text($(this).data('num'));
+            $('#hm-mark-ordered-modal-bg').fadeIn(150);
+        });
+        $(document).on('click', '#hm-mark-ordered-close, #hm-mark-ordered-cancel', function () {
+            $('#hm-mark-ordered-modal-bg').fadeOut(150);
+        });
+        $(document).on('click', '#hm-mark-ordered-confirm', function () {
+            var id = $('#hm-mark-ordered-id').val();
+            $(this).prop('disabled', true).text('Saving…');
+            $.post(HM.ajax_url, { action: 'hm_update_order_status', nonce: HM.nonce, order_id: id, new_status: 'Ordered' },
+            function (r) {
+                $('#hm-mark-ordered-confirm').prop('disabled', false).text('Mark as Ordered');
+                $('#hm-mark-ordered-modal-bg').fadeOut(150);
+                if (r.success) { HM.toast('Order marked as Ordered.', 'success'); loadOrders(); }
+                else HM.toast(r.data.msg || 'Error updating order.', 'error');
+            });
+        });
+
+        // ── Mark Received modal ─────────────────────────────────────────
+        $(document).on('click', '.hm-mark-received-btn', function () {
+            $('#hm-receive-order-id').val($(this).data('id'));
+            $('#hm-receive-order-num').text($(this).data('num'));
+            $('#hm-receive-modal-bg').fadeIn(150);
+        });
+        $(document).on('click', '#hm-receive-modal-close, #hm-receive-cancel', function () {
+            $('#hm-receive-modal-bg').fadeOut(150);
+        });
+        $(document).on('click', '#hm-receive-confirm', function () {
+            var id = $('#hm-receive-order-id').val();
+            $(this).prop('disabled', true).text('Confirming…');
+            $.post(HM.ajax_url, { action: 'hm_update_order_status', nonce: HM.nonce, order_id: id, new_status: 'Received' },
+            function (r) {
+                $('#hm-receive-confirm').prop('disabled', false).text('Confirm Receipt');
+                $('#hm-receive-modal-bg').fadeOut(150);
+                if (r.success) { HM.toast('Order marked as Received — added to Awaiting Fitting.', 'success'); loadOrders(); }
+                else HM.toast(r.data.msg || 'Error updating order.', 'error');
+            });
+        });
+
+        // ── Order detail modal ──────────────────────────────────────────
+        $(document).on('click', '.hm-order-detail-link', function (e) {
+            e.preventDefault();
+            var id = $(this).data('id');
+            $('#hm-order-detail-body').html('<div class="hm-loading"><div class="hm-spinner"></div></div>');
+            $('#hm-order-detail-modal-bg').fadeIn(150);
+            $.post(HM.ajax_url, { action: 'hm_get_order_detail', nonce: HM.nonce, order_id: id },
+            function (r) {
+                if (!r.success) { $('#hm-order-detail-body').html('<p style="color:#dc2626;">Could not load order.</p>'); return; }
+                var o   = r.data;
+                var bad = '<span class="hm-badge ' + (STATUS_BADGE[o.status] || 'hm-badge-gray') + '">' + esc(o.status) + '</span>';
+                var lines = (o.line_items || []).map(function(li) {
+                    return '<tr><td>' + esc(li.product_name) + '</td><td>' + esc(li.ear) + '</td><td>' + (li.qty||1) + '</td>' +
+                           '<td>' + eur(li.unit_price) + '</td><td>−' + eur(li.discount) + '</td><td>' + eur(li.line_total) + '</td></tr>';
+                }).join('');
+                var margin = o.gross_margin_percent !== null
+                    ? '<div class="hm-form-group"><label class="hm-label">Gross Margin</label><div>' + parseFloat(o.gross_margin_percent).toFixed(1) + '%</div></div>'
+                    : '';
+                var html =
+                    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;font-size:.875rem;">' +
+                        '<div><div class="hm-label">Status</div>' + bad + '</div>' +
+                        '<div><div class="hm-label">Patient</div><div>' + esc(o.patient_name) + ' · ' + esc(o.patient_number) + '</div></div>' +
+                        '<div><div class="hm-label">Clinic</div><div>' + esc(o.clinic_name) + '</div></div>' +
+                        '<div><div class="hm-label">Dispenser</div><div>' + esc(o.dispenser_name) + '</div></div>' +
+                        '<div><div class="hm-label">Order #</div><div>' + esc(o.order_number) + '</div></div>' +
+                        '<div><div class="hm-label">Submitted</div><div>' + fmtDate(o.created_at) + '</div></div>' +
+                    '</div>' +
+                    '<table class="hm-table" style="margin-bottom:14px;"><thead><tr><th>Product</th><th>Ear</th><th>Qty</th><th>Unit</th><th>Disc</th><th>Total</th></tr></thead><tbody>' + lines + '</tbody></table>' +
+                    '<div style="display:flex;justify-content:flex-end;"><div style="min-width:220px;font-size:.875rem;">' +
+                        '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#64748b;">Subtotal</span><span>' + eur(o.subtotal) + '</span></div>' +
+                        '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#64748b;">Discount</span><span>−' + eur(o.discount) + '</span></div>' +
+                        '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#64748b;">VAT</span><span>' + eur(o.vat_total) + '</span></div>' +
+                        (o.prsi_applicable ? '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#64748b;">PRSI</span><span style="color:#0BB4C4;">−' + eur(o.prsi_amount) + '</span></div>' : '') +
+                        '<div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:700;"><span>Grand Total</span><span>' + eur(o.grand_total) + '</span></div>' +
+                    '</div></div>' +
+                    margin +
+                    (o.notes ? '<div style="margin-top:12px;padding:10px 14px;background:#f8fafc;border-radius:8px;font-size:.875rem;"><strong>Notes: </strong>' + esc(o.notes) + '</div>' : '') +
+                    (o.duplicate_flag ? '<div style="margin-top:10px;padding:10px;background:#fff7ed;border:1px solid #f59e0b;border-radius:8px;font-size:.85rem;color:#92400e;">⚠️ <strong>Duplicate flag:</strong> ' + esc(o.duplicate_flag_reason) + '</div>' : '');
+
+                $('#hm-order-detail-title').text('Order ' + o.order_number);
+                $('#hm-order-detail-body').html(html);
+            });
+        });
+        $(document).on('click', '#hm-order-detail-close', function () {
+            $('#hm-order-detail-modal-bg').fadeOut(150);
+        });
+        $(document).on('click', '#hm-order-detail-modal-bg', function (e) {
+            if ($(e.target).is('#hm-order-detail-modal-bg')) $('#hm-order-detail-modal-bg').fadeOut(150);
+        });
+
+        // Reload after order created
+        $(document).on('hm:orderCreated', function () { loadOrders(); });
+    });
+
+})(jQuery);
+
+
+// ==========================================================================
+// APPROVAL QUEUE PAGE
+// ==========================================================================
+
+(function ($) {
+    'use strict';
+
+    function eur(n)    { return '€' + parseFloat(n || 0).toFixed(2); }
+    function fmtDate(dt) {
+        if (!dt) return '—';
+        return new Date(dt).toLocaleDateString('en-IE', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+    }
+    function esc(str) {
+        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function marginColor(pct) {
+        if (pct < 15)  return '#dc2626';
+        if (pct < 25)  return '#d97706';
+        return '#16a34a';
+    }
+
+    function loadApprovals() {
+        if (!$('#hm-approvals-list').length) return;
+
+        $('#hm-approvals-loading').show();
+        $('#hm-approvals-list').hide().empty();
+        $('#hm-approvals-empty').hide();
+
+        $.post(HM.ajax_url, { action: 'hm_get_pending_orders', nonce: HM.nonce }, function (r) {
+            $('#hm-approvals-loading').hide();
+            if (!r.success) { HM.toast(r.data.msg || 'Could not load approvals.', 'error'); return; }
+
+            var orders = r.data;
+            if (!orders || !orders.length) {
+                $('#hm-approvals-empty').show();
+                return;
+            }
+
+            orders.forEach(function (o) { renderApprovalCard(o); });
+            $('#hm-approvals-list').show();
+        }).fail(function () {
+            $('#hm-approvals-loading').hide();
+            HM.toast('Network error loading approvals.', 'error');
         });
     }
-};
 
-// ═══ BOOT ═══
-$(function(){if($('#hm-app').length)App.init();});
+    function renderApprovalCard(o) {
+        var tpl  = document.getElementById('hm-approval-card-tpl');
+        if (!tpl) return;
+        var node = tpl.content.cloneNode(true);
+        var $card = $(node.querySelector('.hm-approval-card'));
+        $card.attr('data-order-id', o.id);
+
+        // Header fields
+        $card.find('.hm-apc-order-num').text(o.order_number);
+        $card.find('.hm-apc-patient').text(o.patient_name + (o.patient_number ? ' · ' + o.patient_number : ''));
+        $card.find('.hm-apc-total').text(eur(o.grand_total));
+
+        // Flags
+        var flagHtml = '';
+        (o.flags || []).forEach(function (f) {
+            var cls = f.level === 'red' ? 'hm-badge-red' : 'hm-badge-amber';
+            flagHtml += '<span class="hm-badge ' + cls + '" title="' + esc(f.msg) + '" style="font-size:.75rem;">' + esc(f.msg) + '</span> ';
+        });
+        $card.find('.hm-apc-flags').html(flagHtml);
+
+        // Meta
+        $card.find('.hm-apc-dispenser').text(o.dispenser_name);
+        $card.find('.hm-apc-clinic').text(o.clinic_name);
+        $card.find('.hm-apc-date').text(fmtDate(o.created_at));
+        $card.find('.hm-apc-prsi').text(o.prsi_applicable ? 'Yes — ' + eur(o.prsi_amount) : 'No');
+
+        // Line items
+        var lines = '';
+        (o.line_items || []).forEach(function (li) {
+            var margin = '';
+            if (li.cost_price > 0 && li.line_total > 0) {
+                var totalCost = li.cost_price * (li.qty || 1);
+                var m = ((li.line_total - totalCost) / li.line_total) * 100;
+                margin = '<strong style="color:' + marginColor(m) + ';">' + m.toFixed(1) + '%</strong>';
+            } else {
+                margin = '<span style="color:#94a3b8;">—</span>';
+            }
+            lines += '<tr>' +
+                '<td>' + esc(li.product_name) + '</td>' +
+                '<td>' + esc(li.manufacturer) + '</td>' +
+                '<td>' + esc(li.style) + (li.range ? ' / ' + esc(li.range) : '') + '</td>' +
+                '<td>' + esc(li.ear) + '</td>' +
+                '<td>' + (li.qty || 1) + '</td>' +
+                '<td>' + eur(li.unit_price) + '</td>' +
+                '<td>−' + eur(li.discount) + '</td>' +
+                '<td>' + (li.vat_rate || 0) + '%</td>' +
+                '<td>' + eur(li.line_total) + '</td>' +
+                '<td class="hm-margin-col">' + margin + '</td>' +
+                '</tr>';
+        });
+        $card.find('.hm-apc-lines-tbody').html(lines);
+        $card.find('.hm-margin-col').show();
+
+        // Totals
+        $card.find('.hm-apc-subtotal').text(eur(o.subtotal));
+        $card.find('.hm-apc-discount').text('−' + eur(o.discount));
+        $card.find('.hm-apc-vat').text(eur(o.vat_total));
+        if (o.prsi_applicable) {
+            $card.find('.hm-apc-prsi-row').show();
+            $card.find('.hm-apc-prsi-val').text('−' + eur(o.prsi_amount));
+        } else {
+            $card.find('.hm-apc-prsi-row').hide();
+        }
+        $card.find('.hm-apc-grand').text(eur(o.grand_total));
+
+        var mPct = parseFloat(o.gross_margin_percent || 0);
+        $card.find('.hm-apc-margin').text(mPct.toFixed(1) + '%').css('color', marginColor(mPct));
+
+        // Notes
+        if (o.notes) {
+            $card.find('.hm-apc-notes').text(o.notes);
+            $card.find('.hm-apc-notes-wrap').show();
+        }
+
+        // Expand/collapse
+        $card.find('[data-toggle="expand"]').on('click', function () {
+            var $body = $card.find('.hm-apc-body');
+            var $icon = $card.find('.hm-expand-icon');
+            $body.slideToggle(200);
+            $icon.css('transform', $body.is(':visible') ? 'rotate(180deg)' : '');
+        });
+        // Auto-expand first card
+        if ($('#hm-approvals-list').children().length === 0) {
+            $card.find('.hm-apc-body').show();
+            $card.find('.hm-expand-icon').css('transform','rotate(180deg)');
+        }
+
+        // Approve
+        $card.find('.hm-apc-approve-btn').on('click', function () {
+            var $btn = $(this);
+            if (!confirm('Approve order ' + o.order_number + '?\nFinance will be notified to place the order.')) return;
+            $btn.prop('disabled', true).text('Approving…');
+            $.post(HM.ajax_url, { action: 'hm_approve_order', nonce: HM.nonce, order_id: o.id }, function (r) {
+                if (r.success) {
+                    $card.animate({opacity:0, height:0, marginBottom:0}, 300, function () {
+                        $card.remove();
+                        HM.toast('Order ' + o.order_number + ' approved — Finance notified.', 'success');
+                        if (!$('#hm-approvals-list').children(':visible').length) $('#hm-approvals-empty').show();
+                    });
+                } else {
+                    $btn.prop('disabled', false).text('Approve');
+                    HM.toast(r.data.msg || 'Error approving order.', 'error');
+                }
+            });
+        });
+
+        // Deny — open modal
+        $card.find('.hm-apc-deny-btn').on('click', function () {
+            $('#hm-deny-order-id').val(o.id);
+            $('#hm-deny-reason').val('');
+            $('#hm-deny-modal-bg').fadeIn(150);
+        });
+
+        $('#hm-approvals-list').append($card);
+    }
+
+    $(document).ready(function () {
+        if (!$('#hm-approvals-list').length) return;
+
+        loadApprovals();
+
+        $('#hm-approvals-refresh').on('click', loadApprovals);
+
+        // Deny modal
+        $(document).on('click', '#hm-deny-modal-close, #hm-deny-cancel', function () {
+            $('#hm-deny-modal-bg').fadeOut(150);
+        });
+        $(document).on('click', '#hm-deny-modal-bg', function (e) {
+            if ($(e.target).is('#hm-deny-modal-bg')) $('#hm-deny-modal-bg').fadeOut(150);
+        });
+        $(document).on('click', '#hm-deny-confirm', function () {
+            var id     = $('#hm-deny-order-id').val();
+            var reason = $.trim($('#hm-deny-reason').val());
+            if (!reason) { HM.toast('Please enter a denial reason.', 'error'); return; }
+
+            $(this).prop('disabled', true).text('Denying…');
+            $.post(HM.ajax_url, { action: 'hm_deny_order', nonce: HM.nonce, order_id: id, reason: reason }, function (r) {
+                $('#hm-deny-confirm').prop('disabled', false).text('Deny Order');
+                $('#hm-deny-modal-bg').fadeOut(150);
+                if (r.success) {
+                    var $card = $('[data-order-id="' + id + '"]');
+                    $card.animate({opacity:0, height:0, marginBottom:0}, 300, function () {
+                        $card.remove();
+                        HM.toast('Order denied — dispenser notified.', 'success');
+                        if (!$('#hm-approvals-list').children(':visible').length) $('#hm-approvals-empty').show();
+                    });
+                } else {
+                    HM.toast(r.data.msg || 'Error denying order.', 'error');
+                }
+            });
+        });
+    });
+
+})(jQuery);
+
+
+// ==========================================================================
+// AWAITING FITTING PAGE
+// ==========================================================================
+
+(function ($) {
+    'use strict';
+
+    function eur(n) { return '€' + parseFloat(n || 0).toFixed(2); }
+    function fmtDate(d) {
+        if (!d) return null;
+        return new Date(d).toLocaleDateString('en-IE', {day:'2-digit', month:'short', year:'numeric'});
+    }
+    function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function loadAwaitingFitting() {
+        if (!$('#hm-af-tbody').length) return;
+
+        $('#hm-af-loading').show();
+        $('#hm-af-tbody').html('<tr><td colspan="9" style="text-align:center;padding:2rem;color:#94a3b8;">Loading…</td></tr>');
+        $('#hm-af-empty').hide();
+
+        $.post(HM.ajax_url, {
+            action   : 'hm_get_awaiting_fitting',
+            nonce    : HM.nonce,
+            clinic_id: $('#hm-af-clinic').val()  || '',
+            date_from: $('#hm-af-date-from').val() || '',
+            date_to  : $('#hm-af-date-to').val()   || '',
+        }, function (r) {
+            $('#hm-af-loading').hide();
+            if (!r.success) { HM.toast('Could not load Awaiting Fitting.', 'error'); return; }
+
+            var rows = r.data;
+            if (!rows || !rows.length) {
+                $('#hm-af-tbody').html('');
+                $('#hm-af-empty').show();
+                return;
+            }
+
+            var today  = new Date(); today.setHours(0,0,0,0);
+            var html   = '';
+            rows.forEach(function (row) {
+                var fittingCell;
+                if (row.fitting_date) {
+                    var fd   = new Date(row.fitting_date);
+                    var past = fd < today;
+                    fittingCell = '<span style="color:' + (past ? '#dc2626' : '#151B33') + ';">' +
+                        fmtDate(row.fitting_date) + (past ? ' ⚠️' : '') + '</span>';
+                } else {
+                    fittingCell = '<span style="color:#d97706;">Not scheduled</span>';
+                }
+
+                html += '<tr>' +
+                    '<td>' + esc(row.patient_name) + '</td>' +
+                    '<td><code>' + esc(row.patient_number) + '</code></td>' +
+                    '<td>' + esc(row.clinic_name) + '</td>' +
+                    '<td>' + esc(row.dispenser_name) + '</td>' +
+                    '<td>' + esc(row.product_description) + '</td>' +
+                    '<td>' + eur(row.total_price) + '</td>' +
+                    '<td>' + (row.prsi_applicable ? '<span class="hm-badge hm-badge-teal">−' + eur(row.prsi_amount) + '</span>' : '—') + '</td>' +
+                    '<td>' + fittingCell + '</td>' +
+                    '<td><button class="hm-btn hm-btn-danger hm-btn-sm hm-prefit-cancel-btn" data-order-id="' + row.order_id + '">Pre-Fit Cancel</button></td>' +
+                    '</tr>';
+            });
+            $('#hm-af-tbody').html(html);
+        }).fail(function () {
+            $('#hm-af-loading').hide();
+            HM.toast('Network error.', 'error');
+        });
+    }
+
+    $(document).ready(function () {
+        if (!$('#hm-af-tbody').length) return;
+
+        loadAwaitingFitting();
+
+        $(document).on('change', '#hm-af-clinic, #hm-af-date-from, #hm-af-date-to', loadAwaitingFitting);
+        $(document).on('click', '#hm-af-refresh', loadAwaitingFitting);
+
+        // Pre-Fit Cancel modal
+        $(document).on('click', '.hm-prefit-cancel-btn', function () {
+            $('#hm-prefit-order-id').val($(this).data('order-id'));
+            $('#hm-prefit-reason').val('');
+            $('#hm-prefit-cancel-modal-bg').fadeIn(150);
+        });
+        $(document).on('click', '#hm-prefit-cancel-close, #hm-prefit-cancel-dismiss', function () {
+            $('#hm-prefit-cancel-modal-bg').fadeOut(150);
+        });
+        $(document).on('click', '#hm-prefit-cancel-confirm', function () {
+            var id     = $('#hm-prefit-order-id').val();
+            var reason = $.trim($('#hm-prefit-reason').val());
+            if (!reason) { HM.toast('A cancellation reason is required.', 'error'); return; }
+            $(this).prop('disabled', true).text('Cancelling…');
+            $.post(HM.ajax_url, { action: 'hm_prefit_cancel', nonce: HM.nonce, order_id: id, reason: reason }, function (r) {
+                $('#hm-prefit-cancel-confirm').prop('disabled', false).text('Confirm Cancellation');
+                $('#hm-prefit-cancel-modal-bg').fadeOut(150);
+                if (r.success) { HM.toast('Order cancelled and removed from Awaiting Fitting.', 'success'); loadAwaitingFitting(); }
+                else HM.toast(r.data.msg || 'Error cancelling.', 'error');
+            });
+        });
+    });
 
 })(jQuery);

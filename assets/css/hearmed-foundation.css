@@ -10,11 +10,11 @@
    - Elementor containers (see hearmed-layout.css for the chain)
    - Sidebar (Elementor owns it entirely)
    - Topbar / searchbar (Elementor owns it entirely)
-   - .hm-main or #hm-app (see hearmed-layout.css)
+  - .hm-main or #hm-app (see hearmed-layout.css)
 
    CSS hierarchy (height chain):
      foundation.css  → body 100vh + WP wrappers (height:100%, flex col)
-     layout.css      → Elementor chain + .hm-main (scroller) + #hm-app
+  layout.css      → Elementor chain + .hm-main (scroller) + #hm-app
      core.css        → design tokens, components, scoped to #hm-app
      design.css      → extended design system, scoped to #hm-app
      module CSS      → section-specific visuals inside #hm-app
@@ -64,5 +64,5 @@ body.hm-portal-page .site-main {
    - Sidebar: NOT styled here — Elementor owns it
    - Topbar:  NOT styled here — Elementor owns it
    - Elementor containers: see hearmed-layout.css for the height chain
-   - .hm-main and #hm-app: see hearmed-layout.css
+  - .hm-main and #hm-app: see hearmed-layout.css
    ============================================================================ */
