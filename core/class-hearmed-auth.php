@@ -136,11 +136,13 @@ class HearMed_Auth {
         }
         
         // Get clinics from dispenser meta
-        $clinic_ids = /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $dispenser_id, 'clinic_ids', true );
+        // TODO: USE PostgreSQL: Get from table columns
+        $clinic_ids = get_post_meta( $dispenser_id, 'clinic_ids', true );
         
         if ( ! $clinic_ids || ! is_array( $clinic_ids ) ) {
             // Fallback: single clinic_id
-            $clinic_id = /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $dispenser_id, 'clinic_id', true );
+            // TODO: USE PostgreSQL: Get from table columns
+            $clinic_id = get_post_meta( $dispenser_id, 'clinic_id', true );
             return $clinic_id ? [ intval( $clinic_id ) ] : [];
         }
         
@@ -177,7 +179,8 @@ class HearMed_Auth {
                 continue;
             }
             
-            $dispensers = /* USE PostgreSQL: HearMed_DB::get_results() */ /* get_posts([
+            // TODO: USE PostgreSQL: HearMed_DB::get_results()
+            $dispensers = get_posts([
                 'post_type' => 'dispenser',
                 'posts_per_page' => 1,
                 'post_status' => 'publish',
@@ -204,7 +207,8 @@ class HearMed_Auth {
      * @return array Clinic IDs
      */
     private function get_all_clinic_ids() {
-        $clinics = /* USE PostgreSQL: HearMed_DB::get_results() */ /* get_posts([
+        // TODO: USE PostgreSQL: HearMed_DB::get_results()
+        $clinics = get_posts([
             'post_type' => 'clinic',
             'posts_per_page' => -1,
             'post_status' => 'publish',
