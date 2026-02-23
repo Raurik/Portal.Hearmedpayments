@@ -2,17 +2,10 @@
 /**
  * HearMed KPI Targets Management
  *
- * ⚠️  SCAFFOLD - TODO: Implement KPI target tracking and commission calculations
- *
- * Planned features:
- * - KPI target definition and management
- * - Commission tier configuration
- * - Performance dashboard for staff
- * - Automated commission calculation via PostgreSQL function
- * - Target achievement tracking
- *
+ * Todo: Implement KPI target tracking and commission calculations
+ * 
  * @package HearMed_Portal
- * @since   5.0.0
+ * @since   4.0.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
