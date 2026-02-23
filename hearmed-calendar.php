@@ -47,7 +47,8 @@ function hearmed_fix_old_domain( $url ) {
     return $url;
 }
 
-// Load PostgreSQL connection classes
+// Load core helpers and PostgreSQL connection classes
+require_once HEARMED_PATH . 'core/class-hearmed-logger.php';
 require_once HEARMED_PATH . 'core/class-hearmed-pg.php';
 require_once HEARMED_PATH . 'core/class-hearmed-db.php';  // Main database abstraction
 
@@ -58,6 +59,29 @@ require_once HEARMED_PATH . 'includes/ajax-handlers.php';
 if ( is_admin() ) {
     require_once HEARMED_PATH . 'admin/admin-debug.php';
 }
+
+// Log any fatal PHP errors on shutdown to help diagnose white screens.
+add_action( 'shutdown', function() {
+    if ( ! class_exists( 'HearMed_Logger' ) ) {
+        return;
+    }
+
+    $error = error_get_last();
+    if ( ! $error ) {
+        return;
+    }
+
+    $fatal_types = [ E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR ];
+    if ( in_array( $error['type'], $fatal_types, true ) ) {
+        HearMed_Logger::error( 'Fatal PHP error on shutdown', [
+            'type'    => $error['type'],
+            'message' => $error['message'],
+            'file'    => $error['file'],
+            'line'    => $error['line'],
+            'uri'     => $_SERVER['REQUEST_URI'] ?? '',
+        ] );
+    }
+} );
 
 // REMOVE THEME FOOTER
 remove_action( 'wp_footer', 'wp_footer' );

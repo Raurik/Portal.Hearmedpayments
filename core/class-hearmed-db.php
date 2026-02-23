@@ -57,7 +57,12 @@ class HearMed_DB {
         }
         
         if (!defined('HEARMED_PG_HOST')) {
-            error_log('[HearMed DB] PostgreSQL credentials not defined in wp-config.php');
+            self::$last_error = 'PostgreSQL credentials not defined in wp-config.php';
+            if ( class_exists( 'HearMed_Logger' ) ) {
+                HearMed_Logger::error( 'DB connect failed: missing constants', [] );
+            } else {
+                error_log('[HearMed DB] PostgreSQL credentials not defined in wp-config.php');
+            }
             return false;
         }
         
@@ -75,7 +80,11 @@ class HearMed_DB {
         
         if (!self::$pg_conn) {
             self::$last_error = pg_last_error() ?: 'Connection failed';
-            error_log('[HearMed DB] PostgreSQL connection failed');
+            if ( class_exists( 'HearMed_Logger' ) ) {
+                HearMed_Logger::error( 'PostgreSQL connection failed', [ 'error' => self::$last_error ] );
+            } else {
+                error_log('[HearMed DB] PostgreSQL connection failed: ' . self::$last_error);
+            }
             return false;
         }
         
@@ -104,7 +113,11 @@ class HearMed_DB {
         
         if (!$result) {
             self::$last_error = pg_last_error($conn);
-            error_log('[HearMed DB] Query failed: ' . self::$last_error);
+            if ( class_exists( 'HearMed_Logger' ) ) {
+                HearMed_Logger::error( 'DB get_results failed', [ 'sql' => $sql, 'error' => self::$last_error ] );
+            } else {
+                error_log('[HearMed DB] Query failed: ' . self::$last_error);
+            }
             return [];
         }
         
@@ -163,7 +176,11 @@ class HearMed_DB {
         
         if (!$result) {
             self::$last_error = pg_last_error($conn);
-            error_log('[HearMed DB] Insert failed: ' . self::$last_error);
+            if ( class_exists( 'HearMed_Logger' ) ) {
+                HearMed_Logger::error( 'DB insert failed', [ 'table' => $table_name, 'error' => self::$last_error ] );
+            } else {
+                error_log('[HearMed DB] Insert failed: ' . self::$last_error);
+            }
             return false;
         }
         
@@ -208,7 +225,11 @@ class HearMed_DB {
         
         if (!$result) {
             self::$last_error = pg_last_error($conn);
-            error_log('[HearMed DB] Update failed: ' . self::$last_error);
+            if ( class_exists( 'HearMed_Logger' ) ) {
+                HearMed_Logger::error( 'DB update failed', [ 'table' => $table_name, 'error' => self::$last_error ] );
+            } else {
+                error_log('[HearMed DB] Update failed: ' . self::$last_error);
+            }
             return false;
         }
         
@@ -244,7 +265,11 @@ class HearMed_DB {
         
         if (!$result) {
             self::$last_error = pg_last_error($conn);
-            error_log('[HearMed DB] Delete failed: ' . self::$last_error);
+            if ( class_exists( 'HearMed_Logger' ) ) {
+                HearMed_Logger::error( 'DB delete failed', [ 'table' => $table_name, 'error' => self::$last_error ] );
+            } else {
+                error_log('[HearMed DB] Delete failed: ' . self::$last_error);
+            }
             return false;
         }
         
@@ -296,7 +321,11 @@ class HearMed_DB {
 
         if (!$result) {
             self::$last_error = pg_last_error($conn);
-            error_log('[HearMed DB] Query failed: ' . self::$last_error);
+            if ( class_exists( 'HearMed_Logger' ) ) {
+                HearMed_Logger::error( 'DB query failed', [ 'sql' => $sql, 'error' => self::$last_error ] );
+            } else {
+                error_log('[HearMed DB] Query failed: ' . self::$last_error);
+            }
         }
 
         return $result;
