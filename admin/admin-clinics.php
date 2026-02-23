@@ -92,51 +92,57 @@ class HearMed_Admin_Clinics {
                 <button class="hm-btn hm-btn-teal" onclick="hmClinic.open()">+ Add Clinic</button>
             </div>
 
-            <?php if (empty($clinics)): ?>
-                <div class="hm-empty-state">
-                    <p>No clinics yet. Add your first clinic to get started.</p>
+            <div class="hm-card hm-clinics-card">
+                <div class="hm-card-body hm-card-body-flush">
+                    <?php if (empty($clinics)): ?>
+                        <div class="hm-empty-state hm-clinics-empty">
+                            <p>No clinics yet. Add your first clinic to get started.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="hm-table-wrap">
+                            <table class="hm-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:36px">Colour</th>
+                                        <th>Name</th>
+                                        <th>Address</th>
+                                        <th>Phone</th>
+                                        <th>Email</th>
+                                        <th>Eircode</th>
+                                        <th>Status</th>
+                                        <th style="width:100px"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($clinics as $c): ?>
+                                    <tr data-id="<?php echo $c['id']; ?>">
+                                        <td>
+                                            <span class="hm-colour-dot" style="background:<?php echo esc_attr($c['clinic_colour']); ?>;color:<?php echo esc_attr($c['text_colour']); ?>"></span>
+                                        </td>
+                                        <td><strong><?php echo esc_html($c['name']); ?></strong></td>
+                                        <td><?php echo esc_html($c['address']); ?></td>
+                                        <td><?php echo esc_html($c['clinic_phone']); ?></td>
+                                        <td><?php echo esc_html($c['clinic_email']); ?></td>
+                                        <td><?php echo esc_html($c['eircode']); ?></td>
+                                        <td>
+                                            <?php if ($c['is_active'] === '1'): ?>
+                                                <span class="hm-badge hm-badge-green">Active</span>
+                                            <?php else: ?>
+                                                <span class="hm-badge hm-badge-red">Inactive</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="hm-table-acts">
+                                            <button class="hm-btn hm-btn-sm" onclick='hmClinic.open(<?php echo json_encode($c); ?>)'>Edit</button>
+                                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmClinic.del(<?php echo $c['id']; ?>,'<?php echo esc_js($c['name']); ?>')">Delete</button>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
                 </div>
-            <?php else: ?>
-            <table class="hm-table">
-                <thead>
-                    <tr>
-                        <th style="width:36px">Colour</th>
-                        <th>Name</th>
-                        <th>Address</th>
-                        <th>Phone</th>
-                        <th>Email</th>
-                        <th>Eircode</th>
-                        <th>Status</th>
-                        <th style="width:100px"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php foreach ($clinics as $c): ?>
-                    <tr data-id="<?php echo $c['id']; ?>">
-                        <td>
-                            <span class="hm-colour-dot" style="background:<?php echo esc_attr($c['clinic_colour']); ?>;color:<?php echo esc_attr($c['text_colour']); ?>"></span>
-                        </td>
-                        <td><strong><?php echo esc_html($c['name']); ?></strong></td>
-                        <td><?php echo esc_html($c['address']); ?></td>
-                        <td><?php echo esc_html($c['clinic_phone']); ?></td>
-                        <td><?php echo esc_html($c['clinic_email']); ?></td>
-                        <td><?php echo esc_html($c['eircode']); ?></td>
-                        <td>
-                            <?php if ($c['is_active'] === '1'): ?>
-                                <span class="hm-badge hm-badge-green">Active</span>
-                            <?php else: ?>
-                                <span class="hm-badge hm-badge-red">Inactive</span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="hm-table-acts">
-                            <button class="hm-btn hm-btn-sm" onclick='hmClinic.open(<?php echo json_encode($c); ?>)'>Edit</button>
-                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmClinic.del(<?php echo $c['id']; ?>,'<?php echo esc_js($c['name']); ?>')">Delete</button>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-            <?php endif; ?>
+            </div>
 
             <!-- Modal -->
             <div class="hm-modal-bg" id="hm-clinic-modal">
