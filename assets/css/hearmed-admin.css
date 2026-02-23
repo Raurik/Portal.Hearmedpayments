@@ -135,7 +135,7 @@
     font-size: 11px;
     color: #64748b;
 }
-.hm-admin .hm-table-acts { display: flex; gap: 8px; justify-content: flex-end; white-space: nowrap; }
+.hm-admin .hm-table-acts { display: flex; gap: 8px; justify-content: flex-end; white-space: nowrap; align-items: center; }
 
 /* ═══════════════════════════════════════
    PILL SELECTORS — Outcome style radios
@@ -330,41 +330,49 @@
 
 #hm-clinics-app .hm-clinics-table-card .hm-table {
     margin: 0;
+    table-layout: fixed;
+    width: 100%;
 }
 
 #hm-clinics-app .hm-clinics-table-card .hm-table th {
     background: #f8fafc;
-    padding: 8px 18px;
+    padding: 8px 14px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.03em;
     color: #64748b;
     border-bottom: 1px solid #e2e8f0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #hm-clinics-app .hm-clinics-table-card .hm-table th:first-child {
-    padding-left: 20px;
+    padding-left: 16px;
 }
 
 #hm-clinics-app .hm-clinics-table-card .hm-table th:last-child {
-    padding-right: 20px;
+    padding-right: 16px;
 }
 
 #hm-clinics-app .hm-clinics-table-card .hm-table td {
-    padding: 10px 18px;
+    padding: 10px 14px;
     font-size: 13px;
     color: #334155;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #hm-clinics-app .hm-clinics-table-card .hm-table td:first-child {
-    padding-left: 20px;
+    padding-left: 16px;
 }
 
 #hm-clinics-app .hm-clinics-table-card .hm-table td:last-child {
-    padding-right: 20px;
+    padding-right: 16px;
+    overflow: visible;
 }
 
 #hm-clinics-app .hm-clinics-table-card .hm-table tbody tr:last-child td {

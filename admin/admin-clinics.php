@@ -98,23 +98,23 @@ class HearMed_Admin_Clinics {
                 </div>
             <?php else: ?>
                 <div class="hm-card hm-clinics-table-card">
-                    <table class="hm-table">
+                    <table class="hm-table hm-clinics-table">
                         <thead>
                             <tr>
-                                <th style="width:36px">Colour</th>
-                                <th>Name</th>
-                                <th>Address</th>
-                                <th>Phone</th>
-                                <th>Email</th>
-                                <th>Eircode</th>
-                                <th>Status</th>
-                                <th style="width:100px"></th>
+                                <th style="width:50px">Colour</th>
+                                <th style="width:140px">Name</th>
+                                <th style="width:180px">Address</th>
+                                <th style="width:120px">Phone</th>
+                                <th style="width:160px">Email</th>
+                                <th style="width:90px">Eircode</th>
+                                <th style="width:80px">Status</th>
+                                <th style="width:140px; text-align:right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                         <?php foreach ($clinics as $c): ?>
                             <tr data-id="<?php echo $c['id']; ?>">
-                                <td>
+                                <td style="text-align:center">
                                     <span class="hm-colour-dot" style="background:<?php echo esc_attr($c['clinic_colour']); ?>;color:<?php echo esc_attr($c['text_colour']); ?>"></span>
                                 </td>
                                 <td><strong><?php echo esc_html($c['name']); ?></strong></td>
