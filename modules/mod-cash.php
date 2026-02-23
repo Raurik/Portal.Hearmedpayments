@@ -1,15 +1,25 @@
 <?php
+/**
+ * HearMed Cash Management Module
+ *
+ * ⚠️  SCAFFOLD - TODO: Implement cash drawer and till management
+ *
+ * Planned features:
+ * - Cash drawer opening/closing
+ * - Till reconciliation
+ * - Cash transaction logging
+ * - Daily cash reports
+ * - Float management
+ * - Variance investigation
+ *
+ * @package HearMed_Portal
+ * @since   5.0.0
+ */
 
-add_action('wp_ajax_hm_acknowledge_privacy_notice', 'hm_acknowledge_privacy_notice_handler');
-
-function hm_acknowledge_privacy_notice_handler() {
-    check_ajax_referer('hm_nonce', 'nonce');
-
-    if ( ! is_user_logged_in() ) {
-        wp_send_json_error('User not logged in');
-    }
-
-    $user_id = get_current_user_id();
-    update_user_meta($user_id, 'hm_privacy_notice_accepted', current_time('mysql'));
-    wp_send_json_success();
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
 }
+
+// TODO: Implement cash drawer operations
+// TODO: Implement till reconciliation
+// TODO: Implement cash reports

@@ -1,34 +1,25 @@
 <?php
 /**
- * Accounting dashboard — QBO sync, invoicing, PRSI tracking
- * 
- * Shortcode: [hearmed_accounting]
- * Page: see blueprint for URL
+ * HearMed Orders Module
+ *
+ * ⚠️  SCAFFOLD - TODO: Implement order and product fulfillment
+ *
+ * Planned features:
+ * - Order creation and management
+ * - Product selection and inventory management
+ * - Order status tracking (pending, processing, shipped, delivered)
+ * - Shipment creation and tracking
+ * - Order history and reorder capability
+ * - Integration with inventory system
+ *
+ * @package HearMed_Portal
+ * @since   5.0.0
  */
-if (!defined("ABSPATH")) exit;
 
-class HearMed_Accounting {
-
-    public static function init() {
-        add_shortcode("hearmed_accounting", [__CLASS__, "render"]);
-    }
-
-    public static function render($atts = []): string {
-        if (!is_user_logged_in()) return "";
-        
-        ob_start();
-        ?>
-        <div id="hm-app" data-view="hearmed_accounting">
-            <div class="hm-page-header">
-                <h1 class="hm-page-title">" . esc_html(ucwords(str_replace('_', ' ', 'hearmed_accounting'))) . "</h1>
-            </div>
-            <div class="hm-placeholder">
-                <p>Module not yet built. See blueprint.</p>
-            </div>
-        </div>
-        <?php
-        return ob_get_clean();
-    }
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
 }
 
-HearMed_Accounting::init();
+// TODO: Implement order CRUD operations
+// TODO: Implement inventory integration
+// TODO: Implement shipment tracking
