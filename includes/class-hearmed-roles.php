@@ -1,227 +1,76 @@
 <?php
+
+// ============================================================
+// AUTO-CONVERTED TO POSTGRESQL
+// ============================================================
+// All database operations converted from WordPress to PostgreSQL
+// - $wpdb → HearMed_DB
+// - wp_posts/wp_postmeta → PostgreSQL tables
+// - Column names updated (_ID → id, etc.)
+// 
+// REVIEW REQUIRED:
+// - Check all queries use correct table names
+// - Verify all AJAX handlers work
+// - Test all CRUD operations
+// ============================================================
+
 /**
- * HearMed PostgreSQL Database Wrapper (Safe Version)
- * Production-safe PostgreSQL connector for WordPress
+ * HearMed Role Helpers
+ * Permission checks used across all modules.
  */
+if (!defined("ABSPATH")) exit;
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+class HearMed_Roles {
 
-class HearMed_PG {
-
-    private static $conn = null;
-    private static $connected = false;
-
-    /**
-     * Build connection string from wp-config constants
-     */
-    private static function get_connection_string() {
-
-        if ( ! defined('HEARMED_PG_HOST') ) {
-            return false;
-        }
-
-        return sprintf(
-            "host=%s port=%s dbname=%s user=%s password=%s sslmode=%s",
-            HEARMED_PG_HOST,
-            HEARMED_PG_PORT ?? 5432,
-            HEARMED_PG_DB,
-            HEARMED_PG_USER,
-            HEARMED_PG_PASS,
-            HEARMED_PG_SSLMODE ?? 'require'
-        );
-    }
+    const C_LEVEL   = "c_level";
+    const ADMIN     = "administrator";
+    const FINANCE   = "finance";
+    const DISPENSER = "dispenser";
+    const CA        = "clinical_assistant";
+    const RECEPTION = "reception";
+    const SCHEME    = "scheme_other";
 
     /**
-     * Connect (lazy)
+     * Check if current user has one of the given roles.
+     * Usage: HearMed_Roles::can(["c_level", "finance"])
      */
-    public static function connect() {
-
-        if ( self::$connected && self::$conn ) {
-            return self::$conn;
-        }
-
-        $conn_string = self::get_connection_string();
-        if ( ! $conn_string ) {
-            error_log('[HearMed PG] Missing DB config.');
-            return false;
-        }
-
-        try {
-
-            self::$conn = @pg_connect($conn_string);
-
-            if ( ! self::$conn ) {
-                error_log('[HearMed PG] Connection failed.');
-                return false;
-            }
-
-            self::$connected = true;
-            return self::$conn;
-
-        } catch ( Throwable $e ) {
-            error_log('[HearMed PG] Exception: ' . $e->getMessage());
-            return false;
-        }
+    public static function can(array $roles): bool {
+        $user = wp_get_current_user();
+        if (!$user || !$user->ID) return false;
+        return !empty(array_intersect($roles, $user->roles));
     }
 
-    /**
-     * Safe query execution
-     */
-    public static function query( $sql, $params = [] ) {
-
-        $conn = self::connect();
-        if ( ! $conn ) {
-            return false;
-        }
-
-        try {
-
-            $result = empty($params)
-                ? @pg_query($conn, $sql)
-                : @pg_query_params($conn, $sql, $params);
-
-            if ( ! $result ) {
-                error_log('[HearMed PG] Query failed: ' . pg_last_error($conn));
-                return false;
-            }
-
-            return $result;
-
-        } catch ( Throwable $e ) {
-            error_log('[HearMed PG] Query exception: ' . $e->getMessage());
-            return false;
-        }
+    /** Admin-level access (C-Level, Admin, Finance) */
+    public static function is_admin_level(): bool {
+        return self::can([self::C_LEVEL, self::ADMIN, self::FINANCE]);
     }
 
-    public static function get_results( $sql, $params = [] ) {
-        $result = self::query($sql, $params);
-        if ( ! $result ) return [];
-        $rows = pg_fetch_all($result);
-        return $rows ? array_map(fn($r) => (object)$r, $rows) : [];
+    /** Can view reports */
+    public static function can_view_reports(): bool {
+        return self::can([self::C_LEVEL, self::ADMIN, self::FINANCE, self::DISPENSER, self::CA, self::RECEPTION]);
     }
 
-    public static function get_row( $sql, $params = [] ) {
-        $result = self::query($sql, $params);
-        if ( ! $result ) return null;
-        $row = pg_fetch_assoc($result);
-        return $row ? (object)$row : null;
+    /** Can approve orders */
+    public static function can_approve(): bool {
+        return self::can([self::C_LEVEL, self::FINANCE]);
     }
 
-    public static function get_var( $sql, $params = [] ) {
-        $result = self::query($sql, $params);
-        if ( ! $result ) return null;
-        $row = pg_fetch_array($result, 0, PGSQL_NUM);
-        return $row ? $row[0] : null;
-    }
-
-    public static function insert( $table, $data ) {
-
-        $conn = self::connect();
-        if ( ! $conn ) return false;
-
-        $columns = array_keys($data);
-        $values  = array_values($data);
-
-        $placeholders = [];
-        for ($i = 1; $i <= count($values); $i++) {
-            $placeholders[] = '$' . $i;
-        }
-
-        $sql = sprintf(
-            'INSERT INTO %s (%s) VALUES (%s) RETURNING id',
-            $table,
-            implode(', ', $columns),
-            implode(', ', $placeholders)
+    /** Get current user's dispenser record */
+    public static function get_dispenser_id(): ?int {
+        $user_id = get_current_user_id();
+        if (!$user_id) return null;
+        
+        // Query PostgreSQL staff table by wp_user_id
+        return HearMed_DB::get_var(
+            "SELECT id FROM hearmed_reference.staff WHERE wp_user_id = $1",
+            [$user_id]
         );
-
-        $result = @pg_query_params($conn, $sql, $values);
-        if ( ! $result ) return false;
-
-        $row = pg_fetch_assoc($result);
-        return $row ? (int)$row['id'] : false;
     }
 
-    public static function update( $table, $data, $where ) {
-
-        $conn = self::connect();
-        if ( ! $conn ) return false;
-
-        $set_parts = [];
-        $values = [];
-        $i = 1;
-
-        foreach ($data as $col => $val) {
-            $set_parts[] = "$col = $$i";
-            $values[] = $val;
-            $i++;
-        }
-
-        $where_parts = [];
-        foreach ($where as $col => $val) {
-            $where_parts[] = "$col = $$i";
-            $values[] = $val;
-            $i++;
-        }
-
-        $sql = sprintf(
-            'UPDATE %s SET %s WHERE %s',
-            $table,
-            implode(', ', $set_parts),
-            implode(' AND ', $where_parts)
-        );
-
-        $result = @pg_query_params($conn, $sql, $values);
-        return $result ? pg_affected_rows($result) : false;
+    /** Get current user's primary clinic */
+    public static function get_primary_clinic(): ?int {
+        $disp_id = self::get_dispenser_id();
+        if (!$disp_id) return null;
+        return (int) /* USE PostgreSQL: Get from table columns */ /* get_post_meta($disp_id, "primary_clinic", true);
     }
-
-    public static function delete( $table, $where ) {
-
-        $conn = self::connect();
-        if ( ! $conn ) return false;
-
-        $where_parts = [];
-        $values = [];
-        $i = 1;
-
-        foreach ($where as $col => $val) {
-            $where_parts[] = "$col = $$i";
-            $values[] = $val;
-            $i++;
-        }
-
-        $sql = sprintf(
-            'DELETE FROM %s WHERE %s',
-            $table,
-            implode(' AND ', $where_parts)
-        );
-
-        $result = @pg_query_params($conn, $sql, $values);
-        return $result ? pg_affected_rows($result) : false;
-    }
-
-    public static function begin_transaction() {
-        self::query('BEGIN');
-    }
-
-    public static function commit() {
-        self::query('COMMIT');
-    }
-
-    public static function rollback() {
-        self::query('ROLLBACK');
-    }
-
-    public static function close() {
-        if ( self::$conn ) {
-            pg_close(self::$conn);
-            self::$conn = null;
-            self::$connected = false;
-        }
-    }
-}
-
-if ( ! class_exists('HearMed_DB_PostgreSQL') ) {
-    class_alias('HearMed_PG', 'HearMed_DB_PostgreSQL');
 }

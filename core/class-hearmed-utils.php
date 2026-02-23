@@ -1,9 +1,8 @@
 <?php
 /**
- * HearMed Core System
+ * HearMed Utilities
  * 
- * Central system controller. Manages all initialization, routing, and core services.
- * This is the ONLY entry point for the entire system.
+ * Provides formatting and helper functions.
  * 
  * @package HearMed_Portal
  * @since 4.0.0
@@ -13,224 +12,288 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class HearMed_Core {
+class HearMed_Utils {
     
     /**
-     * Single instance
-     */
-    private static $instance = null;
-    
-    /**
-     * Core components
-     */
-    public $enqueue;
-    public $router;
-    public $auth;
-    public $db;
-    public $ajax;
-    
-    /**
-     * Get singleton instance
-     */
-    public static function instance() {
-        if ( null === self::$instance ) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
-    
-    /**
-     * Constructor - Initialize core components
-     */
-    private function __construct() {
-        $this->load_dependencies();
-        $this->init_components();
-        $this->init_hooks();
-    }
-    
-    /**
-     * Load required core files
-     */
-    private function load_dependencies() {
-        // Core utilities
-        require_once HEARMED_PATH . 'core/class-hearmed-utils.php';
-        require_once HEARMED_PATH . 'core/class-hearmed-db.php';
-        require_once HEARMED_PATH . 'core/class-hearmed-auth.php';
-        require_once HEARMED_PATH . 'core/class-hearmed-enqueue.php';
-        require_once HEARMED_PATH . 'core/class-hearmed-router.php';
-        require_once HEARMED_PATH . 'core/class-hearmed-ajax.php';
-        
-        // Load selected legacy includes for compatibility (avoid duplicate class definitions)
-        $safe_legacy = [
-            HEARMED_PATH . 'includes/class-hearmed-roles.php',
-            HEARMED_PATH . 'includes/class-cpts.php',
-        ];
-        foreach ( $safe_legacy as $file ) {
-            if ( file_exists( $file ) ) {
-                require_once $file;
-            }
-        }
-
-        // Load admin shortcode providers used by portal pages.
-        // These files self-register shortcodes in their constructors and are
-        // required on frontend portal routes where the shortcodes are rendered.
-        $admin_shortcode_files = [
-            HEARMED_PATH . 'admin/admin-console.php',
-            HEARMED_PATH . 'admin/admin-users.php',
-            HEARMED_PATH . 'admin/admin-clinics.php',
-            HEARMED_PATH . 'admin/admin-products.php',
-            HEARMED_PATH . 'admin/admin-kpi-targets.php',
-            HEARMED_PATH . 'admin/admin-sms-templates.php',
-            HEARMED_PATH . 'admin/admin-audit-export.php',
-            HEARMED_PATH . 'admin/admin-audiometers.php',
-            HEARMED_PATH . 'admin/admin-settings.php',
-            HEARMED_PATH . 'admin/admin-taxonomies.php',
-        ];
-        foreach ( $admin_shortcode_files as $file ) {
-            if ( file_exists( $file ) ) {
-                require_once $file;
-            }
-        }
-    }
-    
-    /**
-     * Initialize core components
-     */
-    private function init_components() {
-        $this->db      = new HearMed_DB();
-        $this->auth    = new HearMed_Auth();
-        $this->enqueue = new HearMed_Enqueue();
-        $this->router  = new HearMed_Router();
-        $this->ajax    = new HearMed_Ajax();
-    }
-    
-    /**
-     * Initialize WordPress hooks
-     */
-    private function init_hooks() {
-        // Register shortcodes early
-        add_action( 'init', [ $this->router, 'register_shortcodes' ], 5 );
-        
-        // System ready hook
-        add_action( 'init', [ $this, 'system_ready' ], 10 );
-    }
-    
-    /**
-     * System ready callback
-     */
-    public function system_ready() {
-        // Hook for when system is fully initialized
-        do_action( 'hearmed_system_ready' );
-    }
-    
-    /**
-     * Get the full database table name for a given slug.
-     *
-     * NOW RETURNS POSTGRESQL SCHEMA.TABLE FORMAT!
-     * Uses mapping from HearMed_PG::table()
-     *
-     * @param string $slug Table slug (e.g. 'appointments', 'calendar_settings')
-     * @return string Full table name with schema
-     */
-    public static function table( $slug ) {
-        return HearMed_PG::table( $slug );
-    }
-
-    /**
-     * Read a single setting value from the calendar_settings table.
-     *
-     * @param string $key     Column name in the calendar_settings table
-     * @param mixed  $default Value to return when the table or column has no data
-     * @return mixed Setting value or $default
-     */
-    public static function setting( $key, $default = '' ) {
-        global $wpdb;
-        $t = self::table( 'calendar_settings' );
-        
-        // For PostgreSQL, check table existence differently
-        $table_exists = $wpdb->get_var( 
-            $wpdb->prepare( 
-                "SELECT to_regclass(%s)", 
-                $t 
-            ) 
-        ) !== null;
-        
-        if ( ! $table_exists ) {
-            return $default;
-        }
-        
-        // PostgreSQL uses double quotes for identifiers, not backticks
-        $val = $wpdb->get_var( 
-            $wpdb->prepare(
-                "SELECT \"{$key}\" FROM {$t} LIMIT 1"
-            )
-        );
-        
-        return ( $val !== null ) ? $val : $default;
-    }
-
-    /**
-     * Static logger method (called during activation/deactivation)
+     * Format money amount
      * 
-     * @param string $action Action being logged
-     * @param string $entity Entity type
-     * @param int $entity_id Entity ID
-     * @param array $meta Additional metadata
+     * @param float $amount Amount
+     * @param string $currency Currency symbol (default: €)
+     * @return string Formatted money
      */
-    public static function log( $action, $entity, $entity_id = 0, $meta = [] ) {
-        global $wpdb;
-        
-        // Only log if debug is enabled OR during activation/deactivation
-        $should_log = ( defined('WP_DEBUG') && WP_DEBUG ) || 
-                      in_array( $action, ['plugin_activated', 'plugin_deactivated'] );
-        
-        if ( ! $should_log ) {
-            return;
-        }
-        
-        // Try to log to database if audit table exists
-        $audit_table = HearMed_DB::table('audit_log');
-        
-        // For PostgreSQL, check table existence
-        $table_exists = $wpdb->get_var( 
-            $wpdb->prepare( 
-                "SELECT to_regclass(%s)", 
-                $audit_table 
-            ) 
-        ) !== null;
-        
-        if ( $table_exists ) {
-            $wpdb->insert(
-                $audit_table,
-                [
-                    'action' => $action,
-                    'entity_type' => $entity,
-                    'entity_id' => intval( $entity_id ),
-                    'user_id' => get_current_user_id(),
-                    'details' => wp_json_encode( $meta ),
-                    'created_at' => current_time( 'mysql' ),
-                ],
-                ['%s', '%s', '%d', '%d', '%s', '%s']
-            );
-        }
-        
-        // Always log to error_log for debugging
-        error_log(
-            sprintf(
-                '[HearMed] %s | %s #%d | User: %d | Meta: %s',
-                $action,
-                $entity,
-                intval( $entity_id ),
-                get_current_user_id(),
-                wp_json_encode( $meta )
-            )
-        );
+    public static function money( $amount, $currency = '€' ) {
+        return $currency . number_format( (float) $amount, 2 );
     }
-}
+    
+    /**
+     * Get clinic name by ID
+     * 
+     * @param int $clinic_id Clinic ID
+     * @return string Clinic name
+     */
+    public static function clinic_name( $clinic_id ) {
+        if ( ! $clinic_id ) {
+            return 'Unknown Clinic';
+        }
+        
+        $clinic = get_post( $clinic_id );
+        
+        return $clinic ? $clinic->post_title : 'Unknown Clinic';
+    }
+    
+    /**
+     * Get dispenser name by ID
+     * 
+     * @param int $dispenser_id Dispenser ID
+     * @return string Dispenser name
+     */
+    public static function dispenser_name( $dispenser_id ) {
+        if ( ! $dispenser_id ) {
+            return 'Unknown Dispenser';
+        }
+        
+        $dispenser = get_post( $dispenser_id );
+        
+        return $dispenser ? $dispenser->post_title : 'Unknown Dispenser';
+    }
+    
+    /**
+     * Get patient C-number
+     * 
+     * @param int $patient_id Patient ID
+     * @return string C-number
+     */
+    public static function patient_c_number( $patient_id ) {
+        if ( ! $patient_id ) {
+            return 'C-000';
+        }
+        
+        // OPTION 1: WordPress post meta (CURRENT - WORKING)
+        $c_number = get_post_meta( $patient_id, 'patient_number', true );
+        
+        // OPTION 2: PostgreSQL (UNCOMMENT WHEN READY)
+        // global $wpdb;
+        // $table = HearMed_Core::table( 'patients' );
+        // $c_number = $wpdb->get_var( 
+        //     $wpdb->prepare( 
+        //         "SELECT patient_number FROM {$table} WHERE id = %d", 
+        //         $patient_id 
+        //     ) 
+        // );
+        
+        return $c_number ?: 'C-' . str_pad( $patient_id, 3, '0', STR_PAD_LEFT );
+    }
+    
+    /**
+     * Format date for display
+     * 
+     * @param string $date Date string
+     * @param string $format Date format (default: d/m/Y)
+     * @return string Formatted date
+     */
+    public static function format_date( $date, $format = 'd/m/Y' ) {
+        if ( ! $date ) {
+            return '—';
+        }
+        
+        $timestamp = strtotime( $date );
+        
+        return $timestamp ? date( $format, $timestamp ) : '—';
+    }
+    
+    /**
+     * Format datetime for display
+     * 
+     * @param string $datetime Datetime string
+     * @param string $format Datetime format (default: d/m/Y H:i)
+     * @return string Formatted datetime
+     */
+    public static function format_datetime( $datetime, $format = 'd/m/Y H:i' ) {
+        if ( ! $datetime ) {
+            return '—';
+        }
+        
+        $timestamp = strtotime( $datetime );
+        
+        return $timestamp ? date( $format, $timestamp ) : '—';
+    }
+    
+    /**
+     * Get human-readable time difference
+     * 
+     * @param string $datetime Datetime string
+     * @return string Time ago string
+     */
+    public static function time_ago( $datetime ) {
+        if ( ! $datetime ) {
+            return '—';
+        }
+        
+        $timestamp = strtotime( $datetime );
+        
+        if ( ! $timestamp ) {
+            return '—';
+        }
+        
+        $diff = time() - $timestamp;
+        
+        if ( $diff < 60 ) {
+            return 'Just now';
+        }
+        
+        if ( $diff < 3600 ) {
+            $mins = floor( $diff / 60 );
+            return $mins . ' min' . ( $mins > 1 ? 's' : '' ) . ' ago';
+        }
+        
+        if ( $diff < 86400 ) {
+            $hours = floor( $diff / 3600 );
+            return $hours . ' hour' . ( $hours > 1 ? 's' : '' ) . ' ago';
+        }
+        
+        if ( $diff < 604800 ) {
+            $days = floor( $diff / 86400 );
+            return $days . ' day' . ( $days > 1 ? 's' : '' ) . ' ago';
+        }
+        
+        return date( 'd/m/Y', $timestamp );
+    }
+    
+    /**
+     * Generate a unique order number
+     * 
+     * @param string $prefix Prefix (default: ORD)
+     * @return string Order number
+     */
+    public static function generate_order_number( $prefix = 'ORD' ) {
+        return $prefix . '-' . date( 'Ymd' ) . '-' . strtoupper( substr( uniqid(), -6 ) );
+    }
+    
+    /**
+     * Generate a unique invoice number
+     * 
+     * @param string $prefix Prefix (default: INV)
+     * @return string Invoice number
+     */
+    public static function generate_invoice_number( $prefix = 'INV' ) {
+        return $prefix . '-' . date( 'Ymd' ) . '-' . strtoupper( substr( uniqid(), -6 ) );
+    }
+    
+    /**
+     * Sanitize phone number
+     * 
+     * @param string $phone Phone number
+     * @return string Sanitized phone
+     */
+    public static function sanitize_phone( $phone ) {
+        return preg_replace( '/[^0-9+]/', '', $phone );
+    }
+    
+    /**
+     * Format phone number for display
+     * 
+     * @param string $phone Phone number
+     * @return string Formatted phone
+     */
+    public static function format_phone( $phone ) {
+        $phone = self::sanitize_phone( $phone );
+        
+        if ( empty( $phone ) ) {
+            return '—';
+        }
+        
+        // Irish format: +353 XX XXX XXXX
+        if ( strpos( $phone, '+353' ) === 0 ) {
+            return '+353 ' . substr( $phone, 4, 2 ) . ' ' . 
+                   substr( $phone, 6, 3 ) . ' ' . substr( $phone, 9 );
+        }
+        
+        return $phone;
+    }
+    
+    /**
+     * Get user initials
+     * 
+     * @param int|null $user_id User ID (null for current user)
+     * @return string Initials
+     */
+    public static function user_initials( $user_id = null ) {
+        if ( ! $user_id ) {
+            $user_id = get_current_user_id();
+        }
+        
+        $user = get_user_by( 'id', $user_id );
+        
+        if ( ! $user ) {
+            return '?';
+        }
+        
+        $name = $user->display_name;
+        $parts = explode( ' ', $name );
+        
+        if ( count( $parts ) >= 2 ) {
+            return strtoupper( substr( $parts[0], 0, 1 ) . substr( $parts[1], 0, 1 ) );
+        }
+        
+        return strtoupper( substr( $name, 0, 2 ) );
+    }
+    
+    /**
+     * Get VAT rate for category
+     * 
+     * @param string $category Product category
+     * @return float VAT rate (0, 0.135, 0.23)
+     */
+    public static function get_vat_rate( $category ) {
+        $vat_rates = [
+            'hearing_aids' => 0,      // Exempt
+            'accessories' => 0.23,    // Standard
+            'wax_removal' => 0.135,   // Reduced
+            'batteries' => 0.23,      // Standard
+            'hearing_tests' => 0,     // Exempt
+        ];
+        
+        return $vat_rates[ $category ] ?? 0.23;
+    }
+    
+    /**
+     * Calculate VAT amount
+     * 
+     * @param float $amount Net amount
+     * @param float $rate VAT rate
+     * @return float VAT amount
+     */
+    public static function calculate_vat( $amount, $rate ) {
+        return round( $amount * $rate, 2 );
+    }
 
-// Backward-compatibility alias so legacy module code that references
-// HearMed_Portal::table(), HearMed_Portal::setting(), and
-// HearMed_Portal::log() continues to work without any changes to those files.
-if ( ! class_exists( 'HearMed_Portal' ) ) {
-    class_alias( 'HearMed_Core', 'HearMed_Portal' );
+    /**
+     * Detect whether the current request is inside the Elementor editor or preview.
+     *
+     * @return bool
+     */
+    public static function is_elementor_editor() {
+        // Preview iframe: ?elementor-preview=POST_ID
+        if ( null !== filter_input( INPUT_GET, 'elementor-preview' ) ) {
+            return true;
+        }
+        // Editor mode when Elementor plugin is active
+        if ( class_exists( '\Elementor\Plugin' ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Decide whether HearMed module JS/CSS should boot inside Elementor preview/editor.
+     *
+     * Default is false to avoid conflicts with Elementor iframe editing.
+     * Enable deliberately via filter for controlled staging previews:
+     * add_filter( 'hm_allow_elementor_preview_boot', '__return_true' );
+     *
+     * @return bool
+     */
+    public static function allow_elementor_preview_boot() {
+        return (bool) apply_filters( 'hm_allow_elementor_preview_boot', false );
+    }
 }

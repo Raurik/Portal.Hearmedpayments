@@ -1,187 +1,227 @@
 <?php
 /**
- * HearMed AJAX Handler
- * 
- * Central dispatcher for all AJAX requests.
- * Module-specific AJAX handlers register with this class.
- * 
- * @package HearMed_Portal
- * @since 4.0.0
+ * HearMed PostgreSQL Database Wrapper (Safe Version)
+ * Production-safe PostgreSQL connector for WordPress
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class HearMed_Ajax {
-    
-    /**
-     * Constructor - Register AJAX actions
-     */
-    public function __construct() {
-        // Load legacy module AJAX files for backward compatibility
-        $this->load_legacy_ajax();
+class HearMed_PG {
 
-        // Core AJAX handlers
-        add_action( 'wp_ajax_hm_acknowledge_privacy_notice', [ $this, 'acknowledge_privacy_notice' ] );
-    }
-    
+    private static $conn = null;
+    private static $connected = false;
+
     /**
-     * Load legacy AJAX handlers from module files
-     * 
-     * For backward compatibility, we load the old mod-*.php files
-     * which contain their own add_action('wp_ajax_*') registrations
+     * Build connection string from wp-config constants
      */
-    private function load_legacy_ajax() {
-        // Load legacy module files (they self-register AJAX handlers)
-        $module_files = [
-            'mod-calendar.php',
-            'mod-patients.php',
-            'mod-orders.php',
-            'mod-accounting.php',
-            'mod-reports.php',
-            'mod-repairs.php',
-            'mod-notifications.php',
-            'mod-approvals.php',
-            'mod-kpi.php',
-            'mod-cash.php',
-            'mod-commissions.php',
-            'mod-team-chat.php',
-        ];
-        
-        foreach ( $module_files as $file ) {
-            $file_path = HEARMED_PATH . 'modules/' . $file;
-            if ( file_exists( $file_path ) ) {
-                require_once $file_path;
+    private static function get_connection_string() {
+
+        if ( ! defined('HEARMED_PG_HOST') ) {
+            return false;
+        }
+
+        return sprintf(
+            "host=%s port=%s dbname=%s user=%s password=%s sslmode=%s",
+            HEARMED_PG_HOST,
+            HEARMED_PG_PORT ?? 5432,
+            HEARMED_PG_DB,
+            HEARMED_PG_USER,
+            HEARMED_PG_PASS,
+            HEARMED_PG_SSLMODE ?? 'require'
+        );
+    }
+
+    /**
+     * Connect (lazy)
+     */
+    public static function connect() {
+
+        if ( self::$connected && self::$conn ) {
+            return self::$conn;
+        }
+
+        $conn_string = self::get_connection_string();
+        if ( ! $conn_string ) {
+            error_log('[HearMed PG] Missing DB config.');
+            return false;
+        }
+
+        try {
+
+            self::$conn = @pg_connect($conn_string);
+
+            if ( ! self::$conn ) {
+                error_log('[HearMed PG] Connection failed.');
+                return false;
             }
+
+            self::$connected = true;
+            return self::$conn;
+
+        } catch ( Throwable $e ) {
+            error_log('[HearMed PG] Exception: ' . $e->getMessage());
+            return false;
         }
-    }
-    
-    /**
-     * Register an AJAX action
-     * 
-     * @param string $action Action name (without hm_ prefix)
-     * @param callable $callback Callback function
-     * @param bool $nopriv Allow non-logged-in users (default: false)
-     */
-    public static function register( $action, $callback, $nopriv = false ) {
-        add_action( 'wp_ajax_hm_' . $action, $callback );
-        
-        if ( $nopriv ) {
-            add_action( 'wp_ajax_nopriv_hm_' . $action, $callback );
-        }
-    }
-    
-    /**
-     * Verify nonce for AJAX request
-     * 
-     * @param string $nonce_field Nonce field name (default: nonce)
-     * @return bool True if valid
-     */
-    public static function verify_nonce( $nonce_field = 'nonce' ) {
-        if ( ! isset( $_POST[ $nonce_field ] ) ) {
-            wp_send_json_error( 'Missing nonce' );
-            exit;
-        }
-        
-        if ( ! wp_verify_nonce( $_POST[ $nonce_field ], 'hm_nonce' ) ) {
-            wp_send_json_error( 'Invalid nonce' );
-            exit;
-        }
-        
-        return true;
-    }
-    
-    /**
-     * Check user capability for AJAX request
-     * 
-     * @param string $capability Required capability
-     * @return bool True if authorized
-     */
-    public static function check_capability( $capability ) {
-        $auth = new HearMed_Auth();
-        
-        if ( ! $auth->can( $capability ) ) {
-            wp_send_json_error( 'Unauthorized' );
-            exit;
-        }
-        
-        return true;
-    }
-    
-    /**
-     * Get POST data with sanitization
-     * 
-     * @param string $key Data key
-     * @param mixed $default Default value
-     * @param string $sanitize Sanitization method (text|email|int|float|html)
-     * @return mixed Sanitized value
-     */
-    public static function get_post( $key, $default = '', $sanitize = 'text' ) {
-        if ( ! isset( $_POST[ $key ] ) ) {
-            return $default;
-        }
-        
-        $value = $_POST[ $key ];
-        
-        switch ( $sanitize ) {
-            case 'email':
-                return sanitize_email( $value );
-            case 'int':
-                return intval( $value );
-            case 'float':
-                return floatval( $value );
-            case 'html':
-                return wp_kses_post( $value );
-            case 'text':
-            default:
-                return sanitize_text_field( $value );
-        }
-    }
-    
-    /**
-     * Send JSON success response
-     * 
-     * @param mixed $data Response data
-     * @param int $status_code HTTP status code
-     */
-    public static function success( $data = null, $status_code = 200 ) {
-        wp_send_json_success( $data, $status_code );
-        exit;
-    }
-    
-    /**
-     * Send JSON error response
-     * 
-     * @param string $message Error message
-     * @param mixed $data Additional error data
-     * @param int $status_code HTTP status code
-     */
-    public static function error( $message, $data = null, $status_code = 400 ) {
-        wp_send_json_error([
-            'message' => $message,
-            'data' => $data,
-        ], $status_code );
-        exit;
     }
 
     /**
-     * AJAX handler: acknowledge privacy notice
-     *
-     * Records that the current user has read and accepted the Staff Data
-     * Processing Notice so they can proceed into the portal.
+     * Safe query execution
      */
-    public function acknowledge_privacy_notice() {
-        check_ajax_referer( 'hm_nonce', 'nonce' );
+    public static function query( $sql, $params = [] ) {
 
-        if ( ! is_user_logged_in() ) {
-            wp_send_json_error( 'Unauthorized' );
-            return;
+        $conn = self::connect();
+        if ( ! $conn ) {
+            return false;
         }
 
-        $user_id = get_current_user_id();
-        update_user_meta( $user_id, 'hm_privacy_notice_accepted', current_time( 'mysql' ) );
+        try {
 
-        wp_send_json_success();
+            $result = empty($params)
+                ? @pg_query($conn, $sql)
+                : @pg_query_params($conn, $sql, $params);
+
+            if ( ! $result ) {
+                error_log('[HearMed PG] Query failed: ' . pg_last_error($conn));
+                return false;
+            }
+
+            return $result;
+
+        } catch ( Throwable $e ) {
+            error_log('[HearMed PG] Query exception: ' . $e->getMessage());
+            return false;
+        }
     }
+
+    public static function get_results( $sql, $params = [] ) {
+        $result = self::query($sql, $params);
+        if ( ! $result ) return [];
+        $rows = pg_fetch_all($result);
+        return $rows ? array_map(fn($r) => (object)$r, $rows) : [];
+    }
+
+    public static function get_row( $sql, $params = [] ) {
+        $result = self::query($sql, $params);
+        if ( ! $result ) return null;
+        $row = pg_fetch_assoc($result);
+        return $row ? (object)$row : null;
+    }
+
+    public static function get_var( $sql, $params = [] ) {
+        $result = self::query($sql, $params);
+        if ( ! $result ) return null;
+        $row = pg_fetch_array($result, 0, PGSQL_NUM);
+        return $row ? $row[0] : null;
+    }
+
+    public static function insert( $table, $data ) {
+
+        $conn = self::connect();
+        if ( ! $conn ) return false;
+
+        $columns = array_keys($data);
+        $values  = array_values($data);
+
+        $placeholders = [];
+        for ($i = 1; $i <= count($values); $i++) {
+            $placeholders[] = '$' . $i;
+        }
+
+        $sql = sprintf(
+            'INSERT INTO %s (%s) VALUES (%s) RETURNING id',
+            $table,
+            implode(', ', $columns),
+            implode(', ', $placeholders)
+        );
+
+        $result = @pg_query_params($conn, $sql, $values);
+        if ( ! $result ) return false;
+
+        $row = pg_fetch_assoc($result);
+        return $row ? (int)$row['id'] : false;
+    }
+
+    public static function update( $table, $data, $where ) {
+
+        $conn = self::connect();
+        if ( ! $conn ) return false;
+
+        $set_parts = [];
+        $values = [];
+        $i = 1;
+
+        foreach ($data as $col => $val) {
+            $set_parts[] = "$col = $$i";
+            $values[] = $val;
+            $i++;
+        }
+
+        $where_parts = [];
+        foreach ($where as $col => $val) {
+            $where_parts[] = "$col = $$i";
+            $values[] = $val;
+            $i++;
+        }
+
+        $sql = sprintf(
+            'UPDATE %s SET %s WHERE %s',
+            $table,
+            implode(', ', $set_parts),
+            implode(' AND ', $where_parts)
+        );
+
+        $result = @pg_query_params($conn, $sql, $values);
+        return $result ? pg_affected_rows($result) : false;
+    }
+
+    public static function delete( $table, $where ) {
+
+        $conn = self::connect();
+        if ( ! $conn ) return false;
+
+        $where_parts = [];
+        $values = [];
+        $i = 1;
+
+        foreach ($where as $col => $val) {
+            $where_parts[] = "$col = $$i";
+            $values[] = $val;
+            $i++;
+        }
+
+        $sql = sprintf(
+            'DELETE FROM %s WHERE %s',
+            $table,
+            implode(' AND ', $where_parts)
+        );
+
+        $result = @pg_query_params($conn, $sql, $values);
+        return $result ? pg_affected_rows($result) : false;
+    }
+
+    public static function begin_transaction() {
+        self::query('BEGIN');
+    }
+
+    public static function commit() {
+        self::query('COMMIT');
+    }
+
+    public static function rollback() {
+        self::query('ROLLBACK');
+    }
+
+    public static function close() {
+        if ( self::$conn ) {
+            pg_close(self::$conn);
+            self::$conn = null;
+            self::$connected = false;
+        }
+    }
+}
+
+if ( ! class_exists('HearMed_DB_PostgreSQL') ) {
+    class_alias('HearMed_PG', 'HearMed_DB_PostgreSQL');
 }
