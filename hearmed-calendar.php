@@ -35,86 +35,17 @@ if ( ! defined( 'HEARMED_URL' ) ) {
     define( 'HEARMED_URL', plugin_dir_url( __FILE__ ) );
 }
 
-// Force HTTPS/correct domain on assets to prevent mixed content errors.
-// NOTE: Only applied to scripts/styles/uploads — NOT home_url or site_url
-// (those filters corrupt internal navigation links and cause URL doubling).
-if ( ! is_admin() ) {
-    add_filter( 'wp_get_attachment_url', 'hearmed_force_https_url', 10, 2 );
-    add_filter( 'upload_dir', 'hearmed_force_https_upload_dir' );
-    add_filter( 'script_loader_src', 'hearmed_force_https_url', 10, 2 );
-    add_filter( 'style_loader_src', 'hearmed_force_https_url', 10, 2 );
-    add_filter( 'elementor/frontend/builder_content_data', 'hearmed_force_https_elementor_content', 10, 2 );
-    add_filter( 'elementor/frontend/the_content', 'hearmed_fix_elementor_output', 999 );
-}
+// Fix references to old domain (hear-med-portal.shop) that may be cached in
+// Elementor or the database. Does NOT touch protocol or URL structure at all.
+add_filter( 'script_loader_src', 'hearmed_fix_old_domain', 10, 1 );
+add_filter( 'style_loader_src',  'hearmed_fix_old_domain', 10, 1 );
 
-function hearmed_force_https_url( $url ) {
+function hearmed_fix_old_domain( $url ) {
     if ( is_string( $url ) ) {
-        // First, replace any old domain references
         $url = str_replace( 'hear-med-portal.shop', 'portal.hearmedpayments.net', $url );
-        $url = str_replace( 'http://portal.hearmedpayments.net', 'portal.hearmedpayments.net', $url );
-        // Then ensure HTTPS
-        if ( strpos( $url, 'http://' ) === 0 ) {
-            $url = str_replace( 'http://', 'https://', $url );
-        }
-        // Ensure HTTPS protocol if not present
-        if ( strpos( $url, '//' ) === 0 ) {
-            $url = 'https:' . $url;
-        }
     }
     return $url;
 }
-
-function hearmed_fix_elementor_output( $content ) {
-    if ( is_string( $content ) ) {
-        // Replace old domain
-        $content = str_replace( 'hear-med-portal.shop', 'portal.hearmedpayments.net', $content );
-        $content = str_replace( 'http://portal.hearmedpayments.net', 'https://portal.hearmedpayments.net', $content );
-        // Fix protocol-relative URLs
-        $content = str_replace( '//portal.hearmedpayments.net', 'https://portal.hearmedpayments.net', $content );
-    }
-    return $content;
-}
-
-function hearmed_force_https_upload_dir( $uploads ) {
-    if ( isset( $uploads['url'] ) ) {
-        $uploads['url'] = hearmed_force_https_url( $uploads['url'] );
-    }
-    if ( isset( $uploads['baseurl'] ) ) {
-        $uploads['baseurl'] = hearmed_force_https_url( $uploads['baseurl'] );
-    }
-    return $uploads;
-}
-
-function hearmed_force_https_elementor_content( $data, $post_id ) {
-    if ( is_string( $data ) ) {
-        // Fix old domain
-        $data = str_replace( 'hear-med-portal.shop', 'portal.hearmedpayments.net', $data );
-        // Fix HTTP
-        $data = str_replace( 'http://', 'https://', $data );
-    } elseif ( is_array( $data ) ) {
-        array_walk_recursive( $data, function( &$item ) {
-            if ( is_string( $item ) ) {
-                // Fix old domain
-                $item = str_replace( 'hear-med-portal.shop', 'portal.hearmedpayments.net', $item );
-                // Fix HTTP
-                if ( strpos( $item, 'http://' ) === 0 ) {
-                    $item = str_replace( 'http://', 'https://', $item );
-                }
-            }
-        });
-    }
-    return $data;
-}
-
-// Add filter to fix font CSS output
-add_filter( 'wp_head', function() {
-    ?><style type="text/css">
-        /* Force correct domain for fonts */
-        @font-face {
-            font-display: swap;
-        }
-    </style><?php
-}, 1 );
 
 // Load PostgreSQL connection classes
 require_once HEARMED_PATH . 'core/class-hearmed-pg.php';
