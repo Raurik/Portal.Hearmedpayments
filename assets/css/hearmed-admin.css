@@ -85,12 +85,12 @@
     background: none !important;
 }
 .hm-admin .hm-btn-red {
-    color: #94a3b8 !important;
+    color: #dc2626 !important;
     border-color: transparent !important;
     background: none !important;
 }
 .hm-admin .hm-btn-red:hover {
-    color: #dc2626 !important;
+    color: #b91c1c !important;
     background: none !important;
 }
 .hm-admin .hm-btn-sm {
@@ -101,8 +101,11 @@
     background: none;
     color: #0BB4C4;
 }
-.hm-admin .hm-btn-sm:hover { color: #0BB4C4; background: none; }
-.hm-admin .hm-btn-sm.hm-btn-red:hover { color: #dc2626 !important; }
+.hm-admin .hm-btn-sm:hover { color: #0a9eac; background: none; }
+.hm-admin .hm-btn-sm.hm-btn-red {
+    color: #dc2626 !important;
+}
+.hm-admin .hm-btn-sm.hm-btn-red:hover { color: #b91c1c !important; }
 
 /* Modal actions keep same text-link button style */
 .hm-modal-ft .hm-btn-teal {
@@ -272,7 +275,7 @@
     width: 100%;
     max-width: 100%;
     padding: 24px 32px 32px;
-    background: #e8edf2;
+    background: transparent;
     min-height: 100%;
 }
 
@@ -331,7 +334,7 @@
 
 #hm-clinics-app .hm-clinics-table-card .hm-table th {
     background: #f8fafc;
-    padding: 10px 16px;
+    padding: 8px 18px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -340,12 +343,28 @@
     border-bottom: 1px solid #e2e8f0;
 }
 
+#hm-clinics-app .hm-clinics-table-card .hm-table th:first-child {
+    padding-left: 20px;
+}
+
+#hm-clinics-app .hm-clinics-table-card .hm-table th:last-child {
+    padding-right: 20px;
+}
+
 #hm-clinics-app .hm-clinics-table-card .hm-table td {
-    padding: 12px 16px;
+    padding: 10px 18px;
     font-size: 13px;
     color: #334155;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
+}
+
+#hm-clinics-app .hm-clinics-table-card .hm-table td:first-child {
+    padding-left: 20px;
+}
+
+#hm-clinics-app .hm-clinics-table-card .hm-table td:last-child {
+    padding-right: 20px;
 }
 
 #hm-clinics-app .hm-clinics-table-card .hm-table tbody tr:last-child td {
@@ -353,7 +372,7 @@
 }
 
 #hm-clinics-app .hm-clinics-table-card .hm-table tbody tr:hover td {
-    background: #fafbfc;
+    background: rgba(16, 185, 129, 0.06);
 }
 
 #hm-clinics-app .hm-clinics-table-card .hm-table td strong {
@@ -458,24 +477,26 @@
 #hm-clinics-app .hm-btn-primary {
     background: #0BB4C4;
     color: #fff;
-    padding: 8px 20px;
+    padding: 9px 22px;
     border: none;
-    border-radius: 6px;
+    border-radius: 7px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: all 0.15s;
+    box-shadow: 0 1px 3px rgba(11, 180, 196, 0.2);
 }
 
 #hm-clinics-app .hm-btn-primary:hover {
     background: #0a9eac;
+    box-shadow: 0 2px 6px rgba(11, 180, 196, 0.3);
 }
 
 #hm-clinics-app .hm-btn {
     background: transparent;
     border: none;
     color: #64748b;
-    padding: 8px 20px;
+    padding: 9px 22px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -484,6 +505,29 @@
 
 #hm-clinics-app .hm-btn:hover {
     color: #334155;
+}
+
+/* Clinics status badges */
+#hm-clinics-app .hm-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+#hm-clinics-app .hm-badge-green {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+#hm-clinics-app .hm-badge-red {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 /* Modal overlay + shell (shared by clinics/users etc.) */
