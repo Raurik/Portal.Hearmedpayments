@@ -12,6 +12,7 @@ if (!defined('ABSPATH')) exit;
 class HearMed_DB {
     
     private static $pg_conn = null;
+    private static $last_error = '';
     
     /**
      * Table mapping - slug to PostgreSQL schema.table
@@ -73,6 +74,7 @@ class HearMed_DB {
         self::$pg_conn = @pg_connect($conn_string);
         
         if (!self::$pg_conn) {
+            self::$last_error = pg_last_error() ?: 'Connection failed';
             error_log('[HearMed DB] PostgreSQL connection failed');
             return false;
         }
@@ -101,7 +103,8 @@ class HearMed_DB {
         }
         
         if (!$result) {
-            error_log('[HearMed DB] Query failed: ' . pg_last_error($conn));
+            self::$last_error = pg_last_error($conn);
+            error_log('[HearMed DB] Query failed: ' . self::$last_error);
             return [];
         }
         
@@ -159,7 +162,8 @@ class HearMed_DB {
         $result = @pg_query_params($conn, $sql, $values);
         
         if (!$result) {
-            error_log('[HearMed DB] Insert failed: ' . pg_last_error($conn));
+            self::$last_error = pg_last_error($conn);
+            error_log('[HearMed DB] Insert failed: ' . self::$last_error);
             return false;
         }
         
@@ -203,7 +207,8 @@ class HearMed_DB {
         $result = @pg_query_params($conn, $sql, $values);
         
         if (!$result) {
-            error_log('[HearMed DB] Update failed: ' . pg_last_error($conn));
+            self::$last_error = pg_last_error($conn);
+            error_log('[HearMed DB] Update failed: ' . self::$last_error);
             return false;
         }
         
@@ -238,7 +243,8 @@ class HearMed_DB {
         $result = @pg_query_params($conn, $sql, $values);
         
         if (!$result) {
-            error_log('[HearMed DB] Delete failed: ' . pg_last_error($conn));
+            self::$last_error = pg_last_error($conn);
+            error_log('[HearMed DB] Delete failed: ' . self::$last_error);
             return false;
         }
         
@@ -283,9 +289,23 @@ class HearMed_DB {
         if (!$conn) return false;
         
         if (empty($params)) {
-            return @pg_query($conn, $sql);
+            $result = @pg_query($conn, $sql);
         } else {
-            return @pg_query_params($conn, $sql, $params);
+            $result = @pg_query_params($conn, $sql, $params);
         }
+
+        if (!$result) {
+            self::$last_error = pg_last_error($conn);
+            error_log('[HearMed DB] Query failed: ' . self::$last_error);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get last PostgreSQL error message
+     */
+    public static function last_error() {
+        return self::$last_error;
     }
 }

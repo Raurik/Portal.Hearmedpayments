@@ -316,13 +316,13 @@ class HearMed_Admin_Clinics {
         if ($id) {
             $updated = HearMed_DB::update('clinics', $data, ['id' => $id]);
             if ($updated === false) {
-                wp_send_json_error('Failed to update clinic');
+                wp_send_json_error('Failed to update clinic: ' . (HearMed_DB::last_error() ?: 'database error'));
                 return;
             }
         } else {
             $id = HearMed_DB::insert('clinics', $data);
             if (!$id) {
-                wp_send_json_error('Failed to create clinic');
+                wp_send_json_error('Failed to create clinic: ' . (HearMed_DB::last_error() ?: 'database error'));
                 return;
             }
         }
