@@ -157,7 +157,7 @@ class HearMed_Enqueue {
             'hearmed_calendar', 'hearmed_calendar_settings', 'hearmed_appointment_types',
             'hearmed_blockouts', 'hearmed_holidays',
             'hearmed_patients',
-            'hearmed_order_status', 'hearmed_approvals', 'hearmed_awaiting_fitting',
+            'hearmed_order_status', 'hearmed_approvals', 'hearmed_awaiting_fitting', 'hearmed_orders',
             'hearmed_accounting', 'hearmed_invoices', 'hearmed_payments',
             'hearmed_credit_notes', 'hearmed_prsi',
             'hearmed_reporting', 'hearmed_my_stats', 'hearmed_report_revenue', 'hearmed_report_gp',
@@ -165,6 +165,8 @@ class HearMed_Enqueue {
             'hearmed_repairs',
             'hearmed_notifications', 'hearmed_team_chat',
             'hearmed_kpi', 'hearmed_kpi_tracking',
+            'hearmed_commissions',
+            'hearmed_cash', 'hearmed_till',
             'hearmed_admin_console', 'hearmed_users', 'hearmed_clinics', 'hearmed_products',
             'hearmed_manage_users', 'hearmed_manage_clinics', 'hearmed_manage_products',
             'hearmed_kpi_targets', 'hearmed_sms_templates', 'hearmed_audit_log',
@@ -218,6 +220,7 @@ class HearMed_Enqueue {
             'hearmed_order_status',
             'hearmed_approvals',
             'hearmed_awaiting_fitting',
+            'hearmed_orders',
         ]);
         
         $this->detect_and_load( 'accounting', $content, [
@@ -249,6 +252,15 @@ class HearMed_Enqueue {
             'hearmed_kpi',
             'hearmed_kpi_tracking',
             'hearmed_kpi_targets',
+        ]);
+        
+        $this->detect_and_load( 'commissions', $content, [
+            'hearmed_commissions',
+        ]);
+        
+        $this->detect_and_load( 'cash', $content, [
+            'hearmed_cash',
+            'hearmed_till',
         ]);
         
         $this->detect_and_load( 'admin', $content, [
@@ -297,8 +309,8 @@ class HearMed_Enqueue {
         // Mark as loaded
         self::$loaded_modules[] = $module;
         
-        // Load module CSS if exists
-        $css_path = "modules/{$module}/{$module}.css";
+        // Load module CSS from assets/css/ directory
+        $css_path = "assets/css/hearmed-{$module}.css";
         if ( file_exists( HEARMED_PATH . $css_path ) ) {
             wp_enqueue_style(
                 "hearmed-{$module}",
@@ -308,8 +320,8 @@ class HearMed_Enqueue {
             );
         }
         
-        // Load module JS if exists
-        $js_path = "modules/{$module}/{$module}.js";
+        // Load module JS from assets/js/ directory
+        $js_path = "assets/js/hearmed-{$module}.js";
         if ( file_exists( HEARMED_PATH . $js_path ) ) {
             $deps = [ 'hearmed-core' ]; // Always depend on core JS
             
@@ -326,38 +338,9 @@ class HearMed_Enqueue {
                 true
             );
         }
-        
-        // Load legacy JS files for compatibility (temporary)
-        $this->load_legacy_js( $module );
     }
     
-    /**
-     * Load legacy JS files (for backward compatibility during migration)
-     * 
-     * @param string $module Module name
-     */
-    private function load_legacy_js( $module ) {
-        $legacy_map = [
-            'calendar' => 'js/hearmed-calendar.js',
-            'patients' => 'js/hearmed-patients.js',
-            'orders' => 'js/hearmed-orders.js',
-            'reports' => 'js/hearmed-reports.js',
-            'admin' => 'js/hearmed-admin.js',
-        ];
-        
-        if ( isset( $legacy_map[ $module ] ) ) {
-            $legacy_path = $legacy_map[ $module ];
-            if ( file_exists( HEARMED_PATH . $legacy_path ) ) {
-                wp_enqueue_script(
-                    "hearmed-legacy-{$module}",
-                    HEARMED_URL . $legacy_path,
-                    [ 'hearmed-core' ],
-                    $this->get_file_version( $legacy_path ),
-                    true
-                );
-            }
-        }
-    }
+
     
     /**
      * Get file version for cache busting
