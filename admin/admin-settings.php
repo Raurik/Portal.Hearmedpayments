@@ -214,7 +214,7 @@ class HearMed_Admin_Settings {
 
         $valid_keys = array_column($page['fields'], 'key');
         foreach ($settings as $key => $val) {
-            if (in_array($key, $param) {
+            if (in_array($key, $valid_keys)) {
                 update_option($key, sanitize_text_field($val));
             }
         }
