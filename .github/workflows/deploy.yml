@@ -15,6 +15,7 @@ jobs:
           username: u2157-eobi8upkunha
           port: 18765
           key: ${{ secrets.SG_SSH_KEY }}
+          passphrase: ${{ secrets.SG_SSH_PASSPHRASE }}
           script: |
             cd ~/www/portal.hearmedpayments.net/public_html/wp-content/plugins/hearmed-calendar
             git pull origin main
