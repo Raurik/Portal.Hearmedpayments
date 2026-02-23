@@ -47,6 +47,18 @@ if ( is_admin() ) {
     require_once HEARMED_PATH . 'admin/admin-debug.php';
 }
 
+// AUTO-ACTIVATE HEARMED THEME
+function hearmed_auto_activate_theme() {
+    $theme_name = 'hearmed-theme';
+    $current_theme = wp_get_theme();
+    
+    // If hearmed-theme exists but not active, activate it
+    if ( $current_theme->get( 'Name' ) !== 'HearMed Portal' && file_exists( get_theme_root() . '/' . $theme_name ) ) {
+        switch_theme( $theme_name );
+    }
+}
+add_action( 'admin_init', 'hearmed_auto_activate_theme' );
+
 // INITIALIZE PLUGIN
 function hearmed_initialize_plugin() {
     require_once HEARMED_PATH . 'core/class-hearmed-core.php';
