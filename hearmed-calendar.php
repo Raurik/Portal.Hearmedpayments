@@ -45,15 +45,37 @@ if ( ! is_admin() && isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on' ) 
     add_filter( 'script_loader_src', 'hearmed_force_https_url', 10, 2 );
     add_filter( 'style_loader_src', 'hearmed_force_https_url', 10, 2 );
     
-    // Force Elementor to use HTTPS
+    // Force Elementor to use HTTPS and correct domain
     add_filter( 'elementor/frontend/builder_content_data', 'hearmed_force_https_elementor_content', 10, 2 );
+    add_filter( 'elementor/frontend/the_content', 'hearmed_fix_elementor_output', 999 );
 }
 
 function hearmed_force_https_url( $url ) {
-    if ( is_string( $url ) && strpos( $url, 'http://' ) === 0 ) {
-        $url = str_replace( 'http://', 'https://', $url );
+    if ( is_string( $url ) ) {
+        // First, replace any old domain references
+        $url = str_replace( 'hear-med-portal.shop', 'portal.hearmedpayments.net', $url );
+        $url = str_replace( 'http://portal.hearmedpayments.net', 'portal.hearmedpayments.net', $url );
+        // Then ensure HTTPS
+        if ( strpos( $url, 'http://' ) === 0 ) {
+            $url = str_replace( 'http://', 'https://', $url );
+        }
+        // Ensure HTTPS protocol if not present
+        if ( strpos( $url, '//' ) === 0 ) {
+            $url = 'https:' . $url;
+        }
     }
     return $url;
+}
+
+function hearmed_fix_elementor_output( $content ) {
+    if ( is_string( $content ) ) {
+        // Replace old domain
+        $content = str_replace( 'hear-med-portal.shop', 'portal.hearmedpayments.net', $content );
+        $content = str_replace( 'http://portal.hearmedpayments.net', 'https://portal.hearmedpayments.net', $content );
+        // Fix protocol-relative URLs
+        $content = str_replace( '//portal.hearmedpayments.net', 'https://portal.hearmedpayments.net', $content );
+    }
+    return $content;
 }
 
 function hearmed_force_https_upload_dir( $uploads ) {
@@ -68,16 +90,34 @@ function hearmed_force_https_upload_dir( $uploads ) {
 
 function hearmed_force_https_elementor_content( $data, $post_id ) {
     if ( is_string( $data ) ) {
+        // Fix old domain
+        $data = str_replace( 'hear-med-portal.shop', 'portal.hearmedpayments.net', $data );
+        // Fix HTTP
         $data = str_replace( 'http://', 'https://', $data );
     } elseif ( is_array( $data ) ) {
         array_walk_recursive( $data, function( &$item ) {
-            if ( is_string( $item ) && strpos( $item, 'http://' ) === 0 ) {
-                $item = str_replace( 'http://', 'https://', $item );
+            if ( is_string( $item ) ) {
+                // Fix old domain
+                $item = str_replace( 'hear-med-portal.shop', 'portal.hearmedpayments.net', $item );
+                // Fix HTTP
+                if ( strpos( $item, 'http://' ) === 0 ) {
+                    $item = str_replace( 'http://', 'https://', $item );
+                }
             }
         });
     }
     return $data;
 }
+
+// Add filter to fix font CSS output
+add_filter( 'wp_head', function() {
+    ?><style type="text/css">
+        /* Force correct domain for fonts */
+        @font-face {
+            font-display: swap;
+        }
+    </style><?php
+}, 1 );
 
 // Load PostgreSQL connection classes
 require_once HEARMED_PATH . 'core/class-hearmed-pg.php';

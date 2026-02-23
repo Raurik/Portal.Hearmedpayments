@@ -328,6 +328,14 @@ class HearMed_Enqueue {
             // Add jQuery UI dependencies for specific modules
             if ( $module === 'calendar' ) {
                 $deps[] = 'jquery-ui-sortable';
+                // Calendar also needs orders.js which contains the main calendar logic
+                wp_enqueue_script(
+                    'hearmed-orders',
+                    HEARMED_URL . 'assets/js/hearmed-orders.js',
+                    [ 'hearmed-core' ],
+                    $this->get_file_version( 'assets/js/hearmed-orders.js' ),
+                    true
+                );
             }
             
             wp_enqueue_script(
