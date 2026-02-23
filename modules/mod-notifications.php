@@ -7,6 +7,24 @@
  */
 if (!defined("ABSPATH")) exit;
 
+// Standalone render function called by router
+function hm_notifications_render() {
+    if (!is_user_logged_in()) return;
+    ?>
+    <div class="hm-content">
+        <div class="hm-page-header">
+            <h1 class="hm-page-title">Notifications</h1>
+        </div>
+        <div id="hm-notifications-list" class="hm-notifications-container">
+            <div class="hm-placeholder" style="padding:3rem;text-align:center;color:#94a3b8;">
+                <p>📬 No new notifications</p>
+                <p style="font-size:0.875rem;margin-top:0.5rem;">You're all caught up!</p>
+            </div>
+        </div>
+    </div>
+    <?php
+}
+
 class HearMed_Notifications {
 
     public static function init() {
@@ -17,16 +35,7 @@ class HearMed_Notifications {
         if (!is_user_logged_in()) return "";
         
         ob_start();
-        ?>
-        <div id="hm-app" data-view="hearmed_notifications">
-            <div class="hm-page-header">
-                <h1 class="hm-page-title">" . esc_html(ucwords(str_replace('_', ' ', 'hearmed_notifications'))) . "</h1>
-            </div>
-            <div class="hm-placeholder">
-                <p>Module not yet built. See blueprint.</p>
-            </div>
-        </div>
-        <?php
+        hm_notifications_render();
         return ob_get_clean();
     }
 }

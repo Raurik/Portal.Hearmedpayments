@@ -383,8 +383,8 @@ function hm_debug_table_status() {
     foreach ( $slugs as $slug ) {
         $full = $wpdb->prefix . 'jet_cct_' . $slug;
         // $full is built from the WP prefix (trusted) and a hardcoded slug (not user input).
-        $found  = HearMed_DB::get_var( 'SHOW TABLES LIKE %s', $full );
-        $exists = ( $found === $full );
+        $found  = HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $full ) );
+        $exists = ( $found !== null );
         $count  = 0;
         if ( $exists ) {
             // Table name is trusted (prefix + hardcoded slug); cannot use %i placeholder

@@ -60,8 +60,8 @@ function hm_ajax_get_settings() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
         // PostgreSQL only - no $wpdb needed
     $t = HearMed_Portal::table( 'calendar_settings' );
-    if ( HearMed_DB::get_var( "SHOW TABLES LIKE '$t'" ) !== $t ) { wp_send_json_success( [] ); return; }
-    wp_send_json_success( HearMed_DB::get_row( "SELECT * FROM `$t` LIMIT 1", ARRAY_A ) ?: [] );
+    if ( HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) === null ) { wp_send_json_success( [] ); return; }
+    wp_send_json_success( HearMed_DB::get_row( "SELECT * FROM {$t} LIMIT 1", ARRAY_A ) ?: [] );
 }
 
 function hm_ajax_save_settings() {
@@ -194,7 +194,7 @@ function hm_ajax_get_appointments() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
         // PostgreSQL only - no $wpdb needed
     $t = HearMed_Portal::table( 'appointments' );
-    if ( HearMed_DB::get_var( "SHOW TABLES LIKE '$t'" ) !== $t ) { wp_send_json_success( [] ); return; }
+    if ( HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) === null ) { wp_send_json_success( [] ); return; }
     $start = sanitize_text_field( $_POST['start'] ?? date( 'Y-m-d' ) );
     $end   = sanitize_text_field( $_POST['end']   ?? $start );
     $cl    = intval( $_POST['clinic']    ?? 0 );
@@ -331,7 +331,7 @@ function hm_ajax_get_holidays() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
         // PostgreSQL only - no $wpdb needed
     $t = HearMed_Portal::table( 'holidays' );
-    if ( HearMed_DB::get_var( "SHOW TABLES LIKE '$t'" ) !== $t ) { wp_send_json_success( [] ); return; }
+    if ( HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) === null ) { wp_send_json_success( [] ); return; }
     $dp   = intval( $_POST['dispenser_id'] ?? 0 );
     $w    = $dp ? HearMed_DB::get_results(   "WHERE dispenser_id=%d", $dp ) : "";
     $rows = HearMed_DB::get_results( "SELECT * FROM `$t` $w ORDER BY start_date DESC" );
@@ -375,7 +375,7 @@ function hm_ajax_get_blockouts() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
         // PostgreSQL only - no $wpdb needed
     $t = HearMed_Portal::table( 'blockouts' );
-    if ( HearMed_DB::get_var( "SHOW TABLES LIKE '$t'" ) !== $t ) { wp_send_json_success( [] ); return; }
+    if ( HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) === null ) { wp_send_json_success( [] ); return; }
     $rows = HearMed_DB::get_results( "SELECT * FROM `$t` ORDER BY start_date DESC" );
     foreach ( $rows as &$r ) {
         $r->service_name   = get_the_title( $r->service_id );
@@ -457,4 +457,18 @@ function hm_ajax_save_dispenser_order() {
         foreach ( $order as $i => $did ) update_post_meta( intval( $did ), 'calendar_order', $i + 1 );
     }
     wp_send_json_success();
+}
+
+// ================================================================
+// CALENDAR RENDER FUNCTION (called by router)
+// ================================================================
+function hm_calendar_render() {
+    ?>
+    <div class="hm-content">
+        <div class="hm-page-header">
+            <h1 class="hm-page-title">Calendar</h1>
+        </div>
+        <div id="hm-calendar-container"></div>
+    </div>
+    <?php
 }

@@ -31,8 +31,8 @@ function hm_render_approvals_page() {
         // PostgreSQL only - no $wpdb needed
     $t = HearMed_DB::table('orders');
     $pending = 0;
-    if ( HearMed_DB::get_var("SHOW TABLES LIKE '{$t}'") === $t ) {
-        $pending = (int)HearMed_DB::get_var("SELECT COUNT(*) FROM `{$t}` WHERE status = 'Awaiting Approval'");
+    if ( HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) !== null ) {
+        $pending = (int)HearMed_DB::get_var("SELECT COUNT(*) FROM {$t} WHERE status = 'Awaiting Approval'");
     }
     ob_start();
     ?>

@@ -101,7 +101,7 @@ class HearMed_Admin_AuditLog {
         if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
         // PostgreSQL only - no $wpdb needed
         $t = HearMed_DB::table('audit_log');
-        if (HearMed_DB::get_var("SHOW TABLES LIKE '$t'") !== $t) { wp_send_json_success([]); return; }
+        if (HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) === null) { wp_send_json_success([]); return; }
 
         $where = ['1=1'];
         $entity = sanitize_text_field($_POST['entity'] ?? '');

@@ -33,8 +33,8 @@ class HearMed_Admin_KPI_Targets {
     private function get_targets() {
         // PostgreSQL only - no $wpdb needed
         $t = $this->table();
-        if (HearMed_DB::get_var("SHOW TABLES LIKE '$t'") !== $t) return [];
-        return HearMed_DB::get_results("SELECT * FROM `$t` ORDER BY id ASC", ARRAY_A) ?: [];
+        if (HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) === null) return [];
+        return HearMed_DB::get_results("SELECT * FROM {$t} ORDER BY id ASC", ARRAY_A) ?: [];
     }
 
     public function render() {

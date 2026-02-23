@@ -203,8 +203,8 @@ function hearmed_run_system_checks() {
     
     foreach ( $tables as $table ) {
         $full_table = HearMed_Core::table( $table );
-        $exists = HearMed_DB::get_var( "SHOW TABLES LIKE '$full_table'" ) === $full_table;
-        $count = $exists ? HearMed_DB::get_var( "SELECT COUNT(*) FROM `$full_table`" ) : 0;
+        $exists = HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $full_table ) ) !== null;
+        $count = $exists ? HearMed_DB::get_var( "SELECT COUNT(*) FROM {$full_table}" ) : 0;
         
         $checks['tables'][] = [
             'name' => $table,

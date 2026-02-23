@@ -7,6 +7,22 @@
  */
 if (!defined("ABSPATH")) exit;
 
+// Standalone render function called by router
+function hm_commissions_render() {
+    if (!is_user_logged_in()) return;
+    ?>
+    <div class="hm-content">
+        <div class="hm-page-header">
+            <h1 class="hm-page-title">Commissions</h1>
+        </div>
+        <div class="hm-placeholder" style="padding:3rem;text-align:center;color:#94a3b8;">
+            <p>Commission tracking module — coming soon</p>
+            <p style="font-size:0.875rem;margin-top:0.5rem;">Track commission periods, calculations, and payments</p>
+        </div>
+    </div>
+    <?php
+}
+
 class HearMed_Commissions {
 
     public static function init() {
@@ -17,16 +33,7 @@ class HearMed_Commissions {
         if (!is_user_logged_in()) return "";
         
         ob_start();
-        ?>
-        <div id="hm-app" data-view="hearmed_commissions">
-            <div class="hm-page-header">
-                <h1 class="hm-page-title">" . esc_html(ucwords(str_replace('_', ' ', 'hearmed_commissions'))) . "</h1>
-            </div>
-            <div class="hm-placeholder">
-                <p>Module not yet built. See blueprint.</p>
-            </div>
-        </div>
-        <?php
+        hm_commissions_render();
         return ob_get_clean();
     }
 }

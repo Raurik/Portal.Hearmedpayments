@@ -1,0 +1,50 @@
+# WordPress
+wp-config.php
+wp-content/uploads/
+wp-content/cache/
+wp-content/backup-db/
+wp-content/backups/
+wp-content/advanced-cache.php
+wp-content/wp-cache-config.php
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment & Secrets
+.env
+.env.local
+.env.production
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+
+# Logs
+*.log
+error_log
+debug.log
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+node_modules/
+
+# OS Files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Compressed files (unless intentional)
+# *.zip
+# *.tar.gz
