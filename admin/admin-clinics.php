@@ -35,20 +35,47 @@ class HearMed_Admin_Clinics {
     }
 
     private function get_clinics() {
-        // OLD: /* USE PostgreSQL: HearMed_DB::get_results() */ /* get_posts(['post_type' => 'clinic', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC']);
-        $posts = HearMed_DB::get_results("SELECT id, clinic_name as post_title, id as ID FROM hearmed_reference.clinics WHERE is_active = true ORDER BY clinic_name");
+        // PostgreSQL source of truth: hearmed_reference.clinics
+        $rows = HearMed_DB::get_results(
+            "SELECT id, clinic_name, address_line1, phone, email, postcode, clinic_color, is_active, opening_hours
+             FROM hearmed_reference.clinics
+             ORDER BY clinic_name"
+        );
+
         $clinics = [];
-        foreach ($posts as $p) {
-            $c = ['id' => $p->ID, 'name' => $p->post_title];
-            foreach ($this->fields as $f) {
-                // TODO: USE PostgreSQL: Get from table columns
-                $c[$f] = get_post_meta($p->ID, $f, true);
+
+        foreach ($rows as $row) {
+            $extra = [
+                'days_available' => '1,2,3,4,5',
+                'text_colour'    => '#ffffff',
+            ];
+
+            if (!empty($row->opening_hours)) {
+                $decoded = json_decode($row->opening_hours, true);
+                if (is_array($decoded)) {
+                    if (!empty($decoded['days_available'])) {
+                        $extra['days_available'] = (string) $decoded['days_available'];
+                    }
+                    if (!empty($decoded['text_colour'])) {
+                        $extra['text_colour'] = (string) $decoded['text_colour'];
+                    }
+                }
             }
-            $c['is_active'] = ($c['is_active'] === '' || $c['is_active'] === '1') ? '1' : '0';
-            $c['clinic_colour'] = $c['clinic_colour'] ?: '#0BB4C4';
-            $c['text_colour'] = $c['text_colour'] ?: '#ffffff';
-            $clinics[] = $c;
+
+            $clinics[] = [
+                'id'             => (int) $row->id,
+                'name'           => $row->clinic_name,
+                'address'        => $row->address_line1 ?? '',
+                'clinic_phone'   => $row->phone ?? '',
+                'clinic_email'   => $row->email ?? '',
+                'eircode'        => $row->postcode ?? '',
+                'clinic_colour'  => $row->clinic_color ?: '#0BB4C4',
+                'text_colour'    => $extra['text_colour'],
+                'days_available' => $extra['days_available'],
+                'is_active'      => $row->is_active ? '1' : '0',
+            ];
         }
+
         return $clinics;
     }
 
@@ -263,26 +290,40 @@ class HearMed_Admin_Clinics {
         check_ajax_referer('hm_nonce', 'nonce');
         if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
 
-        $id = intval($_POST['id'] ?? 0);
+        $id   = intval($_POST['id'] ?? 0);
         $name = sanitize_text_field($_POST['name'] ?? '');
         if (empty($name)) { wp_send_json_error('Name required'); return; }
 
-        if ($id) {
-            wp_update_post(['ID' => $id, 'post_title' => $name]);
-        } else {
-            // TODO: USE PostgreSQL: HearMed_DB::insert()
-            $id = wp_insert_post([
-                'post_type' => 'clinic',
-                'post_title' => $name,
-                'post_status' => 'publish',
-            ]);
-            if (is_wp_error($id)) { wp_send_json_error('Failed to create clinic'); return; }
+        $data = [
+            'clinic_name'  => $name,
+            'address_line1'=> sanitize_textarea_field($_POST['address'] ?? ''),
+            'phone'        => sanitize_text_field($_POST['clinic_phone'] ?? ''),
+            'email'        => sanitize_email($_POST['clinic_email'] ?? ''),
+            'postcode'     => sanitize_text_field($_POST['eircode'] ?? ''),
+            'clinic_color' => sanitize_text_field($_POST['clinic_colour'] ?? '#0BB4C4'),
+            'is_active'    => ($_POST['is_active'] ?? '1') === '1',
+        ];
+
+        // Store extra UI-only fields (days_available, text_colour) inside opening_hours JSON
+        $extra = [
+            'days_available' => sanitize_text_field($_POST['days_available'] ?? ''),
+            'text_colour'    => sanitize_text_field($_POST['text_colour'] ?? ''),
+        ];
+        if ($extra['days_available'] !== '' || $extra['text_colour'] !== '') {
+            $data['opening_hours'] = wp_json_encode($extra);
         }
 
-        $meta_fields = ['address', 'clinic_email', 'clinic_phone', 'eircode', 'clinic_colour', 'text_colour', 'days_available', 'is_active'];
-        foreach ($meta_fields as $f) {
-            if (isset($_POST[$f])) {
-                update_post_meta($id, $f, sanitize_text_field($_POST[$f]));
+        if ($id) {
+            $updated = HearMed_DB::update('clinics', $data, ['id' => $id]);
+            if ($updated === false) {
+                wp_send_json_error('Failed to update clinic');
+                return;
+            }
+        } else {
+            $id = HearMed_DB::insert('clinics', $data);
+            if (!$id) {
+                wp_send_json_error('Failed to create clinic');
+                return;
             }
         }
 
@@ -294,7 +335,9 @@ class HearMed_Admin_Clinics {
         if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
 
         $id = intval($_POST['id'] ?? 0);
-        if ($id) wp_delete_post($id, true);
+        if ($id) {
+            HearMed_DB::delete('clinics', ['id' => $id]);
+        }
         wp_send_json_success();
     }
 }

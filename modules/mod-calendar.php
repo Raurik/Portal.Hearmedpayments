@@ -92,15 +92,35 @@ function hm_ajax_save_settings() {
 function hm_ajax_get_clinics() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $ps = HearMed_DB::get_results(
-        "SELECT id, clinic_name, clinic_colour, text_colour, is_active FROM hearmed_reference.clinics WHERE is_active = true ORDER BY clinic_name"
+        "SELECT id, clinic_name, clinic_color, is_active, opening_hours
+         FROM hearmed_reference.clinics
+         WHERE is_active = true
+         ORDER BY clinic_name"
     );
     $d = [];
     foreach ( $ps as $p ) {
+        $extra = [
+            'days_available' => '1,2,3,4,5',
+            'text_colour'    => '#FFFFFF',
+        ];
+
+        if ( ! empty( $p->opening_hours ) ) {
+            $decoded = json_decode( $p->opening_hours, true );
+            if ( is_array( $decoded ) ) {
+                if ( ! empty( $decoded['days_available'] ) ) {
+                    $extra['days_available'] = (string) $decoded['days_available'];
+                }
+                if ( ! empty( $decoded['text_colour'] ) ) {
+                    $extra['text_colour'] = (string) $decoded['text_colour'];
+                }
+            }
+        }
+
         $d[] = [
             'id'             => (int) $p->id,
             'name'           => $p->clinic_name,
-            'clinic_colour'  => $p->clinic_colour ?: '#0BB4C4',
-            'text_colour'    => $p->text_colour ?: '#FFFFFF',
+            'clinic_colour'  => $p->clinic_color ?: '#0BB4C4',
+            'text_colour'    => $extra['text_colour'],
             'is_active'      => (bool) $p->is_active,
         ];
     }
