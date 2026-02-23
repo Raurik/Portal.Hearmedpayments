@@ -71,6 +71,7 @@ class HearMed_Roles {
     public static function get_primary_clinic(): ?int {
         $disp_id = self::get_dispenser_id();
         if (!$disp_id) return null;
-        return (int) /* USE PostgreSQL: Get from table columns */ /* get_post_meta($disp_id, "primary_clinic", true);
+        // TODO: USE PostgreSQL: Get from table columns
+        return (int) get_post_meta($disp_id, "primary_clinic", true);
     }
 }
