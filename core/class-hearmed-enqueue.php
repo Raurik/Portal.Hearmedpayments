@@ -29,8 +29,9 @@ class HearMed_Enqueue {
      * Constructor
      */
     public function __construct() {
-        add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_foundation' ], 5 );
-        add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_modules' ], 10 );
+        // Priority 15 = AFTER Elementor (priority 11) so dependencies exist
+        add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_foundation' ], 15 );
+        add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_modules' ], 16 );
     }
     
     /**
@@ -39,10 +40,16 @@ class HearMed_Enqueue {
      */
     public function enqueue_foundation() {
         // Core CSS - viewport, layout, and component styles
+        // Depend on Elementor frontend so our CSS loads AFTER Elementor
+        $core_deps = [];
+        if ( wp_style_is( 'elementor-frontend', 'registered' ) ) {
+            $core_deps[] = 'elementor-frontend';
+        }
+        
         wp_enqueue_style(
             'hearmed-core',
             HEARMED_URL . 'assets/css/hearmed-core.css',
-            [],
+            $core_deps,
             $this->get_file_version( 'assets/css/hearmed-core.css' )
         );
 
@@ -66,10 +73,15 @@ class HearMed_Enqueue {
 
         // Layout/foundation CSS - ONLY on portal pages to avoid global scroll interference
         if ( $this->is_portal_page() ) {
+            $foundation_deps = [ 'hearmed-design' ];
+            if ( wp_style_is( 'elementor-frontend', 'registered' ) ) {
+                $foundation_deps[] = 'elementor-frontend';
+            }
+            
             wp_enqueue_style(
                 'hearmed-foundation',
                 HEARMED_URL . 'assets/css/hearmed-foundation.css',
-                [ 'hearmed-design' ],
+                $foundation_deps,
                 $this->get_file_version( 'assets/css/hearmed-foundation.css' )
             );
 
