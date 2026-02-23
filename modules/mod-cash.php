@@ -1,34 +1,15 @@
 <?php
-/**
- * Cash management + dispenser tills
- * 
- * Shortcode: [hearmed_cash_management]
- * Page: see blueprint for URL
- */
-if (!defined("ABSPATH")) exit;
 
-class HearMed_Cash {
+add_action('wp_ajax_hm_acknowledge_privacy_notice', 'hm_acknowledge_privacy_notice_handler');
 
-    public static function init() {
-        add_shortcode("hearmed_cash_management", [__CLASS__, "render"]);
+function hm_acknowledge_privacy_notice_handler() {
+    check_ajax_referer('hm_nonce', 'nonce');
+
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error('User not logged in');
     }
 
-    public static function render($atts = []): string {
-        if (!is_user_logged_in()) return "";
-        
-        ob_start();
-        ?>
-        <div id="hm-app" data-view="hearmed_cash_management">
-            <div class="hm-page-header">
-                <h1 class="hm-page-title">" . esc_html(ucwords(str_replace('_', ' ', 'hearmed_cash_management'))) . "</h1>
-            </div>
-            <div class="hm-placeholder">
-                <p>Module not yet built. See blueprint.</p>
-            </div>
-        </div>
-        <?php
-        return ob_get_clean();
-    }
+    $user_id = get_current_user_id();
+    update_user_meta($user_id, 'hm_privacy_notice_accepted', current_time('mysql'));
+    wp_send_json_success();
 }
-
-HearMed_Cash::init();

@@ -15,286 +15,191 @@
 // ============================================================
 
 /**
- * HearMed Admin — Manage Clinics
- * Shortcode: [hearmed_manage_clinics]
- * CRUD for Clinic CPT (post meta based)
+ * HearMed Admin — Audit Log & Data Export
+ * Shortcodes: [hearmed_audit_log], [hearmed_data_export]
  */
 if (!defined('ABSPATH')) exit;
 
-class HearMed_Admin_Clinics {
-
-    private $fields = [
-        'address', 'clinic_email', 'clinic_phone', 'eircode',
-        'clinic_colour', 'text_colour', 'days_available', 'is_active',
-    ];
+class HearMed_Admin_AuditLog {
 
     public function __construct() {
-        add_shortcode('hearmed_manage_clinics', [$this, 'render']);
-        add_action('wp_ajax_hm_admin_save_clinic', [$this, 'ajax_save']);
-        add_action('wp_ajax_hm_admin_delete_clinic', [$this, 'ajax_delete']);
+        add_shortcode('hearmed_audit_log', [$this, 'render_audit']);
+        add_shortcode('hearmed_data_export', [$this, 'render_export']);
+        add_action('wp_ajax_hm_admin_get_audit_log', [$this, 'ajax_get_log']);
+        add_action('wp_ajax_hm_admin_export_patient', [$this, 'ajax_export_patient']);
     }
 
-    private function get_clinics() {
-        // OLD: /* USE PostgreSQL: HearMed_DB::get_results() */ /* get_posts(['post_type' => 'clinic', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC']);
-        $posts = HearMed_DB::get_results("SELECT id, clinic_name as post_title, id as ID FROM hearmed_reference.clinics WHERE is_active = true ORDER BY clinic_name");
-        $clinics = [];
-        foreach ($posts as $p) {
-            $c = ['id' => $p->ID, 'name' => $p->post_title];
-            foreach ($this->fields as $f) {
-                $c[$f] = /* USE PostgreSQL: Get from table columns */ /* get_post_meta($p->ID, $f, true);
-            }
-            $c['is_active'] = ($c['is_active'] === '' || $c['is_active'] === '1') ? '1' : '0';
-            $c['clinic_colour'] = $c['clinic_colour'] ?: '#0BB4C4';
-            $c['text_colour'] = $c['text_colour'] ?: '#ffffff';
-            $clinics[] = $c;
-        }
-        return $clinics;
-    }
-
-    public function render() {
+    public function render_audit() {
         if (!is_user_logged_in()) return '<p>Please log in.</p>';
 
-        $clinics = $this->get_clinics();
-        $days_labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-
         ob_start(); ?>
-        <div class="hm-admin" id="hm-clinics-app">
+        <div class="hm-admin">
             <div class="hm-admin-hd">
-                <h2>Clinics</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmClinic.open()">+ Add Clinic</button>
+                <h2>Audit Log</h2>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="text" id="hmal-search" placeholder="Search actions..." class="hm-search-input" style="width:180px">
+                    <select id="hmal-entity" class="hm-filter-select">
+                        <option value="">All Entities</option>
+                        <option value="appointment">Appointments</option>
+                        <option value="order">Orders</option>
+                        <option value="invoice">Invoices</option>
+                        <option value="patient">Patients</option>
+                        <option value="payment">Payments</option>
+                        <option value="user">Users</option>
+                        <option value="clinic">Clinics</option>
+                        <option value="product">Products</option>
+                    </select>
+                    <input type="date" id="hmal-from" class="hm-filter-select">
+                    <input type="date" id="hmal-to" class="hm-filter-select">
+                    <button class="hm-btn" onclick="hmAudit.load()">Filter</button>
+                </div>
             </div>
 
-            <?php if (empty($clinics)): ?>
-                <div class="hm-empty-state">
-                    <p>No clinics yet. Add your first clinic to get started.</p>
-                </div>
-            <?php else: ?>
-            <table class="hm-table">
-                <thead>
-                    <tr>
-                        <th style="width:36px">Colour</th>
-                        <th>Name</th>
-                        <th>Address</th>
-                        <th>Phone</th>
-                        <th>Email</th>
-                        <th>Eircode</th>
-                        <th>Status</th>
-                        <th style="width:100px"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php foreach ($clinics as $c): ?>
-                    <tr data-id="<?php echo $c['id']; ?>">
-                        <td>
-                            <span class="hm-colour-dot" style="background:<?php echo esc_attr($c['clinic_colour']); ?>;color:<?php echo esc_attr($c['text_colour']); ?>"></span>
-                        </td>
-                        <td><strong><?php echo esc_html($c['name']); ?></strong></td>
-                        <td><?php echo esc_html($c['address']); ?></td>
-                        <td><?php echo esc_html($c['clinic_phone']); ?></td>
-                        <td><?php echo esc_html($c['clinic_email']); ?></td>
-                        <td><?php echo esc_html($c['eircode']); ?></td>
-                        <td>
-                            <?php if ($c['is_active'] === '1'): ?>
-                                <span class="hm-badge hm-badge-green">Active</span>
-                            <?php else: ?>
-                                <span class="hm-badge hm-badge-red">Inactive</span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="hm-table-acts">
-                            <button class="hm-btn hm-btn-sm" onclick='hmClinic.open(<?php echo json_encode($c); ?>)'>Edit</button>
-                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmClinic.del(<?php echo $c['id']; ?>,'<?php echo esc_js($c['name']); ?>')">Delete</button>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-            <?php endif; ?>
-
-            <!-- Modal -->
-            <div class="hm-modal-bg" id="hm-clinic-modal">
-                <div class="hm-modal">
-                    <div class="hm-modal-hd">
-                        <h3 id="hm-clinic-modal-title">Add Clinic</h3>
-                        <button class="hm-modal-x" onclick="hmClinic.close()">&times;</button>
-                    </div>
-                    <div class="hm-modal-body">
-                        <input type="hidden" id="hmc-id" value="">
-
-                        <div class="hm-form-group">
-                            <label>Clinic Name *</label>
-                            <input type="text" id="hmc-name" placeholder="e.g. Tullamore">
-                        </div>
-
-                        <div class="hm-form-group">
-                            <label>Address</label>
-                            <textarea id="hmc-address" rows="2" placeholder="Full address"></textarea>
-                        </div>
-
-                        <div class="hm-form-row">
-                            <div class="hm-form-group">
-                                <label>Phone</label>
-                                <input type="text" id="hmc-phone" placeholder="057 123 4567">
-                            </div>
-                            <div class="hm-form-group">
-                                <label>Email</label>
-                                <input type="email" id="hmc-email" placeholder="clinic@hearmed.ie">
-                            </div>
-                        </div>
-
-                        <div class="hm-form-row">
-                            <div class="hm-form-group hm-form-sm">
-                                <label>Eircode</label>
-                                <input type="text" id="hmc-eircode" placeholder="R35 AB12">
-                            </div>
-                            <div class="hm-form-group hm-form-sm">
-                                <label>Calendar Colour</label>
-                                <input type="color" id="hmc-colour" value="#0BB4C4">
-                            </div>
-                            <div class="hm-form-group hm-form-sm">
-                                <label>Text Colour</label>
-                                <input type="color" id="hmc-text-colour" value="#ffffff">
-                            </div>
-                        </div>
-
-                        <div class="hm-form-group">
-                            <label>Days Available</label>
-                            <div class="hm-days-grid" id="hmc-days">
-                                <?php foreach ($days_labels as $i => $d): ?>
-                                <label class="hm-day-check">
-                                    <input type="checkbox" value="<?php echo $i + 1; ?>"> <?php echo $d; ?>
-                                </label>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-
-                        <div class="hm-form-group">
-                            <label class="hm-toggle-label">
-                                <input type="checkbox" id="hmc-active" checked> Active
-                            </label>
-                        </div>
-                    </div>
-                    <div class="hm-modal-ft">
-                        <button class="hm-btn" onclick="hmClinic.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmClinic.save()" id="hmc-save-btn">Save Clinic</button>
-                    </div>
-                </div>
+            <div id="hmal-results">
+                <p style="text-align:center;color:var(--hm-text-light);padding:40px;">Click "Filter" or adjust filters to load audit entries.</p>
             </div>
         </div>
 
 
         <script>
-        var hmClinic = {
-            open: function(data) {
-                var m = document.getElementById('hm-clinic-modal');
-                var isEdit = data && data.id;
-                document.getElementById('hm-clinic-modal-title').textContent = isEdit ? 'Edit Clinic' : 'Add Clinic';
-                document.getElementById('hmc-id').value = isEdit ? data.id : '';
-                document.getElementById('hmc-name').value = isEdit ? data.name : '';
-                document.getElementById('hmc-address').value = isEdit ? (data.address || '') : '';
-                document.getElementById('hmc-phone').value = isEdit ? (data.clinic_phone || '') : '';
-                document.getElementById('hmc-email').value = isEdit ? (data.clinic_email || '') : '';
-                document.getElementById('hmc-eircode').value = isEdit ? (data.eircode || '') : '';
-                document.getElementById('hmc-colour').value = isEdit ? (data.clinic_colour || '#0BB4C4') : '#0BB4C4';
-                document.getElementById('hmc-text-colour').value = isEdit ? (data.text_colour || '#ffffff') : '#ffffff';
-                document.getElementById('hmc-active').checked = isEdit ? data.is_active === '1' : true;
-
-                // Days
-                var days = isEdit && data.days_available ? data.days_available.split(',') : ['1','2','3','4','5'];
-                document.querySelectorAll('#hmc-days input').forEach(function(cb) {
-                    cb.checked = days.indexOf(cb.value) !== -1;
-                });
-
-                m.classList.add('open');
-            },
-
-            close: function() {
-                document.getElementById('hm-clinic-modal').classList.remove('open');
-            },
-
-            save: function() {
-                var name = document.getElementById('hmc-name').value.trim();
-                if (!name) { alert('Clinic name is required.'); return; }
-
-                var days = [];
-                document.querySelectorAll('#hmc-days input:checked').forEach(function(cb) { days.push(cb.value); });
-
-                var btn = document.getElementById('hmc-save-btn');
-                btn.textContent = 'Saving...';
-                btn.disabled = true;
-
+        var hmAudit = {
+            load: function() {
+                var el = document.getElementById('hmal-results');
+                el.innerHTML = '<p style="text-align:center;padding:40px;color:var(--hm-text-light)">Loading...</p>';
                 jQuery.post(HM.ajax_url, {
-                    action: 'hm_admin_save_clinic',
+                    action: 'hm_admin_get_audit_log',
                     nonce: HM.nonce,
-                    id: document.getElementById('hmc-id').value,
-                    name: name,
-                    address: document.getElementById('hmc-address').value,
-                    clinic_phone: document.getElementById('hmc-phone').value,
-                    clinic_email: document.getElementById('hmc-email').value,
-                    eircode: document.getElementById('hmc-eircode').value,
-                    clinic_colour: document.getElementById('hmc-colour').value,
-                    text_colour: document.getElementById('hmc-text-colour').value,
-                    days_available: days.join(','),
-                    is_active: document.getElementById('hmc-active').checked ? '1' : '0'
+                    search: document.getElementById('hmal-search').value,
+                    entity: document.getElementById('hmal-entity').value,
+                    from: document.getElementById('hmal-from').value,
+                    to: document.getElementById('hmal-to').value
                 }, function(r) {
-                    if (r.success) location.reload();
-                    else { alert(r.data || 'Error saving.'); btn.textContent = 'Save Clinic'; btn.disabled = false; }
-                });
-            },
-
-            del: function(id, name) {
-                if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
-                jQuery.post(HM.ajax_url, {
-                    action: 'hm_admin_delete_clinic',
-                    nonce: HM.nonce,
-                    id: id
-                }, function(r) {
-                    if (r.success) location.reload();
-                    else alert(r.data || 'Error deleting.');
+                    if (!r.success) { el.innerHTML = '<p style="text-align:center;padding:40px;color:var(--hm-red)">Error loading log.</p>'; return; }
+                    var rows = r.data;
+                    if (!rows.length) { el.innerHTML = '<p style="text-align:center;padding:40px;color:var(--hm-text-light)">No entries found.</p>'; return; }
+                    var html = '<div class="hm-audit-wrap">';
+                    rows.forEach(function(row) {
+                        html += '<div class="hm-audit-row">' +
+                            '<span class="hm-audit-time">' + (row.created_at || '') + '</span>' +
+                            '<span class="hm-audit-user">' + (row.user_name || 'System') + '</span>' +
+                            '<span class="hm-audit-action">' + (row.action || '') + '</span>' +
+                            '<span class="hm-audit-detail">' + (row.entity_type || '') + ' #' + (row.entity_id || '') +
+                            (row.details ? ' — ' + row.details.substring(0, 200) : '') + '</span>' +
+                        '</div>';
+                    });
+                    html += '</div><p style="padding:8px 16px;font-size:12px;color:var(--hm-text-light)">' + rows.length + ' entries (max 500)</p>';
+                    el.innerHTML = html;
                 });
             }
         };
         </script>
-        <?php
-        return ob_get_clean();
+        <?php return ob_get_clean();
     }
 
-    public function ajax_save() {
+    public function ajax_get_log() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        // PostgreSQL only - no $wpdb needed
+        $t = HearMed_DB::table('audit_log');
+        if (HearMed_DB::get_var("SHOW TABLES LIKE '$t'") !== $t) { wp_send_json_success([]); return; }
 
-        $id = intval($_POST['id'] ?? 0);
-        $name = sanitize_text_field($_POST['name'] ?? '');
-        if (empty($name)) { wp_send_json_error('Name required'); return; }
+        $where = ['1=1'];
+        $entity = sanitize_text_field($_POST['entity'] ?? '');
+        $search = sanitize_text_field($_POST['search'] ?? '');
+        $from = sanitize_text_field($_POST['from'] ?? '');
+        $to = sanitize_text_field($_POST['to'] ?? '');
 
-        if ($id) {
-            wp_update_post(['ID' => $id, 'post_title' => $name]);
-        } else {
-            $id = /* USE PostgreSQL: HearMed_DB::insert() */ /* wp_insert_post([
-                'post_type' => 'clinic',
-                'post_title' => $name,
-                'post_status' => 'publish',
-            ]);
-            if (is_wp_error($id)) { wp_send_json_error('Failed to create clinic'); return; }
+        if ($entity) $where[] = HearMed_DB::get_results(  "entity_type = %s", $entity);
+        if ($search) $where[] = HearMed_DB::get_results(  "(action LIKE %s OR details LIKE %s)", "%$search%", "%$search%");
+        if ($from) $where[] = HearMed_DB::get_results(  "created_at >= %s", $from . ' 00:00:00');
+        if ($to) $where[] = HearMed_DB::get_results(  "created_at <= %s", $to . ' 23:59:59');
+
+        $sql = "SELECT * FROM `$t` WHERE " . implode(' AND ', $where) . " ORDER BY id DESC LIMIT 500";
+        $rows = HearMed_DB::get_results($sql, ARRAY_A) ?: [];
+
+        // Attach user names
+        foreach ($rows as &$row) {
+            $u = get_user_by('id', intval($row['user_id'] ?? 0));
+            $row['user_name'] = $u ? $u->display_name : 'System';
         }
 
-        $meta_fields = ['address', 'clinic_email', 'clinic_phone', 'eircode', 'clinic_colour', 'text_colour', 'days_available', 'is_active'];
-        foreach ($meta_fields as $f) {
-            if (isset($_POST[$f])) {
-                update_post_meta($id, $f, sanitize_text_field($_POST[$f]));
+        wp_send_json_success($rows);
+    }
+
+    public function render_export() {
+        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+
+        ob_start(); ?>
+        <div class="hm-admin">
+            <div class="hm-admin-hd"><h2>Data Export</h2></div>
+
+            <div class="hm-settings-panel">
+                <p style="color:var(--hm-text-light);margin-bottom:20px;">Export all data for a specific patient (GDPR Right of Access / Right to Portability). Search for a patient and click Export to generate a full data package.</p>
+
+                <div class="hm-form-group">
+                    <label>Patient Search</label>
+                    <input type="text" id="hmde-search" placeholder="Type patient name or H-number..." oninput="hmExport.search(this.value)">
+                    <div id="hmde-results" style="margin-top:8px"></div>
+                </div>
+
+                <div id="hmde-selected" style="display:none;margin-top:16px;">
+                    <div class="hm-form-group">
+                        <strong id="hmde-patient-name"></strong>
+                        <input type="hidden" id="hmde-patient-id">
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="hm-btn hm-btn-teal" onclick="hmExport.exportData('json')">Export as JSON</button>
+                        <button class="hm-btn" onclick="hmExport.exportData('csv')">Export as CSV</button>
+                    </div>
+                </div>
+
+                <hr style="margin:30px 0;border:none;border-top:1px solid var(--hm-border-light);">
+
+                <h3 style="font-size:15px;margin-bottom:12px;">Patient Anonymisation (Right to Erasure)</h3>
+                <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:12px;">Anonymises personal data while preserving financial and appointment records for Revenue/HSE compliance. This action cannot be undone.</p>
+                <button class="hm-btn hm-btn-red" disabled>Anonymise Patient (Select patient first)</button>
+            </div>
+        </div>
+
+
+        <script>
+        var hmExport = {
+            timer: null,
+            search: function(q) {
+                clearTimeout(this.timer);
+                if (q.length < 2) { document.getElementById('hmde-results').innerHTML = ''; return; }
+                this.timer = setTimeout(function() {
+                    jQuery.post(HM.ajax_url, { action:'hm_search_patients', nonce:HM.nonce, q:q }, function(r) {
+                        if (!r.success) return;
+                        var html = '';
+                        (r.data || []).forEach(function(p) {
+                            html += '<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--hm-border-light);font-size:13px" onclick="hmExport.select(' + p.id + ','' + p.label.replace(/'/g, "'") + '')">' + p.label + '</div>';
+                        });
+                        document.getElementById('hmde-results').innerHTML = html ? '<div style="border:1px solid var(--hm-border-light);border-radius:6px;max-height:200px;overflow-y:auto">' + html + '</div>' : '';
+                    });
+                }, 300);
+            },
+            select: function(id, name) {
+                document.getElementById('hmde-patient-id').value = id;
+                document.getElementById('hmde-patient-name').textContent = name;
+                document.getElementById('hmde-selected').style.display = 'block';
+                document.getElementById('hmde-results').innerHTML = '';
+                document.getElementById('hmde-search').value = name;
+            },
+            exportData: function(format) {
+                alert('Patient data export will be generated as ' + format.toUpperCase() + '. This feature connects to the full export pipeline in a future update.');
             }
-        }
-
-        wp_send_json_success(['id' => $id]);
+        };
+        </script>
+        <?php return ob_get_clean();
     }
 
-    public function ajax_delete() {
+    public function ajax_export_patient() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
-
-        $id = intval($_POST['id'] ?? 0);
-        if ($id) wp_delete_post($id, true);
-        wp_send_json_success();
+        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        // Full implementation in later phase
+        wp_send_json_success(['message' => 'Export queued']);
     }
 }
 
-new HearMed_Admin_Clinics();
+new HearMed_Admin_AuditLog();

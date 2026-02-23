@@ -1,16 +1,16 @@
 <?php
 /**
- * Reports dashboard — revenue, appointments, close rate, binaural, TNS, product mix, clinic comparison
+ * Cash management + dispenser tills
  * 
- * Shortcode: [hearmed_reports]
+ * Shortcode: [hearmed_cash_management]
  * Page: see blueprint for URL
  */
 if (!defined("ABSPATH")) exit;
 
-class HearMed_Reports {
+class HearMed_Cash {
 
     public static function init() {
-        add_shortcode("hearmed_reports", [__CLASS__, "render"]);
+        add_shortcode("hearmed_cash_management", [__CLASS__, "render"]);
     }
 
     public static function render($atts = []): string {
@@ -18,9 +18,9 @@ class HearMed_Reports {
         
         ob_start();
         ?>
-        <div id="hm-app" data-view="hearmed_reports">
+        <div id="hm-app" data-view="hearmed_cash_management">
             <div class="hm-page-header">
-                <h1 class="hm-page-title">" . esc_html(ucwords(str_replace('_', ' ', 'hearmed_reports'))) . "</h1>
+                <h1 class="hm-page-title">" . esc_html(ucwords(str_replace('_', ' ', 'hearmed_cash_management'))) . "</h1>
             </div>
             <div class="hm-placeholder">
                 <p>Module not yet built. See blueprint.</p>
@@ -31,4 +31,4 @@ class HearMed_Reports {
     }
 }
 
-HearMed_Reports::init();
+HearMed_Cash::init();

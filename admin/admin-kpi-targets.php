@@ -15,134 +15,388 @@
 // ============================================================
 
 /**
- * HearMed Admin — KPI Targets
- * Shortcode: [hearmed_kpi_targets]
- * CRUD for kpi_targets CCT
+ * HearMed Debug / Health Check Page
+ *
+ * Adds an admin-only diagnostics page under WP Admin → Tools → HearMed Debug.
+ *
+ * Access: administrator, hm_clevel, hm_admin, hm_finance only.
+ *
+ * @package HearMed_Portal
+ * @since   4.0.0
  */
-if (!defined('ABSPATH')) exit;
 
-class HearMed_Admin_KPI_Targets {
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 
-    private function table() { return HearMed_DB::table('kpi_targets'); }
+// ============================================================
+// ADMIN MENU REGISTRATION
+// ============================================================
 
-    public function __construct() {
-        add_shortcode('hearmed_kpi_targets', [$this, 'render']);
-        add_action('wp_ajax_hm_admin_save_kpi_target', [$this, 'ajax_save']);
+add_action( 'admin_menu', function () {
+    add_submenu_page(
+        'tools.php',
+        'HearMed Debug',
+        'HearMed Debug',
+        'manage_options', // Broad gate; role checked inside render callback.
+        'hearmed-debug',
+        'hm_render_debug_page'
+    );
+} );
+
+// ============================================================
+// ASSET ENQUEUE — only on this page
+// ============================================================
+
+add_action( 'admin_enqueue_scripts', function ( $hook ) {
+    if ( 'tools_page_hearmed-debug' !== $hook ) {
+        return;
     }
 
-    private function get_targets() {
-        // PostgreSQL only - no $wpdb needed
-        $t = $this->table();
-        if (HearMed_DB::get_var("SHOW TABLES LIKE '$t'") !== $t) return [];
-        return HearMed_DB::get_results("SELECT * FROM `$t` ORDER BY id ASC", ARRAY_A) ?: [];
+    wp_enqueue_style(
+        'hearmed-debug',
+        HEARMED_URL . 'assets/css/hearmed-debug.css',
+        [],
+        HEARMED_VERSION
+    );
+
+    wp_enqueue_script(
+        'hearmed-debug',
+        HEARMED_URL . 'assets/js/hearmed-debug.js',
+        [ 'jquery' ],
+        HEARMED_VERSION,
+        true
+    );
+
+    wp_localize_script( 'hearmed-debug', 'HMDebug', [
+        'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+        'hmNonce' => wp_create_nonce( 'hm_nonce' ),
+    ] );
+} );
+
+// ============================================================
+// ACCESS HELPER
+// ============================================================
+
+/**
+ * Returns true when the current user may access the debug page.
+ *
+ * @return bool
+ */
+function hm_debug_user_is_allowed() {
+    $user        = wp_get_current_user();
+    $admin_roles = [ 'administrator', 'hm_clevel', 'hm_admin', 'hm_finance' ];
+    return ! empty( array_intersect( $admin_roles, (array) $user->roles ) );
+}
+
+// ============================================================
+// PAGE RENDERER
+// ============================================================
+
+/**
+ * Render the HearMed Debug / Health Check admin page.
+ */
+function hm_render_debug_page() {
+    if ( ! hm_debug_user_is_allowed() ) {
+        wp_die(
+            '<p>' . esc_html__( 'You do not have permission to access this page.', 'hearmed-portal' ) . '</p>',
+            403
+        );
     }
+// Removed: global $wpdb - now using HearMed_DB
+    // ── Section A data ──────────────────────────────────────────
+    $env = hm_debug_environment_info();
 
-    public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
-        $targets = $this->get_targets();
+    // ── Section B data ──────────────────────────────────────────
+    $shortcode_map = hm_debug_shortcode_map();
 
-        ob_start(); ?>
-        <div class="hm-admin">
-            <div class="hm-admin-hd">
-                <h2>KPI Targets</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmKpi.saveAll()" id="hmk-save">Save All</button>
+    // ── Section C data ──────────────────────────────────────────
+    $ajax_checks = hm_debug_ajax_actions();
+
+    // ── Section D data ──────────────────────────────────────────
+    $tables = hm_debug_table_status();
+
+    ?>
+    <div class="wrap" id="hm-debug-wrap">
+        <h1>🔍 HearMed Debug / Health Check</h1>
+        <p>
+            Plugin version: <strong><?php echo esc_html( HEARMED_VERSION ); ?></strong> &nbsp;|&nbsp;
+            Generated: <strong><?php echo esc_html( current_time( 'mysql' ) ); ?></strong>
+        </p>
+
+        <!-- ── A. Environment ─────────────────────────────────── -->
+        <div class="hm-debug-section">
+            <h2>A. Environment</h2>
+            <table class="hm-debug-table widefat striped">
+                <thead>
+                    <tr><th>Setting</th><th>Value</th></tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $env as $label => $value ) : ?>
+                    <tr>
+                        <td><?php echo esc_html( $label ); ?></td>
+                        <td><?php echo esc_html( $value ); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ── B. Module / shortcode detection ───────────────── -->
+        <div class="hm-debug-section">
+            <h2>B. Module / Shortcode Detection</h2>
+            <p>
+                HearMed loads module assets <em>conditionally</em>: a module's CSS and JS are
+                only enqueued when a page's content contains the corresponding shortcode.
+                Use this section to check which HearMed shortcodes appear on a given page.
+            </p>
+
+            <?php
+            // Optional: if a page ID was submitted (GET, read-only), show its shortcodes.
+            $page_id = 0;
+            if (
+                isset( $_GET['hm_debug_page_id'], $_GET['hm_debug_sc_nonce'] ) &&
+                wp_verify_nonce( sanitize_key( $_GET['hm_debug_sc_nonce'] ), 'hm_debug_sc' )
+            ) {
+                $page_id = absint( $_GET['hm_debug_page_id'] );
+            }
+            if ( $page_id ) {
+                $post = get_post( $page_id );
+                if ( $post && 'page' === $post->post_type ) {
+                    echo '<h3>Shortcodes detected on page ID ' . esc_html( $page_id ) . ' — <em>' . esc_html( $post->post_title ) . '</em></h3>';
+                    echo '<ul>';
+                    $found_any = false;
+                    foreach ( $shortcode_map as $shortcode => $module ) {
+                        if ( has_shortcode( $post->post_content, $shortcode ) ) {
+                            $found_any = true;
+                            echo '<li><code>[' . esc_html( $shortcode ) . ']</code> → module: <strong>' . esc_html( $module ) . '</strong></li>';
+                        }
+                    }
+                    if ( ! $found_any ) {
+                        echo '<li>No HearMed shortcodes found on this page.</li>';
+                    }
+                    echo '</ul>';
+                } else {
+                    echo '<p class="hm-debug-warn">⚠ Page ID ' . esc_html( $page_id ) . ' not found or is not a page.</p>';
+                }
+            }
+            ?>
+
+            <form method="get" action="">
+                <input type="hidden" name="page" value="hearmed-debug">
+                <?php wp_nonce_field( 'hm_debug_sc', 'hm_debug_sc_nonce' ); ?>
+                <label for="hm_debug_page_id"><strong>Check a page:</strong></label>
+                <input type="number" id="hm_debug_page_id" name="hm_debug_page_id"
+                       value="<?php echo esc_attr( $page_id ?: '' ); ?>"
+                       placeholder="Enter page ID" style="width:140px;">
+                <button type="submit" class="button">Check Page</button>
+            </form>
+
+            <p style="margin-top:12px;">All registered HearMed shortcodes:</p>
+            <ul>
+                <?php foreach ( $shortcode_map as $shortcode => $module ) : ?>
+                <li><code>[<?php echo esc_html( $shortcode ); ?>]</code> → <em><?php echo esc_html( $module ); ?></em></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+
+        <!-- ── C. AJAX Health Checks ─────────────────────────── -->
+        <div class="hm-debug-section">
+            <h2>C. AJAX Health Checks</h2>
+
+            <div class="hm-nonce-info">
+                <strong>Nonce status:</strong>
+                A fresh <code>hm_nonce</code> has been generated for this session and passed
+                to the buttons below. Each button sends a live request to
+                <code>admin-ajax.php</code> using the same nonce that the portal scripts use.
             </div>
 
-            <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">Set target values for each KPI metric. These appear on the KPI dashboard alongside actual values.</p>
+            <p>
+                <button id="hm-debug-run-all" class="button button-primary">▶ Run All Checks</button>
+            </p>
 
-            <?php if (empty($targets)): ?>
-                <div class="hm-empty-state"><p>No KPI targets found. Deactivate and reactivate the plugin to seed defaults.</p></div>
-            <?php else: ?>
-            <table class="hm-table">
+            <?php foreach ( $ajax_checks as $check ) : ?>
+            <div class="hm-ajax-row" data-action="<?php echo esc_attr( $check['action'] ); ?>">
+                <div class="hm-ajax-row-header">
+                    <button class="button hm-debug-run-btn">Run</button>
+                    <code><?php echo esc_html( $check['action'] ); ?></code>
+                    <span class="hm-ajax-status"></span>
+                    <?php if ( ! $check['registered'] ) : ?>
+                    <span class="hm-debug-warn">(⚠ action not registered — module may not be loaded)</span>
+                    <?php endif; ?>
+                </div>
+                <div class="hm-ajax-result"></div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- ── D. Database / Tables ───────────────────────────── -->
+        <div class="hm-debug-section">
+            <h2>D. Database / Tables</h2>
+            <table class="hm-debug-table widefat">
                 <thead>
                     <tr>
-                        <th>Metric</th>
-                        <th style="width:150px">Target Value</th>
-                        <th style="width:80px">Unit</th>
-                        <th style="width:80px">Active</th>
+                        <th>Table</th>
+                        <th>Status</th>
+                        <th>Row count</th>
                     </tr>
                 </thead>
                 <tbody>
-                <?php foreach ($targets as $t): ?>
-                <tr data-id="<?php echo $t['id']; ?>">
-                    <td><strong><?php echo esc_html($t['target_name']); ?></strong></td>
-                    <td>
-                        <input type="number" class="hmk-val" data-id="<?php echo $t['id']; ?>" value="<?php echo esc_attr($t['target_value']); ?>" step="0.1" min="0" style="width:120px;padding:6px 10px;border:1px solid var(--hm-border);border-radius:6px;font-size:14px;font-weight:600;">
-                    </td>
-                    <td>
-                        <span class="hm-badge hm-badge-blue"><?php echo esc_html($t['target_unit']); ?></span>
-                    </td>
-                    <td>
-                        <label class="hm-toggle-label">
-                            <input type="checkbox" class="hmk-active" data-id="<?php echo $t['id']; ?>" <?php echo $t['is_active'] ? 'checked' : ''; ?>>
-                        </label>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
+                    <?php foreach ( $tables as $t ) : ?>
+                    <tr>
+                        <td><code><?php echo esc_html( $t['full_name'] ); ?></code></td>
+                        <td>
+                            <?php if ( $t['exists'] ) : ?>
+                                <span class="hm-debug-ok">✅ Exists</span>
+                            <?php else : ?>
+                                <span class="hm-debug-err">❌ Missing</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?php echo $t['exists'] ? esc_html( number_format( (int) $t['count'] ) ) : 'N/A'; ?></td>
+                    </tr>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
-            <?php endif; ?>
+            <p style="font-size:12px;color:#666;margin-top:8px;">
+                Tables are prefix-aware (current prefix: <code><?php echo esc_html( $wpdb->prefix ); ?></code>).
+                "Missing" means the table does not yet exist in this database, which is expected for
+                JetEngine CCT types not yet created.
+            </p>
         </div>
 
-        <script>
-        var hmKpi = {
-            saveAll: function() {
-                var targets = [];
-                document.querySelectorAll('.hmk-val').forEach(function(inp) {
-                    var id = inp.dataset.id;
-                    var active = document.querySelector('.hmk-active[data-id="'+id+'"]');
-                    targets.push({
-                        id: id,
-                        value: inp.value,
-                        active: active && active.checked ? 1 : 0
-                    });
-                });
-
-                var btn = document.getElementById('hmk-save');
-                btn.textContent = 'Saving...'; btn.disabled = true;
-
-                jQuery.post(HM.ajax_url, {
-                    action: 'hm_admin_save_kpi_target',
-                    nonce: HM.nonce,
-                    targets: JSON.stringify(targets)
-                }, function(r) {
-                    if (r.success) {
-                        btn.textContent = '✓ Saved';
-                        setTimeout(function() { btn.textContent = 'Save All'; btn.disabled = false; }, 1500);
-                    } else {
-                        alert(r.data || 'Error');
-                        btn.textContent = 'Save All'; btn.disabled = false;
-                    }
-                });
-            }
-        };
-        </script>
-        <?php return ob_get_clean();
-    }
-
-    public function ajax_save() {
-        check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
-        // PostgreSQL only - no $wpdb needed
-        $t = $this->table();
-        $targets = json_decode(stripslashes($_POST['targets'] ?? '[]'), true);
-
-        if (!is_array($targets)) { wp_send_json_error('Invalid data'); return; }
-
-        $uid = get_current_user_id();
-        $now = current_time('mysql');
-
-        foreach ($targets as $tgt) {
-            HearMed_DB::update($t, [
-                'target_value' => floatval($tgt['value']),
-                'is_active' => intval($tgt['active']),
-                'updated_by' => $uid,
-                'updated_at' => $now,
-            ], ['id' => intval($tgt['id'])]);
-        }
-
-        wp_send_json_success();
-    }
+    </div><!-- /#hm-debug-wrap -->
+    <?php
 }
 
-new HearMed_Admin_KPI_Targets();
+// ============================================================
+// DATA HELPERS
+// ============================================================
+
+/**
+ * Collect environment information.
+ *
+ * @return array<string, string>
+ */
+function hm_debug_environment_info() {
+// Removed: global $wpdb - now using HearMed_DB
+    // MySQL version — uses a safe SHOW VARIABLES query (no raw SQL exposed in output).
+    $mysql_version = '(unavailable)';
+    $row = HearMed_DB::get_row( "SHOW VARIABLES LIKE 'version'" );
+    if ( $row ) {
+        $mysql_version = esc_html( $row->Value );
+    }
+
+    return [
+        'Plugin Version (HEARMED_VERSION)' => defined( 'HEARMED_VERSION' ) ? HEARMED_VERSION : '(undefined)',
+        'WordPress Version'                 => get_bloginfo( 'version' ),
+        'PHP Version'                       => PHP_VERSION,
+        'MySQL Version'                     => $mysql_version,
+        'Site URL'                          => site_url(),
+        'Home URL'                          => home_url(),
+        'WP_DEBUG'                          => defined( 'WP_DEBUG' ) && WP_DEBUG ? 'true' : 'false',
+        'WP_DEBUG_LOG'                      => defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ? 'true' : 'false',
+        'Active Theme'                      => wp_get_theme()->get( 'Name' ) . ' ' . wp_get_theme()->get( 'Version' ),
+    ];
+}
+
+/**
+ * Returns the full list of portal shortcodes mapped to their module.
+ *
+ * @return array<string, string>
+ */
+function hm_debug_shortcode_map() {
+    return [
+        'hearmed_calendar'          => 'calendar',
+        'hearmed_calendar_settings' => 'calendar',
+        'hearmed_appointment_types' => 'calendar',
+        'hearmed_blockouts'         => 'calendar',
+        'hearmed_holidays'          => 'calendar',
+        'hearmed_patients'          => 'patients',
+        'hearmed_order_status'      => 'orders',
+        'hearmed_approvals'         => 'orders',
+        'hearmed_awaiting_fitting'  => 'orders',
+        'hearmed_accounting'        => 'accounting',
+        'hearmed_invoices'          => 'accounting',
+        'hearmed_payments'          => 'accounting',
+        'hearmed_credit_notes'      => 'accounting',
+        'hearmed_prsi'              => 'accounting',
+        'hearmed_reporting'         => 'reports',
+        'hearmed_my_stats'          => 'reports',
+        'hearmed_report_revenue'    => 'reports',
+        'hearmed_report_gp'         => 'reports',
+        'hearmed_repairs'           => 'repairs',
+        'hearmed_notifications'     => 'notifications',
+        'hearmed_kpi'               => 'kpi',
+        'hearmed_kpi_tracking'      => 'kpi',
+        'hearmed_admin_console'     => 'admin',
+        'hearmed_users'             => 'admin',
+        'hearmed_clinics'           => 'admin',
+        'hearmed_products'          => 'admin',
+    ];
+}
+
+/**
+ * Returns the list of AJAX actions to test with their registration status.
+ *
+ * @return array[]
+ */
+function hm_debug_ajax_actions() {
+    $actions = [
+        'hm_get_clinics',
+        'hm_get_dispensers',
+        'hm_get_services',
+        'hm_get_settings',
+        'hm_get_patients',
+    ];
+
+    $result = [];
+    foreach ( $actions as $action ) {
+        $result[] = [
+            'action'     => $action,
+            'registered' => (bool) has_action( 'wp_ajax_' . $action ),
+        ];
+    }
+    return $result;
+}
+
+/**
+ * Check existence and row count for the key JetEngine CCT tables.
+ *
+ * @return array[]
+ */
+function hm_debug_table_status() {
+// Removed: global $wpdb - now using HearMed_DB
+    $slugs = [
+        'calendar_settings',
+        'appointments',
+        'patients',
+        'clinics',
+        'dispensers',
+        'services',
+        'appointment_types',
+        'orders',
+        'invoices',
+        'audit_log',
+    ];
+
+    $result = [];
+    foreach ( $slugs as $slug ) {
+        $full = $wpdb->prefix . 'jet_cct_' . $slug;
+        // $full is built from the WP prefix (trusted) and a hardcoded slug (not user input).
+        $found  = HearMed_DB::get_var( 'SHOW TABLES LIKE %s', $full );
+        $exists = ( $found === $full );
+        $count  = 0;
+        if ( $exists ) {
+            // Table name is trusted (prefix + hardcoded slug); cannot use %i placeholder
+            // in older WP versions, so we escape the identifier explicitly.
+            $count = (int) HearMed_DB::get_var( 'SELECT COUNT(*) FROM `' . esc_sql( $full ) . '`' );
+        }
+        $result[] = [
+            'slug'      => $slug,
+            'full_name' => $full,
+            'exists'    => $exists,
+            'count'     => $count,
+        ];
+    }
+    return $result;
+}

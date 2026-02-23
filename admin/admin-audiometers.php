@@ -32,11 +32,13 @@ class HearMed_Admin_Audiometers {
     }
 
     private function get_audiometers() {
-        $posts = /* USE PostgreSQL: HearMed_DB::get_results() */ /* get_posts(['post_type' => 'audiometer', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC']);
+        // TODO: USE PostgreSQL: HearMed_DB::get_results()
+        $posts = get_posts(['post_type' => 'audiometer', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC']);
         $items = [];
         foreach ($posts as $p) {
             $d = ['id' => $p->ID, 'name' => $p->post_title];
-            foreach ($this->fields as $f) $d[$f] = /* USE PostgreSQL: Get from table columns */ /* get_post_meta($p->ID, $f, true);
+            // TODO: USE PostgreSQL: Get from table columns
+            foreach ($this->fields as $f) $d[$f] = get_post_meta($p->ID, $f, true);
             $d['is_active'] = ($d['is_active'] === '' || $d['is_active'] === '1') ? '1' : '0';
             $items[] = $d;
         }
@@ -44,7 +46,8 @@ class HearMed_Admin_Audiometers {
     }
 
     private function get_clinics() {
-        $posts = HearMed_DB::get_results("SELECT id, clinic_name as post_title, id as ID FROM hearmed_reference.clinics WHERE is_active = true ORDER BY clinic_name"); // Converted from /* USE PostgreSQL: HearMed_DB::get_results() */ /* get_posts() to PostgreSQL
+        // TODO: Converted from get_posts() to PostgreSQL HearMed_DB::get_results()
+        $posts = HearMed_DB::get_results("SELECT id, clinic_name as post_title, id as ID FROM hearmed_reference.clinics WHERE is_active = true ORDER BY clinic_name");
         return array_map(function($p) { return ['id' => $p->ID, 'name' => $p->post_title]; }, $posts);
     }
 
@@ -168,7 +171,11 @@ class HearMed_Admin_Audiometers {
         $name = sanitize_text_field($_POST['name'] ?? '');
         if (!$name) { wp_send_json_error('Name required'); return; }
         if ($id) { wp_update_post(['ID'=>$id,'post_title'=>$name]); }
-        else { $id = /* USE PostgreSQL: HearMed_DB::insert() */ /* wp_insert_post(['post_type'=>'audiometer','post_title'=>$name,'post_status'=>'publish']); if (is_wp_error($id)) { wp_send_json_error('Failed'); return; } }
+        else { 
+            // TODO: USE PostgreSQL: HearMed_DB::insert()
+            $id = wp_insert_post(['post_type'=>'audiometer','post_title'=>$name,'post_status'=>'publish']); 
+            if (is_wp_error($id)) { wp_send_json_error('Failed'); return; } 
+        }
         foreach ($this->fields as $f) { if (isset($_POST[$f])) update_post_meta($id,$f,sanitize_text_field($_POST[$f])); }
         wp_send_json_success(['id'=>$id]);
     }

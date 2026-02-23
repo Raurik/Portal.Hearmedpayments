@@ -1,9 +1,8 @@
 <?php
 /**
- * HearMed Router
+ * HearMed Authentication & Authorization
  * 
- * Handles shortcode registration and routing to modules.
- * Each shortcode maps to a specific module.
+ * Handles user roles, permissions, and clinic scoping.
  * 
  * @package HearMed_Portal
  * @since 4.0.0
@@ -13,189 +12,248 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class HearMed_Router {
+class HearMed_Auth {
     
     /**
-     * Shortcode to module mapping
+     * Portal role capabilities map
      */
-    private $shortcode_map = [
-        // Calendar
-        'hearmed_calendar' => [ 'module' => 'calendar', 'view' => 'calendar' ],
-        'hearmed_calendar_settings' => [ 'module' => 'calendar', 'view' => 'settings' ],
-        'hearmed_appointment_types' => [ 'module' => 'calendar', 'view' => 'appointment-types' ],
-        'hearmed_blockouts' => [ 'module' => 'calendar', 'view' => 'blockouts' ],
-        'hearmed_holidays' => [ 'module' => 'calendar', 'view' => 'holidays' ],
-        
-        // Patients
-        'hearmed_patients' => [ 'module' => 'patients', 'view' => 'list' ],
-        
-        // Orders & Finance
-        'hearmed_order_status' => [ 'module' => 'orders', 'view' => 'status' ],
-        'hearmed_approvals' => [ 'module' => 'orders', 'view' => 'approvals' ],
-        'hearmed_awaiting_fitting' => [ 'module' => 'orders', 'view' => 'awaiting-fitting' ],
-        
-        // Accounting
-        'hearmed_accounting' => [ 'module' => 'accounting', 'view' => 'dashboard' ],
-        'hearmed_invoices' => [ 'module' => 'accounting', 'view' => 'invoices' ],
-        'hearmed_payments' => [ 'module' => 'accounting', 'view' => 'payments' ],
-        'hearmed_credit_notes' => [ 'module' => 'accounting', 'view' => 'credit-notes' ],
-        'hearmed_prsi' => [ 'module' => 'accounting', 'view' => 'prsi' ],
-        
-        // Reports
-        'hearmed_reporting' => [ 'module' => 'reports', 'view' => 'dashboard' ],
-        'hearmed_my_stats' => [ 'module' => 'reports', 'view' => 'my-stats' ],
-        'hearmed_report_revenue' => [ 'module' => 'reports', 'view' => 'revenue' ],
-        'hearmed_report_gp' => [ 'module' => 'reports', 'view' => 'gp' ],
-        
-        // Other modules
-        'hearmed_repairs' => [ 'module' => 'repairs', 'view' => 'list' ],
-        'hearmed_notifications' => [ 'module' => 'notifications', 'view' => 'list' ],
-        'hearmed_kpi' => [ 'module' => 'kpi', 'view' => 'dashboard' ],
-        // NOTE: admin console / admin management shortcodes are registered
-        // by dedicated files under /admin and should not be routed through
-        // this module router (no modules/admin/admin.php exists).
+    private $role_caps = [
+        'administrator' => [ '*' ], // All capabilities
+        'hm_clevel' => [ '*' ], // All capabilities
+        'hm_admin' => [ '*' ], // All capabilities
+        'hm_finance' => [ 
+            'view_accounting', 'edit_accounting', 'view_reports', 
+            'view_commissions', 'view_kpi', 'view_all_clinics' 
+        ],
+        'hm_dispenser' => [ 
+            'view_calendar', 'edit_calendar', 'view_patients', 'edit_patients',
+            'view_orders', 'edit_orders', 'view_repairs', 'edit_repairs',
+            'view_own_stats' 
+        ],
+        'hm_reception' => [ 
+            'view_calendar', 'edit_calendar', 'view_patients', 
+            'view_orders' 
+        ],
+        'hm_ca' => [ 
+            'view_calendar', 'view_patients', 'view_orders' 
+        ],
+        'hm_scheme' => [ 
+            'view_calendar', 'view_patients', 'view_orders' 
+        ],
     ];
     
     /**
-     * Register all shortcodes
-     */
-    public function register_shortcodes() {
-        foreach ( $this->shortcode_map as $shortcode => $config ) {
-            add_shortcode( $shortcode, [ $this, 'render_shortcode' ] );
-        }
-    }
-    
-    /**
-     * Render a shortcode
+     * Check if current user has a capability
      * 
-     * @param array $atts Shortcode attributes
-     * @param string $content Shortcode content
-     * @param string $tag Shortcode tag
-     * @return string Rendered output
+     * @param string $capability Capability to check
+     * @param int|null $user_id User ID (null for current user)
+     * @return bool True if user has capability
      */
-    public function render_shortcode( $atts, $content = '', $tag = '' ) {
-        // Check if shortcode exists in map
-        if ( ! isset( $this->shortcode_map[ $tag ] ) ) {
-            return '<div id="hm-app"><p>Unknown module.</p></div>';
+    public function can( $capability, $user_id = null ) {
+        if ( ! $user_id ) {
+            $user_id = get_current_user_id();
         }
-        
-        $config = $this->shortcode_map[ $tag ];
-        $module = $config['module'];
-        $view = $config['view'];
-        
-        // Check authentication
-        if ( ! is_user_logged_in() ) {
-            return '<div id="hm-app"><p>Please log in to access this page.</p></div>';
-        }
-        
-        // Check privacy notice
-        $privacy_notice = $this->check_privacy_notice();
-        if ( $privacy_notice ) {
-            return $privacy_notice;
-        }
-
-        // Show placeholder in Elementor editor/preview unless explicitly enabled for staging QA
-        if ( HearMed_Utils::is_elementor_editor() && ! HearMed_Utils::allow_elementor_preview_boot() ) {
-            return '<div id="hm-app" class="hm-elementor-placeholder"><p style="text-align:center;padding:32px;color:#94a3b8;">[ HearMed ' . esc_html( ucfirst( $module ) ) . ' — editing mode ]</p><p style="text-align:center;padding:0 32px 24px;color:#64748b;font-size:13px;">Enable preview runtime with <code>hm_allow_elementor_preview_boot</code> filter for staging validation.</p></div>';
-        }
-        
-        // Load the module file
-        return $this->load_module( $module, $view, $atts );
-    }
-    
-    /**
-     * Load a module
-     * 
-     * @param string $module Module name
-     * @param string $view View name
-     * @param array $atts Shortcode attributes
-     * @return string Rendered output
-     */
-    private function load_module( $module, $view, $atts = [] ) {
-        // Legacy module file path (for backward compatibility)
-        $legacy_file = HEARMED_PATH . "modules/mod-{$module}.php";
-        
-        // New module file path
-        $module_file = HEARMED_PATH . "modules/{$module}/{$module}.php";
-        
-        // Determine which file to load
-        $file_to_load = file_exists( $module_file ) ? $module_file : $legacy_file;
-        
-        if ( ! file_exists( $file_to_load ) ) {
-            return '<div id="hm-app"><p>Module not found.</p></div>';
-        }
-        
-        // Start output buffering
-        ob_start();
-        
-        // Set module context
-        $GLOBALS['hm_current_module'] = $module;
-        $GLOBALS['hm_current_view'] = $view;
-        $GLOBALS['hm_shortcode_atts'] = $atts;
-        
-        // Render module wrapper
-        echo '<div id="hm-app" class="hm-' . esc_attr( $module ) . '" data-module="' . esc_attr( $module ) . '" data-view="' . esc_attr( $view ) . '">';
-        
-        // Include the module file (may be a no-op if already loaded for AJAX)
-        require_once $file_to_load;
-
-        // Call the module's standalone render function if one exists.
-        // This is needed because require_once is a no-op when the file was
-        // already loaded for AJAX handler registration (e.g. mod-patients.php).
-        $render_fn = 'hm_' . $module . '_render';
-        if ( function_exists( $render_fn ) ) {
-            call_user_func( $render_fn );
-        }
-        
-        echo '</div>';
-        
-        return ob_get_clean();
-    }
-    
-    /**
-     * Check if privacy notice has been accepted
-     * 
-     * @return string|false Privacy notice HTML or false if accepted
-     */
-    private function check_privacy_notice() {
-        $user_id = get_current_user_id();
         
         if ( ! $user_id ) {
             return false;
         }
         
-        $accepted = get_user_meta( $user_id, 'hm_privacy_notice_accepted', true );
+        $user = get_user_by( 'id', $user_id );
         
-        if ( $accepted ) {
+        if ( ! $user ) {
             return false;
         }
         
-        // Load privacy notice template
-        ob_start();
-        $template_file = HEARMED_PATH . 'templates/privacy-notice.php';
-        if ( file_exists( $template_file ) ) {
-            require_once $template_file;
-        } else {
-            echo '<div id="hm-app"><p>Please accept the privacy notice to continue.</p></div>';
+        // Check each role
+        foreach ( $user->roles as $role ) {
+            if ( ! isset( $this->role_caps[ $role ] ) ) {
+                continue;
+            }
+            
+            $caps = $this->role_caps[ $role ];
+            
+            // Wildcard means all capabilities
+            if ( in_array( '*', $caps, true ) ) {
+                return true;
+            }
+            
+            // Check specific capability
+            if ( in_array( $capability, $caps, true ) ) {
+                return true;
+            }
         }
-        return ob_get_clean();
+        
+        return false;
     }
     
     /**
-     * Get current module name
+     * Check if user is admin (C-Level, Admin, Finance, or WP Administrator)
      * 
-     * @return string|null Module name or null
+     * @param int|null $user_id User ID (null for current user)
+     * @return bool True if admin
      */
-    public static function get_current_module() {
-        return $GLOBALS['hm_current_module'] ?? null;
+    public function is_admin( $user_id = null ) {
+        if ( ! $user_id ) {
+            $user_id = get_current_user_id();
+        }
+        
+        if ( ! $user_id ) {
+            return false;
+        }
+        
+        $user = get_user_by( 'id', $user_id );
+        
+        if ( ! $user ) {
+            return false;
+        }
+        
+        $admin_roles = [ 'administrator', 'hm_clevel', 'hm_admin', 'hm_finance' ];
+        
+        return ! empty( array_intersect( $admin_roles, (array) $user->roles ) );
     }
     
     /**
-     * Get current view name
+     * Get user's assigned clinic IDs
      * 
-     * @return string|null View name or null
+     * @param int|null $user_id User ID (null for current user)
+     * @return array Clinic IDs
      */
-    public static function get_current_view() {
-        return $GLOBALS['hm_current_view'] ?? null;
+    public function get_user_clinics( $user_id = null ) {
+        if ( ! $user_id ) {
+            $user_id = get_current_user_id();
+        }
+        
+        // Admins see all clinics
+        if ( $this->is_admin( $user_id ) ) {
+            return $this->get_all_clinic_ids();
+        }
+        
+        // Get user's dispenser profile
+        $dispenser_id = $this->get_user_dispenser_id( $user_id );
+        
+        if ( ! $dispenser_id ) {
+            return [];
+        }
+        
+        // Get clinics from dispenser meta
+        // TODO: USE PostgreSQL: Get from table columns
+        $clinic_ids = get_post_meta( $dispenser_id, 'clinic_ids', true );
+        
+        if ( ! $clinic_ids || ! is_array( $clinic_ids ) ) {
+            // Fallback: single clinic_id
+            // TODO: USE PostgreSQL: Get from table columns
+            $clinic_id = get_post_meta( $dispenser_id, 'clinic_id', true );
+            return $clinic_id ? [ intval( $clinic_id ) ] : [];
+        }
+        
+        return array_map( 'intval', $clinic_ids );
+    }
+    
+    /**
+     * Get user's dispenser profile ID
+     * 
+     * @param int|null $user_id User ID (null for current user)
+     * @return int|false Dispenser ID or false
+     */
+    public function get_user_dispenser_id( $user_id = null ) {
+        if ( ! $user_id ) {
+            $user_id = get_current_user_id();
+        }
+        
+        $user = get_user_by( 'id', $user_id );
+        
+        if ( ! $user ) {
+            return false;
+        }
+        
+        // Try matching by display name, first name, or user login
+        $search_values = [
+            $user->display_name,
+            $user->first_name . ' ' . $user->last_name,
+            $user->user_login,
+            $user_id,
+        ];
+        
+        foreach ( $search_values as $value ) {
+            if ( ! $value ) {
+                continue;
+            }
+            
+            // TODO: USE PostgreSQL: HearMed_DB::get_results()
+            $dispensers = get_posts([
+                'post_type' => 'dispenser',
+                'posts_per_page' => 1,
+                'post_status' => 'publish',
+                'meta_query' => [
+                    [
+                        'key' => 'user_account',
+                        'value' => $value,
+                        'compare' => '=',
+                    ],
+                ],
+            ]);
+            
+            if ( $dispensers ) {
+                return $dispensers[0]->ID;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Get all clinic IDs
+     * 
+     * @return array Clinic IDs
+     */
+    private function get_all_clinic_ids() {
+        // TODO: USE PostgreSQL: HearMed_DB::get_results()
+        $clinics = get_posts([
+            'post_type' => 'clinic',
+            'posts_per_page' => -1,
+            'post_status' => 'publish',
+            'fields' => 'ids',
+        ]);
+        
+        return array_map( 'intval', $clinics );
+    }
+    
+    /**
+     * Check if user can access a specific clinic
+     * 
+     * @param int $clinic_id Clinic ID
+     * @param int|null $user_id User ID (null for current user)
+     * @return bool True if can access
+     */
+    public function can_access_clinic( $clinic_id, $user_id = null ) {
+        $user_clinics = $this->get_user_clinics( $user_id );
+        
+        return in_array( intval( $clinic_id ), $user_clinics, true );
+    }
+    
+    /**
+     * Get SQL WHERE clause for clinic filtering
+     * 
+     * @param string $column Column name for clinic_id
+     * @param int|null $user_id User ID (null for current user)
+     * @return string SQL WHERE clause (without WHERE keyword)
+     */
+    public function get_clinic_sql_filter( $column = 'clinic_id', $user_id = null ) {
+        // PostgreSQL only - no $wpdb needed
+        
+        $clinic_ids = $this->get_user_clinics( $user_id );
+        
+        if ( empty( $clinic_ids ) ) {
+            return '1=0'; // No access
+        }
+        
+        // Admin sees all
+        if ( $this->is_admin( $user_id ) ) {
+            return '1=1';
+        }
+        
+        $ids = implode( ',', array_map( 'intval', $clinic_ids ) );
+        
+        return "{$column} IN ({$ids})";
     }
 }

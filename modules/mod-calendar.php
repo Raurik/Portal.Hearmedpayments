@@ -91,14 +91,18 @@ function hm_ajax_save_settings() {
 // ================================================================
 function hm_ajax_get_clinics() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    $ps = HearMed_DB::get_results("SELECT id, clinic_name as post_title, id as ID FROM hearmed_reference.clinics WHERE is_active = true ORDER BY clinic_name"); // Converted from /* USE PostgreSQL: HearMed_DB::get_results() */ /* get_posts() to PostgreSQL
+    $ps = HearMed_DB::get_results("SELECT id, clinic_name as post_title, id as ID FROM hearmed_reference.clinics WHERE is_active = true ORDER BY clinic_name"); // Converted from // TODO: USE PostgreSQL: HearMed_DB::get_results()
+    get_posts() to PostgreSQL
     $d  = [];
     foreach ( $ps as $p ) {
         $d[] = [
             'id'            => $p->ID, 'name' => $p->post_title,
-            'clinic_colour' => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'clinic_colour', true ) ?: '#0BB4C4',
-            'text_colour'   => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'text_colour',   true ) ?: '#FFFFFF',
-            'is_active'     => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'is_active',     true ) ?: '1',
+            'clinic_colour' => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'clinic_colour', true ) ?: '#0BB4C4',
+            'text_colour'   => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'text_colour',   true ) ?: '#FFFFFF',
+            'is_active'     => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'is_active',     true ) ?: '1',
         ];
     }
     wp_send_json_success( $d );
@@ -109,18 +113,25 @@ function hm_ajax_get_dispensers() {
     $cl   = intval( $_POST['clinic'] ?? 0 );
     $args = [ 'post_type' => 'dispenser', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC' ];
     if ( $cl ) $args['meta_query'] = [ [ 'key' => 'clinic_id', 'value' => $cl ] ];
-    $ps = /* USE PostgreSQL: HearMed_DB::get_results() */ /* get_posts( $args );
+    $ps = // TODO: USE PostgreSQL: HearMed_DB::get_results()
+    get_posts( $args );
     $d  = [];
     foreach ( $ps as $p ) {
-        $active = /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'is_active', true );
+        $active = // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'is_active', true );
         if ( $active === '0' || $active === 'false' ) continue;
         $d[] = [
             'id'             => $p->ID, 'name' => $p->post_title,
-            'initials'       => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'initials',       true ) ?: strtoupper( substr( $p->post_title, 0, 2 ) ),
-            'clinic_id'      => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'clinic_id',      true ),
-            'calendar_order' => intval( /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'calendar_order', true ) ?: 99 ),
-            'user_account'   => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'user_account',   true ),
-            'role_type'      => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'role_type',      true ),
+            'initials'       => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'initials',       true ) ?: strtoupper( substr( $p->post_title, 0, 2 ) ),
+            'clinic_id'      => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'clinic_id',      true ),
+            'calendar_order' => intval( // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'calendar_order', true ) ?: 99 ),
+            'user_account'   => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'user_account',   true ),
+            'role_type'      => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'role_type',      true ),
         ];
     }
     usort( $d, fn( $a, $b ) => $a['calendar_order'] - $b['calendar_order'] );
@@ -129,18 +140,29 @@ function hm_ajax_get_dispensers() {
 
 function hm_ajax_get_services() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    $ps = HearMed_DB::get_results("SELECT id, service_name as post_title, id as ID FROM hearmed_reference.services WHERE is_active = true ORDER BY service_name"); // Converted from /* USE PostgreSQL: HearMed_DB::get_results() */ /* get_posts() to PostgreSQL
+    $ps = HearMed_DB::get_results("SELECT id, service_name as post_title, id as ID FROM hearmed_reference.services WHERE is_active = true ORDER BY service_name"); // Converted from // TODO: USE PostgreSQL: HearMed_DB::get_results()
+    get_posts() to PostgreSQL
     $d  = [];
     foreach ( $ps as $p ) {
         $d[] = [
             'id'                   => $p->ID, 'name' => $p->post_title,
-            'colour'               => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'colour', true ) ?: /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'service_colour', true ) ?: '#3B82F6',
-            'duration'             => intval( /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'duration', true ) ?: 30 ),
-            'sales_opportunity'    => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'sales_opportunity',    true ),
-            'income_bearing'       => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'income_bearing',       true ),
-            'appointment_category' => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'appointment_category', true ),
-            'send_reminders'       => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'send_reminders',  true ) ?: /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'reminders',    true ),
-            'send_confirmation'    => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'send_confirmation',true ) ?: /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'confirmation', true ),
+            'colour'               => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'colour', true ) ?: // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'service_colour', true ) ?: '#3B82F6',
+            'duration'             => intval( // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'duration', true ) ?: 30 ),
+            'sales_opportunity'    => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'sales_opportunity',    true ),
+            'income_bearing'       => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'income_bearing',       true ),
+            'appointment_category' => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'appointment_category', true ),
+            'send_reminders'       => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'send_reminders',  true ) ?: // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'reminders',    true ),
+            'send_confirmation'    => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'send_confirmation',true ) ?: // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'confirmation', true ),
         ];
     }
     wp_send_json_success( $d );
@@ -153,17 +175,22 @@ function hm_ajax_search_patients() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $q = sanitize_text_field( $_POST['q'] ?? $_POST['query'] ?? '' );
     if ( strlen( $q ) < 2 ) { wp_send_json_success( [] ); return; }
-    $ps = /* USE PostgreSQL: HearMed_DB::get_results() */ /* get_posts( [ 'post_type' => 'patient', 'posts_per_page' => 20, 'post_status' => 'publish', 's' => $q ] );
+    $ps = // TODO: USE PostgreSQL: HearMed_DB::get_results()
+    get_posts( [ 'post_type' => 'patient', 'posts_per_page' => 20, 'post_status' => 'publish', 's' => $q ] );
     $d  = [];
     foreach ( $ps as $p ) {
-        $fn = /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'first_name',     true );
-        $ln = /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'last_name',      true );
-        $pn = /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'patient_number', true );
+        $fn = // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'first_name',     true );
+        $ln = // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'last_name',      true );
+        $pn = // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'patient_number', true );
         $d[] = [
             'id'             => $p->ID,
             'name'           => ( $fn && $ln ) ? "$fn $ln" : $p->post_title,
             'label'          => ( $pn ? "$pn — " : '' ) . ( ( $fn && $ln ) ? "$fn $ln" : $p->post_title ),
-            'phone'          => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $p->ID, 'patient_phone', true ),
+            'phone'          => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $p->ID, 'patient_phone', true ),
             'patient_number' => $pn,
         ];
     }
@@ -190,26 +217,32 @@ function hm_ajax_get_appointments() {
     foreach ( $rows as $r ) {
         $pname = $r->patient_id ? get_the_title( $r->patient_id ) : 'Walk-in';
         if ( $r->patient_id ) {
-            $fn = /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $r->patient_id, 'first_name', true );
-            $ln = /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $r->patient_id, 'last_name',  true );
+            $fn = // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $r->patient_id, 'first_name', true );
+            $ln = // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $r->patient_id, 'last_name',  true );
             if ( $fn && $ln ) $pname = "$fn $ln";
         }
         $d[] = [
             'id'                   => $r->id,
             'patient_id'            => $r->patient_id,
             'patient_name'          => $pname,
-            'patient_number'        => $r->patient_id ? /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $r->patient_id, 'patient_number', true ) : '',
+            'patient_number'        => $r->patient_id ? // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $r->patient_id, 'patient_number', true ) : '',
             'dispenser_id'          => $r->dispenser_id,
             'dispenser_name'        => get_the_title( $r->dispenser_id ),
             'clinic_id'             => $r->clinic_id,
             'clinic_name'           => get_the_title( $r->clinic_id ),
             'service_id'            => $r->service_id,
             'service_name'          => get_the_title( $r->service_id ),
-            'service_colour'        => /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $r->service_id, 'colour', true ) ?: /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $r->service_id, 'service_colour', true ) ?: '#3B82F6',
+            'service_colour'        => // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $r->service_id, 'colour', true ) ?: // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $r->service_id, 'service_colour', true ) ?: '#3B82F6',
             'appointment_date'      => $r->appointment_date,
             'start_time'            => $r->start_time,
             'end_time'              => $r->end_time,
-            'duration'              => intval( $r->duration ?: /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $r->service_id, 'duration', true ) ?: 30 ),
+            'duration'              => intval( $r->duration ?: // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $r->service_id, 'duration', true ) ?: 30 ),
             'status'                => $r->status ?: 'Confirmed',
             'location_type'         => $r->location_type ?? 'Clinic',
             'notes'                 => $r->notes ?? '',
@@ -227,7 +260,8 @@ function hm_ajax_create_appointment() {
         // PostgreSQL only - no $wpdb needed
     $t   = HearMed_Portal::table( 'appointments' );
     $sid = intval( $_POST['service_id'] );
-    $dur = intval( /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $sid, 'duration', true ) ) ?: 30;
+    $dur = intval( // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $sid, 'duration', true ) ) ?: 30;
     $st  = sanitize_text_field( $_POST['start_time'] );
     $sp  = explode( ':', $st );
     $em  = intval( $sp[0] ) * 60 + intval( $sp[1] ) + $dur;
@@ -262,7 +296,8 @@ function hm_ajax_update_appointment() {
     $t   = HearMed_Portal::table( 'appointments' );
     $id  = intval( $_POST['appointment_id'] );
     $sid = intval( $_POST['service_id'] );
-    $dur = intval( /* USE PostgreSQL: Get from table columns */ /* get_post_meta( $sid, 'duration', true ) ) ?: 30;
+    $dur = intval( // TODO: USE PostgreSQL: Get from table columns
+    get_post_meta( $sid, 'duration', true ) ) ?: 30;
     $st  = sanitize_text_field( $_POST['start_time'] );
     $sp  = explode( ':', $st );
     $em  = intval( $sp[0] ) * 60 + intval( $sp[1] ) + $dur;
@@ -396,7 +431,8 @@ function hm_ajax_save_service() {
     $id   = intval( $_POST['id'] ?? 0 );
     $name = sanitize_text_field( $_POST['name'] );
     if ( $id ) wp_update_post( [ 'ID' => $id, 'post_title' => $name ] );
-    else        $id = /* USE PostgreSQL: HearMed_DB::insert() */ /* wp_insert_post( [ 'post_type' => 'service', 'post_title' => $name, 'post_status' => 'publish' ] );
+    else        $id = // TODO: USE PostgreSQL: HearMed_DB::insert()
+    wp_insert_post( [ 'post_type' => 'service', 'post_title' => $name, 'post_status' => 'publish' ] );
     $meta = [
         'colour'               => $_POST['colour']               ?? '#3B82F6',
         'service_colour'       => $_POST['colour']               ?? '#3B82F6',
