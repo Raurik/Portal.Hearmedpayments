@@ -1,0 +1,20 @@
+/* hearmed-jet-overrides.css — MINIMAL
+   Only targets elements INSIDE #hm-app. Nothing else. */
+
+/* Font reset inside our app */
+#hm-app,
+#hm-app * {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif !important;
+  box-sizing: border-box !important;
+}
+
+/* Link colours inside our app */
+#hm-app a { color: #0BB4C4; text-decoration: none; }
+#hm-app a:hover { color: #0a9eac; }
+
+/* Images inside our app */
+#hm-app img { max-width: 100%; height: auto; }
+
+/* Tables inside our app */
+#hm-app table { border-collapse: collapse; border-spacing: 0; }
+#hm-app table td, #hm-app table th { border: none; }
