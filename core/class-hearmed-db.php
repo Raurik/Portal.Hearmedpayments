@@ -77,13 +77,15 @@ class HearMed_DB {
         );
         
         self::$pg_conn = @pg_connect($conn_string);
-        
+
         if (!self::$pg_conn) {
-            self::$last_error = pg_last_error() ?: 'Connection failed';
+            // Avoid calling pg_last_error() without a valid connection resource,
+            // which throws "No PostgreSQL connection opened yet" fatals.
+            self::$last_error = 'PostgreSQL connection failed. Please check host, port, database name, user, password, and SSL mode.';
             if ( class_exists( 'HearMed_Logger' ) ) {
                 HearMed_Logger::error( 'PostgreSQL connection failed', [ 'error' => self::$last_error ] );
             } else {
-                error_log('[HearMed DB] PostgreSQL connection failed: ' . self::$last_error);
+                error_log('[HearMed DB] PostgreSQL connection failed. Verify credentials and connectivity.');
             }
             return false;
         }
