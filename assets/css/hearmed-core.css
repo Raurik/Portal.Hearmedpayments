@@ -428,6 +428,38 @@
 }
 
 /* ============================================================
+   LAYOUT - FULL VIEWPORT
+   ============================================================ */
+
+html, body {
+  height: 100vh;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Make main content area full viewport */
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+main, 
+.site-content,
+.content,
+#main {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+#hm-app {
+  height: 100vh;
+  width: 100%;
+  overflow: auto;
+}
+
+/* ============================================================
    HIDE THEME HEADER & FOOTER
    Keep Elementor content and plugin UI visible
    ============================================================ */
@@ -439,7 +471,8 @@ header,
 .site-header-wrapper,
 .theme-header,
 #site-header,
-[class*="header"] {
+[class*="header"],
+.wp-site-blocks > header {
   display: none !important;
 }
 
@@ -450,15 +483,29 @@ footer,
 .site-footer-wrapper,
 .theme-footer,
 #site-footer,
-[class*="footer"] {
+[class*="footer"],
+.wp-site-blocks > footer,
+.wp-block-template-part {
+  display: none !important;
+}
+
+/* Hide any text saying "HearMed Portal 2026" or similar footers */
+[class*="copyright"],
+[class*="footer-text"],
+[class*="footer-credit"],
+.footer-info,
+.footer-disclaimer {
   display: none !important;
 }
 
 /* Preserve Elementor page content */
 #elementor,
 .elementor,
-.elementor-page-body {
+.elementor-page-body,
+.elementor-page-wrapper {
   display: block !important;
+  height: 100%;
+  width: 100%;
 }
 
 /* Preserve HearMed Portal content */

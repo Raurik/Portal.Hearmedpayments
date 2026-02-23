@@ -38,6 +38,14 @@ class HearMed_Enqueue {
      * These files control layout, design system, and core JS
      */
     public function enqueue_foundation() {
+        // Core CSS - viewport, layout, and component styles
+        wp_enqueue_style(
+            'hearmed-core',
+            HEARMED_URL . 'assets/css/hearmed-core.css',
+            [],
+            $this->get_file_version( 'assets/css/hearmed-core.css' )
+        );
+
         // Design system CSS - tokens, components, utilities (always loaded)
         wp_enqueue_style(
             'hearmed-design',
@@ -82,6 +90,15 @@ class HearMed_Enqueue {
             HEARMED_URL . 'assets/js/hearmed-core.js',
             [ 'jquery' ],
             $this->get_file_version( 'assets/js/hearmed-core.js' ),
+            true
+        );
+
+        // Viewport height fixer - ensure pages display at 100vh without header/footer
+        wp_enqueue_script(
+            'hearmed-viewport-fix',
+            HEARMED_URL . 'assets/js/hearmed-viewport-fix.js',
+            [],
+            $this->get_file_version( 'assets/js/hearmed-viewport-fix.js' ),
             true
         );
         
