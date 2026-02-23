@@ -426,3 +426,43 @@
 @keyframes hmSpin {
   to { transform: rotate(360deg); }
 }
+
+/* ============================================================
+   HIDE THEME HEADER & FOOTER
+   Keep Elementor content and plugin UI visible
+   ============================================================ */
+
+/* Hide WordPress default header */
+header,
+.site-header,
+.header,
+.site-header-wrapper,
+.theme-header,
+#site-header,
+[class*="header"] {
+  display: none !important;
+}
+
+/* Hide WordPress default footer */
+footer,
+.site-footer,
+.footer,
+.site-footer-wrapper,
+.theme-footer,
+#site-footer,
+[class*="footer"] {
+  display: none !important;
+}
+
+/* Preserve Elementor page content */
+#elementor,
+.elementor,
+.elementor-page-body {
+  display: block !important;
+}
+
+/* Preserve HearMed Portal content */
+#hm-app {
+  display: block !important;
+}
+

@@ -17,11 +17,5 @@ jobs:
           key: ${{ secrets.SG_SSH_KEY }}
           passphrase: ${{ secrets.SG_SSH_PASSPHRASE }}
           script: |
-            # Deploy plugin code
             cd ~/www/portal.hearmedpayments.net/public_html/wp-content/plugins/hearmed-calendar
             git pull origin main
-            
-            # Deploy theme to correct location
-            cp -r hearmed-theme ~/www/portal.hearmedpayments.net/public_html/wp-content/themes/hearmed-theme 2>/dev/null || true
-            
-            echo "✅ Deployment complete: Plugin + Theme"
