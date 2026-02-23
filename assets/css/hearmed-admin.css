@@ -281,15 +281,21 @@
     margin-bottom: 18px;
 }
 
-#hm-clinics-app .hm-admin-hd h2 {
-    margin: 0;
+#hm-clinics-app .hm-admin-hd-inner h2 {
+    margin: 0 0 4px;
     font-size: 24px;
     font-weight: 600;
 }
 
+#hm-clinics-app .hm-admin-hd-inner .hm-add-link {
+    font-size: 14px;
+}
+
 #hm-clinics-app .hm-clinics-card {
     border-radius: 18px;
-    box-shadow: var(--hm-shadow-md);
+    border: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: none;
 }
 
 #hm-clinics-app .hm-clinics-card .hm-card-body {
@@ -304,6 +310,37 @@
 #hm-clinics-app .hm-empty-state.hm-clinics-empty {
     padding: 32px 32px 36px;
     text-align: center;
+}
+
+/* Clinics form card behaves like inline panel, not overlay */
+#hm-clinics-app #hm-clinic-modal.hm-modal-bg {
+    position: static;
+    inset: auto;
+    display: block;
+    padding: 0;
+    margin-top: 20px;
+    background: none;
+    backdrop-filter: none;
+}
+
+#hm-clinics-app #hm-clinic-modal .hm-modal {
+    max-width: 100%;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    background: rgba(248, 250, 252, 0.9);
+    box-shadow: none;
+}
+
+#hm-clinics-app #hm-clinic-modal .hm-modal-hd {
+    padding: 20px 28px 8px;
+}
+
+#hm-clinics-app #hm-clinic-modal .hm-modal-body {
+    padding: 8px 28px 20px;
+}
+
+#hm-clinics-app #hm-clinic-modal .hm-modal-ft {
+    padding: 12px 28px 20px;
 }
 
 /* Modal overlay + shell (shared by clinics/users etc.) */

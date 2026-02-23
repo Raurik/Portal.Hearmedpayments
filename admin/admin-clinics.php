@@ -88,8 +88,10 @@ class HearMed_Admin_Clinics {
         ob_start(); ?>
         <div class="hm-admin" id="hm-clinics-app">
             <div class="hm-admin-hd">
-                <h2>Clinics</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmClinic.open()">+ Add Clinic</button>
+                <div class="hm-admin-hd-inner">
+                    <h2>Clinics</h2>
+                    <button class="hm-add-link" type="button" onclick="hmClinic.open()">+ Add Clinic</button>
+                </div>
             </div>
 
             <div class="hm-card hm-clinics-card">
@@ -242,6 +244,25 @@ class HearMed_Admin_Clinics {
             },
 
             close: function() {
+                var isEdit = !!document.getElementById('hmc-id').value;
+
+                // Reset form back to "Add Clinic" state
+                document.getElementById('hm-clinic-modal-title').textContent = 'Add Clinic';
+                document.getElementById('hmc-id').value = '';
+                document.getElementById('hmc-name').value = '';
+                document.getElementById('hmc-address').value = '';
+                document.getElementById('hmc-phone').value = '';
+                document.getElementById('hmc-email').value = '';
+                document.getElementById('hmc-eircode').value = '';
+                document.getElementById('hmc-colour').value = '#0BB4C4';
+                document.getElementById('hmc-text-colour').value = '#ffffff';
+                document.getElementById('hmc-active').checked = true;
+
+                var defaultDays = ['1','2','3','4','5'];
+                document.querySelectorAll('#hmc-days input').forEach(function(cb) {
+                    cb.checked = defaultDays.indexOf(cb.value) !== -1;
+                });
+
                 document.getElementById('hm-clinic-modal').classList.remove('open');
             },
 
