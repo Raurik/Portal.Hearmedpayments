@@ -35,17 +35,14 @@ if ( ! defined( 'HEARMED_URL' ) ) {
     define( 'HEARMED_URL', plugin_dir_url( __FILE__ ) );
 }
 
-// Force HTTPS on all WordPress URLs to prevent mixed content errors
-if ( ! is_admin() && isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] === 'on' ) {
-    // Force HTTPS for home and site URL
-    add_filter( 'home_url', 'hearmed_force_https_url', 10, 4 );
-    add_filter( 'site_url', 'hearmed_force_https_url', 10, 4 );
+// Force HTTPS/correct domain on assets to prevent mixed content errors.
+// NOTE: Only applied to scripts/styles/uploads — NOT home_url or site_url
+// (those filters corrupt internal navigation links and cause URL doubling).
+if ( ! is_admin() ) {
     add_filter( 'wp_get_attachment_url', 'hearmed_force_https_url', 10, 2 );
     add_filter( 'upload_dir', 'hearmed_force_https_upload_dir' );
     add_filter( 'script_loader_src', 'hearmed_force_https_url', 10, 2 );
     add_filter( 'style_loader_src', 'hearmed_force_https_url', 10, 2 );
-    
-    // Force Elementor to use HTTPS and correct domain
     add_filter( 'elementor/frontend/builder_content_data', 'hearmed_force_https_elementor_content', 10, 2 );
     add_filter( 'elementor/frontend/the_content', 'hearmed_fix_elementor_output', 999 );
 }
