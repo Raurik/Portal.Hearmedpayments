@@ -41,7 +41,8 @@ class HearMed_Admin_Clinics {
         foreach ($posts as $p) {
             $c = ['id' => $p->ID, 'name' => $p->post_title];
             foreach ($this->fields as $f) {
-                $c[$f] = /* USE PostgreSQL: Get from table columns */ /* get_post_meta($p->ID, $f, true);
+                // TODO: USE PostgreSQL: Get from table columns
+                $c[$f] = get_post_meta($p->ID, $f, true);
             }
             $c['is_active'] = ($c['is_active'] === '' || $c['is_active'] === '1') ? '1' : '0';
             $c['clinic_colour'] = $c['clinic_colour'] ?: '#0BB4C4';
@@ -269,7 +270,8 @@ class HearMed_Admin_Clinics {
         if ($id) {
             wp_update_post(['ID' => $id, 'post_title' => $name]);
         } else {
-            $id = /* USE PostgreSQL: HearMed_DB::insert() */ /* wp_insert_post([
+            // TODO: USE PostgreSQL: HearMed_DB::insert()
+            $id = wp_insert_post([
                 'post_type' => 'clinic',
                 'post_title' => $name,
                 'post_status' => 'publish',
