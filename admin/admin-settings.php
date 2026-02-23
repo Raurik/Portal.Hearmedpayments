@@ -1,404 +1,226 @@
 <?php
 /**
- * HearMed Admin — Manage Products
- * Shortcode: [hearmed_manage_products]
- * CRUD for ha-product CPT
+ * HearMed Admin — Settings Pages
+ * Multiple simple config shortcodes that store options in wp_options
  */
 if (!defined('ABSPATH')) exit;
 
-class HearMed_Admin_Products {
+class HearMed_Admin_Settings {
 
-    private $meta_fields = [
-        'item_code','manufacturer','model','style','tech_level',
-        'hearmed_range','cost_price','retail_price','vat_rate',
-        'product_category','receivers','gain_options','earbud_size',
-        'earbud_type','power','product_image','style_icon',
+    private $pages = [
+        'hearmed_finance_settings' => [
+            'title' => 'Finance Settings',
+            'fields' => [
+                ['key' => 'hm_vat_hearing_aids', 'label' => 'VAT Rate — Hearing Aids (%)', 'type' => 'number', 'default' => '0'],
+                ['key' => 'hm_vat_accessories', 'label' => 'VAT Rate — Accessories (%)', 'type' => 'number', 'default' => '0'],
+                ['key' => 'hm_vat_services', 'label' => 'VAT Rate — Services (%)', 'type' => 'number', 'default' => '13.5'],
+                ['key' => 'hm_vat_consumables', 'label' => 'VAT Rate — Consumables (%)', 'type' => 'number', 'default' => '23'],
+                ['key' => 'hm_vat_other_aud', 'label' => 'VAT Rate — Other Audiological (%)', 'type' => 'number', 'default' => '13.5'],
+                ['key' => 'hm_payment_methods', 'label' => 'Payment Methods (comma-separated)', 'type' => 'text', 'default' => 'Card,Cash,Cheque,Bank Transfer,Finance,PRSI'],
+                ['key' => 'hm_prsi_amount_per_ear', 'label' => 'PRSI Amount Per Ear (€)', 'type' => 'number', 'default' => '500'],
+                ['key' => 'hm_invoice_prefix', 'label' => 'Invoice Number Prefix', 'type' => 'text', 'default' => 'INV-'],
+                ['key' => 'hm_order_prefix', 'label' => 'Order Number Prefix', 'type' => 'text', 'default' => 'ORD-'],
+                ['key' => 'hm_credit_note_prefix', 'label' => 'Credit Note Prefix', 'type' => 'text', 'default' => 'CN-'],
+            ],
+        ],
+        'hearmed_comms_settings' => [
+            'title' => 'Communication Settings',
+            'fields' => [
+                ['key' => 'hm_sms_enabled', 'label' => 'SMS Enabled', 'type' => 'toggle', 'default' => '0'],
+                ['key' => 'hm_sms_provider', 'label' => 'SMS Provider', 'type' => 'select', 'options' => ['twilio' => 'Twilio', 'bulksms' => 'BulkSMS.ie'], 'default' => 'twilio'],
+                ['key' => 'hm_twilio_sid', 'label' => 'Twilio Account SID', 'type' => 'text', 'default' => ''],
+                ['key' => 'hm_twilio_token', 'label' => 'Twilio Auth Token', 'type' => 'password', 'default' => ''],
+                ['key' => 'hm_twilio_from', 'label' => 'Twilio From Number', 'type' => 'text', 'default' => ''],
+                ['key' => 'hm_email_enabled', 'label' => 'Email Reminders Enabled', 'type' => 'toggle', 'default' => '0'],
+                ['key' => 'hm_email_from_name', 'label' => 'Email From Name', 'type' => 'text', 'default' => 'HearMed'],
+                ['key' => 'hm_email_from_address', 'label' => 'Email From Address', 'type' => 'text', 'default' => ''],
+            ],
+        ],
+        'hearmed_document_types' => [
+            'title' => 'Document Types',
+            'fields' => [
+                ['key' => 'hm_document_types', 'label' => 'Document Types (one per line)', 'type' => 'textarea', 'default' => "Case History\nSales Order\nConsent Form\nAudiogram\nGP Referral\nHearing Test\nRepair Form\nFitting Receipt\nPhone Call Log\nENT Referral\nOther"],
+            ],
+        ],
+        'hearmed_form_settings' => [
+            'title' => 'Form & Input Settings',
+            'fields' => [
+                ['key' => 'hm_signature_method', 'label' => 'Signature Capture Method', 'type' => 'select', 'options' => ['wacom' => 'Wacom Signature Pad', 'touch' => 'Touch/Mouse Canvas', 'none' => 'No Signature'], 'default' => 'wacom'],
+                ['key' => 'hm_require_gdpr_consent', 'label' => 'Require GDPR Consent on Forms', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_form_types', 'label' => 'Form Types (one per line)', 'type' => 'textarea', 'default' => "New Digital Consent Form\nGeneral Consent Form\nAudiogram\nGP/ENT Referral\nHearing Test\nRepair Form\nCase History\nFitting Receipt\nPhone Call Log"],
+            ],
+        ],
+        'hearmed_cash_settings' => [
+            'title' => 'Cash Management Settings',
+            'fields' => [
+                ['key' => 'hm_cash_morning_prompt', 'label' => 'Morning Till Prompt Enabled', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_cash_evening_prompt', 'label' => 'Evening Till Prompt Enabled', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_cash_evening_time', 'label' => 'Evening Prompt Time', 'type' => 'text', 'default' => '16:55'],
+                ['key' => 'hm_cash_track_card', 'label' => 'Track Card Payments in Tills', 'type' => 'toggle', 'default' => '0'],
+            ],
+        ],
+        'hearmed_ai_settings' => [
+            'title' => 'AI Settings',
+            'fields' => [
+                ['key' => 'hm_ai_enabled', 'label' => 'AI Features Enabled', 'type' => 'toggle', 'default' => '0'],
+                ['key' => 'hm_make_webhook_transcription', 'label' => 'Make.com Webhook — AI Transcription', 'type' => 'text', 'default' => ''],
+                ['key' => 'hm_make_webhook_summary', 'label' => 'Make.com Webhook — Smart Summary', 'type' => 'text', 'default' => ''],
+                ['key' => 'hm_make_webhook_brief', 'label' => 'Make.com Webhook — Appointment Brief', 'type' => 'text', 'default' => ''],
+                ['key' => 'hm_make_webhook_flagging', 'label' => 'Make.com Webhook — Intelligent Flagging', 'type' => 'text', 'default' => ''],
+                ['key' => 'hm_ai_auto_save', 'label' => 'Auto-save Transcriptions (skip review)', 'type' => 'toggle', 'default' => '0'],
+            ],
+        ],
+        'hearmed_gdpr_settings' => [
+            'title' => 'GDPR Settings',
+            'fields' => [
+                ['key' => 'hm_privacy_policy_url', 'label' => 'Privacy Policy URL', 'type' => 'text', 'default' => ''],
+                ['key' => 'hm_retention_patient_years', 'label' => 'Patient Record Retention (years)', 'type' => 'number', 'default' => '8'],
+                ['key' => 'hm_retention_financial_years', 'label' => 'Financial Record Retention (years)', 'type' => 'number', 'default' => '6'],
+                ['key' => 'hm_retention_sms_years', 'label' => 'SMS Log Retention (years)', 'type' => 'number', 'default' => '2'],
+                ['key' => 'hm_data_processors', 'label' => 'Third-Party Data Processors (one per line)', 'type' => 'textarea', 'default' => "WordPress.com (Automattic) — Hosting\nMake.com — Automations\nOpenRouter — AI Processing\nTwilio — SMS\nQuickBooks (Intuit) — Accounting"],
+            ],
+        ],
+        'hearmed_admin_alerts' => [
+            'title' => 'Alerts & Notification Settings',
+            'fields' => [
+                ['key' => 'hm_notify_order_status', 'label' => 'Notify on Order Status Change', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_notify_fitting_overdue', 'label' => 'Notify on Overdue Fittings', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_notify_double_booking', 'label' => 'Notify on Double Booking', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_notify_cheque_reminder', 'label' => 'Cheque Not Sent Reminders', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_notify_duplicate_order', 'label' => 'Duplicate Order Warnings', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_review_reminder_months', 'label' => 'Annual Review Reminder (months)', 'type' => 'number', 'default' => '11'],
+            ],
+        ],
+        'hearmed_admin_groups' => [
+            'title' => 'Groups',
+            'fields' => [],
+            'note' => 'Staff groups and permission sets. Coming in a future update — roles are currently managed via the Users page and WordPress Members plugin.',
+        ],
+        'hearmed_admin_resources' => [
+            'title' => 'Resources',
+            'fields' => [],
+            'note' => 'Help documents, training materials, and onboarding guides for staff. Coming in a future update.',
+        ],
+        'hearmed_admin_report_layout' => [
+            'title' => 'Report Layout',
+            'fields' => [
+                ['key' => 'hm_report_logo_url', 'label' => 'Report Logo URL', 'type' => 'text', 'default' => ''],
+                ['key' => 'hm_report_company_name', 'label' => 'Company Name on Reports', 'type' => 'text', 'default' => 'HearMed Acoustic Health Care Ltd'],
+                ['key' => 'hm_report_footer_text', 'label' => 'Report Footer Text', 'type' => 'text', 'default' => ''],
+            ],
+        ],
+        'hearmed_admin_patient_overview' => [
+            'title' => 'Patient Overview Settings',
+            'fields' => [
+                ['key' => 'hm_patient_default_tab', 'label' => 'Default Patient Tab', 'type' => 'select', 'options' => ['overview' => 'Overview', 'appointments' => 'Appointments', 'orders' => 'Orders', 'notes' => 'Notes'], 'default' => 'overview'],
+                ['key' => 'hm_patient_show_balance', 'label' => 'Show Balance on Patient Header', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_patient_show_prsi', 'label' => 'Show PRSI Status on Header', 'type' => 'toggle', 'default' => '1'],
+            ],
+        ],
     ];
-
-    private $categories = [
-        'Hearing Aids' => '0',
-        'Accessories' => '0',
-        'Services' => '13.5',
-        'Consumables' => '23',
-        'Other Audiological Services' => '13.5',
-    ];
-
-    private $styles = ['RIC','CIC','ITE','BTE','IIC','CROS','BiCROS','Body Worn','Other'];
 
     public function __construct() {
-        add_shortcode('hearmed_manage_products', [$this, 'render']);
-        add_action('wp_ajax_hm_admin_save_product', [$this, 'ajax_save']);
-        add_action('wp_ajax_hm_admin_delete_product', [$this, 'ajax_delete']);
-    }
-
-    private function get_products() {
-        $posts = // TODO: USE PostgreSQL: HearMed_DB::get_results()
-    get_posts([
-            'post_type' => 'ha-product',
-        $products = [];
-        foreach ($posts as $p) {
-            $d = ['id' => $p->ID, 'name' => $p->post_title];
-            foreach ($this->meta_fields as $f) {
-                $d[$f] = // TODO: USE PostgreSQL: Get from table columns
-    get_post_meta($p->ID, $f, true);
-            }
-            $products[] = $d;
+        foreach (array_keys($this->pages) as $sc) {
+            add_shortcode($sc, [$this, 'render']);
         }
-        return $products;
+        add_action('wp_ajax_hm_admin_save_settings_page', [$this, 'ajax_save']);
     }
 
-    private function get_taxonomy_terms($taxonomy) {
-        $terms = get_terms(['taxonomy' => $taxonomy, 'hide_empty' => false, 'orderby' => 'name']);
-        if (is_wp_error($terms)) return [];
-        return array_map(function($t) { return ['id' => $t->term_id, 'name' => $t->name, 'slug' => $t->slug]; }, $terms);
-    }
-
-    public function render() {
+    public function render($atts, $content, $tag) {
         if (!is_user_logged_in()) return '<p>Please log in.</p>';
-
-        $products = $this->get_products();
-        $manufacturers = $this->get_taxonomy_terms('manufacturer');
-        $ranges = $this->get_taxonomy_terms('hearmed-range');
+        $page = $this->pages[$tag] ?? null;
+        if (!$page) return '<p>Unknown settings page.</p>';
 
         ob_start(); ?>
-        <div class="hm-admin" id="hm-products-app">
+        <div class="hm-admin">
             <div class="hm-admin-hd">
-                <h2>Products & Services</h2>
-                <div style="display:flex;gap:8px;align-items:center;">
-                    <input type="text" id="hmp-search" placeholder="Search products..." class="hm-search-input" oninput="hmProd.filter()">
-                    <select id="hmp-cat-filter" onchange="hmProd.filter()" class="hm-filter-select">
-                        <option value="">All Categories</option>
-                        <?php foreach (array_keys($this->categories) as $cat): ?>
-                        <option value="<?php echo esc_attr($cat); ?>"><?php echo esc_html($cat); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <button class="hm-btn hm-btn-teal" onclick="hmProd.open()">+ Add Product</button>
-                </div>
+                <h2><?php echo esc_html($page['title']); ?></h2>
+                <?php if (!empty($page['fields'])): ?>
+                <button class="hm-btn hm-btn-teal" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+                <?php endif; ?>
             </div>
 
-            <?php if (empty($products)): ?>
-                <div class="hm-empty-state"><p>No products yet. Add your first product to get started.</p></div>
-            <?php else: ?>
-            <table class="hm-table" id="hmp-table">
-                <thead>
-                    <tr>
-                        <th>Item Code</th>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th>Manufacturer</th>
-                        <th>Style</th>
-                        <th>Range</th>
-                        <th class="hm-num">Cost</th>
-                        <th class="hm-num">Retail</th>
-                        <th class="hm-num">VAT</th>
-                        <th class="hm-num">Margin</th>
-                        <th style="width:100px"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php foreach ($products as $p):
-                    $cost = floatval($p['cost_price'] ?? 0);
-                    $retail = floatval($p['retail_price'] ?? 0);
-                    $margin = $retail > 0 ? round((($retail - $cost) / $retail) * 100, 1) : 0;
-                    $margin_cls = $margin >= 70 ? 'green' : ($margin >= 50 ? 'blue' : ($margin >= 30 ? 'amber' : 'red'));
-                ?>
-                    <tr data-cat="<?php echo esc_attr($p['product_category'] ?? ''); ?>" data-search="<?php echo esc_attr(strtolower($p['name'] . ' ' . ($p['item_code'] ?? '') . ' ' . ($p['manufacturer'] ?? ''))); ?>">
-                        <td><code><?php echo esc_html($p['item_code'] ?? '—'); ?></code></td>
-                        <td><strong><?php echo esc_html($p['name']); ?></strong></td>
-                        <td><?php echo esc_html($p['product_category'] ?? '—'); ?></td>
-                        <td><?php echo esc_html($p['manufacturer'] ?? '—'); ?></td>
-                        <td><?php echo esc_html($p['style'] ?? '—'); ?></td>
-                        <td><?php echo esc_html($p['hearmed_range'] ?? '—'); ?></td>
-                        <td class="hm-num"><?php echo $cost ? '€' . number_format($cost, 2) : '—'; ?></td>
-                        <td class="hm-num"><?php echo $retail ? '€' . number_format($retail, 2) : '—'; ?></td>
-                        <td class="hm-num"><?php echo esc_html(($p['vat_rate'] ?? '0') . '%'); ?></td>
-                        <td class="hm-num"><span class="hm-badge hm-badge-<?php echo $margin_cls; ?>"><?php echo $margin; ?>%</span></td>
-                        <td class="hm-table-acts">
-                            <button class="hm-btn hm-btn-sm" onclick='hmProd.open(<?php echo json_encode($p); ?>)'>Edit</button>
-                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmProd.del(<?php echo $p['id']; ?>,'<?php echo esc_js($p['name']); ?>')">Delete</button>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-            <div class="hm-table-count" id="hmp-count"><?php echo count($products); ?> products</div>
+            <?php if (!empty($page['note'])): ?>
+                <div class="hm-empty-state"><p><?php echo esc_html($page['note']); ?></p></div>
             <?php endif; ?>
 
-            <!-- Modal -->
-            <div class="hm-modal-bg" id="hm-product-modal">
-                <div class="hm-modal" style="width:680px">
-                    <div class="hm-modal-hd">
-                        <h3 id="hm-product-modal-title">Add Product</h3>
-                        <button class="hm-modal-x" onclick="hmProd.close()">&times;</button>
-                    </div>
-                    <div class="hm-modal-body">
-                        <input type="hidden" id="hmpf-id" value="">
-
-                        <div class="hm-form-row">
-                            <div class="hm-form-group" style="flex:2">
-                                <label>Product Name *</label>
-                                <input type="text" id="hmpf-name" placeholder="e.g. Widex Moment 440 RIC">
-                            </div>
-                            <div class="hm-form-group">
-                                <label>Item Code</label>
-                                <input type="text" id="hmpf-item-code" placeholder="SKU / Code">
-                            </div>
-                        </div>
-
-                        <div class="hm-form-row">
-                            <div class="hm-form-group">
-                                <label>Category *</label>
-                                <select id="hmpf-category" onchange="hmProd.catChange()">
-                                    <?php foreach ($this->categories as $cat => $vat): ?>
-                                    <option value="<?php echo esc_attr($cat); ?>" data-vat="<?php echo $vat; ?>"><?php echo esc_html($cat); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="hm-form-group">
-                                <label>Manufacturer</label>
-                                <select id="hmpf-manufacturer">
-                                    <option value="">— None —</option>
-                                    <?php foreach ($manufacturers as $m): ?>
-                                    <option value="<?php echo esc_attr($m['name']); ?>"><?php echo esc_html($m['name']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="hm-form-row">
-                            <div class="hm-form-group">
-                                <label>Style</label>
-                                <select id="hmpf-style">
-                                    <option value="">— None —</option>
-                                    <?php foreach ($this->styles as $s): ?>
-                                    <option value="<?php echo esc_attr($s); ?>"><?php echo esc_html($s); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="hm-form-group">
-                                <label>Tech Level</label>
-                                <input type="text" id="hmpf-tech-level" placeholder="e.g. 440, 330, Premium">
-                            </div>
-                            <div class="hm-form-group">
-                                <label>HearMed Range</label>
-                                <select id="hmpf-range">
-                                    <option value="">— None —</option>
-                                    <?php foreach ($ranges as $r): ?>
-                                    <option value="<?php echo esc_attr($r['name']); ?>"><?php echo esc_html($r['name']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="hm-form-row">
-                            <div class="hm-form-group">
-                                <label>Cost Price (€)</label>
-                                <input type="number" id="hmpf-cost" step="0.01" min="0" placeholder="0.00" oninput="hmProd.calcMargin()">
-                            </div>
-                            <div class="hm-form-group">
-                                <label>Retail Price (€)</label>
-                                <input type="number" id="hmpf-retail" step="0.01" min="0" placeholder="0.00" oninput="hmProd.calcMargin()">
-                            </div>
-                            <div class="hm-form-group hm-form-sm">
-                                <label>VAT Rate (%)</label>
-                                <input type="number" id="hmpf-vat" step="0.5" min="0" placeholder="0">
-                            </div>
-                            <div class="hm-form-group hm-form-sm">
-                                <label>Margin</label>
-                                <div id="hmpf-margin" class="hm-margin-display">—</div>
-                            </div>
-                        </div>
-
-                        <div class="hm-form-row">
-                            <div class="hm-form-group">
-                                <label>Model</label>
-                                <input type="text" id="hmpf-model" placeholder="Model name">
-                            </div>
-                            <div class="hm-form-group">
-                                <label>Receivers</label>
-                                <input type="text" id="hmpf-receivers" placeholder="e.g. S, M, P, UP">
-                            </div>
-                        </div>
-
-                        <div class="hm-form-row">
-                            <div class="hm-form-group">
-                                <label>Earbud Size</label>
-                                <input type="text" id="hmpf-earbud-size" placeholder="e.g. Small, Medium">
-                            </div>
-                            <div class="hm-form-group">
-                                <label>Earbud Type</label>
-                                <input type="text" id="hmpf-earbud-type" placeholder="e.g. Open, Closed, Power">
-                            </div>
-                            <div class="hm-form-group">
-                                <label>Power</label>
-                                <input type="text" id="hmpf-power" placeholder="e.g. 312, 13, Rechargeable">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="hm-modal-ft">
-                        <button class="hm-btn" onclick="hmProd.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmProd.save()" id="hmpf-save-btn">Save Product</button>
-                    </div>
+            <?php if (!empty($page['fields'])): ?>
+            <div class="hm-settings-panel">
+                <?php foreach ($page['fields'] as $f):
+                    $val = get_option($f['key'], $f['default']);
+                ?>
+                <div class="hm-form-group">
+                    <?php if ($f['type'] === 'toggle'): ?>
+                        <label class="hm-toggle-label">
+                            <input type="checkbox" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" <?php checked($val, '1'); ?>>
+                            <?php echo esc_html($f['label']); ?>
+                        </label>
+                    <?php else: ?>
+                        <label><?php echo esc_html($f['label']); ?></label>
+                        <?php if ($f['type'] === 'textarea'): ?>
+                            <textarea class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" rows="5"><?php echo esc_textarea($val); ?></textarea>
+                        <?php elseif ($f['type'] === 'select'): ?>
+                            <select class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>">
+                                <?php foreach ($f['options'] as $k => $v): ?>
+                                <option value="<?php echo esc_attr($k); ?>" <?php selected($val, $k); ?>><?php echo esc_html($v); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        <?php elseif ($f['type'] === 'password'): ?>
+                            <input type="password" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($val); ?>">
+                        <?php else: ?>
+                            <input type="<?php echo $f['type'] === 'number' ? 'number' : 'text'; ?>" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($val); ?>" <?php echo $f['type'] === 'number' ? 'step="0.1" min="0"' : ''; ?>>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </div>
+                <?php endforeach; ?>
             </div>
+            <?php endif; ?>
         </div>
 
 
         <script>
-        var hmProd = {
-            open: function(data) {
-                var isEdit = data && data.id;
-                document.getElementById('hm-product-modal-title').textContent = isEdit ? 'Edit Product' : 'Add Product';
-                document.getElementById('hmpf-id').value = isEdit ? data.id : '';
-                document.getElementById('hmpf-name').value = isEdit ? data.name : '';
-                document.getElementById('hmpf-item-code').value = isEdit ? (data.item_code || '') : '';
-                document.getElementById('hmpf-category').value = isEdit ? (data.product_category || 'Hearing Aids') : 'Hearing Aids';
-                document.getElementById('hmpf-manufacturer').value = isEdit ? (data.manufacturer || '') : '';
-                document.getElementById('hmpf-style').value = isEdit ? (data.style || '') : '';
-                document.getElementById('hmpf-tech-level').value = isEdit ? (data.tech_level || '') : '';
-                document.getElementById('hmpf-range').value = isEdit ? (data.hearmed_range || '') : '';
-                document.getElementById('hmpf-cost').value = isEdit ? (data.cost_price || '') : '';
-                document.getElementById('hmpf-retail').value = isEdit ? (data.retail_price || '') : '';
-                document.getElementById('hmpf-vat').value = isEdit ? (data.vat_rate || '0') : '0';
-                document.getElementById('hmpf-model').value = isEdit ? (data.model || '') : '';
-                document.getElementById('hmpf-receivers').value = isEdit ? (data.receivers || '') : '';
-                document.getElementById('hmpf-earbud-size').value = isEdit ? (data.earbud_size || '') : '';
-                document.getElementById('hmpf-earbud-type').value = isEdit ? (data.earbud_type || '') : '';
-                document.getElementById('hmpf-power').value = isEdit ? (data.power || '') : '';
-
-                if (!isEdit) this.catChange();
-                this.calcMargin();
-                document.getElementById('hm-product-modal').classList.add('open');
-            },
-
-            close: function() {
-                document.getElementById('hm-product-modal').classList.remove('open');
-            },
-
-            catChange: function() {
-                var sel = document.getElementById('hmpf-category');
-                var opt = sel.options[sel.selectedIndex];
-                if (opt && opt.dataset.vat !== undefined) {
-                    document.getElementById('hmpf-vat').value = opt.dataset.vat;
-                }
-            },
-
-            calcMargin: function() {
-                var cost = parseFloat(document.getElementById('hmpf-cost').value) || 0;
-                var retail = parseFloat(document.getElementById('hmpf-retail').value) || 0;
-                var el = document.getElementById('hmpf-margin');
-                if (retail > 0 && cost > 0) {
-                    var m = ((retail - cost) / retail * 100).toFixed(1);
-                    el.textContent = m + '%';
-                    el.style.color = m >= 70 ? '#059669' : m >= 50 ? '#3b82f6' : m >= 30 ? '#d97706' : '#ef4444';
-                } else {
-                    el.textContent = '—';
-                    el.style.color = '';
-                }
-            },
-
-            filter: function() {
-                var q = (document.getElementById('hmp-search').value || '').toLowerCase();
-                var cat = document.getElementById('hmp-cat-filter').value;
-                var rows = document.querySelectorAll('#hmp-table tbody tr');
-                var vis = 0;
-                rows.forEach(function(tr) {
-                    var matchSearch = !q || (tr.dataset.search || '').indexOf(q) !== -1;
-                    var matchCat = !cat || tr.dataset.cat === cat;
-                    tr.style.display = (matchSearch && matchCat) ? '' : 'none';
-                    if (matchSearch && matchCat) vis++;
+        var hmSettings = {
+            save: function(tag) {
+                var data = { action:'hm_admin_save_settings_page', nonce:HM.nonce, page_tag:tag, settings:{} };
+                document.querySelectorAll('.hm-stg-field').forEach(function(el) {
+                    var key = el.dataset.key;
+                    if (el.type === 'checkbox') data.settings[key] = el.checked ? '1' : '0';
+                    else data.settings[key] = el.value;
                 });
-                document.getElementById('hmp-count').textContent = vis + ' products';
-            },
+                data.settings = JSON.stringify(data.settings);
 
-            save: function() {
-                var name = document.getElementById('hmpf-name').value.trim();
-                if (!name) { alert('Product name is required.'); return; }
-
-                var btn = document.getElementById('hmpf-save-btn');
-                btn.textContent = 'Saving...';
-                btn.disabled = true;
-
-                jQuery.post(HM.ajax_url, {
-                    action: 'hm_admin_save_product',
-                    nonce: HM.nonce,
-                    id: document.getElementById('hmpf-id').value,
-                    name: name,
-                    item_code: document.getElementById('hmpf-item-code').value,
-                    product_category: document.getElementById('hmpf-category').value,
-                    manufacturer: document.getElementById('hmpf-manufacturer').value,
-                    style: document.getElementById('hmpf-style').value,
-                    tech_level: document.getElementById('hmpf-tech-level').value,
-                    hearmed_range: document.getElementById('hmpf-range').value,
-                    cost_price: document.getElementById('hmpf-cost').value,
-                    retail_price: document.getElementById('hmpf-retail').value,
-                    vat_rate: document.getElementById('hmpf-vat').value,
-                    model: document.getElementById('hmpf-model').value,
-                    receivers: document.getElementById('hmpf-receivers').value,
-                    earbud_size: document.getElementById('hmpf-earbud-size').value,
-                    earbud_type: document.getElementById('hmpf-earbud-type').value,
-                    power: document.getElementById('hmpf-power').value
-                }, function(r) {
-                    if (r.success) location.reload();
-                    else { alert(r.data || 'Error saving.'); btn.textContent = 'Save Product'; btn.disabled = false; }
-                });
-            },
-
-            del: function(id, name) {
-                if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
-                jQuery.post(HM.ajax_url, {
-                    action: 'hm_admin_delete_product',
-                    nonce: HM.nonce,
-                    id: id
-                }, function(r) {
-                    if (r.success) location.reload();
-                    else alert(r.data || 'Error deleting.');
+                var btn = document.getElementById('hms-save-btn');
+                btn.textContent = 'Saving...'; btn.disabled = true;
+                jQuery.post(HM.ajax_url, data, function(r) {
+                    if (r.success) { btn.textContent = '✓ Saved'; setTimeout(function(){ btn.textContent = 'Save Settings'; btn.disabled = false; }, 1500); }
+                    else { alert(r.data || 'Error'); btn.textContent = 'Save Settings'; btn.disabled = false; }
                 });
             }
         };
         </script>
-        <?php
-        return ob_get_clean();
+        <?php return ob_get_clean();
     }
 
     public function ajax_save() {
         check_ajax_referer('hm_nonce', 'nonce');
         if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
 
-        $id = intval($_POST['id'] ?? 0);
-        $name = sanitize_text_field($_POST['name'] ?? '');
-        if (empty($name)) { wp_send_json_error('Name required'); return; }
+        $tag = sanitize_text_field($_POST['page_tag'] ?? '');
+        $page = $this->pages[$tag] ?? null;
+        if (!$page) { wp_send_json_error('Unknown page'); return; }
 
-        if ($id) {
-            wp_update_post(['ID' => $id, 'post_title' => $name]);
-        } else {
-            $id = // TODO: USE PostgreSQL: HearMed_DB::insert()
-    wp_insert_post([
-                'post_type' => 'ha-product',
-                'post_title' => $name,
-                'post_status' => 'publish',
-            ]);
-            if (is_wp_error($id)) { wp_send_json_error('Failed to create product'); return; }
-        }
+        $settings = json_decode(stripslashes($_POST['settings'] ?? '{}'), true);
+        if (!is_array($settings)) { wp_send_json_error('Invalid data'); return; }
 
-        foreach ($this->meta_fields as $f) {
-            $post_key = $f;
-            if (isset($_POST[$f])) {
-                update_post_meta($id, $f, sanitize_text_field($_POST[$f]));
+        $valid_keys = array_column($page['fields'], 'key');
+        foreach ($settings as $key => $val) {
+            if (in_array($key, $param) {
+                update_option($key, sanitize_text_field($val));
             }
         }
 
-        wp_send_json_success(['id' => $id]);
-    }
-
-    public function ajax_delete() {
-        check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
-
-        $id = intval($_POST['id'] ?? 0);
-        if ($id) wp_delete_post($id, true);
         wp_send_json_success();
     }
 }
 
-new HearMed_Admin_Products();
+new HearMed_Admin_Settings();

@@ -179,10 +179,11 @@ function hm_ajax_get_pending_orders() {
         foreach ($line_items as $li) {
             $pid = intval($li['product_id'] ?? 0);
             $lines[] = array_merge($li, [
-                'manufacturer' => /* USE PostgreSQL: Get from table columns */ /* get_post_meta($pid, 'manufacturer', true) ?: '',
-                'style'        => /* USE PostgreSQL: Get from table columns */ /* get_post_meta($pid, 'style', true)        ?: '',
-                'range'        => /* USE PostgreSQL: Get from table columns */ /* get_post_meta($pid, 'hearmed_range', true) ?: '',
-                'cost_price'   => (float)/* USE PostgreSQL: Get from table columns */ /* get_post_meta($pid, 'cost_price', true),
+                // TODO: USE PostgreSQL: Get from table columns
+                'manufacturer' => get_post_meta($pid, 'manufacturer', true) ?: '',
+                'style'        => get_post_meta($pid, 'style', true)        ?: '',
+                'range'        => get_post_meta($pid, 'hearmed_range', true) ?: '',
+                'cost_price'   => (float)get_post_meta($pid, 'cost_price', true),
             ]);
         }
 
