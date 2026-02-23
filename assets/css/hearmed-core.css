@@ -428,111 +428,88 @@
 }
 
 /* ============================================================
-   LAYOUT - FULL VIEWPORT
+   LAYOUT - FULL VIEWPORT  
    ============================================================ */
 
-html, body {
+html {
   height: 100vh;
   width: 100%;
   margin: 0;
   padding: 0;
+  overflow: hidden;
 }
 
-/* Make main content area full viewport */
 body {
-  display: flex;
-  flex-direction: column;
-}
-
-main, 
-.site-content,
-.content,
-#main {
-  flex: 1;
-  width: 100%;
-  height: 100%;
-}
-
-#hm-app {
   height: 100vh;
   width: 100%;
-  overflow: auto;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 /* ============================================================
-   HIDE THEME HEADER & FOOTER
-   Keep Elementor content and plugin UI visible
+   NUCLEAR: HIDE ALL HEADERS AND FOOTERS
    ============================================================ */
 
-/* NUCLEAR OPTION: Hide absolutely everything at top that might be a header */
-header,
-.site-header,
-.header,
-.site-header-wrapper,
-.theme-header,
-#site-header,
-#header,
-.masthead,
-nav,
-.navbar,
-.wp-site-blocks > *:first-child,
-[class*="header"],
-[class*="Header"],
-[id*="header"],
-[id*="Header"],
-.wp-block-template-part[area="header"],
-script {
+/* Every possible header element */
+header, nav, .header, .site-header, #masthead, #header,
+.site-header-wrapper, .navbar, .navbar-header, .navbar-nav,
+.wp-site-blocks > header, .wp-block-template-part[area="header"],
+[class*="header"], [id*="header"], 
+.theme-header, .page-header, .entry-header, .site-branding,
+.custom-header, .header-main, .top-bar, .menu-header,
+.header-widget-area, .site-header-main {
   display: none !important;
   visibility: hidden !important;
   height: 0 !important;
-  overflow: hidden !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
 }
 
-/* Hide WordPress default footer */
-footer,
-.site-footer,
-.footer,
-.site-footer-wrapper,
-.theme-footer,
-#site-footer,
-#footer,
-[class*="footer"],
-[class*="Footer"],
-[id*="footer"],
-[id*="Footer"],
-.wp-site-blocks > *:last-child,
-.wp-block-template-part[area="footer"] {
+/* Every possible footer element */
+footer, .footer, .site-footer, #footer, #site-footer,
+.site-footer-wrapper, .footer-wrapper, .footer-content,
+.wp-site-blocks > footer, .wp-block-template-part[area="footer"],
+[class*="footer"], [id*="footer"],
+.theme-footer, .page-footer, .entry-footer, .site-info,
+.footer-widget-area, .footer-main, .footer-bottom, .footer-top,
+.copyright, .footer-copyright, [class*="copyright"],
+[class*="footer-text"], [class*="footer-credit"],
+.credits, .site-credits, .site-content + footer {
   display: none !important;
   visibility: hidden !important;
   height: 0 !important;
-  overflow: hidden !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
 }
 
-/* Hide any text saying "HearMed Portal", copyright, etc */
-[class*="copyright"],
-[class*="footer-text"],
-[class*="footer-credit"],
-.footer-info,
-.footer-disclaimer,
-[class*="site-info"],
-.credits {
+/* Hide any script text that might appear */
+script:not([async]):not([defer]) {
   display: none !important;
-  visibility: hidden !important;
-  height: 0 !important;
 }
 
-/* Preserve Elementor page content */
-#elementor,
-.elementor,
-.elementor-page-body,
-.elementor-page-wrapper {
-  display: block !important;
-  height: auto !important;
-  visibility: visible !important;
+/* Make main content full viewport */
+main, .site-content, .content, .main-content, #main,
+.page, .post, .entry-content, .the-content,
+.elementor, .elementor-page-body, .elementor-page,
+#elementor, .elementor-container {
+  height: 100vh !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: auto !important;
 }
 
-/* Preserve HearMed Portal content */
+/* Preserve HearMed Portal */
 #hm-app {
+  height: 100vh !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
   display: block !important;
   visibility: visible !important;
 }

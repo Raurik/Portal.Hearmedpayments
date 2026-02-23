@@ -92,15 +92,6 @@ class HearMed_Enqueue {
             $this->get_file_version( 'assets/js/hearmed-core.js' ),
             true
         );
-
-        // Viewport height fixer - ensure pages display at 100vh without header/footer
-        wp_enqueue_script(
-            'hearmed-viewport-fix',
-            HEARMED_URL . 'assets/js/hearmed-viewport-fix.js',
-            [],
-            $this->get_file_version( 'assets/js/hearmed-viewport-fix.js' ),
-            true
-        );
         
         // Localize script with global data
         $user = wp_get_current_user();
