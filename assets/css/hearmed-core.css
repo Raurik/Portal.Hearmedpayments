@@ -464,16 +464,28 @@ main,
    Keep Elementor content and plugin UI visible
    ============================================================ */
 
-/* Hide WordPress default header */
+/* NUCLEAR OPTION: Hide absolutely everything at top that might be a header */
 header,
 .site-header,
 .header,
 .site-header-wrapper,
 .theme-header,
 #site-header,
+#header,
+.masthead,
+nav,
+.navbar,
+.wp-site-blocks > *:first-child,
 [class*="header"],
-.wp-site-blocks > header {
+[class*="Header"],
+[id*="header"],
+[id*="Header"],
+.wp-block-template-part[area="header"],
+script {
   display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
 }
 
 /* Hide WordPress default footer */
@@ -483,19 +495,30 @@ footer,
 .site-footer-wrapper,
 .theme-footer,
 #site-footer,
+#footer,
 [class*="footer"],
-.wp-site-blocks > footer,
-.wp-block-template-part {
+[class*="Footer"],
+[id*="footer"],
+[id*="Footer"],
+.wp-site-blocks > *:last-child,
+.wp-block-template-part[area="footer"] {
   display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
 }
 
-/* Hide any text saying "HearMed Portal 2026" or similar footers */
+/* Hide any text saying "HearMed Portal", copyright, etc */
 [class*="copyright"],
 [class*="footer-text"],
 [class*="footer-credit"],
 .footer-info,
-.footer-disclaimer {
+.footer-disclaimer,
+[class*="site-info"],
+.credits {
   display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
 }
 
 /* Preserve Elementor page content */
@@ -504,12 +527,13 @@ footer,
 .elementor-page-body,
 .elementor-page-wrapper {
   display: block !important;
-  height: 100%;
-  width: 100%;
+  height: auto !important;
+  visibility: visible !important;
 }
 
 /* Preserve HearMed Portal content */
 #hm-app {
   display: block !important;
+  visibility: visible !important;
 }
 
