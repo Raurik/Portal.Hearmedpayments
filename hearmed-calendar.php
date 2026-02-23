@@ -41,9 +41,19 @@ add_filter( 'script_loader_src', 'hearmed_fix_old_domain', 10, 1 );
 add_filter( 'style_loader_src',  'hearmed_fix_old_domain', 10, 1 );
 
 function hearmed_fix_old_domain( $url ) {
-    if ( is_string( $url ) ) {
-        $url = str_replace( 'hear-med-portal.shop', 'portal.hearmedpayments.net', $url );
+    if ( ! is_string( $url ) ) {
+        return $url;
     }
+
+    // Swap any leftover references to the old domain
+    $url = str_replace( 'hear-med-portal.shop', 'portal.hearmedpayments.net', $url );
+
+    // Specifically fix Elementor local Google Fonts that are still hard-coded as http://
+    $fonts_prefix = 'http://portal.hearmedpayments.net/wp-content/uploads/elementor/google-fonts/';
+    if ( strpos( $url, $fonts_prefix ) === 0 ) {
+        $url = 'https://' . substr( $url, strlen( 'http://' ) );
+    }
+
     return $url;
 }
 
