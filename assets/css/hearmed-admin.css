@@ -265,82 +265,217 @@
 .hm-table-count { padding: 10px 14px; font-size: 12px; color: #94a3b8; }
 
 /* ═══════════════════════════════════════
-   CLINICS
+   CLINICS — FULL PAGE LAYOUT
    ═══════════════════════════════════════ */
 
-#hm-clinics-app {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 24px 28px 32px;
+.hm-page {
+    width: 100%;
+    max-width: 100%;
+    padding: 40px 48px 60px;
+    background: #e8edf2;
+    min-height: 100%;
 }
 
-#hm-clinics-app .hm-admin-hd {
+.hm-page-hd {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    margin-bottom: 18px;
+    align-items: center;
+    margin-bottom: 32px;
 }
 
-#hm-clinics-app .hm-admin-hd-inner h2 {
-    margin: 0 0 4px;
-    font-size: 24px;
+.hm-page-title {
+    font-size: 32px;
     font-weight: 600;
+    color: #151B33;
+    margin: 0;
+    letter-spacing: -0.02em;
 }
 
-#hm-clinics-app .hm-admin-hd-inner .hm-add-link {
+.hm-btn-add {
+    background: none;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    color: #0BB4C4;
+    cursor: pointer;
+    padding: 8px 0;
+    transition: color 0.15s;
+}
+
+.hm-btn-add:hover {
+    color: #0a9eac;
+    text-decoration: underline;
+}
+
+#hm-clinics-app .hm-empty-state {
+    background: #fff;
+    border-radius: 18px;
+    padding: 48px 32px;
+    text-align: center;
+    color: #64748b;
     font-size: 14px;
 }
 
-#hm-clinics-app .hm-clinics-card {
-    border-radius: 18px;
+#hm-clinics-app .hm-clinics-table-card {
+    background: #fff;
     border: 1px solid #e2e8f0;
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: none;
-}
-
-#hm-clinics-app .hm-clinics-card .hm-card-body {
-    padding: 0;
-}
-
-#hm-clinics-app .hm-table-wrap {
     border-radius: 18px;
     overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    margin-bottom: 24px;
 }
 
-#hm-clinics-app .hm-empty-state.hm-clinics-empty {
-    padding: 32px 32px 36px;
-    text-align: center;
+#hm-clinics-app .hm-clinics-table-card .hm-table {
+    margin: 0;
 }
 
-/* Clinics form card behaves like inline panel, not overlay */
-#hm-clinics-app #hm-clinic-modal.hm-modal-bg {
-    position: static;
-    inset: auto;
-    display: block;
-    padding: 0;
-    margin-top: 20px;
-    background: none;
-    backdrop-filter: none;
+#hm-clinics-app .hm-clinics-table-card .hm-table th {
+    background: #f8fafc;
+    padding: 14px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #64748b;
+    border-bottom: 1px solid #e2e8f0;
 }
 
-#hm-clinics-app #hm-clinic-modal .hm-modal {
-    max-width: 100%;
-    border-radius: 18px;
+#hm-clinics-app .hm-clinics-table-card .hm-table td {
+    padding: 16px 20px;
+    font-size: 14px;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+#hm-clinics-app .hm-clinics-table-card .hm-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+#hm-clinics-app .hm-clinics-table-card .hm-table tbody tr:hover td {
+    background: #fafbfc;
+}
+
+#hm-clinics-app .hm-clinics-table-card .hm-table td strong {
+    color: #0BB4C4;
+    font-weight: 600;
+}
+
+/* Clinic form card (hidden by default) */
+#hm-clinics-app .hm-clinic-form {
+    display: none;
+    background: #fff;
     border: 1px solid #e2e8f0;
-    background: rgba(248, 250, 252, 0.9);
-    box-shadow: none;
+    border-radius: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    margin-top: 24px;
+    padding: 0;
 }
 
-#hm-clinics-app #hm-clinic-modal .hm-modal-hd {
-    padding: 20px 28px 8px;
+#hm-clinics-app .hm-form-hd {
+    padding: 24px 32px 16px;
+    border-bottom: 1px solid #f1f5f9;
 }
 
-#hm-clinics-app #hm-clinic-modal .hm-modal-body {
-    padding: 8px 28px 20px;
+#hm-clinics-app .hm-form-hd h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #151B33;
+    margin: 0;
 }
 
-#hm-clinics-app #hm-clinic-modal .hm-modal-ft {
-    padding: 12px 28px 20px;
+#hm-clinics-app .hm-form-body {
+    padding: 24px 32px;
+}
+
+#hm-clinics-app .hm-form-ft {
+    padding: 16px 32px 24px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+#hm-clinics-app .hm-form-group {
+    margin-bottom: 20px;
+}
+
+#hm-clinics-app .hm-form-group:last-child {
+    margin-bottom: 0;
+}
+
+#hm-clinics-app .hm-form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 8px;
+}
+
+#hm-clinics-app .hm-form-group input,
+#hm-clinics-app .hm-form-group textarea,
+#hm-clinics-app .hm-form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #334155;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+#hm-clinics-app .hm-form-group input:focus,
+#hm-clinics-app .hm-form-group textarea:focus,
+#hm-clinics-app .hm-form-group select:focus {
+    border-color: #0BB4C4;
+    box-shadow: 0 0 0 3px rgba(11,180,196,0.1);
+    outline: none;
+}
+
+#hm-clinics-app .hm-form-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+#hm-clinics-app .hm-form-row .hm-form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+#hm-clinics-app .hm-form-group.hm-form-sm {
+    max-width: 180px;
+}
+
+#hm-clinics-app .hm-btn-primary {
+    background: #0BB4C4;
+    color: #fff;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+#hm-clinics-app .hm-btn-primary:hover {
+    background: #0a9eac;
+}
+
+#hm-clinics-app .hm-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+#hm-clinics-app .hm-btn:hover {
+    color: #334155;
 }
 
 /* Modal overlay + shell (shared by clinics/users etc.) */

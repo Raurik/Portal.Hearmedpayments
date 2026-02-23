@@ -86,74 +86,66 @@ class HearMed_Admin_Clinics {
         $days_labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
         ob_start(); ?>
-        <div class="hm-admin" id="hm-clinics-app">
-            <div class="hm-admin-hd">
-                <div class="hm-admin-hd-inner">
-                    <h2>Clinics</h2>
-                    <button class="hm-add-link" type="button" onclick="hmClinic.open()">+ Add Clinic</button>
-                </div>
+        <div class="hm-page" id="hm-clinics-app">
+            <div class="hm-page-hd">
+                <h1 class="hm-page-title">Clinics</h1>
+                <button class="hm-btn-add" type="button" onclick="hmClinic.open()">+ Add Clinic</button>
             </div>
 
-            <div class="hm-card hm-clinics-card">
-                <div class="hm-card-body hm-card-body-flush">
-                    <?php if (empty($clinics)): ?>
-                        <div class="hm-empty-state hm-clinics-empty">
-                            <p>No clinics yet. Add your first clinic to get started.</p>
-                        </div>
-                    <?php else: ?>
-                        <div class="hm-table-wrap">
-                            <table class="hm-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width:36px">Colour</th>
-                                        <th>Name</th>
-                                        <th>Address</th>
-                                        <th>Phone</th>
-                                        <th>Email</th>
-                                        <th>Eircode</th>
-                                        <th>Status</th>
-                                        <th style="width:100px"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                <?php foreach ($clinics as $c): ?>
-                                    <tr data-id="<?php echo $c['id']; ?>">
-                                        <td>
-                                            <span class="hm-colour-dot" style="background:<?php echo esc_attr($c['clinic_colour']); ?>;color:<?php echo esc_attr($c['text_colour']); ?>"></span>
-                                        </td>
-                                        <td><strong><?php echo esc_html($c['name']); ?></strong></td>
-                                        <td><?php echo esc_html($c['address']); ?></td>
-                                        <td><?php echo esc_html($c['clinic_phone']); ?></td>
-                                        <td><?php echo esc_html($c['clinic_email']); ?></td>
-                                        <td><?php echo esc_html($c['eircode']); ?></td>
-                                        <td>
-                                            <?php if ($c['is_active'] === '1'): ?>
-                                                <span class="hm-badge hm-badge-green">Active</span>
-                                            <?php else: ?>
-                                                <span class="hm-badge hm-badge-red">Inactive</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="hm-table-acts">
-                                            <button class="hm-btn hm-btn-sm" onclick='hmClinic.open(<?php echo json_encode($c); ?>)'>Edit</button>
-                                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmClinic.del(<?php echo $c['id']; ?>,'<?php echo esc_js($c['name']); ?>')">Delete</button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+            <?php if (empty($clinics)): ?>
+                <div class="hm-empty-state">
+                    <p>No clinics yet. Add your first clinic to get started.</p>
                 </div>
-            </div>
+            <?php else: ?>
+                <div class="hm-card hm-clinics-table-card">
+                    <table class="hm-table">
+                        <thead>
+                            <tr>
+                                <th style="width:36px">Colour</th>
+                                <th>Name</th>
+                                <th>Address</th>
+                                <th>Phone</th>
+                                <th>Email</th>
+                                <th>Eircode</th>
+                                <th>Status</th>
+                                <th style="width:100px"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($clinics as $c): ?>
+                            <tr data-id="<?php echo $c['id']; ?>">
+                                <td>
+                                    <span class="hm-colour-dot" style="background:<?php echo esc_attr($c['clinic_colour']); ?>;color:<?php echo esc_attr($c['text_colour']); ?>"></span>
+                                </td>
+                                <td><strong><?php echo esc_html($c['name']); ?></strong></td>
+                                <td><?php echo esc_html($c['address']); ?></td>
+                                <td><?php echo esc_html($c['clinic_phone']); ?></td>
+                                <td><?php echo esc_html($c['clinic_email']); ?></td>
+                                <td><?php echo esc_html($c['eircode']); ?></td>
+                                <td>
+                                    <?php if ($c['is_active'] === '1'): ?>
+                                        <span class="hm-badge hm-badge-green">Active</span>
+                                    <?php else: ?>
+                                        <span class="hm-badge hm-badge-red">Inactive</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="hm-table-acts">
+                                    <button class="hm-btn hm-btn-sm" onclick='hmClinic.open(<?php echo json_encode($c); ?>)'>Edit</button>
+                                    <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmClinic.del(<?php echo $c['id']; ?>,'<?php echo esc_js($c['name']); ?>')">Delete</button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
 
-            <!-- Modal -->
-            <div class="hm-modal-bg" id="hm-clinic-modal">
-                <div class="hm-modal">
-                    <div class="hm-modal-hd">
-                        <h3 id="hm-clinic-modal-title">Add Clinic</h3>
-                        <button class="hm-modal-x" onclick="hmClinic.close()">&times;</button>
-                    </div>
-                    <div class="hm-modal-body">
+            <!-- Add/Edit Form (hidden by default) -->
+            <div class="hm-card hm-clinic-form" id="hm-clinic-form">
+                <div class="hm-form-hd">
+                    <h2 id="hm-clinic-form-title">Add Clinic</h2>
+                </div>
+                <div class="hm-form-body">
                         <input type="hidden" id="hmc-id" value="">
 
                         <div class="hm-form-group">
@@ -208,11 +200,10 @@ class HearMed_Admin_Clinics {
                                 <input type="checkbox" id="hmc-active" checked> Active
                             </label>
                         </div>
-                    </div>
-                    <div class="hm-modal-ft">
-                        <button class="hm-btn" onclick="hmClinic.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmClinic.save()" id="hmc-save-btn">Save Clinic</button>
-                    </div>
+                </div>
+                <div class="hm-form-ft">
+                    <button class="hm-btn" onclick="hmClinic.close()">Cancel</button>
+                    <button class="hm-btn hm-btn-primary" onclick="hmClinic.save()" id="hmc-save-btn">Save Clinic</button>
                 </div>
             </div>
         </div>
@@ -221,9 +212,9 @@ class HearMed_Admin_Clinics {
         <script>
         var hmClinic = {
             open: function(data) {
-                var m = document.getElementById('hm-clinic-modal');
+                var form = document.getElementById('hm-clinic-form');
                 var isEdit = data && data.id;
-                document.getElementById('hm-clinic-modal-title').textContent = isEdit ? 'Edit Clinic' : 'Add Clinic';
+                document.getElementById('hm-clinic-form-title').textContent = isEdit ? 'Edit Clinic' : 'Add Clinic';
                 document.getElementById('hmc-id').value = isEdit ? data.id : '';
                 document.getElementById('hmc-name').value = isEdit ? data.name : '';
                 document.getElementById('hmc-address').value = isEdit ? (data.address || '') : '';
@@ -240,14 +231,16 @@ class HearMed_Admin_Clinics {
                     cb.checked = days.indexOf(cb.value) !== -1;
                 });
 
-                m.classList.add('open');
+                form.style.display = 'block';
+                form.scrollIntoView({ behavior: 'smooth', block: 'start' });
             },
 
             close: function() {
-                var isEdit = !!document.getElementById('hmc-id').value;
+                var form = document.getElementById('hm-clinic-form');
+                form.style.display = 'none';
 
                 // Reset form back to "Add Clinic" state
-                document.getElementById('hm-clinic-modal-title').textContent = 'Add Clinic';
+                document.getElementById('hm-clinic-form-title').textContent = 'Add Clinic';
                 document.getElementById('hmc-id').value = '';
                 document.getElementById('hmc-name').value = '';
                 document.getElementById('hmc-address').value = '';
@@ -262,8 +255,6 @@ class HearMed_Admin_Clinics {
                 document.querySelectorAll('#hmc-days input').forEach(function(cb) {
                     cb.checked = defaultDays.indexOf(cb.value) !== -1;
                 });
-
-                document.getElementById('hm-clinic-modal').classList.remove('open');
             },
 
             save: function() {
