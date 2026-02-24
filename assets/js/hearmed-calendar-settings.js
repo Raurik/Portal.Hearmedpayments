@@ -22,10 +22,10 @@ var SettingsPage = {
 
         var $card = $('#hs-preview-card');
         if ($card.length) {
+            $card.css({background: bg});
             $('#hs-preview-name').text(name).css('color', font);
             $('#hs-preview-time').text(start).css('color', badge);
             $('#hs-preview-meta').text('Follow up · Cosgrove\'s Pharmacy').css('color', meta);
-            $card.css('background', bg);
             $card.find('.hm-badge').css({'background': badge, 'color': '#fff'});
             $card.removeClass('outcome-default outcome-small outcome-tag outcome-popover');
             $card.addClass('outcome-' + outcome);

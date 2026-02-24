@@ -38,7 +38,7 @@ class HearMed_Admin_Calendar_Settings {
                             <div class="hm-srow"><span class="hm-slbl">Default timeframe</span><span class="hm-sval"><select id="hs-view" name="default_view" class="hm-dd"><option value="day">Day</option><option value="week" selected>Week</option></select></span></div>
                         </div>
                     </div>
-                    <!-- Block 2: Display Preferences -->
+                    <!-- Block 2: Display Preferences (now includes color pickers) -->
                     <div class="hm-card">
                         <div class="hm-card-hd">Display Preferences</div>
                         <div class="hm-card-body">
@@ -78,37 +78,25 @@ class HearMed_Admin_Calendar_Settings {
                                     Display full resource name
                                 </label>
                             </div>
+                            <div class="hm-srow hm-color-row">
+                                <span class="hm-slbl">Appt Colors</span>
+                                <span class="hm-sval hm-color-pickers">
+                                    <label title="Background"><input type="color" id="hs-appt-bg" name="appt_bg_color" value="#0BB4C4" class="hm-color-box"></label>
+                                    <label title="Font"><input type="color" id="hs-appt-font" name="appt_font_color" value="#ffffff" class="hm-color-box"></label>
+                                    <label title="Badge"><input type="color" id="hs-appt-badge" name="appt_badge_color" value="#3b82f6" class="hm-color-box"></label>
+                                    <label title="Meta"><input type="color" id="hs-appt-meta" name="appt_meta_color" value="#38bdf8" class="hm-color-box"></label>
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <!-- Block 3: Appointment Style & Preview -->
-                    <div class="hm-card">
-                        <div class="hm-card-hd">Appointment Style</div>
-                        <div class="hm-card-body">
-                            <div class="hm-srow">
-                                <span class="hm-slbl">Background</span>
-                                <span class="hm-sval"><input type="color" id="hs-appt-bg" name="appt_bg_color" value="#0BB4C4" style="width:36px;height:24px;border:none;"></span>
-                            </div>
-                            <div class="hm-srow">
-                                <span class="hm-slbl">Font</span>
-                                <span class="hm-sval"><input type="color" id="hs-appt-font" name="appt_font_color" value="#ffffff" style="width:36px;height:24px;border:none;"></span>
-                            </div>
-                            <div class="hm-srow">
-                                <span class="hm-slbl">Badge</span>
-                                <span class="hm-sval"><input type="color" id="hs-appt-badge" name="appt_badge_color" value="#3b82f6" style="width:36px;height:24px;border:none;"></span>
-                            </div>
-                            <div class="hm-srow">
-                                <span class="hm-slbl">Meta</span>
-                                <span class="hm-sval"><input type="color" id="hs-appt-meta" name="appt_meta_color" value="#38bdf8" style="width:36px;height:24px;border:none;"></span>
-                            </div>
-                            <div style="margin-top:12px">
-                                <div class="hm-appt-preview-card" id="hs-preview-card" style="width:180px;height:60px;display:flex;flex-direction:column;justify-content:center;">
-                                    <div class="hm-appt-body" style="padding:0;">
-                                        <div class="hm-appt-name" id="hs-preview-name">Joe</div>
-                                        <div style="margin:2px 0" id="hs-preview-badges"><span class="hm-badge hm-badge-c">C</span> <span class="hm-badge hm-badge-r">R</span> <span class="hm-badge hm-badge-v">VM</span></div>
-                                        <div class="hm-appt-time" id="hs-preview-time">09:00</div>
-                                        <div class="hm-appt-meta" id="hs-preview-meta">Follow up · Cosgrove's Pharmacy</div>
-                                    </div>
-                                </div>
+                    <!-- Block 3: Appointment Preview Only -->
+                    <div class="hm-card hm-appt-preview-wrap">
+                        <div class="hm-appt-preview-card" id="hs-preview-card">
+                            <div class="hm-appt-body">
+                                <div class="hm-appt-name" id="hs-preview-name">Joe</div>
+                                <div style="margin:2px 0" id="hs-preview-badges"><span class="hm-badge hm-badge-c">C</span> <span class="hm-badge hm-badge-r">R</span> <span class="hm-badge hm-badge-v">VM</span></div>
+                                <div class="hm-appt-time" id="hs-preview-time">09:00</div>
+                                <div class="hm-appt-meta" id="hs-preview-meta">Follow up · Cosgrove's Pharmacy</div>
                             </div>
                         </div>
                     </div>
@@ -118,8 +106,6 @@ class HearMed_Admin_Calendar_Settings {
                 </div>
                 </form>
             </div>
-        </div>
-        </div>
         </div>
             <?php
             if ( current_user_can( 'manage_options' ) ) : ?>

@@ -84,6 +84,32 @@
   gap: 16px;
 }
 
+/* Color picker row for appointment block */
+#hm-app .hm-color-row {
+  align-items: center;
+}
+
+#hm-app .hm-color-pickers {
+  display: flex;
+  gap: 8px;
+}
+
+#hm-app .hm-color-box {
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+  cursor: pointer;
+  transition: border 0.15s;
+}
+#hm-app .hm-color-box:focus {
+  outline: none;
+  border-color: var(--hm-teal);
+}
+
 #hm-app .hm-slbl {
   font-size: 14px;
   color: #334155;
@@ -245,30 +271,34 @@
   background: var(--hm-teal-hover);
 }
 
-/* Adjust Joe Bloggs appointment bar size */
-.hm-settings-main .hm-settings-appt-card {
-  height: 60px; /* Reduce height to half */
-  padding: 8px 12px;
+
+/* Appointment preview card fills card neatly */
+#hm-app .hm-appt-preview-wrap {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  min-height: 320px;
+  height: 100%;
 }
-
-.hm-settings-main .hm-settings-appt-name {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--hm-text);
+#hm-app .hm-appt-preview-card {
+  width: 100%;
+  max-width: 340px;
+  min-height: 180px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  box-shadow: 0 2px 12px rgba(15,23,42,0.08);
+  font-size: 1rem;
 }
-
-.hm-settings-main .hm-settings-appt-time {
-  font-size: 0.85rem;
-  color: var(--hm-teal);
-  font-weight: 600;
-}
-
-.hm-settings-main .hm-settings-appt-meta {
-  font-size: 0.8rem;
-  color: var(--hm-text-muted);
+#hm-app .hm-appt-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 28px;
 }
 
 /* Hide tick for unchecked, show blue tick for checked */
