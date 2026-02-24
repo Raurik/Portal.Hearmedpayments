@@ -3,6 +3,18 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class HearMed_Admin_Dispenser_Schedules {
 
+    // Fetch all dispenser schedules with staff and clinic info
+    private function get_schedules() {
+        return HearMed_DB::get_results(
+            "SELECT ds.id, ds.staff_id, s.first_name, s.last_name, s.role, ds.clinic_id, c.clinic_name, ds.day_of_week, ds.rotation_weeks, ds.week_number, ds.is_active
+             FROM hearmed_reference.dispenser_schedules ds
+             JOIN hearmed_reference.staff s ON ds.staff_id = s.id
+             JOIN hearmed_reference.clinics c ON ds.clinic_id = c.id
+             WHERE ds.is_active = true AND s.is_active = true AND c.is_active = true
+             ORDER BY s.last_name, s.first_name, c.clinic_name, ds.day_of_week"
+        ) ?: [];
+    }
+
 
     // Render a calendar-style detail page for a staff member
     private function render_detail_page($staff_data, $clinics, $days) {
