@@ -97,6 +97,28 @@ class HearMed_Core {
                 require_once $file;
             }
         }
+
+        // Load modules (business logic providers)
+        // These modules provide shortcodes and AJAX handlers for portal pages
+        $module_files = [
+            HEARMED_PATH . 'modules/mod-calendar.php',
+            HEARMED_PATH . 'modules/mod-patients.php',
+            HEARMED_PATH . 'modules/mod-orders.php',
+            HEARMED_PATH . 'modules/mod-approvals.php',
+            HEARMED_PATH . 'modules/mod-notifications.php',
+            HEARMED_PATH . 'modules/mod-repairs.php',
+            HEARMED_PATH . 'modules/mod-team-chat.php',
+            HEARMED_PATH . 'modules/mod-accounting.php',
+            HEARMED_PATH . 'modules/mod-reports.php',
+            HEARMED_PATH . 'modules/mod-commissions.php',
+            HEARMED_PATH . 'modules/mod-kpi.php',
+            HEARMED_PATH . 'modules/mod-cash.php',
+        ];
+        foreach ( $module_files as $file ) {
+            if ( file_exists( $file ) ) {
+                require_once $file;
+            }
+        }
     }
     
     /**
