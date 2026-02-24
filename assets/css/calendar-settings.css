@@ -244,3 +244,29 @@
 #hm-app #hm-settings-save:hover {
   background: var(--hm-teal-hover);
 }
+
+/* Adjust Joe Bloggs appointment bar size */
+.hm-settings-main .hm-settings-appt-card {
+  height: 60px; /* Reduce height to half */
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hm-settings-main .hm-settings-appt-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--hm-text);
+}
+
+.hm-settings-main .hm-settings-appt-time {
+  font-size: 0.85rem;
+  color: var(--hm-teal);
+  font-weight: 600;
+}
+
+.hm-settings-main .hm-settings-appt-meta {
+  font-size: 0.8rem;
+  color: var(--hm-text-muted);
+}

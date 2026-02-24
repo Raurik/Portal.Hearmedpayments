@@ -30,18 +30,35 @@ var SettingsPage = {
         e.preventDefault();
         var $btn = $('#hm-settings-save');
         $btn.prop('disabled', true).text('Saving...');
+
         var data = $('#hm-settings-form').serialize();
         data += '&action=hm_save_settings';
+
         // Add nonce if available
-        if(window.HM && HM.nonce) data += '&nonce=' + encodeURIComponent(HM.nonce);
-        $.post((window.HM && HM.ajax_url) || '/wp-admin/admin-ajax.php', data, function(resp){
-            $btn.prop('disabled', false).text('Save Settings');
-            if(resp && resp.success){
-                $btn.text('Saved!');
-                setTimeout(function(){ $btn.text('Save Settings'); }, 1200);
-            } else {
-                alert('Failed to save settings.');
-            }
+        if (window.HM && HM.nonce) {
+            data += '&nonce=' + encodeURIComponent(HM.nonce);
+        }
+
+        // Perform AJAX request
+        $.ajax({
+            url: (window.HM && HM.ajax_url) || '/wp-admin/admin-ajax.php',
+            method: 'POST',
+            data: data,
+            success: function (resp) {
+                $btn.prop('disabled', false).text('Save Settings');
+                if (resp && resp.success) {
+                    $btn.text('Saved!');
+                    setTimeout(function () {
+                        $btn.text('Save Settings');
+                    }, 1200);
+                } else {
+                    alert('Failed to save settings. Please try again.');
+                }
+            },
+            error: function () {
+                $btn.prop('disabled', false).text('Save Settings');
+                alert('An error occurred while saving settings. Please try again.');
+            },
         });
     }
 };
