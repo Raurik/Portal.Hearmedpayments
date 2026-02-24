@@ -251,14 +251,31 @@
    ADMIN SHARED COMPONENTS
    ═══════════════════════════════════════ */
 .hm-settings-panel {
-    background: #f8fafc;
-    border: 1px solid #f1f5f9;
+    background: transparent;
+    border: none;
     border-radius: 12px;
-    padding: 20px 24px;
-    max-width: 640px;
+    padding: 0;
+    max-width: 700px;
 }
-.hm-settings-panel .hm-form-group { margin-bottom: 16px; }
+.hm-settings-panel .hm-form-group { margin-bottom: 12px; }
 .hm-settings-panel .hm-form-group:last-child { margin-bottom: 0; }
+.hm-settings-panel .hm-form-group label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 5px;
+    display: block;
+}
+.hm-settings-panel .hm-form-group input,
+.hm-settings-panel .hm-form-group textarea,
+.hm-settings-panel .hm-form-group select {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+.hm-settings-panel .hm-form-group textarea {
+    min-height: 60px;
+}
 .hm-filter-bar-hd {
     display: flex;
     justify-content: space-between;
@@ -280,23 +297,26 @@
    CLINICS — FULL PAGE LAYOUT
    ═══════════════════════════════════════ */
 
-.hm-page {
+.hm-page,
+.hm-admin {
     width: 100%;
     max-width: 100%;
-    padding: 24px 32px 32px;
+    padding: 20px 28px 28px;
     background: transparent;
     min-height: 100%;
 }
 
-.hm-page-hd {
+.hm-page-hd,
+.hm-admin-hd {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
-.hm-page-title {
-    font-size: 24px;
+.hm-page-title,
+.hm-admin-hd h2 {
+    font-size: 22px;
     font-weight: 600;
     color: #151B33;
     margin: 0;
@@ -306,7 +326,7 @@
 .hm-btn-add {
     background: none;
     border: none;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #0BB4C4;
     cursor: pointer;
@@ -319,15 +339,17 @@
     text-decoration: underline;
 }
 
+.hm-admin .hm-empty-state,
 #hm-clinics-app .hm-empty-state {
     background: #fff;
     border-radius: 12px;
-    padding: 32px 24px;
+    padding: 28px 20px;
     text-align: center;
     color: #64748b;
-    font-size: 13px;
+    font-size: 12px;
 }
 
+.hm-admin .hm-table,
 #hm-clinics-app .hm-clinics-table-card {
     background: #fff;
     border: 1px solid #e2e8f0;
@@ -337,19 +359,29 @@
     margin-bottom: 16px;
 }
 
+.hm-admin .hm-table {
+    margin: 0;
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
 #hm-clinics-app .hm-clinics-table-card .hm-table {
     margin: 0;
     table-layout: fixed;
     width: 100%;
+    border: none;
 }
 
+.hm-admin .hm-table th,
 #hm-clinics-app .hm-clinics-table-card .hm-table th {
     background: #f8fafc;
-    padding: 8px 14px;
-    font-size: 11px;
+    padding: 8px 12px;
+    font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
     color: #64748b;
     border-bottom: 1px solid #e2e8f0;
     overflow: hidden;
@@ -357,17 +389,20 @@
     white-space: nowrap;
 }
 
+.hm-admin .hm-table th:first-child,
 #hm-clinics-app .hm-clinics-table-card .hm-table th:first-child {
-    padding-left: 16px;
+    padding-left: 14px;
 }
 
+.hm-admin .hm-table th:last-child,
 #hm-clinics-app .hm-clinics-table-card .hm-table th:last-child {
-    padding-right: 16px;
+    padding-right: 14px;
 }
 
+.hm-admin .hm-table td,
 #hm-clinics-app .hm-clinics-table-card .hm-table td {
-    padding: 10px 14px;
-    font-size: 13px;
+    padding: 9px 12px;
+    font-size: 12px;
     color: #334155;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
@@ -375,27 +410,40 @@
     text-overflow: ellipsis;
 }
 
+.hm-admin .hm-table td:first-child,
 #hm-clinics-app .hm-clinics-table-card .hm-table td:first-child {
-    padding-left: 16px;
+    padding-left: 14px;
 }
 
+.hm-admin .hm-table td:last-child,
 #hm-clinics-app .hm-clinics-table-card .hm-table td:last-child {
-    padding-right: 16px;
+    padding-right: 14px;
     overflow: visible;
 }
 
+.hm-admin .hm-table tbody tr:last-child td,
 #hm-clinics-app .hm-clinics-table-card .hm-table tbody tr:last-child td {
     border-bottom: none;
 }
 
+.hm-admin .hm-table tbody tr:hover td,
 #hm-clinics-app .hm-clinics-table-card .hm-table tbody tr:hover td {
     background: rgba(16, 185, 129, 0.06);
 }
 
+.hm-admin .hm-table td strong,
 #hm-clinics-app .hm-clinics-table-card .hm-table td strong {
     color: #0BB4C4;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 12px;
+}
+
+.hm-admin .hm-table td code {
+    font-size: 11px;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 #hm-clinics-app .hm-clinic-name {
@@ -562,27 +610,43 @@
     color: #334155;
 }
 
-/* Clinics status badges */
+/* Status badges (global for all admin pages) */
+.hm-admin .hm-badge,
 #hm-clinics-app .hm-badge {
     display: inline-flex;
     align-items: center;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
+.hm-admin .hm-badge-green,
 #hm-clinics-app .hm-badge-green {
     background: rgba(16, 185, 129, 0.12);
     color: #059669;
     border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
+.hm-admin .hm-badge-red,
 #hm-clinics-app .hm-badge-red {
     background: rgba(239, 68, 68, 0.12);
     color: #dc2626;
     border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.hm-admin .hm-badge-yellow {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.hm-admin .hm-badge-blue {
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563eb;
+    border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 /* Modal overlay + shell (shared by clinics/users etc.) */
@@ -603,9 +667,9 @@
 .hm-modal {
     position: relative;
     width: 100%;
-    max-width: 720px;
+    max-width: 650px;
     background: rgba(248, 250, 252, 0.98);
-    border-radius: 18px;
+    border-radius: 14px;
     box-shadow: 0 30px 80px rgba(15, 23, 42, 0.55);
     overflow: hidden;
 }
@@ -614,60 +678,130 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 28px 12px;
-    font-size: 18px;
+    padding: 14px 22px 10px;
+    font-size: 15px;
     font-weight: 600;
     color: #0f172a;
 }
 
+.hm-modal-hd h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+
 .hm-modal-body {
-    padding: 12px 28px 20px;
+    padding: 10px 22px 16px;
 }
 
 .hm-modal-ft {
     display: flex;
     justify-content: flex-end;
-    gap: 12px;
-    padding: 14px 28px 20px;
+    gap: 10px;
+    padding: 12px 22px 16px;
     border-top: 1px solid #e2e8f0;
 }
 
 .hm-modal-x {
     border: none;
     background: none;
-    font-size: 20px;
+    font-size: 18px;
     line-height: 1;
     color: #94a3b8;
     cursor: pointer;
-    padding: 4px;
+    padding: 3px;
     border-radius: 999px;
-    transition: background 0.12s, color 0.12s, transform 0.08s;
+    transition: background 0.12s, color 0.12s;
 }
 
 .hm-modal-x:hover {
     background: rgba(148, 163, 184, 0.12);
     color: #64748b;
-    transform: translateY(-0.5px);
 }
 
 .hm-form-row {
     display: flex;
-    gap: 16px;
+    gap: 12px;
 }
 
 .hm-form-row .hm-form-group {
     flex: 1;
 }
 
+.hm-form-group {
+    margin-bottom: 12px;
+}
+
+.hm-form-group:last-child {
+    margin-bottom: 0;
+}
+
+.hm-form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 5px;
+}
+
+.hm-form-group input,
+.hm-form-group textarea,
+.hm-form-group select {
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+    color: #334155;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.hm-form-group textarea {
+    resize: vertical;
+    min-height: 50px;
+}
+
+.hm-form-group input:focus,
+.hm-form-group textarea:focus,
+.hm-form-group select:focus {
+    border-color: #0BB4C4;
+    box-shadow: 0 0 0 2px rgba(11,180,196,0.08);
+    outline: none;
+}
+
+.hm-form-group input[type="checkbox"] {
+    width: auto;
+    accent-color: #0BB4C4;
+}
+
 .hm-form-group.hm-form-sm {
-    max-width: 220px;
+    max-width: 180px;
+}
+
+.hm-toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #475569;
+    font-weight: 500;
+}
+
+.hm-toggle-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #0BB4C4;
 }
 
 .hm-colour-dot {
     display: inline-block;
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
     border: 1px solid #e2e8f0;
 }
 .hm-days-grid { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
