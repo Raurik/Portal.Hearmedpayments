@@ -21,7 +21,7 @@ class HearMed_Admin_Dispenser_Schedules {
              FROM hearmed_reference.dispenser_schedules ds
              JOIN hearmed_reference.staff s ON s.id = ds.staff_id
              JOIN hearmed_reference.clinics c ON c.id = ds.clinic_id
-             ORDER BY c.clinic_name, ds.day_of_week, s.last_name, s.first_name"
+             ORDER BY c.clinic_name, s.last_name, s.first_name, ds.day_of_week"
         ) ?: [];
     }
 
@@ -96,7 +96,18 @@ class HearMed_Admin_Dispenser_Schedules {
                 <tbody>
                 <?php foreach ( $payload as $row ):
                     $json = json_encode( $row, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP );
-                    $rotation = $row['rotation_weeks'] === 2 ? '2-week (Week ' . $row['week_number'] . ')' : 'Weekly';
+                    
+                    // Format rotation display
+                    if ( $row['rotation_weeks'] === 2 ) {
+                        $rotation = 'Every 2 weeks (Week ' . $row['week_number'] . ')';
+                    } elseif ( $row['rotation_weeks'] === 3 ) {
+                        $rotation = 'Every 3 weeks';
+                    } elseif ( $row['rotation_weeks'] === 4 ) {
+                        $rotation = 'Once a month';
+                    } else {
+                        $rotation = 'Weekly';
+                    }
+                    
                     $day_label = $days[ $row['day_of_week'] ] ?? 'Unknown';
                 ?>
                     <tr>
@@ -147,22 +158,17 @@ class HearMed_Admin_Dispenser_Schedules {
                             </div>
                         </div>
                         <div class="hm-form-row">
-                            <div class="hm-form-group">
-                                <label>Day *</label>
-                                <select id="hms-day">
-                                    <?php foreach ( $days as $idx => $label ): ?>
-                                        <option value="<?php echo (int) $idx; ?>"><?php echo esc_html( $label ); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="hm-form-group">
-                                <label>Rotation</label>
+                            <div class="hm-form-group" style="flex:1;">
+                                <label>Rotation *</label>
                                 <select id="hms-rotation">
                                     <option value="1">Weekly</option>
-                                    <option value="2">2-week rotation</option>
+                                    <option value="2">Every 2 weeks</option>
+                                    <option value="3">Every 3 weeks</option>
+                                    <option value="4">Once a month</option>
                                 </select>
                             </div>
                         </div>
+
                         <div class="hm-form-row" id="hms-week-row" style="display:none;">
                             <div class="hm-form-group">
                                 <label>Week</label>
@@ -172,6 +178,19 @@ class HearMed_Admin_Dispenser_Schedules {
                                 </select>
                             </div>
                         </div>
+
+                        <div class="hm-form-group">
+                            <label>Days *</label>
+                            <div style="display:flex;flex-wrap:wrap;gap:12px;padding:8px 0;">
+                                <?php foreach ( $days as $idx => $label ): ?>
+                                    <label class="hm-day-check">
+                                        <input type="checkbox" class="hms-day-check" value="<?php echo (int) $idx; ?>">
+                                        <?php echo esc_html( $label ); ?>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
                         <div class="hm-form-row">
                             <div class="hm-form-group">
                                 <label class="hm-toggle-label">
@@ -181,7 +200,7 @@ class HearMed_Admin_Dispenser_Schedules {
                             </div>
                         </div>
                         <div class="hm-form-group" style="font-size:12px;color:#64748b;">
-                            Week 1 uses odd calendar weeks (ISO week number), Week 2 uses even weeks.
+                            <strong>Select one or more days.</strong> A separate schedule entry will be created for each day selected.
                         </div>
                     </div>
                     <div class="hm-modal-ft">
@@ -200,10 +219,21 @@ class HearMed_Admin_Dispenser_Schedules {
                 document.getElementById('hms-id').value = isEdit ? data.id : '';
                 document.getElementById('hms-staff').value = isEdit ? data.staff_id : '';
                 document.getElementById('hms-clinic').value = isEdit ? data.clinic_id : '';
-                document.getElementById('hms-day').value = isEdit ? data.day_of_week : '1';
                 document.getElementById('hms-rotation').value = isEdit ? data.rotation_weeks : '1';
                 document.getElementById('hms-week').value = isEdit ? data.week_number : '1';
                 document.getElementById('hms-active').checked = isEdit ? !!data.is_active : true;
+                
+                // Uncheck all days first
+                document.querySelectorAll('.hms-day-check').forEach(function(cb) {
+                    cb.checked = false;
+                });
+                
+                // If editing, check the day that corresponds to this record
+                if (isEdit && data.day_of_week >= 0) {
+                    var dayCheckbox = document.querySelector('.hms-day-check[value="' + data.day_of_week + '"]');
+                    if (dayCheckbox) dayCheckbox.checked = true;
+                }
+                
                 hmSchedules.syncRotation();
                 document.getElementById('hm-schedule-modal').classList.add('open');
             },
@@ -227,24 +257,59 @@ class HearMed_Admin_Dispenser_Schedules {
                     return;
                 }
 
-                var rotation = document.getElementById('hms-rotation').value;
-                var payload = {
-                    action: 'hm_admin_save_schedule',
-                    nonce: HM.nonce,
-                    id: document.getElementById('hms-id').value,
-                    staff_id: staffId,
-                    clinic_id: clinicId,
-                    day_of_week: document.getElementById('hms-day').value,
-                    rotation_weeks: rotation,
-                    week_number: rotation === '2' ? document.getElementById('hms-week').value : 1,
-                    is_active: document.getElementById('hms-active').checked ? 1 : 0
-                };
+                // Get all checked days
+                var days = [];
+                document.querySelectorAll('.hms-day-check:checked').forEach(function(cb) {
+                    days.push(parseInt(cb.value, 10));
+                });
+                
+                if (days.length === 0) {
+                    alert('Please select at least one day.');
+                    return;
+                }
 
+                var rotation = document.getElementById('hms-rotation').value;
+                var isEdit = document.getElementById('hms-id').value !== '';
+                
                 var btn = document.getElementById('hms-save');
                 btn.textContent = 'Saving...'; btn.disabled = true;
-                jQuery.post(HM.ajax_url, payload, function(r) {
-                    if (r.success) location.reload();
-                    else { alert(r.data || 'Error'); btn.textContent = 'Save'; btn.disabled = false; }
+                
+                // For each selected day, create a save payload
+                var saveCount = days.length;
+                var completed = 0;
+                var hasError = false;
+                
+                days.forEach(function(dayOfWeek, idx) {
+                    var payload = {
+                        action: 'hm_admin_save_schedule',
+                        nonce: HM.nonce,
+                        id: isEdit ? document.getElementById('hms-id').value : '', // Only for first day when editing
+                        staff_id: staffId,
+                        clinic_id: clinicId,
+                        day_of_week: dayOfWeek,
+                        rotation_weeks: rotation,
+                        week_number: rotation === '2' ? document.getElementById('hms-week').value : 1,
+                        is_active: document.getElementById('hms-active').checked ? 1 : 0,
+                        is_multi_day: saveCount > 1 ? 1 : 0,
+                        day_index: idx + 1,
+                        total_days: saveCount
+                    };
+
+                    jQuery.post(HM.ajax_url, payload, function(r) {
+                        completed++;
+                        if (!r.success) {
+                            hasError = true;
+                        }
+                        if (completed === saveCount) {
+                            if (hasError) {
+                                alert('Error saving some schedules. Please try again.');
+                                btn.textContent = 'Save'; 
+                                btn.disabled = false;
+                            } else {
+                                location.reload();
+                            }
+                        }
+                    });
                 });
             },
             del: function(id, name) {
@@ -276,17 +341,34 @@ class HearMed_Admin_Dispenser_Schedules {
         $day = intval( $_POST['day_of_week'] ?? -1 );
         $rotation = intval( $_POST['rotation_weeks'] ?? 1 );
         $week = intval( $_POST['week_number'] ?? 1 );
+        $is_multi_day = intval( $_POST['is_multi_day'] ?? 0 ) === 1;
+        $day_index = intval( $_POST['day_index'] ?? 1 );
+        $is_active = intval( $_POST['is_active'] ?? 1 );
 
         if ( ! $staff_id || ! $clinic_id || $day < 0 || $day > 6 ) {
             wp_send_json_error( 'Missing fields' );
             return;
         }
 
-        if ( $rotation !== 2 ) {
+        // Validate and normalize rotation
+        if ( ! in_array( $rotation, [ 1, 2, 3, 4 ] ) ) {
             $rotation = 1;
+        }
+
+        // Only show week selector for 2-week rotation
+        if ( $rotation !== 2 ) {
             $week = 1;
         } else {
             $week = $week === 2 ? 2 : 1;
+        }
+
+        // If this is a multi-day save and it's the first day, delete old schedules for this staff/clinic combo
+        if ( $is_multi_day && $day_index === 1 && $id ) {
+            HearMed_DB::get_results(
+                "DELETE FROM hearmed_reference.dispenser_schedules WHERE staff_id = $1 AND clinic_id = $2",
+                [ $staff_id, $clinic_id ]
+            );
+            $id = 0; // Force insert instead of update
         }
 
         $data = [
@@ -295,7 +377,7 @@ class HearMed_Admin_Dispenser_Schedules {
             'day_of_week' => $day,
             'rotation_weeks' => $rotation,
             'week_number' => $week,
-            'is_active' => intval( $_POST['is_active'] ?? 1 ),
+            'is_active' => $is_active,
             'updated_at' => current_time( 'mysql' ),
         ];
 
