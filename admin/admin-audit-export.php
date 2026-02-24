@@ -128,10 +128,14 @@ class HearMed_Admin_AuditLog {
         $rows = HearMed_DB::get_results($sql, $params) ?: [];
 
         // Attach user names
-        foreach ($rows as &$row) {
-            $u = get_user_by('id', intval($row['user_id'] ?? 0));
-            $row['user_name'] = $u ? $u->display_name : 'System';
+        $out = [];
+        foreach ($rows as $row) {
+            $r = (array) $row;
+            $u = get_user_by('id', intval($r['user_id'] ?? 0));
+            $r['user_name'] = $u ? $u->display_name : 'System';
+            $out[] = $r;
         }
+        $rows = $out;
 
         wp_send_json_success($rows);
     }

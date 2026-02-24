@@ -54,6 +54,9 @@ class HearMed_DB {
         'stock_movements'          => 'hearmed_reference.stock_movements',
         'audiometers'              => 'hearmed_reference.audiometers',
         'hearmed_range'            => 'hearmed_reference.hearmed_range',
+        'staff_groups'             => 'hearmed_reference.staff_groups',
+        'staff_group_members'      => 'hearmed_reference.staff_group_members',
+        'resources'                => 'hearmed_reference.resources',
 
         // ── hearmed_core ──────────────────────────────────────────────────
         'patients'                 => 'hearmed_core.patients',          // ← WAS WRONG (was hearmed_reference)
@@ -102,6 +105,7 @@ class HearMed_DB {
         'commission_rules'         => 'hearmed_admin.commission_rules',
         'gdpr_deletions'           => 'hearmed_admin.gdpr_deletions',
         'gdpr_exports'             => 'hearmed_admin.gdpr_exports',
+        'gdpr_settings'            => 'hearmed_admin.gdpr_settings',
     ];
 
     // -------------------------------------------------------------------------

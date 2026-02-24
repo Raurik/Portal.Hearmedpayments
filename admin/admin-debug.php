@@ -258,9 +258,8 @@ function hm_render_debug_page() {
                 </tbody>
             </table>
             <p style="font-size:12px;color:#666;margin-top:8px;">
-                Tables are prefix-aware (current prefix: <code><?php echo esc_html( $wpdb->prefix ); ?></code>).
-                "Missing" means the table does not yet exist in this database, which is expected for
-                JetEngine CCT types not yet created.
+                Tables are resolved via <code>HearMed_DB::table()</code> to their PostgreSQL schema-qualified names.
+                "Missing" means the table does not yet exist in the Railway PostgreSQL database.
             </p>
         </div>
 
@@ -278,19 +277,22 @@ function hm_render_debug_page() {
  * @return array<string, string>
  */
 function hm_debug_environment_info() {
-// Removed: global $wpdb - now using HearMed_DB
-    // MySQL version — uses a safe SHOW VARIABLES query (no raw SQL exposed in output).
-    $mysql_version = '(unavailable)';
-    $row = HearMed_DB::get_row( "SHOW VARIABLES LIKE 'version'" );
-    if ( $row ) {
-        $mysql_version = esc_html( $row->Value );
+    // PostgreSQL version
+    $pg_version = '(unavailable)';
+    try {
+        $row = HearMed_DB::get_var( "SELECT version()" );
+        if ( $row ) {
+            $pg_version = $row;
+        }
+    } catch ( \Exception $e ) {
+        $pg_version = '(connection error)';
     }
 
     return [
         'Plugin Version (HEARMED_VERSION)' => defined( 'HEARMED_VERSION' ) ? HEARMED_VERSION : '(undefined)',
         'WordPress Version'                 => get_bloginfo( 'version' ),
         'PHP Version'                       => PHP_VERSION,
-        'MySQL Version'                     => $mysql_version,
+        'PostgreSQL Version'                => $pg_version,
         'Site URL'                          => site_url(),
         'Home URL'                          => home_url(),
         'WP_DEBUG'                          => defined( 'WP_DEBUG' ) && WP_DEBUG ? 'true' : 'false',
@@ -365,31 +367,41 @@ function hm_debug_ajax_actions() {
  * @return array[]
  */
 function hm_debug_table_status() {
-// Removed: global $wpdb - now using HearMed_DB
     $slugs = [
         'calendar_settings',
         'appointments',
         'patients',
         'clinics',
-        'dispensers',
+        'staff',
         'services',
         'appointment_types',
         'orders',
         'invoices',
         'audit_log',
+        'products',
+        'manufacturers',
+        'dispenser_schedules',
+        'sms_templates',
+        'kpi_targets',
     ];
 
     $result = [];
     foreach ( $slugs as $slug ) {
-        $full = $wpdb->prefix . 'jet_cct_' . $slug;
-        // $full is built from the WP prefix (trusted) and a hardcoded slug (not user input).
+        $full = HearMed_DB::table( $slug );
+        if ( ! $full ) {
+            $result[] = [
+                'slug'      => $slug,
+                'full_name' => '(not registered)',
+                'exists'    => false,
+                'count'     => 0,
+            ];
+            continue;
+        }
         $found  = HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $full ) );
         $exists = ( $found !== null );
         $count  = 0;
         if ( $exists ) {
-            // Table name is trusted (prefix + hardcoded slug); cannot use %i placeholder
-            // in older WP versions, so we escape the identifier explicitly.
-            $count = (int) HearMed_DB::get_var( 'SELECT COUNT(*) FROM `' . esc_sql( $full ) . '`' );
+            $count = (int) HearMed_DB::get_var( "SELECT COUNT(*) FROM {$full}" );
         }
         $result[] = [
             'slug'      => $slug,

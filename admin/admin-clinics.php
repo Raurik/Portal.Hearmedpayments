@@ -358,7 +358,11 @@ class HearMed_Admin_Clinics {
 
         $id = intval($_POST['id'] ?? 0);
         if ($id) {
-            HearMed_DB::delete('clinics', ['id' => $id]);
+            // Soft delete — set is_active = false
+            HearMed_DB::update('clinics', [
+                'is_active'  => false,
+                'updated_at' => current_time('mysql'),
+            ], ['id' => $id]);
         }
         wp_send_json_success();
     }

@@ -79,7 +79,6 @@ class HearMed_Core {
         $admin_shortcode_files = [
             HEARMED_PATH . 'admin/admin-console.php',
             HEARMED_PATH . 'admin/admin-calendar-settings.php',
-            HEARMED_PATH . 'admin/admin-users.php',
             HEARMED_PATH . 'admin/admin-manage-users.php',
             HEARMED_PATH . 'admin/admin-clinics.php',
             HEARMED_PATH . 'admin/admin-products.php',

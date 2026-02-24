@@ -327,16 +327,96 @@ class HearMed_Admin_Dispenser_Schedules {
         </div>
 
         <script>
-        // Make each row clickable and highlight on hover
+        var hmSchedules = {
+            open: function(data) {
+                var isEdit = !!(data && data.id);
+                document.getElementById('hm-schedule-title').textContent = isEdit ? 'Edit Schedule' : 'Add Schedule';
+                document.getElementById('hms-id').value = isEdit ? data.id : '';
+                if (data) {
+                    document.getElementById('hms-staff').value = data.staff_id || '';
+                    document.getElementById('hms-clinic').value = data.clinic_id || '';
+                    document.getElementById('hms-rotation').value = data.rotation_weeks || '1';
+                    document.getElementById('hms-week').value = data.week_number || '1';
+                    document.getElementById('hms-active').checked = data.is_active !== false;
+                    // Clear day checkboxes and check the right one
+                    document.querySelectorAll('.hms-day-check').forEach(function(cb) { cb.checked = false; });
+                    if (data.day_of_week !== undefined) {
+                        var dayCheck = document.querySelector('.hms-day-check[value="'+data.day_of_week+'"]');
+                        if (dayCheck) dayCheck.checked = true;
+                    }
+                } else {
+                    document.getElementById('hms-staff').value = '';
+                    document.getElementById('hms-clinic').value = '';
+                    document.getElementById('hms-rotation').value = '1';
+                    document.getElementById('hms-week').value = '1';
+                    document.getElementById('hms-active').checked = true;
+                    document.querySelectorAll('.hms-day-check').forEach(function(cb) { cb.checked = false; });
+                }
+                hmSchedules.toggleWeekRow();
+                document.getElementById('hm-schedule-modal').classList.add('open');
+            },
+            openAdd: function() { hmSchedules.open(); },
+            close: function() { document.getElementById('hm-schedule-modal').classList.remove('open'); },
+            closeDetail: function() { document.getElementById('hm-schedule-detail-modal').classList.remove('open'); },
+            toggleWeekRow: function() {
+                var rot = document.getElementById('hms-rotation').value;
+                document.getElementById('hms-week-row').style.display = (rot === '2') ? '' : 'none';
+            },
+            save: function() {
+                var staffId  = document.getElementById('hms-staff').value;
+                var clinicId = document.getElementById('hms-clinic').value;
+                var rotation = document.getElementById('hms-rotation').value;
+                var week     = document.getElementById('hms-week').value;
+                var isActive = document.getElementById('hms-active').checked ? 1 : 0;
+                var schedId  = document.getElementById('hms-id').value;
+
+                if (!staffId)  { alert('Please select a staff member.'); return; }
+                if (!clinicId) { alert('Please select a clinic.'); return; }
+
+                var days = [];
+                document.querySelectorAll('.hms-day-check:checked').forEach(function(cb) {
+                    days.push(parseInt(cb.value));
+                });
+                if (!days.length) { alert('Please select at least one day.'); return; }
+
+                var btn = document.getElementById('hms-save');
+                btn.textContent = 'Saving...'; btn.disabled = true;
+                var total = days.length, done = 0, errors = [];
+
+                days.forEach(function(day, idx) {
+                    jQuery.post(HM.ajax_url, {
+                        action: 'hm_admin_save_dispenser_schedule',
+                        nonce: HM.nonce,
+                        id: days.length === 1 ? schedId : '',
+                        staff_id: staffId,
+                        clinic_id: clinicId,
+                        day_of_week: day,
+                        rotation_weeks: rotation,
+                        week_number: week,
+                        is_active: isActive,
+                        is_multi_day: days.length > 1 ? 1 : 0,
+                        day_index: idx + 1
+                    }, function(r) {
+                        done++;
+                        if (!r.success) errors.push(r.data || 'Error');
+                        if (done === total) {
+                            if (errors.length) { alert(errors.join('\n')); btn.textContent = 'Save'; btn.disabled = false; }
+                            else location.reload();
+                        }
+                    });
+                });
+            }
+        };
+
+        // Toggle week selector on rotation change
+        document.getElementById('hms-rotation').addEventListener('change', hmSchedules.toggleWeekRow);
+
+        // Make each row clickable
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.hm-disp-row').forEach(function(row) {
                 row.style.cursor = 'pointer';
-                row.addEventListener('mouseenter', function() {
-                    row.style.background = '#f0f9ff';
-                });
-                row.addEventListener('mouseleave', function() {
-                    row.style.background = '';
-                });
+                row.addEventListener('mouseenter', function() { row.style.background = '#f0f9ff'; });
+                row.addEventListener('mouseleave', function() { row.style.background = ''; });
                 row.addEventListener('click', function() {
                     var staffId = row.getAttribute('data-staff');
                     window.location = window.location.pathname + '?staff=' + staffId;
