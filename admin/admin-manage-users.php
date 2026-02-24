@@ -15,8 +15,7 @@ class HearMed_Admin_Manage_Users {
     }
 
     private function get_staff() {
-        // Fetch staff with optional join to auth (if exists)
-        // Use simple query first - don't depend on staff_auth existing
+        // Fetch staff - try with auth JOIN first
         $result = HearMed_DB::get_results(
             "SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.role, 
                     COALESCE(s.employee_number, '') as employee_number, 
@@ -31,11 +30,10 @@ class HearMed_Admin_Manage_Users {
              ORDER BY s.last_name, s.first_name"
         );
         
-        error_log('[HearMed] get_staff() query result: ' . print_r($result, true));
-        
-        // If query fails, try without the JOIN
-        if ($result === false) {
-            error_log('[HearMed] get_staff() query failed: ' . HearMed_DB::last_error());
+        // get_results() returns [] on failure, not false
+        // If empty, might be query error. Try simpler query without JOIN
+        if (empty($result)) {
+            error_log('[HearMed] get_staff() JOIN query returned empty, trying fallback');
             $result = HearMed_DB::get_results(
                 "SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.role, 
                         COALESCE(s.employee_number, '') as employee_number, 
@@ -47,9 +45,15 @@ class HearMed_Admin_Manage_Users {
                         '' as totp_secret
                  FROM hearmed_reference.staff s
                  ORDER BY s.last_name, s.first_name"
-            ) ?: [];
+            );
             
-            error_log('[HearMed] get_staff() fallback query result: ' . print_r($result, true));
+            if (!empty($result)) {
+                error_log('[HearMed] Fallback query succeeded with ' . count($result) . ' staff');
+            } else {
+                error_log('[HearMed] Fallback query also returned empty');
+            }
+        } else {
+            error_log('[HearMed] JOIN query succeeded with ' . count($result) . ' staff');
         }
         
         return $result ?: [];
