@@ -69,6 +69,13 @@ class HearMed_Ajax {
         add_action( 'wp_ajax_hm_complete_order', [ 'HearMed_Orders', 'ajax_complete_order' ] ); // Stage 6 (fires QBO)
         add_action( 'wp_ajax_hm_patient_search', [ 'HearMed_Orders', 'ajax_patient_search' ] ); // Autocomplete
 
+        // Accounting — ADD THESE 5 NEW ONES
+add_action('wp_ajax_hm_save_supplier_invoice', ['HearMed_Accounting', 'ajax_save_supplier_invoice']);
+add_action('wp_ajax_hm_retry_qbo_sync',        ['HearMed_Accounting', 'ajax_retry_qbo_sync']);
+add_action('wp_ajax_hm_assign_bank_txn',        ['HearMed_Accounting', 'ajax_assign_bank_txn']);
+add_action('wp_ajax_hm_qbo_sync_accounts',      ['HearMed_Accounting', 'ajax_qbo_sync_accounts']);
+add_action('wp_ajax_hm_qbo_disconnect',         ['HearMed_Accounting', 'ajax_qbo_disconnect']);
+
         // ── Accounting / QuickBooks ───────────────────────────────────────────
         add_action( 'wp_ajax_hm_retry_qbo_sync', [ 'HearMed_Accounting', 'ajax_retry_sync' ] );
 

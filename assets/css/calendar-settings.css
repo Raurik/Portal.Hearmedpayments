@@ -160,27 +160,27 @@
    ============================================================ */
 
 #hm-app .hm-appt-preview-card {
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid #e2e8f0;
   background: #ffffff;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.05);
 }
 
 /* Gradient header */
 #hm-app .hm-appt-preview-card::before {
   content: "Outcome";
   display: block;
-  padding: 12px 16px;
-  font-size: 14px;
-  font-weight: 600;
+  padding: 8px 12px;
+  font-size: 8px;
+  font-weight: 400;
   color: #ffffff;
   background: linear-gradient(135deg, #22c55e 0%, #0ea5a4 100%);
 }
 
 /* Body */
 #hm-app .hm-appt-body {
-  padding: 18px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -188,7 +188,7 @@
 
 /* Name */
 #hm-app .hm-appt-name {
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 600;
   color: #0f172a;
 }
