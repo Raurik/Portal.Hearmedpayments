@@ -79,7 +79,17 @@ class HearMed_Admin_Manage_Users {
         if (!is_user_logged_in()) return '<p>Please log in.</p>';
 
         $staff = $this->get_staff();
-        error_log('[HearMed] render() received staff: ' . print_r($staff, true));
+        
+        // Diagnostic: Show query results on page if staff is empty
+        $diagnostic = '';
+        if (empty($staff)) {
+            $test_count = HearMed_DB::get_var("SELECT COUNT(*) FROM hearmed_reference.staff");
+            $diagnostic = '<div style="background:#fff3cd;border:1px solid #ffc107;padding:12px;margin-bottom:16px;border-radius:4px;font-size:13px;font-family:monospace;">';
+            $diagnostic .= '<strong>DIAGNOSTIC:</strong> Staff list empty. ';
+            $diagnostic .= 'Raw count from staff table: ' . ($test_count ?? '(query failed)') . '<br>';
+            $diagnostic .= 'If count > 0, query has a problem. If count = 0, table is empty.';
+            $diagnostic .= '</div>';
+        }
         
         $clinics = $this->get_clinics();
         $staff_clinics = $this->get_staff_clinics();
@@ -137,6 +147,7 @@ class HearMed_Admin_Manage_Users {
 
         ob_start(); ?>
         <div class="hm-admin" id="hm-users-admin">
+            <?php if (!empty($diagnostic)) echo $diagnostic; ?>
             <div class="hm-admin-hd">
                 <h2>Staff</h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmUsers.open()">+ Add Staff</button>
