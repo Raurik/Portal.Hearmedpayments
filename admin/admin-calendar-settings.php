@@ -102,22 +102,6 @@ class HearMed_Admin_Calendar_Settings {
             </div>
         </div>
         </div>
-                <?php if ( $show_debug ): ?>
-                <div style="margin-top:18px;padding:12px;border-top:1px solid var(--hm-border);">
-                    <h3 style="margin:0 0 10px 0">Preview (server-side fallback)</h3>
-                    <div class="hs-preview-container">
-                        <div class="hm-appt-preview outcome-default">
-                            <div class="hm-appt-outcome">Outcome</div>
-                            <div class="hm-appt-body">
-                                <div class="hm-appt-name">Piet Pompies</div>
-                                <div class="hm-appt-time">09:00</div>
-                                <div class="hm-appt-meta">Follow up · Cosgrove's Pharmacy</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <?php endif; ?>
-            </div>
         </div>
             <?php
             if ( current_user_can( 'manage_options' ) ) : ?>
