@@ -1,3 +1,84 @@
+    // Render a calendar-style detail page for a staff member
+    private function render_detail_page($staff_data, $clinics, $days) {
+        ob_start();
+        ?>
+        <div class="hm-admin" id="hm-schedule-detail-page">
+            <div class="hm-admin-hd" style="display:flex;align-items:center;gap:20px;">
+                <a href="<?php echo esc_attr( strtok($_SERVER['REQUEST_URI'], '?') ); ?>" class="hm-btn">&larr; Back</a>
+                <h2 style="margin:0;">Dispenser Schedule: <?php echo esc_html($staff_data['staff_name']); ?> <span style="font-size:16px;color:#64748b;">(<?php echo esc_html($staff_data['staff_role']); ?>)</span></h2>
+            </div>
+            <div style="margin:20px 0 30px 0;">
+                <button class="hm-btn hm-btn-teal" onclick="window.location.href='<?php echo esc_attr( strtok($_SERVER['REQUEST_URI'], '?') ); ?>#add'">+ Add Schedule</button>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:32px;">
+                <?php
+                // Group schedules by clinic
+                $clinicGroups = [];
+                foreach ($staff_data['schedules'] as $s) {
+                    $cid = $s['clinic_id'];
+                    if (!isset($clinicGroups[$cid])) {
+                        $clinicGroups[$cid] = [
+                            'name' => $s['clinic_name'],
+                            'days' => []
+                        ];
+                    }
+                    $clinicGroups[$cid]['days'][] = $s;
+                }
+                foreach ($clinicGroups as $clinic) {
+                ?>
+                <div style="min-width:260px;flex:1 1 320px;background:#f8fafc;border-radius:10px;padding:18px 18px 10px 18px;box-shadow:0 2px 8px #e0e7ef;">
+                    <div style="font-weight:600;font-size:17px;margin-bottom:10px;letter-spacing:0.5px;">
+                        <?php echo esc_html($clinic['name']); ?>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#e0e7ef;font-size:14px;">
+                                <th style="padding:6px 4px;">Day</th>
+                                <th style="padding:6px 4px;">Rotation</th>
+                                <th style="padding:6px 4px;">Status</th>
+                                <th style="padding:6px 4px;width:60px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($clinic['days'] as $d):
+                            $badge = $d['is_active'] ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>';
+                            if ($d['rotation_weeks'] === 2) $rotation = 'Every 2 weeks (Week ' . $d['week_number'] . ')';
+                            elseif ($d['rotation_weeks'] === 3) $rotation = 'Every 3 weeks';
+                            elseif ($d['rotation_weeks'] === 4) $rotation = 'Once a month';
+                            else $rotation = 'Weekly';
+                        ?>
+                            <tr style="border-bottom:1px solid #e5e7eb;">
+                                <td style="padding:6px 4px;"><strong><?php echo esc_html($d['day_label']); ?></strong></td>
+                                <td style="padding:6px 4px;"><?php echo esc_html($rotation); ?></td>
+                                <td style="padding:6px 4px;"><?php echo $badge; ?></td>
+                                <td style="padding:6px 4px;text-align:right;">
+                                    <form method="post" style="display:inline;" onsubmit="return confirm('Delete this schedule?');">
+                                        <input type="hidden" name="delete_schedule_id" value="<?php echo (int)$d['id']; ?>">
+                                        <button class="hm-btn hm-btn-sm hm-btn-red" type="submit">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php } ?>
+            </div>
+        </div>
+        <style>
+        #hm-schedule-detail-page .hm-btn { font-size:14px; }
+        #hm-schedule-detail-page table th, #hm-schedule-detail-page table td { font-size:14px; }
+        #hm-schedule-detail-page h2 { font-size:22px; }
+        </style>
+        <?php
+        // Handle delete
+        if (!empty($_POST['delete_schedule_id'])) {
+            $del_id = intval($_POST['delete_schedule_id']);
+            HearMed_DB::update('hearmed_reference.dispenser_schedules', ['is_active'=>false,'updated_at'=>current_time('mysql')], ['id'=>$del_id]);
+            echo "<script>window.location.href='" . strtok($_SERVER['REQUEST_URI'], '?') . "?staff=" . (int)$staff_data['staff_id'] . "';</script>";
+        }
+        return ob_get_clean();
+    }
 <?php
 /**
  * HearMed Admin — Dispenser Schedules
@@ -88,6 +169,14 @@ class HearMed_Admin_Dispenser_Schedules {
             $payload[] = $staff_data;
         }
 
+        // If viewing details for a staff member
+        $detail_id = isset($_GET['staff']) ? intval($_GET['staff']) : 0;
+        if ($detail_id && isset($staff_schedules[$detail_id])) {
+            $staff_data = $staff_schedules[$detail_id];
+            echo $this->render_detail_page($staff_data, $clinics, $days);
+            return;
+        }
+
         ob_start(); ?>
         <div class="hm-admin" id="hm-schedules-admin">
             <div class="hm-admin-hd">
@@ -98,21 +187,17 @@ class HearMed_Admin_Dispenser_Schedules {
             <?php if ( empty( $payload ) ): ?>
                 <div class="hm-empty-state"><p>No schedules yet.</p></div>
             <?php else: ?>
-            <table class="hm-table">
+            <table class="hm-table" id="hm-disp-table">
                 <thead>
                     <tr>
                         <th>Staff</th>
                         <th>Role</th>
                         <th>Clinics Assigned</th>
                         <th>Status</th>
-                        <th style="width:120px"></th>
                     </tr>
                 </thead>
                 <tbody>
                 <?php foreach ( $payload as $staff_data ):
-                    $staff_json = json_encode( $staff_data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP );
-                    
-                    // Count unique clinics
                     $clinic_ids = [];
                     $clinic_names = [];
                     foreach ( $staff_data['schedules'] as $schedule ) {
@@ -121,8 +206,6 @@ class HearMed_Admin_Dispenser_Schedules {
                             $clinic_names[] = $schedule['clinic_name'];
                         }
                     }
-                    
-                    // Check if all schedules are active
                     $all_active = true;
                     foreach ( $staff_data['schedules'] as $schedule ) {
                         if ( ! $schedule['is_active'] ) {
@@ -131,15 +214,11 @@ class HearMed_Admin_Dispenser_Schedules {
                         }
                     }
                 ?>
-                    <tr>
+                    <tr class="hm-disp-row" data-staff="<?php echo (int)$staff_data['staff_id']; ?>">
                         <td><strong><?php echo esc_html( $staff_data['staff_name'] ); ?></strong></td>
                         <td><?php echo esc_html( $staff_data['staff_role'] ?: '—' ); ?></td>
                         <td><?php echo esc_html( implode( ', ', $clinic_names ) ?: '—' ); ?></td>
                         <td><?php echo $all_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
-                        <td class="hm-table-acts">
-                            <button class="hm-btn hm-btn-sm" onclick='hmSchedules.viewDetails(<?php echo $staff_json; ?>)'>View Details</button>
-                            <button class="hm-btn hm-btn-sm hm-btn-teal" onclick="hmSchedules.openAdd()">+ Add</button>
-                        </td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -250,204 +329,21 @@ class HearMed_Admin_Dispenser_Schedules {
         </div>
 
         <script>
-        var hmSchedules = {
-            currentStaffData: null,
-            formatRotation: function(rotation, week) {
-                if (rotation === 2) return 'Every 2 weeks (Week ' + week + ')';
-                if (rotation === 3) return 'Every 3 weeks';
-                if (rotation === 4) return 'Once a month';
-                return 'Weekly';
-            },
-            viewDetails: function(staffData) {
-                this.currentStaffData = staffData;
-                document.getElementById('hm-detail-title').textContent = staffData.staff_name + ' - ' + staffData.staff_role;
-                
-                var content = document.getElementById('hm-detail-content');
-                var html = '';
-                
-                // Group schedules by clinic
-                var clinicGroups = {};
-                staffData.schedules.forEach(function(schedule) {
-                    var cid = schedule.clinic_id;
-                    if (!clinicGroups[cid]) {
-                        clinicGroups[cid] = {
-                            name: schedule.clinic_name,
-                            days: []
-                        };
-                    }
-                    clinicGroups[cid].days.push(schedule);
+        // Make each row clickable and highlight on hover
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.hm-disp-row').forEach(function(row) {
+                row.style.cursor = 'pointer';
+                row.addEventListener('mouseenter', function() {
+                    row.style.background = '#f0f9ff';
                 });
-                
-                // Build HTML for each clinic
-                Object.keys(clinicGroups).forEach(function(clinicId) {
-                    var clinic = clinicGroups[clinicId];
-                    html += '<div style="margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid #e2e8f0;">';
-                    html += '<div style="font-weight:600;margin-bottom:10px;font-size:15px;">' + clinic.name + '</div>';
-                    
-                    clinic.days.forEach(function(schedule) {
-                        var badge = schedule.is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>';
-                        var rotation = hmSchedules.formatRotation(schedule.rotation_weeks, schedule.week_number);
-                        
-                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:14px;">';
-                        html += '<div>';
-                        html += '<strong>' + schedule.day_label + '</strong> • ' + rotation + ' • ' + badge;
-                        html += '</div>';
-                        html += '<button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmSchedules.deleteSchedule(' + schedule.id + ', \'' + hmSchedules.escapeJs(clinic.name + ' - ' + schedule.day_label) + '\')">Delete</button>';
-                        html += '</div>';
-                    });
-                    
-                    html += '</div>';
+                row.addEventListener('mouseleave', function() {
+                    row.style.background = '';
                 });
-                
-                content.innerHTML = html;
-                document.getElementById('hm-schedule-detail-modal').classList.add('open');
-            },
-            closeDetail: function() {
-                document.getElementById('hm-schedule-detail-modal').classList.remove('open');
-            },
-            openAdd: function() {
-                var isEdit = !!(this.currentStaffData && this.currentStaffData.staff_id);
-                document.getElementById('hm-schedule-title').textContent = 'Add Schedule';
-                document.getElementById('hms-id').value = '';
-                document.getElementById('hms-staff').value = isEdit ? this.currentStaffData.staff_id : '';
-                document.getElementById('hms-clinic').value = '';
-                document.getElementById('hms-rotation').value = '1';
-                document.getElementById('hms-week').value = '1';
-                document.getElementById('hms-active').checked = true;
-                
-                // Uncheck all days
-                document.querySelectorAll('.hms-day-check').forEach(function(cb) {
-                    cb.checked = false;
+                row.addEventListener('click', function() {
+                    var staffId = row.getAttribute('data-staff');
+                    window.location = window.location.pathname + '?staff=' + staffId;
                 });
-                
-                hmSchedules.syncRotation();
-                
-                // Close detail modal if open
-                document.getElementById('hm-schedule-detail-modal').classList.remove('open');
-                document.getElementById('hm-schedule-modal').classList.add('open');
-            },
-            open: function(data) {
-                var isEdit = !!(data && data.id);
-                document.getElementById('hm-schedule-title').textContent = isEdit ? 'Edit Schedule' : 'Add Schedule';
-                document.getElementById('hms-id').value = isEdit ? data.id : '';
-                document.getElementById('hms-staff').value = isEdit ? data.staff_id : '';
-                document.getElementById('hms-clinic').value = isEdit ? data.clinic_id : '';
-                document.getElementById('hms-rotation').value = isEdit ? data.rotation_weeks : '1';
-                document.getElementById('hms-week').value = isEdit ? data.week_number : '1';
-                document.getElementById('hms-active').checked = isEdit ? !!data.is_active : true;
-                
-                // Uncheck all days first
-                document.querySelectorAll('.hms-day-check').forEach(function(cb) {
-                    cb.checked = false;
-                });
-                
-                // If editing, check the day that corresponds to this record
-                if (isEdit && data.day_of_week >= 0) {
-                    var dayCheckbox = document.querySelector('.hms-day-check[value="' + data.day_of_week + '"]');
-                    if (dayCheckbox) dayCheckbox.checked = true;
-                }
-                
-                hmSchedules.syncRotation();
-                document.getElementById('hm-schedule-modal').classList.add('open');
-            },
-            close: function() {
-                document.getElementById('hm-schedule-modal').classList.remove('open');
-            },
-            escapeJs: function(str) {
-                return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-            },
-            syncRotation: function() {
-                var rotation = document.getElementById('hms-rotation').value;
-                var weekRow = document.getElementById('hms-week-row');
-                if (rotation === '2') {
-                    weekRow.style.display = 'flex';
-                } else {
-                    weekRow.style.display = 'none';
-                }
-            },
-            save: function() {
-                var staffId = document.getElementById('hms-staff').value;
-                var clinicId = document.getElementById('hms-clinic').value;
-                if (!staffId || !clinicId) {
-                    alert('Staff and clinic are required.');
-                    return;
-                }
-
-                // Get all checked days
-                var days = [];
-                document.querySelectorAll('.hms-day-check:checked').forEach(function(cb) {
-                    days.push(parseInt(cb.value, 10));
-                });
-                
-                if (days.length === 0) {
-                    alert('Please select at least one day.');
-                    return;
-                }
-
-                var rotation = document.getElementById('hms-rotation').value;
-                var isEdit = document.getElementById('hms-id').value !== '';
-                
-                var btn = document.getElementById('hms-save');
-                btn.textContent = 'Saving...'; btn.disabled = true;
-                
-                // For each selected day, create a save payload
-                var saveCount = days.length;
-                var completed = 0;
-                var hasError = false;
-                
-                days.forEach(function(dayOfWeek, idx) {
-                    var payload = {
-                        action: 'hm_admin_save_schedule',
-                        nonce: HM.nonce,
-                        id: isEdit ? document.getElementById('hms-id').value : '',
-                        staff_id: staffId,
-                        clinic_id: clinicId,
-                        day_of_week: dayOfWeek,
-                        rotation_weeks: rotation,
-                        week_number: rotation === '2' ? document.getElementById('hms-week').value : 1,
-                        is_active: document.getElementById('hms-active').checked ? 1 : 0,
-                        is_multi_day: saveCount > 1 ? 1 : 0,
-                        day_index: idx + 1,
-                        total_days: saveCount
-                    };
-
-                    jQuery.post(HM.ajax_url, payload, function(r) {
-                        completed++;
-                        if (!r.success) {
-                            hasError = true;
-                        }
-                        if (completed === saveCount) {
-                            if (hasError) {
-                                alert('Error saving some schedules. Please try again.');
-                                btn.textContent = 'Save'; 
-                                btn.disabled = false;
-                            } else {
-                                location.reload();
-                            }
-                        }
-                    });
-                });
-            },
-            deleteSchedule: function(id, label) {
-                if (!confirm('Delete "' + label + '"?')) return;
-                jQuery.post(HM.ajax_url, { action:'hm_admin_delete_schedule', nonce:HM.nonce, id:id }, function(r) {
-                    if (r.success) location.reload();
-                    else alert(r.data || 'Error');
-                });
-            },
-            del: function(id, name) {
-                if (!confirm('Delete all schedules for "' + name + '"?')) return;
-                jQuery.post(HM.ajax_url, { action:'hm_admin_delete_schedule', nonce:HM.nonce, id:id }, function(r) {
-                    if (r.success) location.reload();
-                    else alert(r.data || 'Error');
-                });
-            }
-        };
-
-        document.addEventListener('change', function(e) {
-            if (e.target && e.target.id === 'hms-rotation') {
-                hmSchedules.syncRotation();
-            }
+            });
         });
         </script>
         <?php
