@@ -71,7 +71,7 @@ class HearMed_Staff_Auth {
                 'username' => $username,
                 'password_hash' => null,          // No password until set by admin
                 'temp_password' => false,         // Not a temp password (no password at all)
-                'two_factor_enabled' => false,
+                'two_factor_enabled' => false,    // No 2FA by default
                 'created_at' => current_time( 'mysql' ),
                 'updated_at' => current_time( 'mysql' ),
             ]

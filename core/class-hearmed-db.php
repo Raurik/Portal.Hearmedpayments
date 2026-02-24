@@ -183,6 +183,15 @@ class HearMed_DB {
         
         $columns = array_keys($data);
         $values = array_values($data);
+        
+        // Convert PHP booleans to PostgreSQL boolean strings
+        $values = array_map(function($v) {
+            if (is_bool($v)) {
+                return $v ? 'true' : 'false';
+            }
+            return $v;
+        }, $values);
+        
         $placeholders = [];
         
         for ($i = 1; $i <= count($values); $i++) {
@@ -227,14 +236,16 @@ class HearMed_DB {
         
         foreach ($data as $col => $val) {
             $set_parts[] = "$col = \$$i";
-            $values[] = $val;
+            // Convert PHP booleans to PostgreSQL boolean strings
+            $values[] = is_bool($val) ? ($val ? 'true' : 'false') : $val;
             $i++;
         }
         
         $where_parts = [];
         foreach ($where as $col => $val) {
             $where_parts[] = "$col = \$$i";
-            $values[] = $val;
+            // Convert PHP booleans to PostgreSQL boolean strings
+            $values[] = is_bool($val) ? ($val ? 'true' : 'false') : $val;
             $i++;
         }
         
