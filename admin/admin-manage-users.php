@@ -239,21 +239,18 @@ class HearMed_Admin_Manage_Users {
                         </div>
                         <div class="hm-form-row">
                             <div class="hm-form-group">
-                                <label>Set New Password</label>
-                                <input type="password" id="hmu-pass" placeholder="Leave blank to keep current">
+                                <label>Set New Password <span id="hmu-pass-req" style="color:#ef4444;">*</span></label>
+                                <input type="password" id="hmu-pass" placeholder="Required for new staff">
                             </div>
                             <div class="hm-form-group">
-                                <label>Confirm Password</label>
+                                <label>Confirm Password <span id="hmu-pass2-req" style="color:#ef4444;display:none;">*</span></label>
                                 <input type="password" id="hmu-pass2">
                             </div>
                         </div>
                         <div class="hm-form-row">
-                            <div class="hm-form-group" style="font-size:12px;color:#64748b;">
-                                Default temp password: Hearmed1674!
-                            </div>
-                            <div class="hm-form-group" style="display:flex;align-items:flex-end;justify-content:flex-end;">
-                                <input type="hidden" id="hmu-reset-pass" value="0">
-                                <button type="button" class="hm-btn hm-btn-sm" onclick="hmUsers.resetPassword()">Reset Temp Password</button>
+                            <div class="hm-form-group" style="font-size:12px;color:#64748b;" id="hmu-passes-help">
+                                <strong>New staff:</strong> Password required. Will be marked temporary so user must change on first login.<br>
+                                <strong>Edit staff:</strong> Password optional. Leave blank to keep current password.
                             </div>
                         </div>
                     </div>
@@ -268,8 +265,10 @@ class HearMed_Admin_Manage_Users {
         <script>
         var hmUsers = {
             clinics: <?php echo json_encode(array_map(function($c){ return ['id'=>(int)$c->id,'name'=>$c->clinic_name]; }, $clinics), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>,
+            isNewStaff: false,
             open: function(data) {
                 var isEdit = !!(data && data.id);
+                this.isNewStaff = !isEdit;
                 document.getElementById('hm-user-title').textContent = isEdit ? 'Edit Staff' : 'Add Staff';
 
                 document.getElementById('hmu-id').value = isEdit ? data.id : '';
@@ -287,7 +286,9 @@ class HearMed_Admin_Manage_Users {
                 document.getElementById('hmu-secret').value = isEdit ? (data.totp_secret || '') : '';
                 document.getElementById('hmu-pass').value = '';
                 document.getElementById('hmu-pass2').value = '';
-                document.getElementById('hmu-reset-pass').value = '0';
+                document.getElementById('hmu-pass').placeholder = this.isNewStaff ? 'Required' : 'Leave blank to keep current';
+                document.getElementById('hmu-pass-req').style.display = this.isNewStaff ? 'inline' : 'none';
+                document.getElementById('hmu-pass2-req').style.display = this.isNewStaff ? 'inline' : 'none';
                 hmUsers.toggleSecret();
 
                 document.querySelectorAll('.hm-staff-clinic').forEach(function(cb) {
@@ -308,10 +309,6 @@ class HearMed_Admin_Manage_Users {
             toggleSecret: function() {
                 var show = document.getElementById('hmu-2fa').checked;
                 document.getElementById('hmu-secret-row').style.display = show ? 'flex' : 'none';
-            },
-            resetPassword: function() {
-                document.getElementById('hmu-reset-pass').value = '1';
-                alert('Temp password will be reset on save.');
             },
             refreshPrimary: function() {
                 var sel = document.getElementById('hmu-primary');
@@ -347,6 +344,14 @@ class HearMed_Admin_Manage_Users {
 
                 var pass = document.getElementById('hmu-pass').value;
                 var pass2 = document.getElementById('hmu-pass2').value;
+                
+                // Password required for new staff
+                if (this.isNewStaff && !pass) {
+                    alert('Password is required when creating new staff.');
+                    return;
+                }
+                
+                // Password validation if provided
                 if (pass || pass2) {
                     if (pass.length < 8) {
                         alert('Password must be at least 8 characters.');
@@ -379,7 +384,7 @@ class HearMed_Admin_Manage_Users {
                     username: document.getElementById('hmu-username').value,
                     two_factor_enabled: document.getElementById('hmu-2fa').checked ? 1 : 0,
                     new_password: pass,
-                    reset_password: document.getElementById('hmu-reset-pass').value,
+                    is_new_staff: this.isNewStaff ? 1 : 0,
                     clinics: JSON.stringify(clinicIds),
                     primary_clinic_id: document.getElementById('hmu-primary').value
                 };
@@ -475,12 +480,20 @@ class HearMed_Admin_Manage_Users {
         $username = sanitize_text_field($_POST['username'] ?? $email);
         $auth = HearMed_Staff_Auth::ensure_auth_for_staff($id, $email, $username);
 
-        $reset_password = intval($_POST['reset_password'] ?? 0) === 1;
+        // For NEW staff (create), password is REQUIRED
+        // For EDIT, password is optional (only update if provided)
         $new_password = (string) ($_POST['new_password'] ?? '');
-        if ($reset_password) {
-            HearMed_Staff_Auth::set_password($id, HearMed_Staff_Auth::default_temp_password(), true);
-        } elseif ($new_password !== '') {
-            HearMed_Staff_Auth::set_password($id, $new_password, false);
+        $is_new_staff = intval($_POST['is_new_staff'] ?? 0) === 1;
+        
+        if ($is_new_staff && $new_password === '') {
+            wp_send_json_error('Password is required when creating new staff');
+            return;
+        }
+        
+        if ($new_password !== '') {
+            // When admin sets password on creation, mark as temp so user must change on first login
+            $is_temp = $is_new_staff ? true : false;
+            HearMed_Staff_Auth::set_password($id, $new_password, $is_temp);
         }
 
         $enable_2fa = intval($_POST['two_factor_enabled'] ?? 0) === 1;

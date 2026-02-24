@@ -108,7 +108,7 @@ class HearMed_Admin_Clinics {
                                 <th style="width:160px">Email</th>
                                 <th style="width:90px">Eircode</th>
                                 <th style="width:80px">Status</th>
-                                <th style="width:140px; text-align:right">Actions</th>
+                                <th style="width:140px">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
