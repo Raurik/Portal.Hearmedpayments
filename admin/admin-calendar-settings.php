@@ -42,7 +42,8 @@ class HearMed_Admin_Calendar_Settings {
                 <?php endif; ?>
             </div>
         </div>
-        return ob_get_clean();
+            <?php
+            return ob_get_clean();
     }
 }
 
