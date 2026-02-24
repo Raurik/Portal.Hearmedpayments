@@ -15,46 +15,15 @@ class HearMed_Admin_Manage_Users {
     }
 
     private function get_staff() {
-        // Fetch staff - try with auth JOIN first
+        // Simple query - proven to work by diagnostic
         $result = HearMed_DB::get_results(
             "SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.role, 
-                    COALESCE(s.employee_number, '') as employee_number, 
-                    COALESCE(s.hire_date::text, '') as hire_date,
-                    s.is_active, s.wp_user_id,
-                    COALESCE(a.username, '') as username, 
-                    COALESCE(a.two_factor_enabled, false) as two_factor_enabled, 
-                    COALESCE(a.temp_password, false) as temp_password, 
-                    COALESCE(a.totp_secret, '') as totp_secret
+                    s.employee_number, s.hire_date, s.is_active, s.wp_user_id,
+                    a.username, a.two_factor_enabled, a.temp_password, a.totp_secret
              FROM hearmed_reference.staff s
              LEFT JOIN hearmed_reference.staff_auth a ON s.id = a.staff_id
              ORDER BY s.last_name, s.first_name"
         );
-        
-        // get_results() returns [] on failure, not false
-        // If empty, might be query error. Try simpler query without JOIN
-        if (empty($result)) {
-            error_log('[HearMed] get_staff() JOIN query returned empty, trying fallback');
-            $result = HearMed_DB::get_results(
-                "SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.role, 
-                        COALESCE(s.employee_number, '') as employee_number, 
-                        COALESCE(s.hire_date::text, '') as hire_date,
-                        s.is_active, s.wp_user_id,
-                        '' as username, 
-                        false as two_factor_enabled, 
-                        false as temp_password, 
-                        '' as totp_secret
-                 FROM hearmed_reference.staff s
-                 ORDER BY s.last_name, s.first_name"
-            );
-            
-            if (!empty($result)) {
-                error_log('[HearMed] Fallback query succeeded with ' . count($result) . ' staff');
-            } else {
-                error_log('[HearMed] Fallback query also returned empty');
-            }
-        } else {
-            error_log('[HearMed] JOIN query succeeded with ' . count($result) . ' staff');
-        }
         
         return $result ?: [];
     }
@@ -79,34 +48,6 @@ class HearMed_Admin_Manage_Users {
         if (!is_user_logged_in()) return '<p>Please log in.</p>';
 
         $staff = $this->get_staff();
-        
-        // Diagnostic: Show query results on page if staff is empty
-        $diagnostic = '';
-        if (empty($staff)) {
-            $test_count = HearMed_DB::get_var("SELECT COUNT(*) FROM hearmed_reference.staff");
-            
-            // Test simple query without JOIN
-            $simple_result = HearMed_DB::get_results(
-                "SELECT id, first_name, last_name, email FROM hearmed_reference.staff LIMIT 1"
-            );
-            $simple_ok = !empty($simple_result) ? 'OK (' . count($simple_result) . ' rows)' : 'EMPTY';
-            
-            // Test with JOIN
-            $join_result = HearMed_DB::get_results(
-                "SELECT s.id, s.first_name FROM hearmed_reference.staff s 
-                 LEFT JOIN hearmed_reference.staff_auth a ON s.id = a.staff_id LIMIT 1"
-            );
-            $join_ok = !empty($join_result) ? 'OK (' . count($join_result) . ' rows)' : 'EMPTY';
-            
-            $diagnostic = '<div style="background:#fff3cd;border:1px solid #ffc107;padding:12px;margin-bottom:16px;border-radius:4px;font-size:12px;font-family:monospace;">';
-            $diagnostic .= '<strong>DIAGNOSTIC:</strong> Staff query failing<br>';
-            $diagnostic .= '• Staff table count: ' . ($test_count ?? 'ERROR') . '<br>';
-            $diagnostic .= '• Simple query (no JOIN): ' . $simple_ok . '<br>';
-            $diagnostic .= '• Query with LEFT JOIN: ' . $join_ok . '<br>';
-            $diagnostic .= '→ If "with JOIN" is EMPTY but simple is OK, the JOIN is broken<br>';
-            $diagnostic .= '→ This likely means staff_auth table schema is wrong';
-            $diagnostic .= '</div>';
-        }
         
         $clinics = $this->get_clinics();
         $staff_clinics = $this->get_staff_clinics();
@@ -143,19 +84,19 @@ class HearMed_Admin_Manage_Users {
 
             $staff_payload[] = [
                 'id' => $sid,
-                'first_name' => $s->first_name,
-                'last_name' => $s->last_name,
-                'email' => $s->email,
-                'phone' => $s->phone,
-                'role' => $s->role,
-                'employee_number' => $s->employee_number,
-                'hire_date' => $s->hire_date,
-                'is_active' => (bool) $s->is_active,
-                'wp_user_id' => $s->wp_user_id,
-                'username' => $s->username,
-                'two_factor_enabled' => (bool) $s->two_factor_enabled,
-                'temp_password' => (bool) $s->temp_password,
-                'totp_secret' => $s->totp_secret,
+                'first_name' => $s->first_name ?? '',
+                'last_name' => $s->last_name ?? '',
+                'email' => $s->email ?? '',
+                'phone' => $s->phone ?? '',
+                'role' => $s->role ?? '',
+                'employee_number' => $s->employee_number ?? '',
+                'hire_date' => $s->hire_date ?? '',
+                'is_active' => (bool) ($s->is_active ?? false),
+                'wp_user_id' => $s->wp_user_id ?? null,
+                'username' => $s->username ?? '',
+                'two_factor_enabled' => (bool) ($s->two_factor_enabled ?? false),
+                'temp_password' => (bool) ($s->temp_password ?? false),
+                'totp_secret' => $s->totp_secret ?? '',
                 'clinic_ids' => $clinic_ids,
                 'primary_clinic_id' => $primary_id,
                 'clinic_labels' => $clinic_labels,
@@ -164,7 +105,6 @@ class HearMed_Admin_Manage_Users {
 
         ob_start(); ?>
         <div class="hm-admin" id="hm-users-admin">
-            <?php if (!empty($diagnostic)) echo $diagnostic; ?>
             <div class="hm-admin-hd">
                 <h2>Staff</h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmUsers.open()">+ Add Staff</button>
