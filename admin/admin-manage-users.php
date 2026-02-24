@@ -84,10 +84,27 @@ class HearMed_Admin_Manage_Users {
         $diagnostic = '';
         if (empty($staff)) {
             $test_count = HearMed_DB::get_var("SELECT COUNT(*) FROM hearmed_reference.staff");
-            $diagnostic = '<div style="background:#fff3cd;border:1px solid #ffc107;padding:12px;margin-bottom:16px;border-radius:4px;font-size:13px;font-family:monospace;">';
-            $diagnostic .= '<strong>DIAGNOSTIC:</strong> Staff list empty. ';
-            $diagnostic .= 'Raw count from staff table: ' . ($test_count ?? '(query failed)') . '<br>';
-            $diagnostic .= 'If count > 0, query has a problem. If count = 0, table is empty.';
+            
+            // Test simple query without JOIN
+            $simple_result = HearMed_DB::get_results(
+                "SELECT id, first_name, last_name, email FROM hearmed_reference.staff LIMIT 1"
+            );
+            $simple_ok = !empty($simple_result) ? 'OK (' . count($simple_result) . ' rows)' : 'EMPTY';
+            
+            // Test with JOIN
+            $join_result = HearMed_DB::get_results(
+                "SELECT s.id, s.first_name FROM hearmed_reference.staff s 
+                 LEFT JOIN hearmed_reference.staff_auth a ON s.id = a.staff_id LIMIT 1"
+            );
+            $join_ok = !empty($join_result) ? 'OK (' . count($join_result) . ' rows)' : 'EMPTY';
+            
+            $diagnostic = '<div style="background:#fff3cd;border:1px solid #ffc107;padding:12px;margin-bottom:16px;border-radius:4px;font-size:12px;font-family:monospace;">';
+            $diagnostic .= '<strong>DIAGNOSTIC:</strong> Staff query failing<br>';
+            $diagnostic .= '• Staff table count: ' . ($test_count ?? 'ERROR') . '<br>';
+            $diagnostic .= '• Simple query (no JOIN): ' . $simple_ok . '<br>';
+            $diagnostic .= '• Query with LEFT JOIN: ' . $join_ok . '<br>';
+            $diagnostic .= '→ If "with JOIN" is EMPTY but simple is OK, the JOIN is broken<br>';
+            $diagnostic .= '→ This likely means staff_auth table schema is wrong';
             $diagnostic .= '</div>';
         }
         
