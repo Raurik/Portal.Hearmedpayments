@@ -17,6 +17,62 @@
 .hm-settings-main .hm-settings-appt-time{font-size:1rem;color:#2563eb;font-weight:600}
 .hm-settings-main .hm-settings-appt-meta{font-size:.95rem;color:#64748b}
 
+/* Refined Calendar Settings Page Styles */
+.hm-settings-main .hm-settings-card {
+  background: var(--hm-bg);
+  border: 1px solid var(--hm-border);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.hm-settings-main .hm-settings-card-hd {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: var(--hm-text);
+  margin-bottom: 12px;
+}
+
+.hm-settings-main .hm-settings-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hm-settings-main .hm-check {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--hm-teal);
+  border-radius: 4px;
+  background-color: var(--hm-bg);
+  position: relative;
+}
+
+.hm-settings-main .hm-check::after {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 10px;
+  border: solid var(--hm-teal);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  position: absolute;
+  top: 2px;
+  left: 5px;
+}
+
+.hm-settings-main .hm-settings-appt-card {
+  background: var(--hm-bg);
+  border: 1px solid var(--hm-border);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 /* small screen adjustments */
 @media(max-width:880px){
   .hm-settings-main .hm-settings-grid{grid-template-columns:1fr}
