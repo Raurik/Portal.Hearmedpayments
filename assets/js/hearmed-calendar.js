@@ -307,76 +307,96 @@ cfg.slotHpx = slotH;
         this._popAppt=a;
         var r=el.getBoundingClientRect();
         var col=a.service_colour||'#3B82F6';
-        var html='<div class="hm-pop-bar" style="background:'+col+'"></div>'+
-            '<div class="hm-pop-hd"><span>'+esc(a.service_name||'Appointment')+'</span><button class="hm-pop-x">'+IC.x+'</button></div>'+
-            '<div class="hm-pop-body">'+
-                '<div><span class="hm-pop-lbl">Patient</span><span>'+esc(a.patient_name||'—')+'</span></div>'+
-                '<div><span class="hm-pop-lbl">Time</span><span>'+(a.start_time||'').substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</span></div>'+
-                '<div><span class="hm-pop-lbl">Assignee</span><span>'+esc(a.dispenser_name||'—')+'</span></div>'+
-                '<div><span class="hm-pop-lbl">Clinic</span><span>'+esc(a.clinic_name||'—')+'</span></div>'+
-                '<div><span class="hm-pop-lbl">Status</span><span>'+esc(a.status||'—')+'</span></div>'+
-                (a.notes?'<div><span class="hm-pop-lbl">Notes</span><span>'+esc(a.notes)+'</span></div>':'')+
-            '</div>'+
-            '<div class="hm-pop-ft"><button class="hm-btn hm-btn-teal hm-btn-sm hm-pop-edit">Edit</button></div>';
+            var h='<div class="hm-settings">';
 
-        var $pop=$('#hm-pop');
-        $pop.html(html);
-        var l=r.right+10,t=r.top;
-        if(l+290>window.innerWidth)l=r.left-290;
-        if(t+260>window.innerHeight)t=window.innerHeight-270;
-        if(t<10)t=10;
-        $pop.css({left:l,top:t}).addClass('open');
-    },
+            // Header
+            h+='<div class="hm-admin-hd"><div><h2>Calendar Settings</h2><div class="hm-admin-subtitle">Adjust your scheduling and display preferences.</div></div></div>';
 
-    editPop:function(){
-        if(!this._popAppt)return;
-        Cal.openEditModal(this._popAppt);
-        $('#hm-pop').removeClass('open');
-    },
+            // Two-column layout: left = settings, right = preview + key prefs
+            h+='<div class="hm-settings-two" style="display:grid;grid-template-columns:1fr 380px;gap:16px;margin-top:12px">';
 
-    openEditModal:function(a){
-        var self=this;
-        var html='<div class="hm-modal-bg open"><div class="hm-modal">'+
-            '<div class="hm-modal-hd"><h3>Edit Appointment</h3><button class="hm-modal-x hm-edit-close">'+IC.x+'</button></div>'+
-            '<div class="hm-modal-body">'+
-                '<div class="hm-fld"><label>Patient</label><input class="hm-inp" id="hme-patient" value="'+esc(a.patient_name||'')+'" readonly></div>'+
-                '<div class="hm-row">'+
-                    '<div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hme-service">'+self.services.map(function(s){return'<option value="'+s.id+'"'+(s.id==a.service_id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
-                    '<div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hme-clinic">'+self.clinics.map(function(c){return'<option value="'+c.id+'"'+(c.id==a.clinic_id?' selected':'')+'>'+esc(c.name)+'</option>';}).join('')+'</select></div>'+
-                '</div>'+
-                '<div class="hm-row">'+
-                    '<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hme-disp">'+self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(d.id==a.dispenser_id?' selected':'')+'>'+esc(d.name)+'</option>';}).join('')+'</select></div>'+
-                    '<div class="hm-fld"><label>Status</label><select class="hm-inp" id="hme-status">'+['Confirmed','Pending','Completed','Cancelled','No Show','Rescheduled'].map(function(s){return'<option'+(s===a.status?' selected':'')+'>'+s+'</option>';}).join('')+'</select></div>'+
-                '</div>'+
-                '<div class="hm-row">'+
-                    '<div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hme-date" value="'+a.appointment_date+'"></div>'+
-                    '<div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hme-time" value="'+(a.start_time||'').substring(0,5)+'"></div>'+
-                '</div>'+
-                '<div class="hm-fld"><label>Notes</label><textarea class="hm-inp" id="hme-notes">'+esc(a.notes||'')+'</textarea></div>'+
-            '</div>'+
-            '<div class="hm-modal-ft">'+
-                '<button class="hm-btn hm-btn-red hm-edit-del">Delete</button>'+
-                '<div class="hm-modal-acts"><button class="hm-btn hm-edit-close">Cancel</button><button class="hm-btn hm-btn-teal hm-edit-save">Save</button></div>'+
-            '</div>'+
-        '</div></div>';
-        $('body').append(html);
+            // Left column - stacked cards
+            h+='<div class="hs-left">';
 
-        $(document).off('click.editclose').on('click.editclose','.hm-edit-close',function(e){
-            e.stopPropagation();
-            $('.hm-modal-bg').remove();$(document).off('.editmodal .editclose');
-        });
-        $(document).off('.editmodal').on('click.editmodal','.hm-modal-bg',function(e){
-            if($(e.target).hasClass('hm-modal-bg')){$('.hm-modal-bg').remove();$(document).off('.editmodal .editclose');}
-        });
-        $(document).off('click.editsave').on('click.editsave','.hm-edit-save',function(){
-            post('update_appointment',{
-                appointment_id:a._ID,patient_id:a.patient_id,
-                service_id:$('#hme-service').val(),clinic_id:$('#hme-clinic').val(),
-                dispenser_id:$('#hme-disp').val(),status:$('#hme-status').val(),
-                appointment_date:$('#hme-date').val(),start_time:$('#hme-time').val(),
-                notes:$('#hme-notes').val()
-            }).then(function(r){if(r.success){$('.hm-modal-bg').remove();$(document).off('.editmodal .editclose .editsave .editdel');self.refresh();}else{alert('Error saving');}});
-        });
+            // ── Card 1: Time & View ──
+            h+='<div class="hm-card">';
+            h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">🕐</span><h3>Time &amp; View</h3></div>';
+            h+='<div class="hm-card-body">';
+            h+=this.row('Start time','<input type="time" class="hm-inp" id="hs-start" value="'+esc(v('start_time','09:00'))+'" style="width:130px">');
+            h+=this.row('End time','<input type="time" class="hm-inp" id="hs-end" value="'+esc(v('end_time','18:00'))+'" style="width:130px">');
+            h+=this.row('Time interval','<select class="hm-dd" id="hs-interval">'+[15,20,30,45,60].map(function(m){return'<option value="'+m+'"'+(parseInt(v('time_interval',30))===m?' selected':'')+'>'+m+' minutes</option>';}).join('')+'</select>');
+            h+=this.row('Slot height','<select class="hm-dd" id="hs-slotH">'+['compact','regular','large'].map(function(s){return'<option value="'+s+'"'+(v('slot_height','regular')===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';}).join('')+'</select>');
+            h+=this.row('Default timeframe','<select class="hm-dd" id="hs-view">'+['day','week'].map(function(s){return'<option value="'+s+'"'+(v('default_view','week')===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';}).join('')+'</select>');
+            h+='</div></div>';
+
+            // ── Card 3: Rules & Safety ──
+            h+='<div class="hm-card">';
+            h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">🛡</span><h3>Rules &amp; Safety</h3></div>';
+            h+='<div class="hm-card-body">';
+            h+=this.tog('Require cancellation reason','hs-cancelReason',v('require_cancel_reason','yes')==='yes','Patients will be prompted when cancelling online.');
+            h+=this.tog('Hide cancelled appointments','hs-hideCancelled',v('hide_cancelled','yes')==='yes');
+            h+=this.tog('Require reschedule note','hs-reschedNote',v('require_reschedule_note','no')==='yes');
+            h+=this.tog('Prevent mismatched location bookings','hs-locMismatch',v('prevent_location_mismatch','no')==='yes');
+            h+='</div></div>';
+
+            // ── Card 4: Availability ──
+            h+='<div class="hm-card">';
+            h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">📅</span><h3>Availability</h3></div>';
+            h+='<div class="hm-card-body">';
+            var enDays=(v('enabled_days','mon,tue,wed,thu,fri')).split(',');
+            h+='<div class="hm-srow" style="flex-direction:column;align-items:stretch"><span class="hm-slbl" style="margin-bottom:8px">Enabled days</span><div class="hm-day-checks">';
+            ['mon','tue','wed','thu','fri','sat','sun'].forEach(function(d){h+='<label><input type="checkbox" class="hs-day" value="'+d+'"'+(enDays.indexOf(d)!==-1?' checked':'')+'>'+d.charAt(0).toUpperCase()+d.slice(1)+'</label>';});
+            h+='</div></div>';
+            h+=this.tog('Apply clinic colour to working times','hs-clinicColour',v('apply_clinic_colour','no')==='yes');
+            h+='</div></div>';
+
+            // ── Card 5: Calendar Order (full width in left column) ──
+            h+='<div class="hm-card">';
+            h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">⠿</span><h3>Calendar Order</h3></div>';
+            h+='<div class="hm-card-body">';
+            h+='<div style="font-size:12px;color:#94a3b8;margin-bottom:10px">Drag to reorder how dispensers appear on the calendar.</div>';
+            h+='<ul class="hm-sort-list" id="hs-sortList">';
+            this.dispensers.forEach(function(d){
+                var ini=esc(d.initials||'');
+                h+='<li class="hm-sort-item" data-id="'+d.id+'">';
+                h+='<span class="hm-sort-grip">⠿</span>';
+                h+='<span class="hm-sort-avatar">'+ini+'</span>';
+                h+='<span class="hm-sort-info"><span class="hm-sort-name">'+esc(d.name)+'</span><span class="hm-sort-role">'+ini+' · '+(esc(d.role_type)||'Dispenser')+'</span></span>';
+                h+='</li>';
+            });
+            h+='</ul></div></div>';
+
+            h+='</div>'; // end left
+
+            // Right column - preview + display prefs + save
+            h+='<div class="hs-right">';
+            // Display Preferences card moved to right
+            h+='<div class="hm-card">';
+            h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">👁</span><h3>Display Preferences</h3></div>';
+            h+='<div class="hm-card-body">';
+            h+=this.tog('Display time inline with patient name','hs-timeInline',v('show_time_inline','no')==='yes');
+            h+=this.tog('Hide appointment end time','hs-hideEnd',v('hide_end_time','yes')==='yes');
+            h+='<div class="hm-srow" style="flex-direction:column;align-items:stretch"><span class="hm-slbl">Outcome style</span><div class="hm-radio-grp" style="margin-top:8px">';
+            ['default','small','tag','popover'].forEach(function(s){h+='<label><input type="radio" name="hs-outcome" value="'+s+'"'+(v('outcome_style','default')===s?' checked':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</label>';});
+            h+='</div></div>';
+            h+=this.tog('Display full resource name','hs-fullName',v('display_full_name','no')==='yes');
+            h+='</div></div>';
+
+            // Preview card
+            h+='<div class="hm-card">';
+            h+='<div class="hm-card-hd"><h3>Preview</h3></div>';
+            h+='<div class="hm-card-body"><div id="hs-preview" class="hs-preview-container"></div></div>';
+            h+='</div>';
+
+            // Save area
+            h+='<div class="hm-card">';
+            h+='<div class="hm-card-body" style="display:flex;justify-content:flex-end;gap:8px">';
+            h+='<button class="hm-btn hm-btn-teal" id="hs-save">Save Changes</button>';
+            h+='</div></div>';
+
+            h+='</div>'; // end right
+
+            h+='</div>'; // end two-column
         $(document).off('click.editdel').on('click.editdel','.hm-edit-del',function(){
             if(!confirm('Delete this appointment?'))return;
             var reason=prompt('Reason for cancellation:')||'Deleted';
@@ -514,8 +534,11 @@ var Settings={
         // Header
         h+='<div class="hm-admin-hd"><div><h2>Calendar Settings</h2><div class="hm-admin-subtitle">Adjust your scheduling and display preferences.</div></div></div>';
 
-        // Card grid
-        h+='<div class="hm-card-grid">';
+        // Two-column layout: left = settings, right = preview + key prefs
+        h+='<div class="hm-settings-two" style="display:grid;grid-template-columns:1fr 380px;gap:16px;margin-top:12px">';
+
+        // Left column - stacked cards
+        h+='<div class="hs-left">';
 
         // ── Card 1: Time & View ──
         h+='<div class="hm-card">';
@@ -526,18 +549,6 @@ var Settings={
         h+=this.row('Time interval','<select class="hm-dd" id="hs-interval">'+[15,20,30,45,60].map(function(m){return'<option value="'+m+'"'+(parseInt(v('time_interval',30))===m?' selected':'')+'>'+m+' minutes</option>';}).join('')+'</select>');
         h+=this.row('Slot height','<select class="hm-dd" id="hs-slotH">'+['compact','regular','large'].map(function(s){return'<option value="'+s+'"'+(v('slot_height','regular')===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';}).join('')+'</select>');
         h+=this.row('Default timeframe','<select class="hm-dd" id="hs-view">'+['day','week'].map(function(s){return'<option value="'+s+'"'+(v('default_view','week')===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';}).join('')+'</select>');
-        h+='</div></div>';
-
-        // ── Card 2: Display Preferences ──
-        h+='<div class="hm-card">';
-        h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">👁</span><h3>Display Preferences</h3></div>';
-        h+='<div class="hm-card-body">';
-        h+=this.tog('Display time inline with patient name','hs-timeInline',v('show_time_inline','no')==='yes');
-        h+=this.tog('Hide appointment end time','hs-hideEnd',v('hide_end_time','yes')==='yes');
-        h+='<div class="hm-srow" style="flex-direction:column;align-items:stretch"><span class="hm-slbl">Outcome style</span><div class="hm-radio-grp" style="margin-top:8px">';
-        ['default','small','tag','popover'].forEach(function(s){h+='<label><input type="radio" name="hs-outcome" value="'+s+'"'+(v('outcome_style','default')===s?' checked':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</label>';});
-        h+='</div></div>';
-        h+=this.tog('Display full resource name','hs-fullName',v('display_full_name','no')==='yes');
         h+='</div></div>';
 
         // ── Card 3: Rules & Safety ──
@@ -561,8 +572,8 @@ var Settings={
         h+=this.tog('Apply clinic colour to working times','hs-clinicColour',v('apply_clinic_colour','no')==='yes');
         h+='</div></div>';
 
-        // ── Card 5: Calendar Order (full width) ──
-        h+='<div class="hm-card hm-card-grid-full">';
+        // ── Card 5: Calendar Order (full width in left column) ──
+        h+='<div class="hm-card">';
         h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">⠿</span><h3>Calendar Order</h3></div>';
         h+='<div class="hm-card-body">';
         h+='<div style="font-size:12px;color:#94a3b8;margin-bottom:10px">Drag to reorder how dispensers appear on the calendar.</div>';
@@ -577,17 +588,37 @@ var Settings={
         });
         h+='</ul></div></div>';
 
-        // Close grid
-        // Preview area (appointment block preview)
-        h+='<div class="hm-card hm-card-grid-full" style="margin-top:18px">';
+        h+='</div>'; // end left
+
+        // Right column - preview + display prefs + save
+        h+='<div class="hs-right">';
+        // Display Preferences card moved to right
+        h+='<div class="hm-card">';
+        h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">👁</span><h3>Display Preferences</h3></div>';
+        h+='<div class="hm-card-body">';
+        h+=this.tog('Display time inline with patient name','hs-timeInline',v('show_time_inline','no')==='yes');
+        h+=this.tog('Hide appointment end time','hs-hideEnd',v('hide_end_time','yes')==='yes');
+        h+='<div class="hm-srow" style="flex-direction:column;align-items:stretch"><span class="hm-slbl">Outcome style</span><div class="hm-radio-grp" style="margin-top:8px">';
+        ['default','small','tag','popover'].forEach(function(s){h+='<label><input type="radio" name="hs-outcome" value="'+s+'"'+(v('outcome_style','default')===s?' checked':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</label>';});
+        h+='</div></div>';
+        h+=this.tog('Display full resource name','hs-fullName',v('display_full_name','no')==='yes');
+        h+='</div></div>';
+
+        // Preview card
+        h+='<div class="hm-card">';
         h+='<div class="hm-card-hd"><h3>Preview</h3></div>';
         h+='<div class="hm-card-body"><div id="hs-preview" class="hs-preview-container"></div></div>';
         h+='</div>';
 
         // Save area
-        h+='<div class="hm-save-area"><span class="hm-toast" id="hs-toast" style="display:none"><span class="hm-toast-icon">✓</span> Calendar updated successfully</span><button class="hm-btn hm-btn-teal" id="hs-save">Save Changes</button></div>';
+        h+='<div class="hm-card">';
+        h+='<div class="hm-card-body" style="display:flex;justify-content:flex-end;gap:8px">';
+        h+='<button class="hm-btn hm-btn-teal" id="hs-save">Save Changes</button>';
+        h+='</div></div>';
 
-        h+='</div>';
+        h+='</div>'; // end right
+
+        h+='</div>'; // end two-column
         this.$el.html(h);
         $('#hs-sortList').sortable({handle:'.hm-sort-grip'});
     },

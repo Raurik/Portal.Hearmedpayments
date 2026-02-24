@@ -398,6 +398,14 @@
 .hs-preview-container{display:flex;flex-direction:column;gap:12px}
 .hm-appt-preview{border-radius:10px;overflow:hidden;display:flex;flex-direction:column;width:100%;max-width:680px;border:1px solid var(--hm-border);box-shadow:var(--hm-shadow-sm)}
 .hm-appt-preview .hm-appt-outcome{background:linear-gradient(90deg,#2dd4bf,#06b6d4);color:#fff;padding:10px 12px;font-weight:700}
+
+/* Two-column settings layout specific tweaks */
+.hm-settings-two .hs-left .hm-card{margin-bottom:14px}
+.hm-settings-two .hs-right .hm-card{margin-bottom:12px}
+.hs-preview-container{min-height:160px;display:flex;align-items:center;justify-content:center}
+.hs-preview-container .hm-appt-preview-card{width:100%}
+.hm-settings-two .hm-card-hd h3{font-size:15px;margin:0}
+
 .hm-appt-preview .hm-appt-body{padding:14px;background:linear-gradient(180deg,#06b6d4,#0bb4c4);color:#fff}
 .hm-appt-preview .hm-appt-name{font-weight:800;font-size:1.05rem;margin-bottom:6px}
 .hm-appt-preview .hm-appt-time{font-weight:600;opacity:0.95;margin-bottom:6px}

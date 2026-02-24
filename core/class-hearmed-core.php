@@ -60,6 +60,7 @@ class HearMed_Core {
         require_once HEARMED_PATH . 'core/class-hearmed-enqueue.php';
         require_once HEARMED_PATH . 'core/class-hearmed-router.php';
         require_once HEARMED_PATH . 'core/class-hearmed-ajax.php';
+        require_once HEARMED_PATH . 'core/class-hearmed-qbo.php';
         
         // Load selected legacy includes for compatibility (avoid duplicate class definitions)
         $safe_legacy = [
