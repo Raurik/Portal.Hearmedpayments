@@ -50,17 +50,17 @@ class HearMed_Admin_Dispenser_Schedules {
                 }
                 foreach ($clinicGroups as $clinic) {
                 ?>
-                <div style="min-width:260px;flex:1 1 320px;background:#f8fafc;border-radius:10px;padding:18px 18px 10px 18px;box-shadow:0 2px 8px #e0e7ef;">
+                <div style="min-width:260px;flex:1 1 320px;">
                     <div style="font-weight:600;font-size:17px;margin-bottom:10px;letter-spacing:0.5px;">
                         <?php echo esc_html($clinic['name']); ?>
                     </div>
-                    <table style="width:100%;border-collapse:collapse;">
+                    <table class="hm-table" style="width:100%;">
                         <thead>
-                            <tr style="background:#e0e7ef;font-size:14px;">
-                                <th style="padding:6px 4px;">Day</th>
-                                <th style="padding:6px 4px;">Rotation</th>
-                                <th style="padding:6px 4px;">Status</th>
-                                <th style="padding:6px 4px;width:60px;"></th>
+                            <tr>
+                                <th>Day</th>
+                                <th>Rotation</th>
+                                <th>Status</th>
+                                <th style="width:60px;"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -71,11 +71,11 @@ class HearMed_Admin_Dispenser_Schedules {
                             elseif ($d['rotation_weeks'] === 4) $rotation = 'Once a month';
                             else $rotation = 'Weekly';
                         ?>
-                            <tr style="border-bottom:1px solid #e5e7eb;">
-                                <td style="padding:6px 4px;"><strong><?php echo esc_html($d['day_label']); ?></strong></td>
-                                <td style="padding:6px 4px;"><?php echo esc_html($rotation); ?></td>
-                                <td style="padding:6px 4px;"><?php echo $badge; ?></td>
-                                <td style="padding:6px 4px;text-align:right;">
+                            <tr>
+                                <td><strong><?php echo esc_html($d['day_label']); ?></strong></td>
+                                <td><?php echo esc_html($rotation); ?></td>
+                                <td><?php echo $badge; ?></td>
+                                <td style="text-align:right;">
                                     <form method="post" style="display:inline;" onsubmit="return confirm('Delete this schedule?');">
                                         <input type="hidden" name="delete_schedule_id" value="<?php echo (int)$d['id']; ?>">
                                         <button class="hm-btn hm-btn-sm hm-btn-red" type="submit">Delete</button>
