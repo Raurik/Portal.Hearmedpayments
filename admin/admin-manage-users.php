@@ -29,6 +29,7 @@ class HearMed_Admin_Manage_Users {
         
         // If query fails (columns don't exist yet), use fallback without those columns
         if ($result === false) {
+            error_log('[HearMed] get_staff() first query failed: ' . HearMed_DB::last_error());
             $result = HearMed_DB::get_results(
                 "SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.role, 
                         '' as employee_number, 
@@ -39,7 +40,16 @@ class HearMed_Admin_Manage_Users {
                  LEFT JOIN hearmed_reference.staff_auth a ON s.id = a.staff_id
                  ORDER BY s.last_name, s.first_name"
             ) ?: [];
+            
+            if ($result === false) {
+                error_log('[HearMed] get_staff() fallback query also failed: ' . HearMed_DB::last_error());
+                return [];
+            }
         }
+        
+        // Log how many records we got
+        $count = is_array($result) ? count($result) : ($result ? 1 : 0);
+        error_log('[HearMed] get_staff() returned ' . $count . ' records');
         
         return $result ?: [];
     }
@@ -64,6 +74,8 @@ class HearMed_Admin_Manage_Users {
         if (!is_user_logged_in()) return '<p>Please log in.</p>';
 
         $staff = $this->get_staff();
+        error_log('[HearMed] render() received staff: ' . print_r($staff, true));
+        
         $clinics = $this->get_clinics();
         $staff_clinics = $this->get_staff_clinics();
 
