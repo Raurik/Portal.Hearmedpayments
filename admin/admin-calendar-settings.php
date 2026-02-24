@@ -68,6 +68,34 @@ class HearMed_Admin_Calendar_Settings {
             print_r( $info );
             echo '</pre>';
             echo '</div>';
+            // Inline JS debug — logs HM and tests AJAX endpoint (admin-only)
+            ?>
+            <script>
+            (function(){
+                try{
+                    console.log('HM-DEBUG: calendar-settings inline debug');
+                    console.log('HM object:', window.HM);
+                    console.log('HM.ajax_url:', window.HM && window.HM.ajax_url);
+                    console.log('HM.nonce:', window.HM && window.HM.nonce);
+                    var app = document.getElementById('hm-app');
+                    console.log('#hm-app exists?', !!app, app && app.dataset);
+                    var ajax = (window.HM && window.HM.ajax_url) || '/wp-admin/admin-ajax.php';
+                    var nonce = (window.HM && window.HM.nonce) || '';
+                    fetch(ajax, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({ action: 'hm_get_settings', nonce: nonce })
+                    }).then(function(r){
+                        return r.text().then(function(t){
+                            console.log('HM-DEBUG fetch status', r.status, 'body:', t);
+                        });
+                    }).catch(function(e){
+                        console.error('HM-DEBUG fetch error', e);
+                    });
+                }catch(e){console.error('HM-DEBUG error', e);}            
+            })();
+            </script>
+            <?php
         }
 
         return ob_get_clean();
