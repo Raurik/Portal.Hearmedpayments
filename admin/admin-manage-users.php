@@ -15,14 +15,33 @@ class HearMed_Admin_Manage_Users {
     }
 
     private function get_staff() {
-        return HearMed_DB::get_results(
-            "SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.role, s.employee_number, s.hire_date,
+        // Try to fetch with optional columns (employee_number, hire_date) first
+        $result = HearMed_DB::get_results(
+            "SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.role, 
+                    COALESCE(s.employee_number, '') as employee_number, 
+                    COALESCE(s.hire_date::text, '') as hire_date,
                     s.is_active, s.wp_user_id,
                     a.username, a.two_factor_enabled, a.temp_password, a.totp_secret
              FROM hearmed_reference.staff s
              LEFT JOIN hearmed_reference.staff_auth a ON s.id = a.staff_id
-             ORDER BY last_name, first_name"
-        ) ?: [];
+             ORDER BY s.last_name, s.first_name"
+        );
+        
+        // If query fails (columns don't exist yet), use fallback without those columns
+        if ($result === false) {
+            $result = HearMed_DB::get_results(
+                "SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.role, 
+                        '' as employee_number, 
+                        '' as hire_date,
+                        s.is_active, s.wp_user_id,
+                        a.username, a.two_factor_enabled, a.temp_password, a.totp_secret
+                 FROM hearmed_reference.staff s
+                 LEFT JOIN hearmed_reference.staff_auth a ON s.id = a.staff_id
+                 ORDER BY s.last_name, s.first_name"
+            ) ?: [];
+        }
+        
+        return $result ?: [];
     }
 
     private function get_clinics() {
@@ -437,18 +456,37 @@ class HearMed_Admin_Manage_Users {
             'email' => $email,
             'phone' => sanitize_text_field($_POST['phone'] ?? ''),
             'role' => $role,
-            'employee_number' => sanitize_text_field($_POST['employee_number'] ?? ''),
-            'hire_date' => sanitize_text_field($_POST['hire_date'] ?? ''),
             'wp_user_id' => ($_POST['wp_user_id'] ?? '') !== '' ? intval($_POST['wp_user_id']) : null,
             'is_active' => intval($_POST['is_active'] ?? 1),
             'updated_at' => current_time('mysql'),
         ];
+        
+        // Add optional columns only if data provided (they may not exist in DB yet)
+        $employee_number = sanitize_text_field($_POST['employee_number'] ?? '');
+        $hire_date = sanitize_text_field($_POST['hire_date'] ?? '');
+        
+        if ($employee_number !== '') {
+            $data['employee_number'] = $employee_number;
+        }
+        if ($hire_date !== '') {
+            $data['hire_date'] = $hire_date;
+        }
 
         if ($id) {
             $result = HearMed_DB::update('hearmed_reference.staff', $data, ['id' => $id]);
+            // If update fails (columns might not exist), try without optional columns
+            if ($result === false) {
+                unset($data['employee_number'], $data['hire_date']);
+                $result = HearMed_DB::update('hearmed_reference.staff', $data, ['id' => $id]);
+            }
         } else {
             $data['created_at'] = current_time('mysql');
             $id = HearMed_DB::insert('hearmed_reference.staff', $data);
+            // If insert fails (columns might not exist), try without optional columns
+            if (!$id) {
+                unset($data['employee_number'], $data['hire_date']);
+                $id = HearMed_DB::insert('hearmed_reference.staff', $data);
+            }
             $result = $id ? 1 : false;
         }
 
