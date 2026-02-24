@@ -16,7 +16,14 @@ class HearMed_Admin_Calendar_Settings {
 
         ob_start();
         ?>
-        <div id="hm-app" class="hm-calendar" data-module="calendar" data-view="settings"></div>
+        <div class="hm-page" id="hm-calendar-settings-app">
+            <div class="hm-page-hd">
+                <h1 class="hm-page-title">Calendar Settings</h1>
+            </div>
+            <div class="hm-card">
+                <div id="hm-app" class="hm-calendar" data-module="calendar" data-view="settings"></div>
+            </div>
+        </div>
         <?php
 
         // Inline debug panel (visible to admins or when ?hm_debug=1)
