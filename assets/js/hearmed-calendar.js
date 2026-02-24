@@ -171,29 +171,29 @@ var Cal={
     refreshUI:function(){this.renderGrid();this.renderAppts();this.renderNow();this.updateViewBtns();},
 
     updateViewBtns:function(){$('.hm-view-btn').removeClass('on');$('.hm-view-btn[data-v="'+this.mode+'"]').addClass('on');},
-    updateCogUI:function(){
-        $('#hm-cogMode .hm-cog-tog-btn').removeClass('on');$('#hm-cogMode .hm-cog-tog-btn[data-v="'+this.viewMode+'"]').addClass('on');
-        $('#hm-cogTime .hm-cog-tog-btn').removeClass('on');$('#hm-cogTime .hm-cog-tog-btn[data-v="'+this.mode+'"]').addClass('on');
+    updatePreview:function(){
+        var outcome = $('input[name="hs-outcome"]:checked').val() || 'default';
+        var fullName = $('#hs-fullName').prop('checked');
+        var name = fullName ? 'Jane Doe' : 'Jane';
+        var start = $('#hs-start').val() || '09:00';
+        var svc = 'Hearing Test';
+        var clinic = 'Main Clinic';
+        var html = '';
+        html += '<div class="hm-appt-preview-card outcome-' + outcome + '">';
+        html += '<div class="hm-appt-outcome">' + outcome.charAt(0).toUpperCase() + outcome.slice(1) + '</div>';
+        html += '<div class="hm-appt-body">';
+        html += '<div class="hm-appt-name">' + name + '</div>';
+        html += '<div class="hm-appt-badges">';
+        html += '<span class="hm-badge hm-badge-c">C</span>';
+        html += '<span class="hm-badge hm-badge-r">R</span>';
+        html += '<span class="hm-badge hm-badge-v">VM</span>';
+        html += '</div>';
+        html += '<div class="hm-appt-time">' + start + '</div>';
+        html += '<div class="hm-appt-meta">' + svc + ' · ' + clinic + '</div>';
+        html += '</div>'; // body
+        html += '</div>'; // card
+        $("#hs-preview").html(html);
     },
-    nav:function(dir){
-        this.date.setDate(this.date.getDate()+dir*(this.mode==='week'?7:1));
-        $('#hm-pop').removeClass('open');
-        var self=this;
-        this.loadDispensers().then(function(){self.refresh();});
-    },
-
-    renderGrid:function(){
-        var g=document.getElementById('hm-grid');if(!g)return;
-        var dates=this.visDates(),disps=this.visDisps(),cfg=this.cfg;
-        this.updateDateLbl(dates);this.updateViewBtns();
-
-        var wrap=document.getElementById('hm-gridWrap');
-	// Fixed slot heights based on setting
-	var slotMap = {
-    		compact: 20,
-   		regular: 28,
-    		large: 38
-	};
 
 var slotH = slotMap[cfg.slotHt] || 28;
 cfg.slotHpx = slotH;
