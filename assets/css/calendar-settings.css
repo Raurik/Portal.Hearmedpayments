@@ -215,16 +215,16 @@
 #hm-app .hm-appt-preview-card::before {
   content: "Outcome";
   display: block;
-  padding: 8px 12px;
+  padding: 10px 14px;
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 500;
   color: #ffffff;
-  background: linear-gradient(135deg, #22c55e 0%, #0ea5a4 100%);
+  background: linear-gradient(135deg, #22c55e 0%, #22c55e 100%);
 }
 
 /* Body */
 #hm-app .hm-appt-body {
-  padding: 8px 12px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
