@@ -139,9 +139,9 @@
   position: absolute;
   left: 5px;
   top: 2px;
-  width: 5px;
+  width: 6px;
   height: 10px;
-  border: solid white;
+  border: solid #fff;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
@@ -269,4 +269,54 @@
 .hm-settings-main .hm-settings-appt-meta {
   font-size: 0.8rem;
   color: var(--hm-text-muted);
+}
+
+/* Hide tick for unchecked, show blue tick for checked */
+#hm-app .hm-check::after {
+  content: none;
+}
+#hm-app .hm-day-check input:checked + .hm-check::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 6px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Remove radio dot, use tick for checked */
+#hm-app .hm-sval label input[type="radio"] {
+  display: none;
+}
+#hm-app .hm-sval label .hm-check {
+  border-radius: 6px;
+  border: 1.5px solid #cbd5e1;
+  background: #fff;
+  width: 18px;
+  height: 18px;
+  position: relative;
+  margin-right: 6px;
+}
+#hm-app .hm-sval label input[type="radio"]:checked + .hm-check {
+  background: var(--hm-teal);
+  border-color: var(--hm-teal);
+}
+#hm-app .hm-sval label input[type="radio"]:checked + .hm-check::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 6px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Remove preview server fallback */
+#hm-app .hs-preview-container, #hm-app .hm-appt-preview.outcome-default {
+  display: none !important;
 }
