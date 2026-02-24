@@ -19,45 +19,64 @@ class HearMed_Admin_Calendar_Settings {
 
         ob_start();
         ?>
-        <div class="hm-page" id="hm-calendar-settings-app">
-            <div class="hm-page-hd">
-                <h1 class="hm-page-title">Calendar Settings</h1>
-            </div>
-            <div class="hm-card">
-                <div id="hm-app" class="hm-calendar" data-module="calendar" data-view="settings">
-                    <!-- Server-side fallback markup: matches client-side two-column layout until JS loads -->
-                    <div class="hm-settings">
-                        <div class="hm-admin-hd"><div><h2>Calendar Settings</h2><div class="hm-admin-subtitle">Adjust your scheduling and display preferences.</div></div></div>
-                        <div class="hm-settings-two" style="display:grid;grid-template-columns:1fr 360px;gap:16px;margin-top:12px">
-                            <div class="hs-left">
-                                <div class="hm-card">
-                                    <div class="hm-card-hd"><h3>Time &amp; View</h3></div>
-                                    <div class="hm-card-body">
-                                        <div class="hm-srow"><span class="hm-slbl">Start time</span><div class="hm-sval">09:00</div></div>
-                                        <div class="hm-srow"><span class="hm-slbl">End time</span><div class="hm-sval">18:00</div></div>
-                                        <div class="hm-srow"><span class="hm-slbl">Time interval</span><div class="hm-sval">30 minutes</div></div>
-                                    </div>
-                                </div>
+        <link rel="stylesheet" href="<?php echo esc_url(plugins_url('assets/css/calendar-settings.css', dirname(__FILE__))); ?>" />
+        <div class="hm-settings-main" id="hm-calendar-settings-app">
+            <div class="hm-settings-header">Calendar Settings</div>
+            <div class="hm-settings-subtitle">Adjust your scheduling and display preferences.</div>
+            <div class="hm-settings-grid">
+                <div class="hm-settings-cards">
+                    <div class="hm-settings-card">
+                        <div class="hm-settings-card-hd">🕐 Time &amp; View</div>
+                        <div class="hm-settings-card-body">
+                            <div class="hm-settings-tog"><span>Start time</span><span>09:00</span></div>
+                            <div class="hm-settings-tog"><span>End time</span><span>18:00</span></div>
+                            <div class="hm-settings-tog"><span>Time interval</span><span>30 minutes</span></div>
+                            <div class="hm-settings-tog"><span>Slot height</span><span>Regular</span></div>
+                            <div class="hm-settings-tog"><span>Default timeframe</span><span>Week</span></div>
+                        </div>
+                    </div>
+                    <div class="hm-settings-card">
+                        <div class="hm-settings-card-hd">🛡 Rules &amp; Safety</div>
+                        <div class="hm-settings-card-body">
+                            <div class="hm-settings-tog"><span>Require cancellation reason</span><span>✔</span></div>
+                            <div class="hm-settings-tog"><span>Hide cancelled appointments</span><span>✔</span></div>
+                            <div class="hm-settings-tog"><span>Require reschedule note</span><span>✘</span></div>
+                            <div class="hm-settings-tog"><span>Prevent mismatched location bookings</span><span>✘</span></div>
+                        </div>
+                    </div>
+                    <div class="hm-settings-card">
+                        <div class="hm-settings-card-hd">📅 Availability</div>
+                        <div class="hm-settings-card-body">
+                            <div class="hm-settings-tog"><span>Enabled days</span><span>Mon, Tue, Wed, Thu, Fri</span></div>
+                            <div class="hm-settings-tog"><span>Apply clinic colour to working times</span><span>✘</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="hm-settings-card">
+                        <div class="hm-settings-card-hd">👁 Display Preferences</div>
+                        <div class="hm-settings-card-body">
+                            <div class="hm-settings-tog"><span>Display time inline with patient name</span><span>✔</span></div>
+                            <div class="hm-settings-tog"><span>Hide appointment end time</span><span>✔</span></div>
+                            <div class="hm-settings-tog"><span>Outcome style</span><span>Default</span></div>
+                            <div class="hm-settings-tog"><span>Display full resource name</span><span>✘</span></div>
+                        </div>
+                    </div>
+                    <div class="hm-settings-preview">
+                        <div class="hm-settings-appt-card">
+                            <div class="hm-settings-appt-name">Joe Bloggs</div>
+                            <div class="hm-settings-appt-badges">
+                                <span class="hm-settings-badge">C</span>
+                                <span class="hm-settings-badge">R</span>
+                                <span class="hm-settings-badge">VM</span>
                             </div>
-                            <div class="hs-right">
-                                <div class="hm-card">
-                                    <div class="hm-card-hd outcome-header">Outcome</div>
-                                    <div class="hm-card-body">
-                                        <div class="hm-appt-preview outcome-default">
-                                            <div class="hm-appt-outcome">Outcome</div>
-                                            <div class="hm-appt-body">
-                                                <div class="hm-appt-name">Joe Bloggs</div>
-                                                <div class="hm-appt-badges"><span class="hm-badge">C</span><span class="hm-badge">R</span><span class="hm-badge">VM</span></div>
-                                                <div class="hm-appt-time">09:00</div>
-                                                <div class="hm-appt-meta">Follow up · Cosgrove's Pharmacy</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="hm-card" style="margin-top:12px">
-                                    <div class="hm-card-hd"><h3>Display Preferences</h3></div>
-                                    <div class="hm-card-body">
-                                        <div class="hm-srow"><span class="hm-slbl">Display time inline with patient name</span><div class="hm-sval">✔</div></div>
+                            <div class="hm-settings-appt-time">09:00</div>
+                            <div class="hm-settings-appt-meta">Follow up · Cosgrove's Pharmacy</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
                                         <div class="hm-srow"><span class="hm-slbl">Hide appointment end time</span><div class="hm-sval">✖</div></div>
                                     </div>
                                 </div>
