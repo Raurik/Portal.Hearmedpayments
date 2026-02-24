@@ -98,17 +98,14 @@ WordPress's database (wp_users, wp_usermeta) used only for login/session managem
 **Zero business data in wp_posts, wp_postmeta, or any WordPress table.**
 
 ### The Tech Stack
-| Layer | Technology | Role | Hosting |
-|-------|-----------|------|---------|
-| UI Shell | WordPress.com Business | Page routing, chrome | Page builder |
-| Page Layout | Elementor Pro | Dynamic content | Theme |
-| Core Plugin | hearmed-calendar | All business logic, shortcodes, AJAX | /srv/htdocs/wp-content/plugins/ |
-| Database | PostgreSQL on Railway | All 59 tables of business data | Railway |
-| Accounting | QuickBooks Online | Accounting mirror | QBO API |
-| Automation | Make.com | QBO webhooks, AI features | Make automation platform |
-| AI | OpenRouter (via Make) | AI transcript of consultations | OpenRouter API |
-| Reporting | Power BI | Direct PostgreSQL connection | Power BI Cloud |
-| Deployment | SFTP/WinSCP | Manual sync to server | /srv/htdocs/wp-content/plugins/hearmed-calendar/ |
+| Tech Stack Item | Technology | Role | Status |
+|---|-----------|------|--------|
+| UI Shell | WordPress.com Business | Page routing, chrome | ✅ Live |
+| Page Layout | Elementor Pro | Dynamic content | ✅ Live |
+| Core Plugin | hearmed-calendar | All business logic, shortcodes, AJAX | ✅ Framework ready |
+| Database | PostgreSQL on Railway | All 59 tables of business data | ✅ Schema complete, empty |
+| Accounting | QuickBooks Online | Accounting mirror | 🚧 Direct OAuth2 integration (no Make.com) |
+| Reporting | Direct PostgreSQL queries | All reports + dashboards | 🚧 Planned |
 
 ### Plugin Structure
 ```
@@ -473,23 +470,32 @@ If patient in fitting queue has fitting appointment deleted → ask dispenser: "
    - Notification includes patient name, C-number, amount, credit note #
 8. Once `cheque_sent = true` set → all reminders stop permanently
 
-### QuickBooks Online Integration
-Portal is source of truth. QBO is mirror.
+### QuickBooks Online Integration — Direct OAuth2
 
-**Outbound (portal → QBO via Make.com):**
-- New invoice → Make webhook → QBO invoice created → QBO ID stored
-- Payment recorded → Make → QBO payment applied
-- Credit note → Make → QBO credit note created → QBO ID stored back
+**Setup:** 
+- Developer credentials registered with Intuit
+- QBO credentials (Client ID, Client Secret, Realm ID) stored in `wp-config.php`
+- Direct PHP integration via `HearMed_QBO` class (no Make.com webhooks)
 
-**Inbound (QBO → portal via Make.com):**
-- Invoice marked paid in QBO → Make webhook → portal invoice status updated
+**Outbound (portal → QBO via direct API):**
+- New invoice created in portal
+- Trigger: Invoice marked as `paid`
+- Portal calls QBO API directly with invoice data
+- QBO ID returned and stored in `hearmed_core.invoices.qbo_invoice_id`
 
-**Direct QBO API (portal → QBO, no Make.com):**
-- Accounting page uses `HearMed_QBO` PHP class with OAuth2
-- Calls QBO Reporting API directly
-- Used for: P&L report, aged debtors, VAT summary
-- OAuth2 tokens stored in wp_options, auto-refreshed
-- Never requires opening QBO manually
+**Inbound (QBO → portal via direct API):**
+- Optional: Pull invoice status from QBO periodically
+- Used for reconciliation + accounting dashboard
+
+**Data sent to QBO:**
+- Customer name + C-number
+- Line items (hearing aids, accessories, services with serial numbers)
+- Amount
+- Payment method (maps to QBO account)
+- Payment date
+- Staff member who performed sale
+- Clinic location (for reference)
+- Invoice number (from portal)
 
 ### Forms — Jotform Integration
 - Embedded in patient file Forms tab via `<iframe>`
@@ -579,15 +585,16 @@ All notifications use two tables:
 **Phase 2: PORTAL SECTIONS** (In this strict order)
 | # | Module | Status | Dependencies | Notes |
 |---|--------|--------|--------------|-------|
-| 1️⃣ | **mod-patients** (all parts) | ✅ Partial | Admin complete | All tabs: profile, history, outcomes, devices, notes, forms, documents. Must search PostgreSQL correctly |
-| 2️⃣ | **mod-calendar** (appointments) | ✅ Partial | Patients complete | Book appointments, connect to patients, add notes. ✅ Search fix: now uses PostgreSQL |
-| 3️⃣ | **Invoicing (QuickBooks)** | 🚧 In Build | Calendar complete | Full integration with QBO. Create invoice → await approval → send to QBO |
-| 4️⃣ | **Order Flow (CRITICAL)** | 🚧 Spec Complete | Invoicing | See detailed spec below |
-| 5️⃣ | **mod-team-chat** | 🚧 Scaffold | Patients complete | In-house messaging, soft-delete only, audit trail |
-| 6️⃣ | **mod-reports** | 🚧 Scaffold | Invoicing + chat | Patient history, sales, commissions, accounting reports |
-| 7️⃣ | **In-House Notifications** | 🚧 Scaffold | Orders + chat | Pop-up badge in top-right; "Order received", "Aids ready", "Call patient" |
-| 8️⃣ | **KPI + Till Tracking** | 🚧 Scaffold | Appointments complete | Per-staff KPI dashboard + clinic till reconciliation |
-| 9️⃣ | **Accounting** | 🚧 Scaffold | Reports complete | Supplier invoices, receipts, staff photo upload, QBO sync |
+| 1️⃣ | **mod-patients** (all parts) | 🚧 NOT WORKING | Admin complete | Framework exists but NOT functional. All tabs: profile, history, outcomes, devices, notes, forms, documents. Needs full build |
+| 2️⃣ | **mod-calendar** (appointments) | 🚧 NOT WORKING | Admin complete | Framework exists but NOT functional. Book appointments, connect to patients, add notes. Search now uses PostgreSQL ✅ but rest not working |
+| 3️⃣ | **mod-orders** | 🚧 NOT WORKING | Patients + calendar | Framework exists but NOT functional |
+| 4️⃣ | **mod-approvals** | 🚧 NOT WORKING | Orders | Framework exists but NOT functional |
+| 5️⃣ | **Invoicing (QuickBooks)** | 🚧 In Build | Approvals complete | Direct QBO integration via OAuth2 credentials (wp-config.php). Create invoice → await approval → send directly to QBO |
+| 6️⃣ | **mod-team-chat** | 🚧 Scaffold | Patients complete | In-house messaging, soft-delete only, audit trail |
+| 7️⃣ | **mod-reports** | 🚧 Scaffold | Invoicing + chat | Patient history, sales, commissions, accounting reports |
+| 8️⃣ | **In-House Notifications** | 🚧 Scaffold | Orders + chat | Pop-up badge in top-right; "Order received", "Aids ready", "Call patient" |
+| 9️⃣ | **KPI + Till Tracking** | 🚧 Scaffold | Appointments complete | Per-staff KPI dashboard + clinic till reconciliation |
+| 🔟 | **Accounting** | 🚧 Scaffold | Reports complete | Supplier invoices, receipts, staff photo upload, QBO sync |
 
 ---
 
@@ -776,21 +783,81 @@ All notifications use two tables:
 
 ---
 
-## SECTION 16: NEXT IMMEDIATE STEPS
+## SECTION 16: REAL CURRENT STATUS (Honest Assessment)
 
-**Priority 1: Complete Calendar Settings (save functionality now working)**
-- Verify color pickers save to `hearmed_core.calendar_settings`
-- Verify colors apply to calendar appointments
-- Final tweaks as needed
+### What IS Definitely Working ✅
+- ✅ 59 database tables on Railway — correct schema, indexes, FK relationships
+- ✅ PostgreSQL connection from WordPress.com working
+- ✅ Auth system framework complete
+- ✅ Admin pages: Clinics, Users, Audiometers, Calendar Settings (framework complete)
+- ✅ Search bar: Now queries PostgreSQL instead of WordPress ✅
 
-**Priority 2: Build Remaining Admin Pages**
-- Ensure all pages: save to PostgreSQL correctly, style per design system, function end-to-end
-- Each page must be 100% complete before moving on
+### What Is NOT Working ❌
+- ❌ Patients module — framework exists, functionality not built
+- ❌ Calendar module — framework exists, functionality not built
+- ❌ Orders module — framework exists, functionality not built
+- ❌ Approvals module — framework exists, functionality not built
+- ❌ 8 other modules — scaffolds only, placeholders
 
-**Priority 3: Implement Order Flow**
-- Complete mod-orders.php with all steps above
-- Build approval queue UI
-- Test full workflow from creation to QuickBooks sync
+### What Remains
+- 🚧 Complete all admin pages (styling + full PostgreSQL integration)
+- 🚧 Build patients module (REAL functionality)
+- 🚧 Build calendar module (REAL functionality)
+- 🚧 Build orders module (REAL functionality)
+- 🚧 Build approvals module (REAL functionality)
+- 🚧 Build invoicing + QBO direct integration
+- 🚧 Build order flow with QBO sync
+- 🚧 All remaining modules
 
-**All changes auto-deploy to SiteGround on every commit.**
+---
+
+## SECTION 17: SLOW METHODICAL APPROACH — "Eat The Elephant"
+
+**Starting point: Admin Pages. One. At. A. Time.**
+
+### Admin Page Build Checklist (Template for each page)
+For EACH admin page, complete in this order:
+1. ✅ PostgreSQL queries working (C.R.U.D.)
+2. ✅ AJAX handlers responding correctly
+3. ✅ UI renders data correctly
+4. ✅ UI styled per HearMed design system (hm-* classes)
+5. ✅ Save/Update/Delete functions writing to database correctly
+6. ✅ Error handling and validation working
+7. ✅ Tested end-to-end before moving to next page
+
+### Admin Pages — Priority Order
+| Priority | Page | Status | Next Step |
+|----------|------|--------|-----------|
+| ✅ DONE | Clinics | Verify working | Move on |
+| ✅ DONE | Users (Staff) | Verify working | Move on |
+| ✅ DONE | Audiometers | Verify working | Move on |
+| ✅ DONE | Calendar Settings | Save working | Move on |
+| 🔴 NEXT | **Products** | Start here | Build full CRUD |
+| 🟡 THEN | Manufacturers | After products | Build full CRUD |
+| 🟡 THEN | SMS Templates | After mfg | Build full CRUD |
+| 🟡 THEN | KPI Targets | After SMS | Build full CRUD |
+| 🟡 THEN | Taxonomies | After KPI | Build full CRUD |
+| 🟡 THEN | Settings | After tax | Build full CRUD |
+| 🟡 THEN | Audit Export | After settings | Build full CRUD |
+| 🟡 THEN | System Status | After audit | Build full CRUD |
+| 🟡 THEN | Debug Console | After system | Build full CRUD |
+
+**Once ALL admin pages are 100% working → start on portal modules (patients, calendar, orders, etc.)**
+
+---
+
+## SECTION 18: NEXT IMMEDIATE STEPS
+
+**What we do next (in order):**
+
+1. **Verify existing admin pages** (Clinics, Users, Audiometers, Calendar Settings) are working end-to-end
+2. **Start Products admin page** — full CRUD, PostgreSQL integration
+3. **Verify save/update/delete** — all writes go to `hearmed_reference.products` correctly
+4. **Style per design system** — use hm-* classes, teal accents, proper spacing
+5. **Test, commit, auto-deploy**
+6. **Move to next admin page**
+
+**No jumping ahead. No module work until ALL admin pages work perfectly.**
+
+**Every commit auto-deploys to SiteGround. Verify each page live before moving on.**
 
