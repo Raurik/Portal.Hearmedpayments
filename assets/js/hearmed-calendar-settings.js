@@ -42,6 +42,9 @@ var SettingsPage = {
         // Add nonce if available
         if (window.HM && HM.nonce) {
             data += '&nonce=' + encodeURIComponent(HM.nonce);
+        } else if ($('input[name="_wpnonce"], input[name="nonce"]').length) {
+            // fallback for nonce field in form
+            data += '&nonce=' + encodeURIComponent($('input[name="_wpnonce"], input[name="nonce"]').val());
         }
 
         // Perform AJAX request
@@ -57,12 +60,17 @@ var SettingsPage = {
                         $btn.text('Save Settings');
                     }, 1200);
                 } else {
-                    alert('Failed to save settings. Please try again.');
+                    let msg = (resp && resp.data && resp.data.message) ? resp.data.message : 'Failed to save settings. Please try again.';
+                    alert(msg);
                 }
             },
-            error: function () {
+            error: function (xhr) {
                 $btn.prop('disabled', false).text('Save Settings');
-                alert('An error occurred while saving settings. Please try again.');
+                let msg = 'An error occurred while saving settings. Please try again.';
+                if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                    msg = xhr.responseJSON.data.message;
+                }
+                alert(msg);
             },
         });
     }

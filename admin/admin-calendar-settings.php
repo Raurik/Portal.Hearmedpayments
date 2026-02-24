@@ -79,12 +79,14 @@ class HearMed_Admin_Calendar_Settings {
                                 </label>
                             </div>
                             <div class="hm-srow hm-color-row">
-                                <span class="hm-slbl">Appt Colors</span>
+                                <span class="hm-slbl">Appointment Colors</span>
                                 <span class="hm-sval hm-color-pickers">
-                                    <label title="Background"><input type="color" id="hs-appt-bg" name="appt_bg_color" value="#0BB4C4" class="hm-color-box"></label>
-                                    <label title="Font"><input type="color" id="hs-appt-font" name="appt_font_color" value="#ffffff" class="hm-color-box"></label>
-                                    <label title="Badge"><input type="color" id="hs-appt-badge" name="appt_badge_color" value="#3b82f6" class="hm-color-box"></label>
-                                    <label title="Meta"><input type="color" id="hs-appt-meta" name="appt_meta_color" value="#38bdf8" class="hm-color-box"></label>
+                                    <div class="hm-color-label-group">
+                                        <label class="hm-color-label">BG<br><input type="color" id="hs-appt-bg" name="appt_bg_color" value="#0BB4C4" class="hm-color-box"></label>
+                                        <label class="hm-color-label">Font<br><input type="color" id="hs-appt-font" name="appt_font_color" value="#ffffff" class="hm-color-box"></label>
+                                        <label class="hm-color-label">Badge<br><input type="color" id="hs-appt-badge" name="appt_badge_color" value="#3b82f6" class="hm-color-box"></label>
+                                        <label class="hm-color-label">Meta<br><input type="color" id="hs-appt-meta" name="appt_meta_color" value="#38bdf8" class="hm-color-box"></label>
+                                    </div>
                                 </span>
                             </div>
                         </div>
