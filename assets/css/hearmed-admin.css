@@ -391,6 +391,16 @@
     font-size: 13px;
 }
 
+#hm-clinics-app .hm-clinic-name {
+    cursor: pointer;
+    transition: color 0.15s, text-decoration 0.15s;
+}
+
+#hm-clinics-app .hm-clinic-name:hover {
+    color: #0a9eac;
+    text-decoration: underline;
+}
+
 /* Clinic form card (hidden by default, compact) */
 #hm-clinics-app .hm-clinic-form {
     display: none;

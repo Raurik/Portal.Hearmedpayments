@@ -117,7 +117,11 @@ class HearMed_Admin_Clinics {
                                 <td style="text-align:center">
                                     <span class="hm-colour-dot" style="background:<?php echo esc_attr($c['clinic_colour']); ?>;color:<?php echo esc_attr($c['text_colour']); ?>"></span>
                                 </td>
-                                <td><strong><?php echo esc_html($c['name']); ?></strong></td>
+                                <td>
+                                    <strong class="hm-clinic-name" onclick='hmClinic.open(<?php echo json_encode($c); ?>)'>
+                                        <?php echo esc_html($c['name']); ?>
+                                    </strong>
+                                </td>
                                 <td><?php echo esc_html($c['address']); ?></td>
                                 <td><?php echo esc_html($c['clinic_phone']); ?></td>
                                 <td><?php echo esc_html($c['clinic_email']); ?></td>
