@@ -185,7 +185,7 @@ class HearMed_Admin_Audiometers {
         ];
         
         if ($id) {
-            HearMed_DB::update(
+            $result = HearMed_DB::update(
                 'hearmed_reference.audiometers',
                 $data,
                 ['id' => $id]
@@ -196,8 +196,14 @@ class HearMed_Admin_Audiometers {
                 'hearmed_reference.audiometers',
                 $data
             );
+            $result = $id ? 1 : false;
         }
         
+        if ($result === false) {
+            wp_send_json_error(HearMed_DB::last_error() ?: 'Database error');
+            return;
+        }
+
         wp_send_json_success(['id' => $id]);
     }
 
@@ -209,13 +215,17 @@ class HearMed_Admin_Audiometers {
         if (!$id) { wp_send_json_error('Invalid ID'); return; }
         
         // Soft delete by setting is_active = false
-        HearMed_DB::update(
+        $result = HearMed_DB::update(
             'hearmed_reference.audiometers',
             ['is_active' => false, 'updated_at' => current_time('mysql')],
             ['id' => $id]
         );
-        
-        wp_send_json_success();
+
+        if ($result === false) {
+            wp_send_json_error(HearMed_DB::last_error() ?: 'Database error');
+        } else {
+            wp_send_json_success();
+        }
     }
 }
 

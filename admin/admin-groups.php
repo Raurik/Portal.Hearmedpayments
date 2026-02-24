@@ -239,7 +239,7 @@ class HearMed_Admin_Groups {
             $result = $id ? 1 : false;
         }
 
-        if ($result === false) { wp_send_json_error('Database error'); return; }
+        if ($result === false) { wp_send_json_error(HearMed_DB::last_error() ?: 'Database error'); return; }
 
         $member_ids = json_decode(stripslashes($_POST['members'] ?? '[]'), true);
         if (!is_array($member_ids)) $member_ids = [];
@@ -279,7 +279,7 @@ class HearMed_Admin_Groups {
         );
 
         if ($result === false) {
-            wp_send_json_error('Database error');
+            wp_send_json_error(HearMed_DB::last_error() ?: 'Database error');
         } else {
             wp_send_json_success();
         }

@@ -71,7 +71,11 @@ WordPress.com Business has restrictions on certain PHP functions, external datab
 ### What HAS Actually Been Accomplished
 - ✅ 59 PostgreSQL tables designed, created, live on Railway — correct schema, indexes, foreign keys, helper functions
 - ✅ 37 PHP files cleaned — all syntax errors found and fixed, all MySQL patterns replaced, all WordPress functions replaced, all broken comments removed
-- ✅ Fixed plugin code is ready to deploy — just hasn't been deployed yet
+- ✅ Fixed plugin code is deployed and no longer crashes on activation
+- ✅ Admin console and Clinics page are functional enough to create/edit clinics
+- ✅ Staff auth groundwork added (custom PostgreSQL auth + optional TOTP 2FA)
+- ✅ Dispenser Schedules admin page added (clinic/day + weekly or 2-week rotation)
+- ✅ Calendar assignees now respect schedule rules (per clinic/date)
 
 ### What Must Happen Next (In Order)
 1. Deploy fixed plugin files to live server via SFTP
@@ -659,9 +663,7 @@ Notifications must be first because repairs, returns, order status, fitting remi
 - ✅ 37 PHP files cleaned — zero syntax errors, zero MySQL patterns, zero WordPress CPT dependencies, zero hybrid code
 - ✅ **Hard architecture problems permanently solved**
 
-### What IS NOT Done
-- ❌ Nothing is live — fixed files haven't been deployed to server yet
-- ❌ Database is empty — all 59 tables have zero rows
+### What IS NOT Don
 - ❌ 8 modules are scaffolds — render placeholder UI only
 - ❌ 3 JS files need to be written — notifications, KPI, reports
 - ❌ Data import tool doesn't exist yet — must be built before portal can be used

@@ -217,7 +217,7 @@ class HearMed_Admin_Settings {
             }
         }
 
-        wp_send_json_success();
+            wp_send_json_success();
     }
 
     private function get_setting_value($tag, $key, $default) {

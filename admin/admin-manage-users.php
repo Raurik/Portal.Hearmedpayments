@@ -1,6 +1,6 @@
 <?php
 /**
- * HearMed Admin — Users (Staff)
+ * HearMed Admin — Staff
  * Shortcode: [hearmed_manage_users]
  * PostgreSQL CRUD for hearmed_reference.staff and staff_clinics
  */
@@ -16,8 +16,11 @@ class HearMed_Admin_Manage_Users {
 
     private function get_staff() {
         return HearMed_DB::get_results(
-            "SELECT id, first_name, last_name, email, phone, role, employee_number, hire_date, is_active, wp_user_id
-             FROM hearmed_reference.staff
+            "SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.role, s.employee_number, s.hire_date,
+                    s.is_active, s.wp_user_id,
+                    a.username, a.two_factor_enabled, a.temp_password, a.totp_secret
+             FROM hearmed_reference.staff s
+             LEFT JOIN hearmed_reference.staff_auth a ON s.id = a.staff_id
              ORDER BY last_name, first_name"
         ) ?: [];
     }
@@ -86,6 +89,10 @@ class HearMed_Admin_Manage_Users {
                 'hire_date' => $s->hire_date,
                 'is_active' => (bool) $s->is_active,
                 'wp_user_id' => $s->wp_user_id,
+                'username' => $s->username,
+                'two_factor_enabled' => (bool) $s->two_factor_enabled,
+                'temp_password' => (bool) $s->temp_password,
+                'totp_secret' => $s->totp_secret,
                 'clinic_ids' => $clinic_ids,
                 'primary_clinic_id' => $primary_id,
                 'clinic_labels' => $clinic_labels,
@@ -95,12 +102,12 @@ class HearMed_Admin_Manage_Users {
         ob_start(); ?>
         <div class="hm-admin" id="hm-users-admin">
             <div class="hm-admin-hd">
-                <h2>Users</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmUsers.open()">+ Add User</button>
+                <h2>Staff</h2>
+                <button class="hm-btn hm-btn-teal" onclick="hmUsers.open()">+ Add Staff</button>
             </div>
 
             <?php if (empty($staff_payload)): ?>
-                <div class="hm-empty-state"><p>No users added yet.</p></div>
+                <div class="hm-empty-state"><p>No staff added yet.</p></div>
             <?php else: ?>
             <table class="hm-table">
                 <thead>
@@ -137,7 +144,7 @@ class HearMed_Admin_Manage_Users {
             <div class="hm-modal-bg" id="hm-user-modal">
                 <div class="hm-modal" style="width:640px">
                     <div class="hm-modal-hd">
-                        <h3 id="hm-user-title">Add User</h3>
+                        <h3 id="hm-user-title">Add Staff</h3>
                         <button class="hm-modal-x" onclick="hmUsers.close()">&times;</button>
                     </div>
                     <div class="hm-modal-body">
@@ -209,6 +216,46 @@ class HearMed_Admin_Manage_Users {
                                 </label>
                             </div>
                         </div>
+
+                        <div style="height:1px;background:#e2e8f0;margin:10px 0 6px;"></div>
+
+                        <div class="hm-form-row">
+                            <div class="hm-form-group">
+                                <label>Login Username</label>
+                                <input type="text" id="hmu-username" placeholder="Uses staff email if blank">
+                            </div>
+                            <div class="hm-form-group">
+                                <label class="hm-toggle-label">
+                                    <input type="checkbox" id="hmu-2fa">
+                                    Two-Factor Enabled
+                                </label>
+                            </div>
+                        </div>
+                        <div class="hm-form-row" id="hmu-secret-row" style="display:none;">
+                            <div class="hm-form-group" style="flex:1;">
+                                <label>2FA Secret</label>
+                                <input type="text" id="hmu-secret" readonly>
+                            </div>
+                        </div>
+                        <div class="hm-form-row">
+                            <div class="hm-form-group">
+                                <label>Set New Password</label>
+                                <input type="password" id="hmu-pass" placeholder="Leave blank to keep current">
+                            </div>
+                            <div class="hm-form-group">
+                                <label>Confirm Password</label>
+                                <input type="password" id="hmu-pass2">
+                            </div>
+                        </div>
+                        <div class="hm-form-row">
+                            <div class="hm-form-group" style="font-size:12px;color:#64748b;">
+                                Default temp password: Hearmed1674!
+                            </div>
+                            <div class="hm-form-group" style="display:flex;align-items:flex-end;justify-content:flex-end;">
+                                <input type="hidden" id="hmu-reset-pass" value="0">
+                                <button type="button" class="hm-btn hm-btn-sm" onclick="hmUsers.resetPassword()">Reset Temp Password</button>
+                            </div>
+                        </div>
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmUsers.close()">Cancel</button>
@@ -223,7 +270,7 @@ class HearMed_Admin_Manage_Users {
             clinics: <?php echo json_encode(array_map(function($c){ return ['id'=>(int)$c->id,'name'=>$c->clinic_name]; }, $clinics), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>,
             open: function(data) {
                 var isEdit = !!(data && data.id);
-                document.getElementById('hm-user-title').textContent = isEdit ? 'Edit User' : 'Add User';
+                document.getElementById('hm-user-title').textContent = isEdit ? 'Edit Staff' : 'Add Staff';
 
                 document.getElementById('hmu-id').value = isEdit ? data.id : '';
                 document.getElementById('hmu-first').value = isEdit ? data.first_name : '';
@@ -235,6 +282,13 @@ class HearMed_Admin_Manage_Users {
                 document.getElementById('hmu-hire').value = isEdit ? (data.hire_date || '') : '';
                 document.getElementById('hmu-wp').value = isEdit ? (data.wp_user_id || '') : '';
                 document.getElementById('hmu-active').checked = isEdit ? !!data.is_active : true;
+                document.getElementById('hmu-username').value = isEdit ? (data.username || data.email || '') : '';
+                document.getElementById('hmu-2fa').checked = isEdit ? !!data.two_factor_enabled : false;
+                document.getElementById('hmu-secret').value = isEdit ? (data.totp_secret || '') : '';
+                document.getElementById('hmu-pass').value = '';
+                document.getElementById('hmu-pass2').value = '';
+                document.getElementById('hmu-reset-pass').value = '0';
+                hmUsers.toggleSecret();
 
                 document.querySelectorAll('.hm-staff-clinic').forEach(function(cb) {
                     cb.checked = isEdit && data.clinic_ids ? data.clinic_ids.indexOf(parseInt(cb.value, 10)) !== -1 : false;
@@ -250,6 +304,14 @@ class HearMed_Admin_Manage_Users {
             },
             close: function() {
                 document.getElementById('hm-user-modal').classList.remove('open');
+            },
+            toggleSecret: function() {
+                var show = document.getElementById('hmu-2fa').checked;
+                document.getElementById('hmu-secret-row').style.display = show ? 'flex' : 'none';
+            },
+            resetPassword: function() {
+                document.getElementById('hmu-reset-pass').value = '1';
+                alert('Temp password will be reset on save.');
             },
             refreshPrimary: function() {
                 var sel = document.getElementById('hmu-primary');
@@ -283,6 +345,19 @@ class HearMed_Admin_Manage_Users {
                     return;
                 }
 
+                var pass = document.getElementById('hmu-pass').value;
+                var pass2 = document.getElementById('hmu-pass2').value;
+                if (pass || pass2) {
+                    if (pass.length < 8) {
+                        alert('Password must be at least 8 characters.');
+                        return;
+                    }
+                    if (pass !== pass2) {
+                        alert('Passwords do not match.');
+                        return;
+                    }
+                }
+
                 var clinicIds = [];
                 document.querySelectorAll('.hm-staff-clinic:checked').forEach(function(cb) {
                     clinicIds.push(parseInt(cb.value, 10));
@@ -301,6 +376,10 @@ class HearMed_Admin_Manage_Users {
                     hire_date: document.getElementById('hmu-hire').value,
                     wp_user_id: document.getElementById('hmu-wp').value,
                     is_active: document.getElementById('hmu-active').checked ? 1 : 0,
+                    username: document.getElementById('hmu-username').value,
+                    two_factor_enabled: document.getElementById('hmu-2fa').checked ? 1 : 0,
+                    new_password: pass,
+                    reset_password: document.getElementById('hmu-reset-pass').value,
                     clinics: JSON.stringify(clinicIds),
                     primary_clinic_id: document.getElementById('hmu-primary').value
                 };
@@ -324,6 +403,12 @@ class HearMed_Admin_Manage_Users {
                 });
             }
         };
+
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.id === 'hmu-2fa') {
+                hmUsers.toggleSecret();
+            }
+        });
         </script>
         <?php
         return ob_get_clean();
@@ -362,7 +447,7 @@ class HearMed_Admin_Manage_Users {
             $result = $id ? 1 : false;
         }
 
-        if ($result === false) { wp_send_json_error('Database error'); return; }
+        if ($result === false) { wp_send_json_error(HearMed_DB::last_error() ?: 'Database error'); return; }
 
         $clinic_ids = json_decode(stripslashes($_POST['clinics'] ?? '[]'), true);
         if (!is_array($clinic_ids)) $clinic_ids = [];
@@ -387,7 +472,21 @@ class HearMed_Admin_Manage_Users {
             );
         }
 
-        wp_send_json_success(['id' => $id]);
+        $username = sanitize_text_field($_POST['username'] ?? $email);
+        $auth = HearMed_Staff_Auth::ensure_auth_for_staff($id, $email, $username);
+
+        $reset_password = intval($_POST['reset_password'] ?? 0) === 1;
+        $new_password = (string) ($_POST['new_password'] ?? '');
+        if ($reset_password) {
+            HearMed_Staff_Auth::set_password($id, HearMed_Staff_Auth::default_temp_password(), true);
+        } elseif ($new_password !== '') {
+            HearMed_Staff_Auth::set_password($id, $new_password, false);
+        }
+
+        $enable_2fa = intval($_POST['two_factor_enabled'] ?? 0) === 1;
+        $secret = HearMed_Staff_Auth::set_two_factor($id, $enable_2fa);
+
+        wp_send_json_success(['id' => $id, 'totp_secret' => $secret]);
     }
 
     public function ajax_delete() {
@@ -404,7 +503,7 @@ class HearMed_Admin_Manage_Users {
         );
 
         if ($result === false) {
-            wp_send_json_error('Database error');
+            wp_send_json_error(HearMed_DB::last_error() ?: 'Database error');
         } else {
             wp_send_json_success();
         }

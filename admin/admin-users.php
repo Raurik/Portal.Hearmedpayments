@@ -357,8 +357,8 @@ class HearMed_Admin_Taxonomies {
             $term_id = $result ?: 0;
         }
 
-        if ($result === false) {
-            wp_send_json_error('Database error');
+            if ($result === false) {
+                wp_send_json_error(HearMed_DB::last_error() ?: 'Database error');
         } else {
             wp_send_json_success(['id' => $term_id]);
         }
@@ -385,8 +385,8 @@ class HearMed_Admin_Taxonomies {
             ['id' => $term_id]
         );
 
-        if ($result === false) {
-            wp_send_json_error('Database error');
+            if ($result === false) {
+                wp_send_json_error(HearMed_DB::last_error() ?: 'Database error');
         } else {
             wp_send_json_success();
         }

@@ -146,7 +146,7 @@ var Cal={
         });
     },
     loadDispensers:function(){
-        return post('get_dispensers',{clinic:this.selClinic}).then(function(r){
+        return post('get_dispensers',{clinic:this.selClinic,date:fmt(this.date)}).then(function(r){
             if(!r.success)return;
             Cal.dispensers=r.data;
             var $f=$('#hm-dispF');$f.find('option:not(:first)').remove();
@@ -175,7 +175,12 @@ var Cal={
         $('#hm-cogMode .hm-cog-tog-btn').removeClass('on');$('#hm-cogMode .hm-cog-tog-btn[data-v="'+this.viewMode+'"]').addClass('on');
         $('#hm-cogTime .hm-cog-tog-btn').removeClass('on');$('#hm-cogTime .hm-cog-tog-btn[data-v="'+this.mode+'"]').addClass('on');
     },
-    nav:function(dir){this.date.setDate(this.date.getDate()+dir*(this.mode==='week'?7:1));$('#hm-pop').removeClass('open');this.refresh();},
+    nav:function(dir){
+        this.date.setDate(this.date.getDate()+dir*(this.mode==='week'?7:1));
+        $('#hm-pop').removeClass('open');
+        var self=this;
+        this.loadDispensers().then(function(){self.refresh();});
+    },
 
     renderGrid:function(){
         var g=document.getElementById('hm-grid');if(!g)return;

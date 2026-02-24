@@ -335,12 +335,12 @@ class HearMed_Admin_Clinics {
             $data['opening_hours'] = wp_json_encode($extra);
         }
 
-        if ($id) {
-            $updated = HearMed_DB::update('clinics', $data, ['id' => $id]);
-            if ($updated === false) {
-                wp_send_json_error('Failed to update clinic: ' . (HearMed_DB::last_error() ?: 'database error'));
-                return;
-            }
+            if ($id) {
+                $updated = HearMed_DB::update('clinics', $data, ['id' => $id]);
+                if ($updated === false) {
+                    wp_send_json_error('Failed to update clinic: ' . (HearMed_DB::last_error() ?: 'database error'));
+                    return;
+                }
         } else {
             $id = HearMed_DB::insert('clinics', $data);
             if (!$id) {

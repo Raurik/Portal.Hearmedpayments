@@ -130,6 +130,37 @@ function hm_ajax_get_clinics() {
 function hm_ajax_get_dispensers() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $clinic_id = intval( $_POST['clinic'] ?? 0 );
+    $date = sanitize_text_field( $_POST['date'] ?? '' );
+    $scheduled_ids = [];
+    if ( $clinic_id && $date ) {
+        $schedule_table = 'hearmed_reference.dispenser_schedules';
+        $has_schedule_table = HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $schedule_table ) ) !== null;
+        if ( ! $has_schedule_table ) {
+            $date = '';
+        }
+    }
+    if ( $clinic_id && $date ) {
+        $ts = strtotime( $date );
+        if ( $ts ) {
+            $day = (int) date( 'w', $ts );
+            $week = (int) date( 'W', $ts );
+            $week_index = ( $week % 2 ) ? 1 : 2;
+            $scheduled = HearMed_DB::get_results(
+                "SELECT staff_id
+                 FROM hearmed_reference.dispenser_schedules
+                 WHERE clinic_id = $1
+                   AND day_of_week = $2
+                   AND is_active = true
+                   AND (rotation_weeks = 1 OR (rotation_weeks = 2 AND week_number = $3))",
+                [ $clinic_id, $day, $week_index ]
+            );
+            if ( $scheduled ) {
+                foreach ( $scheduled as $row ) {
+                    $scheduled_ids[] = (int) $row->staff_id;
+                }
+            }
+        }
+    }
     $sql = "SELECT s.id, s.full_name, s.initials, s.role_type, s.is_active, s.user_account,
                    ARRAY_AGG(sc.clinic_id) as clinic_ids
             FROM hearmed_reference.staff s
@@ -137,6 +168,9 @@ function hm_ajax_get_dispensers() {
             WHERE s.is_active = true";
     if ( $clinic_id ) {
         $sql .= " AND (sc.clinic_id = $clinic_id OR sc.clinic_id IS NULL)";
+    }
+    if ( ! empty( $scheduled_ids ) ) {
+        $sql .= " AND s.id IN (" . implode( ',', array_map( 'intval', $scheduled_ids ) ) . ")";
     }
     $sql .= " GROUP BY s.id, s.full_name, s.initials, s.role_type, s.is_active, s.user_account ORDER BY s.full_name";
     $ps = HearMed_DB::get_results( $sql );

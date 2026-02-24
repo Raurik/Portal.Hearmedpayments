@@ -19,7 +19,7 @@ class HearMed_Admin_Console {
         $sections = [
             ['Practice', [
                 ['Clinics', 'manage-clinics'],
-                ['Users', 'manage-users'],
+                ['Staff', 'manage-users'],
                 ['Audiometers', 'audiometers'],
                 ['Groups', 'groups'],
                 ['Resources', 'resources'],
@@ -27,6 +27,7 @@ class HearMed_Admin_Console {
             ['Schedule', [
                 ['Calendar Settings', 'calendar-settings'],
                 ['Appointment Types', 'appointment-types'],
+                ['Dispenser Schedules', 'dispenser-schedules'],
                 ['Blockouts', 'blockouts'],
                 ['Holidays', 'holidays'],
             ]],

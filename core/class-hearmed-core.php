@@ -56,6 +56,7 @@ class HearMed_Core {
         require_once HEARMED_PATH . 'core/class-hearmed-utils.php';
         require_once HEARMED_PATH . 'core/class-hearmed-db.php';
         require_once HEARMED_PATH . 'core/class-hearmed-auth.php';
+        require_once HEARMED_PATH . 'core/class-hearmed-staff-auth.php';
         require_once HEARMED_PATH . 'core/class-hearmed-enqueue.php';
         require_once HEARMED_PATH . 'core/class-hearmed-router.php';
         require_once HEARMED_PATH . 'core/class-hearmed-ajax.php';
@@ -88,6 +89,8 @@ class HearMed_Core {
             HEARMED_PATH . 'admin/admin-taxonomies.php',
             HEARMED_PATH . 'admin/admin-groups.php',
             HEARMED_PATH . 'admin/admin-resources.php',
+            HEARMED_PATH . 'admin/admin-dispenser-schedules.php',
+            HEARMED_PATH . 'admin/admin-staff-login.php',
         ];
         foreach ( $admin_shortcode_files as $file ) {
             if ( file_exists( $file ) ) {
