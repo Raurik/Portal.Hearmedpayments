@@ -126,6 +126,17 @@ class HearMed_Enqueue {
             true
         );
         
+        // Load calendar settings from PostgreSQL
+        $settings = [];
+        try {
+            $settings_row = HearMed_DB::get_row( "SELECT * FROM hearmed_core.calendar_settings LIMIT 1", ARRAY_A );
+            if ( $settings_row ) {
+                $settings = $settings_row;
+            }
+        } catch ( Throwable $e ) {
+            error_log( '[HearMed] Could not load calendar settings: ' . $e->getMessage() );
+        }
+        
         // Localize script with global data
         $user = wp_get_current_user();
         wp_localize_script( 'hearmed-core', 'HM', [
@@ -141,6 +152,7 @@ class HearMed_Enqueue {
             )),
             'logout_url' => wp_logout_url( home_url() ),
             'plugin_url' => HEARMED_URL,
+            'settings'   => $settings,
         ]);
     }
 

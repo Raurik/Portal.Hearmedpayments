@@ -62,6 +62,11 @@ var Cal={
             hideCancelled:s.hide_cancelled!=='no',
             displayFull:s.display_full_name==='yes',
             enabledDays:(s.enabled_days||'mon,tue,wed,thu,fri').split(','),
+            appt_bg_color:s.appt_bg_color||'#0BB4C4',
+            appt_font_color:s.appt_font_color||'#ffffff',
+            appt_badge_color:s.appt_badge_color||'#3b82f6',
+            appt_badge_font_color:s.appt_badge_font_color||'#ffffff',
+            appt_meta_color:s.appt_meta_color||'#38bdf8',
         };
         this.mode=s.default_view||'week';
         this.viewMode=s.default_mode||'people';
@@ -275,6 +280,7 @@ cfg.slotHpx = slotH;
             var col=a.service_colour||cfg.appt_bg_color||'#3B82F6';
             var font=cfg.appt_font_color||'#fff';
             var badge=cfg.appt_badge_color||'#3b82f6';
+            var badgeFont=cfg.appt_badge_font_color||'#ffffff';
             var meta=cfg.appt_meta_color||'#38bdf8';
             var stCls=a.status==='Pending'?' pending':a.status==='Cancelled'?' cancelled':'';
             var tmLbl=cfg.showTimeInline?(a.start_time.substring(0,5)+' '):'';

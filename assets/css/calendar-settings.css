@@ -216,10 +216,19 @@
   content: "Outcome";
   display: block;
   padding: 10px 14px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   color: #ffffff;
   background: linear-gradient(135deg, #22c55e 0%, #22c55e 100%);
+}
+
+/* Outcome style: default = 14px, small = 11px */
+#hm-app .hm-appt-preview-card.outcome-default::before {
+  font-size: 14px;
+}
+#hm-app .hm-appt-preview-card.outcome-small::before {
+  font-size: 11px;
+  padding: 6px 14px;
 }
 
 /* Body */

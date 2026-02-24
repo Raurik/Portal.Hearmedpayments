@@ -95,7 +95,13 @@ function hm_ajax_save_settings() {
             'hide_cancelled', 'require_reschedule_note', 'apply_clinic_colour', 'display_full_name',
             'prevent_location_mismatch', 'enabled_days', 'calendar_order', 'appointment_statuses',
             'double_booking_warning', 'show_patient', 'show_service', 'show_initials', 'show_status',
-        'appt_bg_color', 'appt_font_color', 'appt_badge_color', 'appt_badge_font_color', 'appt_meta_color',
+            'appt_bg_color', 'appt_font_color', 'appt_badge_color', 'appt_badge_font_color', 'appt_meta_color',
+        ];
+        
+        $data = [];
+        foreach ( $fields as $f ) {
+            if ( isset( $_POST[ $f ] ) ) {
+                $data[ $f ] = sanitize_text_field( $_POST[ $f ] );
             }
         }
         
