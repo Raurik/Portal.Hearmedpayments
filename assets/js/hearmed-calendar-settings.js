@@ -42,10 +42,17 @@ var SettingsPage = {
         // Add nonce if available
         if (window.HM && HM.nonce) {
             data += '&nonce=' + encodeURIComponent(HM.nonce);
+            console.log('✓ DEBUG: Using HM.nonce:', HM.nonce.substring(0,8) + '...');
         } else if ($('input[name="_wpnonce"], input[name="nonce"]').length) {
             // fallback for nonce field in form
             data += '&nonce=' + encodeURIComponent($('input[name="_wpnonce"], input[name="nonce"]').val());
+            console.log('✓ DEBUG: Using fallback nonce from form');
+        } else {
+            console.warn('⚠ DEBUG: NO NONCE FOUND - this will likely fail');
         }
+
+        console.log('📤 DEBUG: Sending AJAX data:', data.substring(0, 200) + '...');
+        console.log('📤 DEBUG: AJAX URL:', (window.HM && HM.ajax_url) || '/wp-admin/admin-ajax.php');
 
         // Perform AJAX request
         $.ajax({
@@ -53,18 +60,24 @@ var SettingsPage = {
             method: 'POST',
             data: data,
             success: function (resp) {
+                console.log('✅ DEBUG: AJAX Success response:', resp);
                 $btn.prop('disabled', false).text('Save Settings');
                 if (resp && resp.success) {
+                    console.log('✅ DEBUG: Save was successful!');
                     $btn.text('Saved!');
                     setTimeout(function () {
                         $btn.text('Save Settings');
                     }, 1200);
                 } else {
                     let msg = (resp && resp.data && resp.data.message) ? resp.data.message : 'Failed to save settings. Please try again.';
+                    console.error('❌ DEBUG: Save returned success=false:', resp);
                     alert(msg);
                 }
             },
-            error: function (xhr) {
+            error: function (xhr, status, error) {
+                console.error('❌ DEBUG: AJAX Error - status:', status, 'error:', error);
+                console.error('❌ DEBUG: xhr.responseText:', xhr.responseText);
+                console.error('❌ DEBUG: xhr.status:', xhr.status);
                 $btn.prop('disabled', false).text('Save Settings');
                 let msg = 'An error occurred while saving settings. Please try again.';
                 if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
