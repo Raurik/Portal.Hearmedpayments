@@ -3,6 +3,12 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class HearMed_Admin_Dispenser_Schedules {
 
+    public function __construct() {
+        add_shortcode('hearmed_dispenser_schedules', [ $this, 'render' ]);
+        add_action('wp_ajax_hm_admin_save_dispenser_schedule', [ $this, 'ajax_save' ]);
+        add_action('wp_ajax_hm_admin_delete_dispenser_schedule', [ $this, 'ajax_delete' ]);
+    }
+
     // Fetch all dispenser schedules with staff and clinic info
     private function get_schedules() {
         return HearMed_DB::get_results(
