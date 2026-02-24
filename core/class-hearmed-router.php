@@ -21,7 +21,8 @@ class HearMed_Router {
     private $shortcode_map = [
         // Calendar
         'hearmed_calendar' => [ 'module' => 'calendar', 'view' => 'calendar' ],
-        'hearmed_calendar_settings' => [ 'module' => 'calendar', 'view' => 'settings' ],
+        // 'hearmed_calendar_settings' is provided by admin/admin-calendar-settings.php
+        // and registers its own shortcode; exclude it here to avoid overriding.
         'hearmed_appointment_types' => [ 'module' => 'calendar', 'view' => 'appointment-types' ],
         'hearmed_blockouts' => [ 'module' => 'calendar', 'view' => 'blockouts' ],
         'hearmed_holidays' => [ 'module' => 'calendar', 'view' => 'holidays' ],
