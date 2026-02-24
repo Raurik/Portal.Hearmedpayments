@@ -15,41 +15,42 @@ class HearMed_Admin_Manage_Users {
     }
 
     private function get_staff() {
-        // Try to fetch with optional columns (employee_number, hire_date) first
+        // Fetch staff with optional join to auth (if exists)
+        // Use simple query first - don't depend on staff_auth existing
         $result = HearMed_DB::get_results(
             "SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.role, 
                     COALESCE(s.employee_number, '') as employee_number, 
                     COALESCE(s.hire_date::text, '') as hire_date,
                     s.is_active, s.wp_user_id,
-                    a.username, a.two_factor_enabled, a.temp_password, a.totp_secret
+                    COALESCE(a.username, '') as username, 
+                    COALESCE(a.two_factor_enabled, false) as two_factor_enabled, 
+                    COALESCE(a.temp_password, false) as temp_password, 
+                    COALESCE(a.totp_secret, '') as totp_secret
              FROM hearmed_reference.staff s
              LEFT JOIN hearmed_reference.staff_auth a ON s.id = a.staff_id
              ORDER BY s.last_name, s.first_name"
         );
         
-        // If query fails (columns don't exist yet), use fallback without those columns
+        error_log('[HearMed] get_staff() query result: ' . print_r($result, true));
+        
+        // If query fails, try without the JOIN
         if ($result === false) {
-            error_log('[HearMed] get_staff() first query failed: ' . HearMed_DB::last_error());
+            error_log('[HearMed] get_staff() query failed: ' . HearMed_DB::last_error());
             $result = HearMed_DB::get_results(
                 "SELECT s.id, s.first_name, s.last_name, s.email, s.phone, s.role, 
-                        '' as employee_number, 
-                        '' as hire_date,
+                        COALESCE(s.employee_number, '') as employee_number, 
+                        COALESCE(s.hire_date::text, '') as hire_date,
                         s.is_active, s.wp_user_id,
-                        a.username, a.two_factor_enabled, a.temp_password, a.totp_secret
+                        '' as username, 
+                        false as two_factor_enabled, 
+                        false as temp_password, 
+                        '' as totp_secret
                  FROM hearmed_reference.staff s
-                 LEFT JOIN hearmed_reference.staff_auth a ON s.id = a.staff_id
                  ORDER BY s.last_name, s.first_name"
             ) ?: [];
             
-            if ($result === false) {
-                error_log('[HearMed] get_staff() fallback query also failed: ' . HearMed_DB::last_error());
-                return [];
-            }
+            error_log('[HearMed] get_staff() fallback query result: ' . print_r($result, true));
         }
-        
-        // Log how many records we got
-        $count = is_array($result) ? count($result) : ($result ? 1 : 0);
-        error_log('[HearMed] get_staff() returned ' . $count . ' records');
         
         return $result ?: [];
     }
