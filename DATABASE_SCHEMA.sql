@@ -894,6 +894,20 @@ CREATE TABLE hearmed_reference.referral_sources (
     updated_at  timestamp with time zone DEFAULT now() NOT NULL
 );
 
+CREATE TABLE hearmed_reference.audiometers (
+    id                bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    audiometer_name   character varying(200) NOT NULL,
+    audiometer_make   character varying(100),
+    audiometer_model  character varying(100),
+    serial_number     character varying(100),
+    calibration_date  date,
+    clinic_id         bigint REFERENCES hearmed_reference.clinics(id) ON DELETE SET NULL,
+    is_active         boolean DEFAULT true NOT NULL,
+    notes             text,
+    created_at        timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at        timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE hearmed_reference.coupled_items (
     id                  bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     item_type           character varying(50) NOT NULL,

@@ -1,8 +1,8 @@
 <?php
 /**
- * HearMed Admin — Taxonomy Managers
+ * HearMed Admin — Reference Data Managers
  * Shortcodes: [hearmed_brands], [hearmed_range_settings], [hearmed_lead_types]
- * Simple CRUD for WordPress taxonomies
+ * PostgreSQL CRUD for reference tables
  */
 if (!defined('ABSPATH')) exit;
 
@@ -10,19 +10,25 @@ class HearMed_Admin_Taxonomies {
 
     private $configs = [
         'hearmed_brands' => [
-            'taxonomy' => 'manufacturer',
+            'table' => 'hearmed_reference.manufacturers',
+            'id_col' => 'id',
+            'name_col' => 'name',
             'title' => 'Brands / Manufacturers',
             'singular' => 'Brand',
             'placeholder' => 'e.g. Widex, GN Hearing, Oticon',
         ],
         'hearmed_range_settings' => [
-            'taxonomy' => 'hearmed-range',
+            'table' => 'hearmed_reference.hearmed_range',
+            'id_col' => 'id',
+            'name_col' => 'range_name',
             'title' => 'HearMed Range',
             'singular' => 'Range',
             'placeholder' => 'e.g. Premium, Premium+, Essential, Entry',
         ],
         'hearmed_lead_types' => [
-            'taxonomy' => 'referral-source',
+            'table' => 'hearmed_reference.referral_sources',
+            'id_col' => 'id',
+            'name_col' => 'source_name',
             'title' => 'Lead Types / Referral Sources',
             'singular' => 'Source',
             'placeholder' => 'e.g. GP Referral, Walk-in, Website',
@@ -40,11 +46,15 @@ class HearMed_Admin_Taxonomies {
     public function render($atts, $content, $tag) {
         if (!is_user_logged_in()) return '<p>Please log in.</p>';
         $cfg = $this->configs[$tag] ?? null;
-        if (!$cfg) return '<p>Unknown taxonomy.</p>';
+        if (!$cfg) return '<p>Unknown reference table.</p>';
 
-        $tax = $cfg['taxonomy'];
-        $terms = get_terms(['taxonomy' => $tax, 'hide_empty' => false, 'orderby' => 'name']);
-        if (is_wp_error($terms)) $terms = [];
+        $table = $cfg['table'];
+        $id_col = $cfg['id_col'];
+        $name_col = $cfg['name_col'];
+        
+        $terms = HearMed_DB::get_results(
+            "SELECT {$id_col} as term_id, {$name_col} as name FROM {$table} WHERE is_active = true ORDER BY {$name_col}"
+        ) ?: [];
 
         ob_start(); ?>
         <div class="hm-admin">
@@ -69,11 +79,11 @@ class HearMed_Admin_Taxonomies {
                 <?php foreach ($terms as $t): ?>
                     <tr>
                         <td><strong><?php echo esc_html($t->name); ?></strong></td>
-                        <td><code><?php echo esc_html($t->slug); ?></code></td>
-                        <td class="hm-num"><?php echo $t->count; ?></td>
+                        <td><code><?php echo str_replace(' ', '-', strtolower(esc_html($t->name))); ?></code></td>
+                        <td class="hm-num">—</td>
                         <td class="hm-table-acts">
-                            <button class="hm-btn hm-btn-sm" onclick="hmTax.open('<?php echo esc_attr($tax); ?>',<?php echo $t->term_id; ?>,'<?php echo esc_js($t->name); ?>')">Edit</button>
-                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmTax.del('<?php echo esc_attr($tax); ?>',<?php echo $t->term_id; ?>,'<?php echo esc_js($t->name); ?>')">Delete</button>
+                            <button class="hm-btn hm-btn-sm" onclick="hmTax.open('<?php echo esc_attr($tag); ?>',<?php echo $t->term_id; ?>,'<?php echo esc_js($t->name); ?>')">Edit</button>
+                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmTax.del('<?php echo esc_attr($tag); ?>',<?php echo $t->term_id; ?>,'<?php echo esc_js($t->name); ?>')">Delete</button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -89,7 +99,7 @@ class HearMed_Admin_Taxonomies {
                         <button class="hm-modal-x" onclick="hmTax.close()">&times;</button>
                     </div>
                     <div class="hm-modal-body">
-                        <input type="hidden" id="hmt-tax" value="">
+                        <input type="hidden" id="hmt-tag" value="">
                         <input type="hidden" id="hmt-id" value="">
                         <div class="hm-form-group">
                             <label>Name *</label>
@@ -106,9 +116,9 @@ class HearMed_Admin_Taxonomies {
 
         <script>
         var hmTax = {
-            open: function(tax, id, name) {
+            open: function(tag, id, name) {
                 document.getElementById('hm-tax-modal-title').textContent = id ? 'Edit' : 'Add';
-                document.getElementById('hmt-tax').value = tax;
+                document.getElementById('hmt-tag').value = tag;
                 document.getElementById('hmt-id').value = id || '';
                 document.getElementById('hmt-name').value = name || '';
                 document.getElementById('hm-tax-modal').classList.add('open');
@@ -123,7 +133,7 @@ class HearMed_Admin_Taxonomies {
                 jQuery.post(HM.ajax_url, {
                     action: 'hm_admin_save_term',
                     nonce: HM.nonce,
-                    taxonomy: document.getElementById('hmt-tax').value,
+                    tag: document.getElementById('hmt-tag').value,
                     term_id: document.getElementById('hmt-id').value,
                     name: name
                 }, function(r) {
@@ -131,12 +141,12 @@ class HearMed_Admin_Taxonomies {
                     else { alert(r.data || 'Error'); btn.textContent = 'Save'; btn.disabled = false; }
                 });
             },
-            del: function(tax, id, name) {
+            del: function(tag, id, name) {
                 if (!confirm('Delete "' + name + '"?')) return;
                 jQuery.post(HM.ajax_url, {
                     action: 'hm_admin_delete_term',
                     nonce: HM.nonce,
-                    taxonomy: tax,
+                    tag: tag,
                     term_id: id
                 }, function(r) {
                     if (r.success) location.reload();
@@ -153,22 +163,39 @@ class HearMed_Admin_Taxonomies {
         check_ajax_referer('hm_nonce', 'nonce');
         if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
 
-        $tax = sanitize_text_field($_POST['taxonomy'] ?? '');
+        $tag = sanitize_text_field($_POST['tag'] ?? '');
         $name = sanitize_text_field($_POST['name'] ?? '');
         $term_id = intval($_POST['term_id'] ?? 0);
 
-        if (empty($tax) || empty($name)) { wp_send_json_error('Missing fields'); return; }
+        if (empty($tag) || empty($name)) { wp_send_json_error('Missing fields'); return; }
+
+        $cfg = $this->configs[$tag] ?? null;
+        if (!$cfg) { wp_send_json_error('Unknown reference table'); return; }
+
+        $table = $cfg['table'];
+        $id_col = $cfg['id_col'];
+        $name_col = $cfg['name_col'];
 
         if ($term_id) {
-            $result = wp_update_term($term_id, $tax, ['name' => $name]);
+            $result = HearMed_DB::update(
+                $table,
+                [$name_col => $name, 'updated_at' => current_time('mysql')],
+                [$id_col => $term_id],
+                ['%s', '%s'],
+                ['%d']
+            );
         } else {
-            $result = wp_insert_term($name, $tax);
+            $result = HearMed_DB::insert(
+                $table,
+                [$name_col => $name, 'is_active' => true, 'created_at' => current_time('mysql')],
+                ['%s', '%d', '%s']
+            );
         }
 
-        if (is_wp_error($result)) {
-            wp_send_json_error($result->get_error_message());
+        if ($result === false) {
+            wp_send_json_error('Database error');
         } else {
-            wp_send_json_success($result);
+            wp_send_json_success(['id' => $term_id ?: HearMed_DB::$last_insert_id]);
         }
     }
 
@@ -176,12 +203,26 @@ class HearMed_Admin_Taxonomies {
         check_ajax_referer('hm_nonce', 'nonce');
         if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
 
-        $tax = sanitize_text_field($_POST['taxonomy'] ?? '');
+        $tag = sanitize_text_field($_POST['tag'] ?? '');
         $term_id = intval($_POST['term_id'] ?? 0);
 
-        if ($tax && $term_id) {
-            wp_delete_term($term_id, $tax);
-        }
+        if (empty($tag) || !$term_id) { wp_send_json_error('Missing parameters'); return; }
+
+        $cfg = $this->configs[$tag] ?? null;
+        if (!$cfg) { wp_send_json_error('Unknown reference table'); return; }
+
+        $table = $cfg['table'];
+        $id_col = $cfg['id_col'];
+
+        // Soft delete by setting is_active = false
+        HearMed_DB::update(
+            $table,
+            ['is_active' => false, 'updated_at' => current_time('mysql')],
+            [$id_col => $term_id],
+            ['%d', '%s'],
+            ['%d']
+        );
+        
         wp_send_json_success();
     }
 }

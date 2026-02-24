@@ -1,23 +1,8 @@
 <?php
-
-// ============================================================
-// AUTO-CONVERTED TO POSTGRESQL
-// ============================================================
-// All database operations converted from WordPress to PostgreSQL
-// - $wpdb → HearMed_DB
-// - wp_posts/wp_postmeta → PostgreSQL tables
-// - Column names updated (_ID → id, etc.)
-// 
-// REVIEW REQUIRED:
-// - Check all queries use correct table names
-// - Verify all AJAX handlers work
-// - Test all CRUD operations
-// ============================================================
-
 /**
  * HearMed Admin — Audiometers
  * Shortcode: [hearmed_audiometers]
- * CRUD for Audiometer CPT
+ * PostgreSQL CRUD for audiometers reference table
  */
 if (!defined('ABSPATH')) exit;
 
@@ -32,22 +17,23 @@ class HearMed_Admin_Audiometers {
     }
 
     private function get_audiometers() {
-        // TODO: USE PostgreSQL: HearMed_DB::get_results()
-        $posts = get_posts(['post_type' => 'audiometer', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC']);
-        $items = [];
-        foreach ($posts as $p) {
-            $d = ['id' => $p->ID, 'name' => $p->post_title];
-            // TODO: USE PostgreSQL: Get from table columns
-            foreach ($this->fields as $f) $d[$f] = get_post_meta($p->ID, $f, true);
-            $d['is_active'] = ($d['is_active'] === '' || $d['is_active'] === '1') ? '1' : '0';
-            $items[] = $d;
-        }
-        return $items;
+        return HearMed_DB::get_results(
+            "SELECT id, audiometer_name as name, audiometer_make, audiometer_model, 
+                    serial_number, calibration_date, clinic_id, is_active
+             FROM hearmed_reference.audiometers 
+             WHERE is_active = true 
+             ORDER BY audiometer_name",
+            ARRAY_A
+        ) ?: [];
     }
 
     private function get_clinics() {
-        // TODO: Converted from get_posts() to PostgreSQL HearMed_DB::get_results()
-        $posts = HearMed_DB::get_results("SELECT id, clinic_name as post_title, id as ID FROM hearmed_reference.clinics WHERE is_active = true ORDER BY clinic_name");
+        $posts = HearMed_DB::get_results(
+            "SELECT id, clinic_name as post_title, id as ID 
+             FROM hearmed_reference.clinics 
+             WHERE is_active = true 
+             ORDER BY clinic_name"
+        );
         return array_map(function($p) { return ['id' => $p->ID, 'name' => $p->post_title]; }, $posts);
     }
 
@@ -87,7 +73,7 @@ class HearMed_Admin_Audiometers {
                             <?php if ($overdue): ?> <small style="color:var(--hm-red)">⚠ Overdue</small><?php endif; ?>
                         <?php else: ?>—<?php endif; ?>
                     </td>
-                    <td><?php echo $a['is_active'] === '1' ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
+                    <td><?php echo $a['is_active'] ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
                     <td class="hm-table-acts">
                         <button class="hm-btn hm-btn-sm" onclick='hmAud.open(<?php echo json_encode($a); ?>)'>Edit</button>
                         <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmAud.del(<?php echo $a['id']; ?>,'<?php echo esc_js($a['name']); ?>')">Delete</button>
@@ -138,7 +124,7 @@ class HearMed_Admin_Audiometers {
                 document.getElementById('hma-serial').value=e?(d.serial_number||''):'';
                 document.getElementById('hma-cal').value=e?(d.calibration_date||''):'';
                 document.getElementById('hma-clinic').value=e?(d.clinic_id||''):'';
-                document.getElementById('hma-active').checked=e?d.is_active==='1':true;
+                document.getElementById('hma-active').checked=e?d.is_active:true;
                 document.getElementById('hm-aud-modal').classList.add('open');
             },
             close:function(){document.getElementById('hm-aud-modal').classList.remove('open');},
@@ -153,7 +139,7 @@ class HearMed_Admin_Audiometers {
                     serial_number:document.getElementById('hma-serial').value,
                     calibration_date:document.getElementById('hma-cal').value,
                     clinic_id:document.getElementById('hma-clinic').value,
-                    is_active:document.getElementById('hma-active').checked?'1':'0'
+                    is_active:document.getElementById('hma-active').checked?1:0
                 },function(r){if(r.success)location.reload();else{alert(r.data||'Error');b.textContent='Save';b.disabled=false;}});
             },
             del:function(id,n){if(!confirm('Delete "'+n+'"?'))return;
@@ -167,24 +153,59 @@ class HearMed_Admin_Audiometers {
     public function ajax_save() {
         check_ajax_referer('hm_nonce','nonce');
         if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        
         $id = intval($_POST['id'] ?? 0);
         $name = sanitize_text_field($_POST['name'] ?? '');
         if (!$name) { wp_send_json_error('Name required'); return; }
-        if ($id) { wp_update_post(['ID'=>$id,'post_title'=>$name]); }
-        else { 
-            // TODO: USE PostgreSQL: HearMed_DB::insert()
-            $id = wp_insert_post(['post_type'=>'audiometer','post_title'=>$name,'post_status'=>'publish']); 
-            if (is_wp_error($id)) { wp_send_json_error('Failed'); return; } 
+        
+        $data = [
+            'audiometer_name' => $name,
+            'audiometer_make' => sanitize_text_field($_POST['audiometer_make'] ?? ''),
+            'audiometer_model' => sanitize_text_field($_POST['audiometer_model'] ?? ''),
+            'serial_number' => sanitize_text_field($_POST['serial_number'] ?? ''),
+            'calibration_date' => sanitize_text_field($_POST['calibration_date'] ?? null),
+            'clinic_id' => intval($_POST['clinic_id'] ?? 0) ?: null,
+            'is_active' => intval($_POST['is_active'] ?? 1),
+            'updated_at' => current_time('mysql')
+        ];
+        
+        if ($id) {
+            HearMed_DB::update(
+                'hearmed_reference.audiometers',
+                $data,
+                ['id' => $id],
+                ['%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s'],
+                ['%d']
+            );
+        } else {
+            $data['created_at'] = current_time('mysql');
+            HearMed_DB::insert(
+                'hearmed_reference.audiometers',
+                $data,
+                ['%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s']
+            );
+            $id = HearMed_DB::$last_insert_id;
         }
-        foreach ($this->fields as $f) { if (isset($_POST[$f])) update_post_meta($id,$f,sanitize_text_field($_POST[$f])); }
-        wp_send_json_success(['id'=>$id]);
+        
+        wp_send_json_success(['id' => $id]);
     }
 
     public function ajax_delete() {
         check_ajax_referer('hm_nonce','nonce');
         if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        
         $id = intval($_POST['id'] ?? 0);
-        if ($id) wp_delete_post($id, true);
+        if (!$id) { wp_send_json_error('Invalid ID'); return; }
+        
+        // Soft delete by setting is_active = false
+        HearMed_DB::update(
+            'hearmed_reference.audiometers',
+            ['is_active' => false, 'updated_at' => current_time('mysql')],
+            ['id' => $id],
+            ['%d', '%s'],
+            ['%d']
+        );
+        
         wp_send_json_success();
     }
 }
