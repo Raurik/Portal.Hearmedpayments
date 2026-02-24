@@ -97,7 +97,29 @@ class HearMed_DB {
      * Get full table name from slug
      */
     public static function table($slug) {
+        if (strpos($slug, '.') !== false) {
+            return $slug;
+        }
         return self::$tables[$slug] ?? 'hearmed_core.' . $slug;
+    }
+
+    /**
+     * Legacy prepare helper for safely embedding values into SQL strings.
+     * Supports %s and %d placeholders only.
+     */
+    public static function prepare($sql, ...$params) {
+        $conn = self::connect();
+        if (!$conn || empty($params)) return $sql;
+
+        $i = 0;
+        return preg_replace_callback('/%[sd]/', function($m) use (&$i, $params, $conn) {
+            $val = $params[$i] ?? '';
+            $i++;
+            if ($m[0] === '%d') {
+                return (string) intval($val);
+            }
+            return pg_escape_literal($conn, (string) $val);
+        }, $sql);
     }
     
     /**

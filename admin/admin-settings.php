@@ -7,6 +7,8 @@ if (!defined('ABSPATH')) exit;
 
 class HearMed_Admin_Settings {
 
+    private $pg_settings_cache = null;
+
     private $pages = [
         'hearmed_finance_settings' => [
             'title' => 'Finance Settings',
@@ -91,16 +93,6 @@ class HearMed_Admin_Settings {
                 ['key' => 'hm_review_reminder_months', 'label' => 'Annual Review Reminder (months)', 'type' => 'number', 'default' => '11'],
             ],
         ],
-        'hearmed_admin_groups' => [
-            'title' => 'Groups',
-            'fields' => [],
-            'note' => 'Staff groups and permission sets. Coming in a future update — roles are currently managed via the Users page and WordPress Members plugin.',
-        ],
-        'hearmed_admin_resources' => [
-            'title' => 'Resources',
-            'fields' => [],
-            'note' => 'Help documents, training materials, and onboarding guides for staff. Coming in a future update.',
-        ],
         'hearmed_admin_report_layout' => [
             'title' => 'Report Layout',
             'fields' => [
@@ -147,7 +139,7 @@ class HearMed_Admin_Settings {
             <?php if (!empty($page['fields'])): ?>
             <div class="hm-settings-panel">
                 <?php foreach ($page['fields'] as $f):
-                    $val = get_option($f['key'], $f['default']);
+                    $val = $this->get_setting_value($tag, $f['key'], $f['default']);
                 ?>
                 <div class="hm-form-group">
                     <?php if ($f['type'] === 'toggle'): ?>
@@ -213,6 +205,12 @@ class HearMed_Admin_Settings {
         if (!is_array($settings)) { wp_send_json_error('Invalid data'); return; }
 
         $valid_keys = array_column($page['fields'], 'key');
+        if ($tag === 'hearmed_gdpr_settings') {
+            $this->save_gdpr_settings($settings, $valid_keys);
+            wp_send_json_success();
+            return;
+        }
+
         foreach ($settings as $key => $val) {
             if (in_array($key, $valid_keys)) {
                 update_option($key, sanitize_text_field($val));
@@ -220,6 +218,40 @@ class HearMed_Admin_Settings {
         }
 
         wp_send_json_success();
+    }
+
+    private function get_setting_value($tag, $key, $default) {
+        if ($tag === 'hearmed_gdpr_settings') {
+            $settings = $this->get_gdpr_settings();
+            return $settings[$key] ?? $default;
+        }
+        return get_option($key, $default);
+    }
+
+    private function get_gdpr_settings() {
+        if (is_array($this->pg_settings_cache)) return $this->pg_settings_cache;
+        $row = HearMed_DB::get_row("SELECT * FROM hearmed_admin.gdpr_settings LIMIT 1");
+        $this->pg_settings_cache = $row ? (array) $row : [];
+        return $this->pg_settings_cache;
+    }
+
+    private function save_gdpr_settings($settings, $valid_keys) {
+        $data = [];
+        foreach ($settings as $key => $val) {
+            if (in_array($key, $valid_keys)) {
+                $data[$key] = sanitize_text_field($val);
+            }
+        }
+        if (empty($data)) return;
+
+        $data['updated_at'] = current_time('mysql');
+        $existing_id = HearMed_DB::get_var("SELECT id FROM hearmed_admin.gdpr_settings LIMIT 1");
+        if ($existing_id) {
+            HearMed_DB::update('hearmed_admin.gdpr_settings', $data, ['id' => $existing_id]);
+        } else {
+            $data['created_at'] = current_time('mysql');
+            HearMed_DB::insert('hearmed_admin.gdpr_settings', $data);
+        }
     }
 }
 

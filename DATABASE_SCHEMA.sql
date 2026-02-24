@@ -153,6 +153,17 @@ CREATE TABLE hearmed_admin.gdpr_exports (
     file_url    character varying(500)
 );
 
+CREATE TABLE hearmed_admin.gdpr_settings (
+    id                           bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    hm_privacy_policy_url        character varying(255),
+    hm_retention_patient_years   integer,
+    hm_retention_financial_years integer,
+    hm_retention_sms_years       integer,
+    hm_data_processors           text,
+    created_at                   timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at                   timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE hearmed_admin.kpi_targets (
     id           bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     target_name  character varying(50) NOT NULL,
@@ -789,6 +800,44 @@ CREATE TABLE hearmed_reference.staff_qualifications (
     document_url         character varying(500),
     created_at           timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at           timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE hearmed_reference.staff_groups (
+    id          bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    group_name  character varying(150) NOT NULL,
+    description text,
+    is_active   boolean DEFAULT true NOT NULL,
+    created_at  timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at  timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE hearmed_reference.staff_group_members (
+    id         bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    group_id   bigint REFERENCES hearmed_reference.staff_groups(id) ON DELETE CASCADE,
+    staff_id   bigint REFERENCES hearmed_reference.staff(id) ON DELETE CASCADE,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE hearmed_reference.hearmed_range (
+    id             bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    range_name     character varying(150) NOT NULL,
+    price_total    numeric(10,2),
+    price_ex_prsi  numeric(10,2),
+    is_active      boolean DEFAULT true NOT NULL,
+    created_at     timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at     timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE hearmed_reference.resources (
+    id          bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    title       character varying(200) NOT NULL,
+    category    character varying(100),
+    url         character varying(500),
+    description text,
+    sort_order  integer DEFAULT 0 NOT NULL,
+    is_active   boolean DEFAULT true NOT NULL,
+    created_at  timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at  timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE hearmed_reference.appointment_types (

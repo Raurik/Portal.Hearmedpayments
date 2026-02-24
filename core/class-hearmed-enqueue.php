@@ -171,6 +171,8 @@ class HearMed_Enqueue {
             'hearmed_manage_users', 'hearmed_manage_clinics', 'hearmed_manage_products',
             'hearmed_kpi_targets', 'hearmed_sms_templates', 'hearmed_audit_log',
             'hearmed_data_export', 'hearmed_audiometers',
+            'hearmed_brands', 'hearmed_range_settings', 'hearmed_lead_types',
+            'hearmed_admin_groups', 'hearmed_admin_resources',
         ];
 
         foreach ( $portal_shortcodes as $shortcode ) {
@@ -275,6 +277,11 @@ class HearMed_Enqueue {
             'hearmed_audit_log',
             'hearmed_data_export',
             'hearmed_audiometers',
+            'hearmed_brands',
+            'hearmed_range_settings',
+            'hearmed_lead_types',
+            'hearmed_admin_groups',
+            'hearmed_admin_resources',
         ]);
     }
     

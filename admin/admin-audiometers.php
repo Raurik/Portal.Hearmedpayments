@@ -17,14 +17,29 @@ class HearMed_Admin_Audiometers {
     }
 
     private function get_audiometers() {
-        return HearMed_DB::get_results(
-            "SELECT id, audiometer_name as name, audiometer_make, audiometer_model, 
+        $rows = HearMed_DB::get_results(
+            "SELECT id, audiometer_name as name, audiometer_make, audiometer_model,
                     serial_number, calibration_date, clinic_id, is_active
-             FROM hearmed_reference.audiometers 
-             WHERE is_active = true 
-             ORDER BY audiometer_name",
-            ARRAY_A
+             FROM hearmed_reference.audiometers
+             WHERE is_active = true
+             ORDER BY audiometer_name"
         ) ?: [];
+
+        $items = [];
+        foreach ($rows as $r) {
+            $items[] = [
+                'id' => (int) $r->id,
+                'name' => $r->name,
+                'audiometer_make' => $r->audiometer_make,
+                'audiometer_model' => $r->audiometer_model,
+                'serial_number' => $r->serial_number,
+                'calibration_date' => $r->calibration_date,
+                'clinic_id' => $r->clinic_id,
+                'is_active' => (bool) $r->is_active,
+            ];
+        }
+
+        return $items;
     }
 
     private function get_clinics() {
@@ -173,18 +188,14 @@ class HearMed_Admin_Audiometers {
             HearMed_DB::update(
                 'hearmed_reference.audiometers',
                 $data,
-                ['id' => $id],
-                ['%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s'],
-                ['%d']
+                ['id' => $id]
             );
         } else {
             $data['created_at'] = current_time('mysql');
-            HearMed_DB::insert(
+            $id = HearMed_DB::insert(
                 'hearmed_reference.audiometers',
-                $data,
-                ['%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s']
+                $data
             );
-            $id = HearMed_DB::$last_insert_id;
         }
         
         wp_send_json_success(['id' => $id]);
@@ -201,9 +212,7 @@ class HearMed_Admin_Audiometers {
         HearMed_DB::update(
             'hearmed_reference.audiometers',
             ['is_active' => false, 'updated_at' => current_time('mysql')],
-            ['id' => $id],
-            ['%d', '%s'],
-            ['%d']
+            ['id' => $id]
         );
         
         wp_send_json_success();

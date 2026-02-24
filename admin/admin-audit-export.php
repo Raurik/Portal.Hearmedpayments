@@ -101,21 +101,31 @@ class HearMed_Admin_AuditLog {
         if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
         // PostgreSQL only - no $wpdb needed
         $t = HearMed_DB::table('audit_log');
-        if (HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) === null) { wp_send_json_success([]); return; }
+        if (HearMed_DB::get_var("SELECT to_regclass($1)", [$t]) === null) { wp_send_json_success([]); return; }
 
-        $where = ['1=1'];
+        $where = [];
+        $params = [];
+        $i = 1;
         $entity = sanitize_text_field($_POST['entity'] ?? '');
         $search = sanitize_text_field($_POST['search'] ?? '');
         $from = sanitize_text_field($_POST['from'] ?? '');
         $to = sanitize_text_field($_POST['to'] ?? '');
 
-        if ($entity) $where[] = HearMed_DB::get_results(  "entity_type = %s", $entity);
-        if ($search) $where[] = HearMed_DB::get_results(  "(action LIKE %s OR details LIKE %s)", "%$search%", "%$search%");
-        if ($from) $where[] = HearMed_DB::get_results(  "created_at >= %s", $from . ' 00:00:00');
-        if ($to) $where[] = HearMed_DB::get_results(  "created_at <= %s", $to . ' 23:59:59');
+        if ($entity) { $where[] = "entity_type = $$i"; $params[] = $entity; $i++; }
+        if ($search) {
+            $where[] = "(action ILIKE $$i OR details::text ILIKE $$i)";
+            $params[] = '%' . $search . '%';
+            $i++;
+        }
+        if ($from) { $where[] = "created_at >= $$i"; $params[] = $from . ' 00:00:00'; $i++; }
+        if ($to) { $where[] = "created_at <= $$i"; $params[] = $to . ' 23:59:59'; $i++; }
 
-        $sql = "SELECT * FROM `$t` WHERE " . implode(' AND ', $where) . " ORDER BY id DESC LIMIT 500";
-        $rows = HearMed_DB::get_results($sql, ARRAY_A) ?: [];
+        $sql = "SELECT * FROM {$t}";
+        if (!empty($where)) {
+            $sql .= " WHERE " . implode(' AND ', $where);
+        }
+        $sql .= " ORDER BY id DESC LIMIT 500";
+        $rows = HearMed_DB::get_results($sql, $params) ?: [];
 
         // Attach user names
         foreach ($rows as &$row) {
@@ -173,9 +183,17 @@ class HearMed_Admin_AuditLog {
                         if (!r.success) return;
                         var html = '';
                         (r.data || []).forEach(function(p) {
-                            html += '<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--hm-border-light);font-size:13px" onclick="hmExport.select(' + p.id + ','' + p.label.replace(/'/g, "'") + '')">' + p.label + '</div>';
+                            var safe = (p.label || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                            var encoded = encodeURIComponent(p.label || '');
+                            html += '<div class="hm-export-item" data-id="' + p.id + '" data-label="' + encoded + '" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--hm-border-light);font-size:13px">' + safe + '</div>';
                         });
-                        document.getElementById('hmde-results').innerHTML = html ? '<div style="border:1px solid var(--hm-border-light);border-radius:6px;max-height:200px;overflow-y:auto">' + html + '</div>' : '';
+                        var container = html ? '<div style="border:1px solid var(--hm-border-light);border-radius:6px;max-height:200px;overflow-y:auto">' + html + '</div>' : '';
+                        document.getElementById('hmde-results').innerHTML = container;
+                        document.querySelectorAll('.hm-export-item').forEach(function(el){
+                            el.onclick = function(){
+                                hmExport.select(el.getAttribute('data-id'), decodeURIComponent(el.getAttribute('data-label') || ''));
+                            };
+                        });
                     });
                 }, 300);
             },
@@ -187,7 +205,22 @@ class HearMed_Admin_AuditLog {
                 document.getElementById('hmde-search').value = name;
             },
             exportData: function(format) {
-                alert('Patient data export will be generated as ' + format.toUpperCase() + '. This feature connects to the full export pipeline in a future update.');
+                var pid = document.getElementById('hmde-patient-id').value;
+                if (!pid) { alert('Select a patient first.'); return; }
+                jQuery.post(HM.ajax_url, { action:'hm_admin_export_patient', nonce:HM.nonce, patient_id:pid, format:format }, function(r) {
+                    if (!r.success) { alert(r.data || 'Export failed'); return; }
+                    var filename = r.data.filename || ('patient-export.' + format);
+                    var mime = r.data.mime || 'application/octet-stream';
+                    var blob = new Blob([r.data.payload || ''], { type: mime });
+                    var url = window.URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                });
             }
         };
         </script>
@@ -197,8 +230,67 @@ class HearMed_Admin_AuditLog {
     public function ajax_export_patient() {
         check_ajax_referer('hm_nonce', 'nonce');
         if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
-        // Full implementation in later phase
-        wp_send_json_success(['message' => 'Export queued']);
+        $patient_id = intval($_POST['patient_id'] ?? 0);
+        $format = sanitize_text_field($_POST['format'] ?? 'json');
+        if (!$patient_id) { wp_send_json_error('Invalid patient'); return; }
+
+        $patient = HearMed_DB::get_row(
+            "SELECT * FROM hearmed_core.patients WHERE id = $1",
+            [$patient_id]
+        );
+        if (!$patient) { wp_send_json_error('Patient not found'); return; }
+
+        $data = [
+            'patient' => (array) $patient,
+            'appointments' => HearMed_DB::get_results("SELECT * FROM hearmed_core.appointments WHERE patient_id = $1 ORDER BY appointment_date DESC", [$patient_id]) ?: [],
+            'orders' => HearMed_DB::get_results("SELECT * FROM hearmed_core.orders WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [],
+            'invoices' => HearMed_DB::get_results("SELECT * FROM hearmed_core.invoices WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [],
+            'payments' => HearMed_DB::get_results("SELECT * FROM hearmed_core.payments WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [],
+            'notes' => HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_notes WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [],
+            'forms' => HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_forms WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [],
+            'devices' => HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_devices WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [],
+        ];
+
+        $exported_by = get_current_user_id();
+        HearMed_DB::insert('hearmed_admin.gdpr_exports', [
+            'patient_id' => $patient_id,
+            'exported_by' => $exported_by,
+            'export_type' => $format,
+            'exported_at' => current_time('mysql'),
+            'file_url' => null,
+        ]);
+
+        if ($format === 'csv') {
+            $csv = $this->patient_to_csv((array) $patient);
+            wp_send_json_success([
+                'payload' => $csv,
+                'mime' => 'text/csv',
+                'filename' => 'patient-' . $patient_id . '.csv',
+            ]);
+        }
+
+        wp_send_json_success([
+            'payload' => wp_json_encode($data, JSON_PRETTY_PRINT),
+            'mime' => 'application/json',
+            'filename' => 'patient-' . $patient_id . '.json',
+        ]);
+    }
+
+    private function patient_to_csv($patient) {
+        $headers = array_keys($patient);
+        $values = array_map(function($v) {
+            if (is_bool($v)) return $v ? 'true' : 'false';
+            if ($v === null) return '';
+            return (string) $v;
+        }, array_values($patient));
+
+        $out = fopen('php://temp', 'r+');
+        fputcsv($out, $headers);
+        fputcsv($out, $values);
+        rewind($out);
+        $csv = stream_get_contents($out);
+        fclose($out);
+        return $csv;
     }
 }
 

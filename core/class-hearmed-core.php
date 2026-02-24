@@ -77,6 +77,7 @@ class HearMed_Core {
         $admin_shortcode_files = [
             HEARMED_PATH . 'admin/admin-console.php',
             HEARMED_PATH . 'admin/admin-users.php',
+            HEARMED_PATH . 'admin/admin-manage-users.php',
             HEARMED_PATH . 'admin/admin-clinics.php',
             HEARMED_PATH . 'admin/admin-products.php',
             HEARMED_PATH . 'admin/admin-kpi-targets.php',
@@ -85,6 +86,8 @@ class HearMed_Core {
             HEARMED_PATH . 'admin/admin-audiometers.php',
             HEARMED_PATH . 'admin/admin-settings.php',
             HEARMED_PATH . 'admin/admin-taxonomies.php',
+            HEARMED_PATH . 'admin/admin-groups.php',
+            HEARMED_PATH . 'admin/admin-resources.php',
         ];
         foreach ( $admin_shortcode_files as $file ) {
             if ( file_exists( $file ) ) {
