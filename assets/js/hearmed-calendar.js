@@ -608,21 +608,29 @@ var Settings={
         var clinic='Cosgrove\'s Pharmacy';
         var outcome=$('input[name="hs-outcome"]:checked').val()||data.outcome_style||'default';
         var fullName = $('#hs-fullName').is(':checked') || (data.display_full_name==='yes');
-
         var html='';
-        html+='<div class="hm-appt-preview">';
-        html+='<div class="hm-appt-outcome">Outcome</div>';
-        html+='<div class="hm-appt-body">';
-        html+='<div class="hm-appt-name">'+name+'</div>';
-        html+='<div class="hm-appt-time">'+start+'</div>';
-        html+='<div class="hm-appt-meta">'+svc+' · '+clinic+'</div>';
-        html+='</div>';
-        html+='</div>';
+        html += '<div class="hm-appt-preview-wrap">';
+        html += '<div class="hm-appt-preview-card">';
+        html += '<div class="hm-appt-outcome">Outcome</div>';
+        html += '<div class="hm-appt-body">';
+        html += '<div class="hm-appt-name">'+name+'</div>';
+        html += '<div class="hm-appt-badges">';
+        html += '<span class="hm-badge hm-badge-c">C</span>';
+        html += '<span class="hm-badge hm-badge-r">R</span>';
+        html += '<span class="hm-badge hm-badge-v">VM</span>';
+        html += '</div>';
+        html += '<div class="hm-appt-time">'+start+'</div>';
+        html += '<div class="hm-appt-meta">'+svc+' · '+clinic+'</div>';
+        html += '</div>'; // body
+        html += '</div>'; // card
+        html += '</div>'; // wrap
         $('#hs-preview').html(html);
         // style variations
         var $card=$('#hs-preview .hm-appt-preview');
-        $card.removeClass('outcome-default outcome-small outcome-tag outcome-popover');
-        $card.addClass('outcome-'+(outcome||'default'));
+        // also support new card class
+        var $newCard = $('#hs-preview .hm-appt-preview-card');
+        $newCard.removeClass('outcome-default outcome-small outcome-tag outcome-popover');
+        $newCard.addClass('outcome-'+(outcome||'default'));
     },
     save:function(){
         var days=[];$('.hs-day:checked').each(function(){days.push($(this).val());});

@@ -409,6 +409,23 @@
 .hm-appt-preview.outcome-tag .hm-appt-body{background:linear-gradient(180deg,#06b6d4,#0bb4c4);padding:10px}
 .hm-appt-preview.outcome-popover .hm-appt-body{background:linear-gradient(180deg,#06b6d4,#0bb4c4);opacity:0.95}
 
+/* New preview card layout */
+.hm-appt-preview-wrap{display:flex;justify-content:flex-start}
+.hm-appt-preview-card{width:340px;border-radius:10px;overflow:hidden;border:1px solid var(--hm-border);box-shadow:var(--hm-shadow-sm);background:#fff}
+.hm-appt-preview-card .hm-appt-outcome{padding:10px 14px;font-weight:700;color:#fff;background:linear-gradient(90deg,#10b981,#06b6d4)}
+.hm-appt-preview-card .hm-appt-body{padding:14px;background:linear-gradient(180deg,#06b6d4,#0bb4c4);color:#fff}
+.hm-appt-badges{display:flex;gap:6px;margin-bottom:8px}
+.hm-badge{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-weight:700;color:#fff;font-size:12px}
+.hm-badge-c{background:#1e293b}
+.hm-badge-r{background:#7c3aed}
+.hm-badge-v{background:#fb7185;color:#fff;padding:0 6px;border-radius:12px;font-size:11px}
+
+/* outcome variants */
+.hm-appt-preview-card.outcome-default .hm-appt-outcome{background:linear-gradient(90deg,#10b981,#06b6d4)}
+.hm-appt-preview-card.outcome-small .hm-appt-body{padding:8px}
+.hm-appt-preview-card.outcome-tag .hm-appt-body{background:linear-gradient(180deg,#06b6d4,#0891b2)}
+.hm-appt-preview-card.outcome-popover .hm-appt-body{opacity:0.95}
+
 #hm-app.hm-calendar .hm-prov-ini {
   font-weight: 800;
   font-size: 12px;
