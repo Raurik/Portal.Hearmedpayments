@@ -3,7 +3,6 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class HearMed_Admin_Dispenser_Schedules {
 
-    // ...existing code...
 
     // Render a calendar-style detail page for a staff member
     private function render_detail_page($staff_data, $clinics, $days) {
