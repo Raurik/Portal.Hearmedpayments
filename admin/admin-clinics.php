@@ -197,7 +197,7 @@ class HearMed_Admin_Clinics {
 
                         <div class="hm-form-group">
                             <label class="hm-toggle-label">
-                                <input type="checkbox" id="hmc-active" checked> Active
+                                <input type="checkbox" id="hmc-active" checked> <span>Active</span>
                             </label>
                         </div>
                 </div>

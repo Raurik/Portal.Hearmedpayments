@@ -94,18 +94,20 @@
     background: none !important;
 }
 .hm-admin .hm-btn-sm {
-    padding: 4px 0;
+    padding: 4px 8px;
     font-size: 12.5px;
     font-weight: 500;
     border: none;
     background: none;
     color: #0BB4C4;
+    display: inline-flex;
+    white-space: nowrap;
 }
 .hm-admin .hm-btn-sm:hover { color: #0a9eac; background: none; }
 .hm-admin .hm-btn-sm.hm-btn-red {
     color: #dc2626 !important;
 }
-.hm-admin .hm-btn-sm.hm-btn-red:hover { color: #b91c1c !important; }
+.hm-admin .hm-btn-sm.hm-btn-red:hover { color: #b91c1c !important; text-decoration: underline; }
 
 /* Modal actions keep same text-link button style */
 .hm-modal-ft .hm-btn-teal {
@@ -482,6 +484,32 @@
     max-width: 140px;
 }
 
+#hm-clinics-app .hm-form-group.hm-form-sm input[type="color"] {
+    width: 50px;
+    height: 40px;
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+#hm-clinics-app .hm-toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #475569;
+    font-weight: 500;
+}
+
+#hm-clinics-app .hm-toggle-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #0BB4C4;
+}
+
 #hm-clinics-app .hm-btn-primary {
     background: #0BB4C4;
     color: #fff;
@@ -623,23 +651,22 @@
     border-radius: 4px;
     border: 1px solid #e2e8f0;
 }
-.hm-days-grid { display: flex; gap: 6px; flex-wrap: wrap; }
+.hm-days-grid { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .hm-day-check {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 5px 10px;
-    background: #f8fafc;
-    border: 1px solid #f1f5f9;
-    border-radius: 6px;
-    font-size: 12px;
+    gap: 5px;
+    padding: 0;
+    background: none;
+    border: none;
+    font-size: 13px;
     font-weight: 500;
-    color: #151B33;
+    color: #475569;
     cursor: pointer;
-    transition: all .15s;
+    transition: color .15s;
 }
-.hm-day-check:has(input:checked) { background: rgba(11,180,196,.08); border-color: #0BB4C4; color: #0BB4C4; }
-.hm-day-check input { width: 13px; height: 13px; accent-color: #0BB4C4; cursor: pointer; }
+.hm-day-check:has(input:checked) { color: #0BB4C4; }
+.hm-day-check input { width: 16px; height: 16px; accent-color: #0BB4C4; cursor: pointer; margin: 0; }
 
 /* ═══════════════════════════════════════
    USERS
