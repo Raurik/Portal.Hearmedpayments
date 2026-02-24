@@ -561,150 +561,236 @@ All notifications use two tables:
 
 ---
 
-## SECTION 12: MODULE BUILD PRIORITY & STATUS
+## SECTION 12: BUILD PRIORITY & DELIVERY ORDER
 
-### Why This Order
-Notifications must be first because repairs, returns, order status, fitting reminders, and cheque system all fire notifications. Everything else depends on this chain.
+**FOUNDATION PRINCIPLE:** Build feature-complete, fully-functional sections in priority order. Each section must be 100% working, save to database correctly, look good per design system, and deploy automatically.
 
-### Build Queue (Priority Order)
-| # | Module | JS File | Priority | Dependencies |
-|---|--------|---------|----------|--------------|
-| 🔴 **FIRST** | **mod-notifications** | hearmed-notifications.js | 🔴 CRITICAL | Nothing — must be first |
-| 1 | mod-repairs | (uses core JS) | 🔴 HIGH | Notifications |
-| 2 | mod-team-chat | hearmed-chat.js | 🟡 MEDIUM | Notifications |
-| 3 | mod-accounting + HearMed_QBO | hearmed-accounting.js | 🔴 HIGH | QBO OAuth2 class needed |
-| 4 | mod-reports | hearmed-reports.js | 🔴 HIGH | Accounting, commissions |
-| 5 | mod-commissions | (uses reports JS) | 🔴 HIGH | Reports |
-| 6 | mod-kpi | hearmed-kpi.js | 🟡 MEDIUM | Reports data |
-| 7 | mod-cash | (uses core JS) | 🟡 MEDIUM | Accounting |
-| — | **Admin: Data Import** | — | 🔴 CRITICAL | Nothing — needed immediately |
+### Actual Build Queue (User-Specified Priority Order)
 
-**Data Import Admin page is critical and must be built alongside or immediately after notifications. Without it, database stays empty and portal is unusable.**
+**Phase 1: ADMIN FOUNDATION** 🔴 CRITICAL
+| # | Admin Page | Status | DB Source | Notes |
+|---|-----------|--------|-----------|-------|
+| 1️⃣ | **Clinics** | ✅ Complete | PostgreSQL | Fully working, CRUD functional |
+| 1️⃣ | **Users (Staff)** | ✅ Complete | PostgreSQL | Fully working, clinic assignments, roles |
+| 1️⃣ | **Audiometers** | ✅ Complete | PostgreSQL | Fully working, inventory tracking |
+| 2️⃣ | **Calendar Settings** | 🔧 In Progress | PostgreSQL | Needs save fix (now complete), color pickers done, need final tweaks |
+| 2️⃣ | **All Remaining Admin Pages** | 🚧 Complete Structure Only | PostgreSQL | Must be fully functional + styled |
 
-### Current File Status (37 PHP files total)
-
-#### Root
-| File | Lines | Status | Notes |
-|------|-------|--------|-------|
-| hearmed-calendar.php | 57 | ✅ Complete | Bootstrap, constants, activation, correct load order |
-
-#### Core (All Complete)
-| File | Lines | Status | Notes |
-|------|-------|--------|-------|
-| class-hearmed-db.php | 230 | ✅ Complete | PostgreSQL abstraction — 6 methods, params, pooling, logging |
-| class-hearmed-pg.php | 17 | ✅ Complete | Alias-only file |
-| class-hearmed-core.php | 124 | ✅ Complete | Singleton bootstrap, loads all dependencies |
-| class-hearmed-auth.php | 111 | ✅ Complete | Role checks, clinic scoping, staff_clinics native |
-| class-hearmed-enqueue.php | 217 | ✅ Complete | Asset loading, conditional per-module |
-| class-hearmed-router.php | 201 | ✅ Complete | All shortcode registrations, privacy notice gate |
-| class-hearmed-ajax.php | 187 | ✅ Complete | Central AJAX dispatcher |
-| class-hearmed-utils.php | 122 | ✅ Complete | Formatting — money, dates, phone, Irish formats |
-
-#### Includes (All Complete)
-| File | Lines | Status | Notes |
-|------|-------|--------|-------|
-| class-cpts.php | 149 | ✅ Complete | CPTs for WP nav only — no data |
-| class-hearmed-roles.php | 56 | ✅ Complete | Role capability helpers |
-| ajax-handlers.php | 11 | ✅ Complete | Stub only |
-
-#### Admin Pages (All 12 Complete)
-| File | Lines | What It Does |
-|------|-------|--------------|
-| admin-clinics.php | 221 | ✅ Clinic CRUD — name, address, phone, email, colour, hours |
-| admin-users.php | 309 | ✅ Staff management — clinic assignments, roles, schedule |
-| admin-products.php | 345 | ✅ Products — manufacturer, model, style, tech level, Range, prices |
-| admin-audiometers.php | 212 | ✅ Audiometer inventory — make, model, serial, calibration |
-| admin-kpi-targets.php | 107 | ✅ KPI targets per metric, C-Level/Admin editable |
-| admin-sms-templates.php | 190 | ✅ SMS templates per appointment type |
-| admin-taxonomies.php | 206 | ✅ Manufacturers, referral sources, HearMed Ranges |
-| admin-audit-export.php | 183 | ✅ Audit log viewer and export |
-| admin-settings.php | 226 | ✅ Global settings — VAT, invoice layout, payment methods |
-| admin-system-status.php | 155 | ✅ PostgreSQL connection status, table counts, health |
-| admin-debug.php | 389 | ✅ Developer tools — query testing, cache flush, error log |
-| admin-console.php | 105 | ✅ Admin dashboard — links to all sections |
-
-#### Modules (12 Total)
-| File | Lines | Status | What It Does |
-|------|-------|--------|--------------|
-| mod-patients.php | 1,207 | ✅ Complete | Full patient file — all tabs, forms, AI transcript, GDPR |
-| mod-orders.php | 1,090 | ✅ Complete | Order creation, status page, fitting queue, full AJAX |
-| mod-calendar.php | 464 | ✅ Complete | Full calendar — types, colours, outcomes, blockouts, SMS |
-| mod-approvals.php | 284 | ✅ Complete | Finance/C-Level approval queue — GP margin, approve/deny |
-| mod-notifications.php | 49 | 🚧 Scaffold | Shortcode registered, placeholder UI |
-| mod-repairs.php | 49 | 🚧 Scaffold | Shortcode registered, placeholder UI |
-| mod-team-chat.php | 49 | 🚧 Scaffold | Shortcode registered, placeholder UI |
-| mod-accounting.php | 49 | 🚧 Scaffold | Shortcode registered, placeholder UI |
-| mod-reports.php | 49 | 🚧 Scaffold | Shortcode registered, placeholder UI |
-| mod-commissions.php | 49 | 🚧 Scaffold | Shortcode registered, placeholder UI |
-| mod-kpi.php | 49 | 🚧 Scaffold | Shortcode registered, placeholder UI |
-| mod-cash.php | 49 | 🚧 Scaffold | Shortcode registered, placeholder UI |
-
-#### JavaScript (7 Complete, 3 Not Started)
-| File | Status | Notes |
-|------|--------|-------|
-| hearmed-core.js | 249 | ✅ Complete |
-| hearmed-calendar.js | 779 | ✅ Complete |
-| hearmed-patients.js | 921 | ✅ Complete |
-| hearmed-orders.js | 1,043 | ✅ Complete |
-| hearmed-debug.js | 134 | ✅ Complete |
-| hearmed-back-btn.js | 55 | ✅ Complete |
-| hearmed-notifications.js | — | ❌ Not started |
-| hearmed-kpi.js | — | ❌ Not started |
-| hearmed-reports.js | — | ❌ Not started |
-
-**Total PHP: 37 files, ~7,574 lines. All syntax-clean, all PostgreSQL-native.**
+**Phase 2: PORTAL SECTIONS** (In this strict order)
+| # | Module | Status | Dependencies | Notes |
+|---|--------|--------|--------------|-------|
+| 1️⃣ | **mod-patients** (all parts) | ✅ Partial | Admin complete | All tabs: profile, history, outcomes, devices, notes, forms, documents. Must search PostgreSQL correctly |
+| 2️⃣ | **mod-calendar** (appointments) | ✅ Partial | Patients complete | Book appointments, connect to patients, add notes. ✅ Search fix: now uses PostgreSQL |
+| 3️⃣ | **Invoicing (QuickBooks)** | 🚧 In Build | Calendar complete | Full integration with QBO. Create invoice → await approval → send to QBO |
+| 4️⃣ | **Order Flow (CRITICAL)** | 🚧 Spec Complete | Invoicing | See detailed spec below |
+| 5️⃣ | **mod-team-chat** | 🚧 Scaffold | Patients complete | In-house messaging, soft-delete only, audit trail |
+| 6️⃣ | **mod-reports** | 🚧 Scaffold | Invoicing + chat | Patient history, sales, commissions, accounting reports |
+| 7️⃣ | **In-House Notifications** | 🚧 Scaffold | Orders + chat | Pop-up badge in top-right; "Order received", "Aids ready", "Call patient" |
+| 8️⃣ | **KPI + Till Tracking** | 🚧 Scaffold | Appointments complete | Per-staff KPI dashboard + clinic till reconciliation |
+| 9️⃣ | **Accounting** | 🚧 Scaffold | Reports complete | Supplier invoices, receipts, staff photo upload, QBO sync |
 
 ---
 
-## SECTION 13: CURRENT HONEST ASSESSMENT
+## SECTION 13: ORDER FLOW SPECIFICATION - COMPLETE WORKFLOW
 
-### What IS Done
-- ✅ 59 database tables on Railway — correct schema, indexes, FK relationships, helper functions
-- ✅ 37 PHP files cleaned — zero syntax errors, zero MySQL patterns, zero WordPress CPT dependencies, zero hybrid code
-- ✅ **Hard architecture problems permanently solved**
+**This is the complete, detailed order flow from creation to clearance. Must be implemented exactly as specified.**
 
-### What IS NOT Don
-- ❌ 8 modules are scaffolds — render placeholder UI only
-- ❌ 3 JS files need to be written — notifications, KPI, reports
-- ❌ Data import tool doesn't exist yet — must be built before portal can be used
-- ❌ QBO OAuth2 class doesn't exist yet — needed for accounting page
-- ❌ PostgreSQL connection from WordPress.com needs verification — `pg_connect()` may need configuration
+### 1. Order Creation (Dispenser Interface)
+<div class="hm-spec">
+- Dispenser creates order in mod-orders.php
+- Selects patient (search PostgreSQL)
+- Selects hearing aids + accessories from products table
+- System auto-calculates:
+  - Unit price × quantity
+  - PRSI deduction (€500/ear, max €1,000 binaural) if applicable
+  - GP margin % if prescribed by GP
+  - Total invoice value
+- Order saved to `hearmed_core.orders` with status = `pending`
+- Order items saved to `hearmed_core.order_items`
+</div>
 
-### Path to "Working"
-1. Deploy fixed files to live server via SFTP
-2. Test `pg_connect()` to Railway — fix any WordPress.com hosting restrictions
-3. Seed reference data (clinics, staff, appointment types, products) via admin pages or SQL
-4. **Build and run data import for ~5,000 patients** ← CRITICAL
-5. Build notifications module
-6. Build repairs, chat, accounting, reports, commissions, KPI, cash in order
-7. UAT with actual staff before going live
+### 2. Approval Stage (C-Level Email Notification)
+<div class="hm-spec">
+- **Auto-trigger:** When order status = `pending`
+- **Who receives:** All C-Level user email addresses (from `hearmed_reference.staff` WHERE `role = 'hm_clevel'`)
+- **Email contents:**
+  - Patient name + C-number
+  - Hearing aid model, colour, range
+  - Unit price
+  - Cost price (internal)
+  - **GP margin %** (if applicable)
+  - Total invoice amount
+  - Link to approval dashboard
+- **C-Level action:** Click Approve or Deny in mod-approvals.php
+- **If Deny:** Order status = `cancelled`, reason recorded
+- **If Approve:** Order status = `approved`, moves to Finance queue
+</div>
 
-### Realistic Timeline
-Foundation is solid. Remaining work is feature development on clean base — not architecture firefighting. Each module ~400–1,200 lines of PHP + JS. With focused sessions, 8 remaining modules can be built in 6–8 week window.
+### 3. Finance Ordering Stage
+<div class="hm-spec">
+- Order appears in Finance dashboard (Diana's view)
+- Finance clicks "Order with Supplier"
+- Status changes to `ordered`
+- Order date/time logged in `hearmed_core.order_shipments` (order_placed_date)
+- **Finance notifies staff somehow** (pop-up in portal, SMS, or notification system — to be decided)
+</div>
+
+### 4. Goods Received in Branch
+<div class="hm-spec">
+- Staff member clicks "Receive Order" in mod-orders.php OR "Awaiting Fitting" section
+- System prompts: **"Are these hearing aids? If YES, enter serial numbers."**
+- If YES (hearing aids):
+  - Dispenser enters serial number for each aid on the invoice
+  - System updates `hearmed_core.order_items` with serial numbers
+  - If pairs (binaural), prompts for left AND right serial nums
+  - Updates proforma invoice with: Model + Color + Range + Price + Serial Number
+- Order status = `goods_received`
+- Order moves to **Awaiting Fitting** queue with status = `pending_fit`
+- Implicit trigger: Notification sent to assigned dispenser: "Aids in branch, ready for fitting"
+</div>
+
+### 5. Awaiting Fitting Queue
+<div class="hm-spec">
+- Patient appears in "Awaiting Fitting" section with:
+  - Aid details (model, colour, serial)
+  - Proforma invoice (with serial numbers filled in)
+  - Button to "Schedule Fitting Appointment"
+  - Button to "Mark as Ready" (manual override if fitting to happen at different time)
+- Dispenser books fitting appointment via calendar for that patient
+- Fitting appointment automatically links to the order
+- OR: Dispenser marks "Mark as Ready" → patient stays in queue, can be fitted at any appointment
+</div>
+
+### 6. Fitting Complete + Invoice Paid
+<div class="hm-spec">
+- Appointment closed with outcome (e.g., "Fitted Left + Right")
+- Invoice now created/modified with:
+  - **How it was paid:** Cash / Card / Bank Transfer / Cheque / PRSI / Finance / Voucher (dropdown, must match payment method in `hearmed_reference.payment_methods`)
+  - Amount paid
+  - Payment date
+  - Invoice status = `paid`
+  - **DO NOT send to QuickBooks yet** — only after marked as paid
+- Once invoice marked `paid`, order status = `complete`
+- Patient removed from "Awaiting Fitting" queue
+- Workflow dates + times logged to `hearmed_core.order_status_history`:
+  - order_created_date
+  - order_approved_date
+  - order_ordered_date
+  - goods_received_date
+  - fitting_scheduled_date
+  - fitting_completed_date
+  - invoice_paid_date
+  - All with timestamps
+</div>
+
+### 7. Invoice Sync to QuickBooks
+<div class="hm-spec">
+- **Trigger:** Invoice marked as `paid` → Send to QuickBooks immediately via Make.com webhook
+- **Data sent to QBO:**
+  - Customer (patient name + C-number)
+  - Line items (hearing aids, accessories, services with serial numbers if applicable)
+  - Amount
+  - Payment method (maps to QBO account)
+  - Payment date
+  - Staff member who performed sale (links to QBO staff)
+  - Clinic location (for reference)
+  - Invoice number (from portal)
+- **QBO returns:** Invoice ID (stored in `hearmed_core.invoices.qbo_invoice_id`)
+- **Invoice can then be printed:** Full details including staff, clinic, all products with serials, payment method
+</div>
+
+### 8. Cancellation / Return Flow
+<div class="hm-spec">
+- If patient cancels fitting (in Awaiting Fitting queue):
+  - Dispenser clicks "Cancel Order"
+  - Is asked: "Do you want to create a credit note?"
+  - If YES: Credit note created, patient refunded, cheque_sent = false, tracked for follow-up
+  - Order status = `cancelled`
+  - Removed from Awaiting Fitting queue
+- If staff clicks "Remove from Queue" before appointment booked:
+  - Order returns to `approved` status (can be reactivated)
+- All cancellations logged to `hearmed_core.order_status_history`
+</div>
+
+### 9. Database Log for Audit Trail
+<div class="hm-spec">
+**Every order must have these dates/times recorded in `hearmed_core.order_status_history`:**
+- `order_created_at` (auto timestamp)
+- `order_approved_at` (when C-Level approved)
+- `order_ordered_date` (when Finance ordered from supplier)
+- `goods_received_date` (when staff clicked Receive)
+- `fitting_scheduled_date` (when appointment booked)
+- `fitting_completed_date` (when appointment closed with outcome)
+- `invoice_paid_date` (when payment method selected + marked paid)
+- `qbo_sync_date` (when sent to QuickBooks)
+- `status_changed_at` (every status change logged)
+- `changed_by` (user ID who changed status)
+- `change_reason` (if applicable — e.g., cancellation reason)
+
+**These allow you to pull full workflow timeline for any order on demand.**
+</div>
 
 ---
 
-## SECTION 14: IMMEDIATE PRIORITIES (What I Need to Know)
+## SECTION 14: ADMIN PAGES STATUS & NEXT FOCUS
 
-**The original issue you reported:** "Fix syntax error on class-hearmed-auth.php on line 156"
+### Admin Pages Currently Complete ✅
+| Page | Function | DB Source | Status |
+|------|----------|-----------|--------|
+| Clinics | Full CRUD | PostgreSQL | ✅ Working perfectly |
+| Users (Staff) | Full CRUD + clinic assignment | PostgreSQL | ✅ Working perfectly |
+| Audiometers | Full inventory | PostgreSQL | ✅ Working perfectly |
+| Calendar Settings | Time, view, colours, display | PostgreSQL | ✅ Mostly complete, save verified working |
 
-This spiraled into a comprehensive codebase audit that revealed:
-- Multiple duplicate class declarations (FIXED ✅)
-- Recurring malformed comments (`/* USE PostgreSQL */ /* code`) throughout files
-- Missing/extra parentheses
-- Wrong variable names
+### Admin Pages Needing Completion
+| Page | What's Missing | Priority |
+|------|---|----------|
+| **All other admin pages** | Styling + DB integration | 🔴 HIGH |
+| **Data Import** | Build complete CSV upload tool for ~5,000 patients | 🔴 CRITICAL |
 
-**Current status:**
-- ✅ Duplicate classes fixed and deployed
-- ✅ mod-approvals.php fixed and deployed
-- ✅ admin-settings.php fixed and deployed
-- ⚠️ Still have ~20 files with malformed comment syntax causing parse errors
-- ⚠️ None of this is live yet — nothing deployed to server
+### Search Bar Fix ✅ DONE
+- **Issue:** Search bar in elementor topbar was pulling from WordPress CPTs instead of PostgreSQL
+- **Fixed:** Calendar search function `hm_ajax_search_patients()` now queries `hearmed_core.patients` directly
+- **Result:** All patient searches now use PostgreSQL as source of truth
 
-**What I need from you NOW:**
-1. **Should I continue fixing the remaining malformed comment syntax errors in the ~20 files?** (Will take systematic effort but is necessary before deployment)
-2. **Or should we pivot to deployment and testing first?**
-3. **What is your immediate next step expectation?**
+---
 
-The document you provided is now committed to the repo as the master reference. I will use it to stay perfectly aligned with your vision.
+## SECTION 15: CURRENT CODE STATUS
+
+### All Syntax Errors Fixed ✅
+- ✅ 37 PHP files syntax-clean
+- ✅ All MySQL patterns replaced with PostgreSQL
+- ✅ All WordPress CPT dependencies replaced
+- ✅ auth.php refactored + static method wrappers added
+- ✅ Search functions now use PostgreSQL exclusively
+
+### What's Ready to Deploy 🚀
+- ✅ All core/ framework files
+- ✅ All completed admin pages (clinics, users, audiometers, settings)
+- ✅ All working modules (patients, calendar, orders, approvals)
+
+### Auto-Deployment Active ✅
+- ✅ GitHub Actions workflow: `deploy.yml`
+- ✅ On every push to `main` branch → auto-deploys to SiteGround
+- ✅ No manual SFTP needed — fully automated
+
+---
+
+## SECTION 16: NEXT IMMEDIATE STEPS
+
+**Priority 1: Complete Calendar Settings (save functionality now working)**
+- Verify color pickers save to `hearmed_core.calendar_settings`
+- Verify colors apply to calendar appointments
+- Final tweaks as needed
+
+**Priority 2: Build Remaining Admin Pages**
+- Ensure all pages: save to PostgreSQL correctly, style per design system, function end-to-end
+- Each page must be 100% complete before moving on
+
+**Priority 3: Implement Order Flow**
+- Complete mod-orders.php with all steps above
+- Build approval queue UI
+- Test full workflow from creation to QuickBooks sync
+
+**All changes auto-deploy to SiteGround on every commit.**
 

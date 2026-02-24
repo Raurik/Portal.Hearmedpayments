@@ -230,23 +230,26 @@ function hm_ajax_search_patients() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $q = sanitize_text_field( $_POST['q'] ?? $_POST['query'] ?? '' );
     if ( strlen( $q ) < 2 ) { wp_send_json_success( [] ); return; }
-    $ps = // TODO: USE PostgreSQL: HearMed_DB::get_results()
-    get_posts( [ 'post_type' => 'patient', 'posts_per_page' => 20, 'post_status' => 'publish', 's' => $q ] );
-    $d  = [];
-    foreach ( $ps as $p ) {
-        $fn = // TODO: USE PostgreSQL: Get from table columns
-    get_post_meta( $p->ID, 'first_name',     true );
-        $ln = // TODO: USE PostgreSQL: Get from table columns
-    get_post_meta( $p->ID, 'last_name',      true );
-        $pn = // TODO: USE PostgreSQL: Get from table columns
-    get_post_meta( $p->ID, 'patient_number', true );
+    
+    // PostgreSQL source of truth: hearmed_core.patients
+    $search_term = '%' . $q . '%';
+    $results = HearMed_DB::get_results(
+        "SELECT id, patient_number, first_name, last_name, phone
+         FROM hearmed_core.patients
+         WHERE first_name ILIKE %s OR last_name ILIKE %s OR patient_number ILIKE %s
+         ORDER BY last_name, first_name
+         LIMIT 20",
+        $search_term, $search_term, $search_term
+    );
+    
+    $d = [];
+    foreach ( $results as $p ) {
         $d[] = [
-            'id'             => $p->ID,
-            'name'           => ( $fn && $ln ) ? "$fn $ln" : $p->post_title,
-            'label'          => ( $pn ? "$pn — " : '' ) . ( ( $fn && $ln ) ? "$fn $ln" : $p->post_title ),
-            'phone'          => // TODO: USE PostgreSQL: Get from table columns
-    get_post_meta( $p->ID, 'patient_phone', true ),
-            'patient_number' => $pn,
+            'id'             => $p->id,
+            'name'           => "{$p->first_name} {$p->last_name}",
+            'label'          => ( $p->patient_number ? "{$p->patient_number} — " : '' ) . "{$p->first_name} {$p->last_name}",
+            'phone'          => $p->phone ?? '',
+            'patient_number' => $p->patient_number,
         ];
     }
     wp_send_json_success( $d );
