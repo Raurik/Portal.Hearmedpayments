@@ -9,7 +9,7 @@
    page-level scrollers that cause clipping.
    ============================================================ */
 
-#hm-app {
+#hm-app.hm-patients {
   display: flex !important;
   flex-direction: column !important;
   height: auto !important;
