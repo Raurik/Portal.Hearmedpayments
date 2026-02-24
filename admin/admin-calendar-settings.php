@@ -19,7 +19,6 @@ class HearMed_Admin_Calendar_Settings {
 
         ob_start();
         ?>
-        <link rel="stylesheet" href="<?php echo esc_url(plugins_url('assets/css/calendar-settings.css', dirname(__FILE__))); ?>" />
         <div class="hm-settings-main" id="hm-calendar-settings-app">
             <div class="hm-settings-header">Calendar Settings</div>
             <div class="hm-settings-subtitle">Adjust your scheduling and display preferences.</div>

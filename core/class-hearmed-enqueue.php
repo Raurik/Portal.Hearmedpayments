@@ -14,6 +14,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class HearMed_Enqueue {
+        /**
+         * Enqueue calendar settings assets if shortcode is present
+         */
+        public function maybe_enqueue_calendar_settings() {
+            if ( is_singular() && has_shortcode( get_post()->post_content, 'hearmed_calendar_settings' ) ) {
+                wp_enqueue_style(
+                    'calendar-settings',
+                    HEARMED_URL . 'assets/css/calendar-settings.css',
+                    [ 'hearmed-design' ],
+                    $this->get_file_version( 'assets/css/calendar-settings.css' )
+                );
+                wp_enqueue_script(
+                    'hearmed-calendar-settings',
+                    HEARMED_URL . 'assets/js/hearmed-calendar-settings.js',
+                    [ 'hearmed-core' ],
+                    $this->get_file_version( 'assets/js/hearmed-calendar-settings.js' ),
+                    true
+                );
+            }
+        }
     
     /**
      * Tracks loaded modules to prevent duplicates
@@ -32,6 +52,7 @@ class HearMed_Enqueue {
         // Priority 15 = AFTER Elementor (priority 11) so dependencies exist
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_foundation' ], 15 );
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_modules' ], 16 );
+        add_action( 'wp_enqueue_scripts', [ $this, 'maybe_enqueue_calendar_settings' ], 17 );
     }
     
     /**
