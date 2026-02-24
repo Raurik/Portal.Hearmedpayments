@@ -80,16 +80,34 @@ class HearMed_Admin_Calendar_Settings {
                             </div>
                         </div>
                     </div>
-                    <!-- Block 3: Preview -->
+                    <!-- Block 3: Appointment Style & Preview -->
                     <div class="hm-card">
-                        <div class="hm-card-hd">Preview</div>
+                        <div class="hm-card-hd">Appointment Style</div>
                         <div class="hm-card-body">
-                            <div class="hm-appt-preview-card" id="hs-preview-card">
-                                <div class="hm-appt-body">
-                                    <div class="hm-appt-name" id="hs-preview-name">Joe Bloggs</div>
-                                    <div style="margin:6px 0" id="hs-preview-badges"><span class="hm-badge hm-badge-c">C</span> <span class="hm-badge hm-badge-r">R</span> <span class="hm-badge hm-badge-v">VM</span></div>
-                                    <div class="hm-appt-time" id="hs-preview-time">09:00</div>
-                                    <div class="hm-appt-meta" id="hs-preview-meta">Follow up · Cosgrove's Pharmacy</div>
+                            <div class="hm-srow">
+                                <span class="hm-slbl">Background</span>
+                                <span class="hm-sval"><input type="color" id="hs-appt-bg" name="appt_bg_color" value="#0BB4C4" style="width:36px;height:24px;border:none;"></span>
+                            </div>
+                            <div class="hm-srow">
+                                <span class="hm-slbl">Font</span>
+                                <span class="hm-sval"><input type="color" id="hs-appt-font" name="appt_font_color" value="#ffffff" style="width:36px;height:24px;border:none;"></span>
+                            </div>
+                            <div class="hm-srow">
+                                <span class="hm-slbl">Badge</span>
+                                <span class="hm-sval"><input type="color" id="hs-appt-badge" name="appt_badge_color" value="#3b82f6" style="width:36px;height:24px;border:none;"></span>
+                            </div>
+                            <div class="hm-srow">
+                                <span class="hm-slbl">Meta</span>
+                                <span class="hm-sval"><input type="color" id="hs-appt-meta" name="appt_meta_color" value="#38bdf8" style="width:36px;height:24px;border:none;"></span>
+                            </div>
+                            <div style="margin-top:12px">
+                                <div class="hm-appt-preview-card" id="hs-preview-card" style="width:180px;height:60px;display:flex;flex-direction:column;justify-content:center;">
+                                    <div class="hm-appt-body" style="padding:0;">
+                                        <div class="hm-appt-name" id="hs-preview-name">Joe</div>
+                                        <div style="margin:2px 0" id="hs-preview-badges"><span class="hm-badge hm-badge-c">C</span> <span class="hm-badge hm-badge-r">R</span> <span class="hm-badge hm-badge-v">VM</span></div>
+                                        <div class="hm-appt-time" id="hs-preview-time">09:00</div>
+                                        <div class="hm-appt-meta" id="hs-preview-meta">Follow up · Cosgrove's Pharmacy</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

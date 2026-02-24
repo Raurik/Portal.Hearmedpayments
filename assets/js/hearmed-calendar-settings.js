@@ -15,13 +15,18 @@ var SettingsPage = {
         var fullName = $('#hs-fullName').prop('checked');
         var name = fullName ? 'Joe Bloggs' : 'Joe';
         var outcome = $('input[name="outcome_style"]:checked').val() || 'default';
+        var bg = $('#hs-appt-bg').val() || '#0BB4C4';
+        var font = $('#hs-appt-font').val() || '#ffffff';
+        var badge = $('#hs-appt-badge').val() || '#3b82f6';
+        var meta = $('#hs-appt-meta').val() || '#38bdf8';
 
-        // Update preview elements if present
         var $card = $('#hs-preview-card');
         if ($card.length) {
-            $('#hs-preview-name').text(name);
-            $('#hs-preview-time').text(start);
-            $('#hs-preview-meta').text('Follow up · Cosgrove\'s Pharmacy');
+            $('#hs-preview-name').text(name).css('color', font);
+            $('#hs-preview-time').text(start).css('color', badge);
+            $('#hs-preview-meta').text('Follow up · Cosgrove\'s Pharmacy').css('color', meta);
+            $card.css('background', bg);
+            $card.find('.hm-badge').css({'background': badge, 'color': '#fff'});
             $card.removeClass('outcome-default outcome-small outcome-tag outcome-popover');
             $card.addClass('outcome-' + outcome);
         }

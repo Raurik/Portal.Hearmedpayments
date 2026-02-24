@@ -272,15 +272,19 @@ cfg.slotHpx = slotH;
             var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+a.dispenser_id+'"]');
             if(!$t.length)return;
 
-            var col=a.service_colour||'#3B82F6';
+            var col=a.service_colour||cfg.appt_bg_color||'#3B82F6';
+            var font=cfg.appt_font_color||'#fff';
+            var badge=cfg.appt_badge_color||'#3b82f6';
+            var meta=cfg.appt_meta_color||'#38bdf8';
             var stCls=a.status==='Pending'?' pending':a.status==='Cancelled'?' cancelled':'';
             var tmLbl=cfg.showTimeInline?(a.start_time.substring(0,5)+' '):'';
 
-            var el=$('<div class="hm-appt'+stCls+'" data-id="'+a._ID+'" style="background:'+col+';height:'+h+'px;top:'+off+'px">'+
-                '<div class="hm-appt-svc">'+esc(a.service_name)+'</div>'+
-                '<div class="hm-appt-pt">'+tmLbl+esc(a.patient_name||'No patient')+'</div>'+
-                (h>36&&!cfg.hideEndTime?'<div class="hm-appt-tm">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>':
-                 h>36?'<div class="hm-appt-tm">'+a.start_time.substring(0,5)+'</div>':'')+
+            var el=$('<div class="hm-appt'+stCls+'" data-id="'+a._ID+'" style="background:'+col+';height:'+h+'px;top:'+off+'px;color:'+font+'">'+
+                '<div class="hm-appt-svc" style="color:'+font+'">'+esc(a.service_name)+'</div>'+
+                '<div class="hm-appt-pt" style="color:'+font+'">'+tmLbl+esc(a.patient_name||'No patient')+'</div>'+
+                (h>36&&!cfg.hideEndTime?'<div class="hm-appt-tm" style="color:'+badge+'">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>':
+                 h>36?'<div class="hm-appt-tm" style="color:'+badge+'">'+a.start_time.substring(0,5)+'</div>':'')+
+                '<div class="hm-appt-meta" style="color:'+meta+'">'+esc(a.service_name)+' · '+esc(a.clinic_name||'')+'</div>'+
             '</div>');
             $t.append(el);
             el.on('click',function(e){e.stopPropagation();Cal.showPop(a,this);});
