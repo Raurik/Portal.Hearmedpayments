@@ -1,80 +1,246 @@
-/* Calendar Settings Page Styles (scoped) */
-.hm-settings-main{box-sizing:border-box}
-.hm-settings-main .hm-settings-container{max-width:1100px;margin:24px auto;padding:0 16px}
-.hm-settings-main .hm-settings-header{font-size:1.75rem;font-weight:700;color:#0f172a;margin-bottom:12px}
-.hm-settings-main .hm-settings-subtitle{font-size:1rem;color:#64748b;margin-bottom:20px}
-.hm-settings-main .hm-settings-grid{display:grid;grid-template-columns:1fr 360px;gap:20px}
-.hm-settings-main .hm-settings-cards{display:flex;flex-direction:column;gap:18px}
-.hm-settings-main .hm-settings-card{background:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(15,23,42,0.06);padding:20px;display:flex;flex-direction:column;gap:10px}
-.hm-settings-main .hm-settings-card-hd{font-size:1.1rem;font-weight:600;color:#0f172a;margin-bottom:8px;display:flex;align-items:center;gap:8px}
-.hm-settings-main .hm-settings-card-body{display:flex;flex-direction:column;gap:10px}
-.hm-settings-main .hm-settings-tog{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}
-.hm-settings-main .hm-settings-badge{display:inline-block;padding:4px 10px;border-radius:8px;font-size:.95em;background:#e0e7ef;color:#2563eb;margin-right:8px;font-weight:500}
-.hm-settings-main .hm-settings-preview{background:#f3f4f6;border-radius:8px;min-height:120px;display:flex;align-items:center;justify-content:center;margin-top:12px;overflow:hidden}
-.hm-settings-main .hm-settings-appt-card{background:#fff;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,0.06);padding:14px 18px;display:flex;flex-direction:column;gap:8px;width:300px}
-.hm-settings-main .hm-settings-appt-name{font-size:1.05rem;font-weight:600;color:#374151}
-.hm-settings-main .hm-settings-appt-badges{margin-bottom:6px;display:flex;gap:6px}
-.hm-settings-main .hm-settings-appt-time{font-size:1rem;color:#2563eb;font-weight:600}
-.hm-settings-main .hm-settings-appt-meta{font-size:.95rem;color:#64748b}
+/* ============================================================
+   HEARMED – CALENDAR SETTINGS (Pixel Accurate)
+   Scoped to #hm-app
+   ============================================================ */
 
-/* Refined Calendar Settings Page Styles */
-.hm-settings-main .hm-settings-card {
-  background: var(--hm-bg);
-  border: 1px solid var(--hm-border);
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+/* ============================================================
+   PAGE BACKGROUND
+   ============================================================ */
+
+#hm-app {
+  background: #f8fafc;
+  padding: 24px;
 }
 
-.hm-settings-main .hm-settings-card-hd {
-  font-size: 1.25rem;
-  font-weight: bold;
-  color: var(--hm-text);
-  margin-bottom: 12px;
+/* ============================================================
+   PAGE HEADER
+   ============================================================ */
+
+#hm-app .hm-page-header {
+  margin-bottom: 24px;
 }
 
-.hm-settings-main .hm-settings-card-body {
+#hm-app .hm-page-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #1e293b;
+  border-left: none;
+  padding-left: 0;
+}
+
+#hm-app .hm-page-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin-top: 4px;
+  padding-left: 0;
+}
+
+/* ============================================================
+   GRID LAYOUT
+   ============================================================ */
+
+#hm-app .hm-card-grid--3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 360px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  #hm-app .hm-card-grid--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   CARD STYLE
+   ============================================================ */
+
+#hm-app .hm-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+/* Card heading */
+#hm-app .hm-card-hd {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 18px;
+}
+
+/* ============================================================
+   SETTINGS ROW STRUCTURE
+   ============================================================ */
+
+#hm-app .hm-srow {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 16px;
 }
 
-.hm-settings-main .hm-check {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--hm-teal);
-  border-radius: 4px;
-  background-color: var(--hm-bg);
+#hm-app .hm-slbl {
+  font-size: 14px;
+  color: #334155;
+  flex: 1;
+}
+
+#hm-app .hm-sval {
+  width: 160px;
+}
+
+/* Inputs */
+#hm-app input,
+#hm-app select {
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+/* ============================================================
+   CHECKBOX (toggle look like screenshot)
+   ============================================================ */
+
+#hm-app .hm-day-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #334155;
+  cursor: pointer;
+}
+
+#hm-app .hm-day-check input {
+  display: none;
+}
+
+#hm-app .hm-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1.5px solid #cbd5e1;
+  background: #fff;
   position: relative;
+  transition: all 0.15s ease;
 }
 
-.hm-settings-main .hm-check::after {
-  content: '';
-  display: block;
-  width: 6px;
+#hm-app .hm-day-check input:checked + .hm-check {
+  background: var(--hm-teal);
+  border-color: var(--hm-teal);
+}
+
+#hm-app .hm-day-check input:checked + .hm-check::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 5px;
   height: 10px;
-  border: solid var(--hm-teal);
+  border: solid white;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
-  position: absolute;
-  top: 2px;
-  left: 5px;
 }
 
-.hm-settings-main .hm-settings-appt-card {
-  background: var(--hm-bg);
-  border: 1px solid var(--hm-border);
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+/* ============================================================
+   RADIO GROUP
+   ============================================================ */
+
+#hm-app input[type="radio"] {
+  accent-color: var(--hm-teal);
+  margin-right: 6px;
+}
+
+/* ============================================================
+   PREVIEW CARD
+   ============================================================ */
+
+#hm-app .hm-appt-preview-card {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+}
+
+/* Gradient header */
+#hm-app .hm-appt-preview-card::before {
+  content: "Outcome";
+  display: block;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background: linear-gradient(135deg, #22c55e 0%, #0ea5a4 100%);
+}
+
+/* Body */
+#hm-app .hm-appt-body {
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-/* small screen adjustments */
-@media(max-width:880px){
-  .hm-settings-main .hm-settings-grid{grid-template-columns:1fr}
-  .hm-settings-main .hm-settings-cards{order:2}
+/* Name */
+#hm-app .hm-appt-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Badges */
+#hm-app #hs-preview-badges {
+  display: flex;
+  gap: 6px;
+}
+
+#hm-app .hm-badge {
+  height: 22px;
+  min-width: 22px;
+  padding: 0 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+}
+
+#hm-app .hm-badge-c { background: #3b82f6; }
+#hm-app .hm-badge-r { background: #6366f1; }
+#hm-app .hm-badge-v { background: #8b5cf6; }
+
+/* Time */
+#hm-app .hm-appt-time {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0ea5a4;
+}
+
+/* Meta */
+#hm-app .hm-appt-meta {
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* ============================================================
+   SAVE BUTTON
+   ============================================================ */
+
+#hm-app #hm-settings-save {
+  padding: 10px 20px;
+  font-size: 14px;
+  border-radius: 8px;
+  background: var(--hm-teal);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+
+#hm-app #hm-settings-save:hover {
+  background: var(--hm-teal-hover);
 }
