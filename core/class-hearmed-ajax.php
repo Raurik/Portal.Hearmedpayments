@@ -1,187 +1,179 @@
 <?php
 /**
  * HearMed AJAX Handler
- * 
+ *
  * Central dispatcher for all AJAX requests.
- * Module-specific AJAX handlers register with this class.
- * 
+ * All module AJAX actions are registered here — one place, no surprises.
+ *
  * @package HearMed_Portal
- * @since 4.0.0
+ * @since   5.0.0
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 class HearMed_Ajax {
-    
-    /**
-     * Constructor - Register AJAX actions
-     */
-    public function __construct() {
-        // Load legacy module AJAX files for backward compatibility
-        $this->load_legacy_ajax();
 
-        // Core AJAX handlers
-        add_action( 'wp_ajax_hm_acknowledge_privacy_notice', [ $this, 'acknowledge_privacy_notice' ] );
+    public function __construct() {
+        $this->load_modules();
+        $this->register_all();
     }
-    
-    /**
-     * Load legacy AJAX handlers from module files
-     * 
-     * For backward compatibility, we load the old mod-*.php files
-     * which contain their own add_action('wp_ajax_*') registrations
-     */
-    private function load_legacy_ajax() {
-        // Load legacy module files (they self-register AJAX handlers)
-        $module_files = [
+
+    // -------------------------------------------------------------------------
+    // Load all module files so their classes are available
+    // -------------------------------------------------------------------------
+    private function load_modules() {
+        $modules = [
             'mod-calendar.php',
             'mod-patients.php',
             'mod-orders.php',
             'mod-accounting.php',
-            'mod-reports.php',
-            'mod-repairs.php',
-            'mod-notifications.php',
             'mod-approvals.php',
+            'mod-notifications.php',
+            'mod-repairs.php',
+            'mod-reports.php',
+            'mod-commissions.php',
             'mod-kpi.php',
             'mod-cash.php',
-            'mod-commissions.php',
             'mod-team-chat.php',
         ];
-        
-        foreach ( $module_files as $file ) {
-            $file_path = HEARMED_PATH . 'modules/' . $file;
-            if ( file_exists( $file_path ) ) {
-                require_once $file_path;
+
+        foreach ( $modules as $file ) {
+            $path = HEARMED_PATH . 'modules/' . $file;
+            if ( file_exists( $path ) ) {
+                require_once $path;
             }
         }
+
+        // QBO class lives in core
+        $qbo = HEARMED_PATH . 'core/class-hearmed-qbo.php';
+        if ( file_exists( $qbo ) ) {
+            require_once $qbo;
+        }
     }
-    
-    /**
-     * Register an AJAX action
-     * 
-     * @param string $action Action name (without hm_ prefix)
-     * @param callable $callback Callback function
-     * @param bool $nopriv Allow non-logged-in users (default: false)
-     */
+
+    // -------------------------------------------------------------------------
+    // Register every AJAX action in one place
+    // -------------------------------------------------------------------------
+    private function register_all() {
+
+        // ── Core / Auth ───────────────────────────────────────────────────────
+        add_action( 'wp_ajax_hm_acknowledge_privacy_notice', [ $this, 'acknowledge_privacy_notice' ] );
+
+        // ── Orders — full 6-stage workflow ────────────────────────────────────
+        add_action( 'wp_ajax_hm_create_order',   [ 'HearMed_Orders', 'ajax_create_order' ] );   // Stage 1
+        add_action( 'wp_ajax_hm_approve_order',  [ 'HearMed_Orders', 'ajax_approve_order' ] );  // Stage 2a
+        add_action( 'wp_ajax_hm_reject_order',   [ 'HearMed_Orders', 'ajax_reject_order' ] );   // Stage 2b
+        add_action( 'wp_ajax_hm_mark_ordered',   [ 'HearMed_Orders', 'ajax_mark_ordered' ] );   // Stage 3
+        add_action( 'wp_ajax_hm_mark_received',  [ 'HearMed_Orders', 'ajax_mark_received' ] );  // Stage 4
+        add_action( 'wp_ajax_hm_save_serials',   [ 'HearMed_Orders', 'ajax_save_serials' ] );   // Stage 4→5
+        add_action( 'wp_ajax_hm_complete_order', [ 'HearMed_Orders', 'ajax_complete_order' ] ); // Stage 6 (fires QBO)
+        add_action( 'wp_ajax_hm_patient_search', [ 'HearMed_Orders', 'ajax_patient_search' ] ); // Autocomplete
+
+        // ── Accounting / QuickBooks ───────────────────────────────────────────
+        add_action( 'wp_ajax_hm_retry_qbo_sync', [ 'HearMed_Accounting', 'ajax_retry_sync' ] );
+
+        // ── Calendar ─────────────────────────────────────────────────────────
+        // Calendar registers its own handlers inside mod-calendar.php
+        // (legacy pattern kept until calendar is refactored)
+
+        // ── Patients ─────────────────────────────────────────────────────────
+        // Patients registers its own handlers inside mod-patients.php
+        // (legacy pattern kept until patients is refactored)
+
+        // ── Approvals ────────────────────────────────────────────────────────
+        // Approvals registers its own handlers inside mod-approvals.php
+
+        // ── Notifications (registered when module is built) ───────────────────
+        // add_action( 'wp_ajax_hm_mark_notification_read', [ 'HearMed_Notifications', 'ajax_mark_read' ] );
+        // add_action( 'wp_ajax_hm_dismiss_notification',   [ 'HearMed_Notifications', 'ajax_dismiss' ] );
+
+        // ── Repairs (registered when module is built) ─────────────────────────
+        // add_action( 'wp_ajax_hm_create_repair',   [ 'HearMed_Repairs', 'ajax_create' ] );
+        // add_action( 'wp_ajax_hm_update_repair',   [ 'HearMed_Repairs', 'ajax_update' ] );
+
+        // ── Team Chat (registered when module is built) ───────────────────────
+        // add_action( 'wp_ajax_hm_send_message',    [ 'HearMed_Chat', 'ajax_send' ] );
+        // add_action( 'wp_ajax_hm_get_messages',    [ 'HearMed_Chat', 'ajax_get' ] );
+
+        // ── Reports / Commissions / KPI / Cash (registered when built) ────────
+        // add_action( 'wp_ajax_hm_get_report',      [ 'HearMed_Reports',     'ajax_get' ] );
+        // add_action( 'wp_ajax_hm_get_commissions', [ 'HearMed_Commissions', 'ajax_get' ] );
+        // add_action( 'wp_ajax_hm_get_kpi',         [ 'HearMed_KPI',         'ajax_get' ] );
+    }
+
+    // -------------------------------------------------------------------------
+    // Helper: register a single action (used by modules that self-register)
+    // -------------------------------------------------------------------------
     public static function register( $action, $callback, $nopriv = false ) {
         add_action( 'wp_ajax_hm_' . $action, $callback );
-        
         if ( $nopriv ) {
             add_action( 'wp_ajax_nopriv_hm_' . $action, $callback );
         }
     }
-    
-    /**
-     * Verify nonce for AJAX request
-     * 
-     * @param string $nonce_field Nonce field name (default: nonce)
-     * @return bool True if valid
-     */
+
+    // -------------------------------------------------------------------------
+    // Helper: verify nonce
+    // -------------------------------------------------------------------------
     public static function verify_nonce( $nonce_field = 'nonce' ) {
-        if ( ! isset( $_POST[ $nonce_field ] ) ) {
-            wp_send_json_error( 'Missing nonce' );
-            exit;
+        if ( empty( $_POST[ $nonce_field ] ) ) {
+            wp_send_json_error( 'Missing nonce' ); exit;
         }
-        
-        if ( ! wp_verify_nonce( $_POST[ $nonce_field ], 'hm_nonce' ) ) {
-            wp_send_json_error( 'Invalid nonce' );
-            exit;
+        if ( ! wp_verify_nonce( $_POST[ $nonce_field ], 'hearmed_nonce' ) ) {
+            wp_send_json_error( 'Invalid nonce' ); exit;
         }
-        
         return true;
-    }
-    
-    /**
-     * Check user capability for AJAX request
-     * 
-     * @param string $capability Required capability
-     * @return bool True if authorized
-     */
-    public static function check_capability( $capability ) {
-        $auth = new HearMed_Auth();
-        
-        if ( ! $auth->can( $capability ) ) {
-            wp_send_json_error( 'Unauthorized' );
-            exit;
-        }
-        
-        return true;
-    }
-    
-    /**
-     * Get POST data with sanitization
-     * 
-     * @param string $key Data key
-     * @param mixed $default Default value
-     * @param string $sanitize Sanitization method (text|email|int|float|html)
-     * @return mixed Sanitized value
-     */
-    public static function get_post( $key, $default = '', $sanitize = 'text' ) {
-        if ( ! isset( $_POST[ $key ] ) ) {
-            return $default;
-        }
-        
-        $value = $_POST[ $key ];
-        
-        switch ( $sanitize ) {
-            case 'email':
-                return sanitize_email( $value );
-            case 'int':
-                return intval( $value );
-            case 'float':
-                return floatval( $value );
-            case 'html':
-                return wp_kses_post( $value );
-            case 'text':
-            default:
-                return sanitize_text_field( $value );
-        }
-    }
-    
-    /**
-     * Send JSON success response
-     * 
-     * @param mixed $data Response data
-     * @param int $status_code HTTP status code
-     */
-    public static function success( $data = null, $status_code = 200 ) {
-        wp_send_json_success( $data, $status_code );
-        exit;
-    }
-    
-    /**
-     * Send JSON error response
-     * 
-     * @param string $message Error message
-     * @param mixed $data Additional error data
-     * @param int $status_code HTTP status code
-     */
-    public static function error( $message, $data = null, $status_code = 400 ) {
-        wp_send_json_error([
-            'message' => $message,
-            'data' => $data,
-        ], $status_code );
-        exit;
     }
 
-    /**
-     * AJAX handler: acknowledge privacy notice
-     *
-     * Records that the current user has read and accepted the Staff Data
-     * Processing Notice so they can proceed into the portal.
-     */
+    // -------------------------------------------------------------------------
+    // Helper: check capability
+    // -------------------------------------------------------------------------
+    public static function check_capability( $capability ) {
+        if ( ! HearMed_Auth::can( $capability ) ) {
+            wp_send_json_error( 'Unauthorized' ); exit;
+        }
+        return true;
+    }
+
+    // -------------------------------------------------------------------------
+    // Helper: get sanitised POST value
+    // -------------------------------------------------------------------------
+    public static function get_post( $key, $default = '', $sanitize = 'text' ) {
+        if ( ! isset( $_POST[ $key ] ) ) return $default;
+        $value = $_POST[ $key ];
+        switch ( $sanitize ) {
+            case 'email': return sanitize_email( $value );
+            case 'int':   return intval( $value );
+            case 'float': return floatval( $value );
+            case 'html':  return wp_kses_post( $value );
+            default:      return sanitize_text_field( $value );
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Helper: success response
+    // -------------------------------------------------------------------------
+    public static function success( $data = null, $status_code = 200 ) {
+        wp_send_json_success( $data, $status_code ); exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // Helper: error response
+    // -------------------------------------------------------------------------
+    public static function error( $message, $data = null, $status_code = 400 ) {
+        wp_send_json_error( [ 'message' => $message, 'data' => $data ], $status_code ); exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // Privacy notice acknowledgement
+    // -------------------------------------------------------------------------
     public function acknowledge_privacy_notice() {
-        check_ajax_referer( 'hm_nonce', 'nonce' );
+        check_ajax_referer( 'hearmed_nonce', 'nonce' );
 
         if ( ! is_user_logged_in() ) {
-            wp_send_json_error( 'Unauthorized' );
-            return;
+            wp_send_json_error( 'Unauthorized' ); return;
         }
 
-        $user_id = get_current_user_id();
-        update_user_meta( $user_id, 'hm_privacy_notice_accepted', current_time( 'mysql' ) );
-
+        update_user_meta( get_current_user_id(), 'hm_privacy_notice_accepted', current_time('mysql') );
         wp_send_json_success();
     }
 }
