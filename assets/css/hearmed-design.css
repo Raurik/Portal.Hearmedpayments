@@ -555,3 +555,47 @@
 /* ============================================================================
    END OF DESIGN SYSTEM
    ============================================================================ */
+
+/* ==========================================================================
+   TICKS AND ICONS
+   ========================================================================== */
+
+/* Tick Styles */
+.hm-check {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--hm-teal);
+  border-radius: 4px;
+  background-color: var(--hm-bg);
+  position: relative;
+}
+
+.hm-check::after {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 10px;
+  border: solid var(--hm-teal);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  position: absolute;
+  top: 2px;
+  left: 5px;
+}
+
+/* Minimal Teal Icon */
+.hm-icon {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background-color: var(--hm-teal);
+  mask: url('/assets/icons/minimal-icon.svg') no-repeat center;
+  -webkit-mask: url('/assets/icons/minimal-icon.svg') no-repeat center;
+  mask-size: contain;
+  -webkit-mask-size: contain;
+}
+
+.hm-icon:hover {
+  background-color: var(--hm-teal-hover);
+}

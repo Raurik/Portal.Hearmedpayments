@@ -42,10 +42,42 @@ class HearMed_Admin_Calendar_Settings {
                     <div class="hm-card">
                         <div class="hm-card-hd">Display Preferences</div>
                         <div class="hm-card-body">
-                            <div class="hm-srow"><label class="hm-day-check"><input id="hs-timeInline" name="show_time_inline" type="checkbox"> <span class="hm-check"></span> Display time inline with patient name</label></div>
-                            <div class="hm-srow"><label class="hm-day-check"><input id="hs-hideEnd" name="hide_end_time" type="checkbox" checked> <span class="hm-check"></span> Hide appointment end time</label></div>
-                            <div class="hm-srow"><span class="hm-slbl">Outcome style</span><span class="hm-sval"><label><input type="radio" name="outcome_style" value="default" checked> <span class="hm-check"></span> Default</label> <label><input type="radio" name="outcome_style" value="small"> <span class="hm-check"></span> Small</label></span></div>
-                            <div class="hm-srow"><label class="hm-day-check"><input id="hs-fullName" name="display_full_name" type="checkbox"> <span class="hm-check"></span> Display full resource name</label></div>
+                            <div class="hm-srow">
+                                <label class="hm-day-check">
+                                    <input id="hs-timeInline" name="show_time_inline" type="checkbox">
+                                    <span class="hm-check"></span>
+                                    Display time inline with patient name
+                                </label>
+                            </div>
+                            <div class="hm-srow">
+                                <label class="hm-day-check">
+                                    <input id="hs-hideEnd" name="hide_end_time" type="checkbox" checked>
+                                    <span class="hm-check"></span>
+                                    Hide appointment end time
+                                </label>
+                            </div>
+                            <div class="hm-srow">
+                                <span class="hm-slbl">Outcome style</span>
+                                <span class="hm-sval">
+                                    <label>
+                                        <input type="radio" name="outcome_style" value="default" checked>
+                                        <span class="hm-check"></span>
+                                        Default
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="outcome_style" value="small">
+                                        <span class="hm-check"></span>
+                                        Small
+                                    </label>
+                                </span>
+                            </div>
+                            <div class="hm-srow">
+                                <label class="hm-day-check">
+                                    <input id="hs-fullName" name="display_full_name" type="checkbox">
+                                    <span class="hm-check"></span>
+                                    Display full resource name
+                                </label>
+                            </div>
                         </div>
                     </div>
                     <!-- Block 3: Preview -->
