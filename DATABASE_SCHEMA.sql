@@ -742,6 +742,17 @@ CREATE TABLE hearmed_core.staff_absences (
 -- SCHEMA: hearmed_reference
 -- ============================================================
 
+CREATE TABLE hearmed_reference.roles (
+    id              bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    role_name       character varying(100) NOT NULL UNIQUE,
+    display_name    character varying(150) NOT NULL,
+    description     text,
+    permissions     jsonb DEFAULT '[]'::jsonb,
+    is_active       boolean DEFAULT true,
+    created_at      timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at      timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE hearmed_reference.clinics (
     id            bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     clinic_name   character varying(200) NOT NULL,

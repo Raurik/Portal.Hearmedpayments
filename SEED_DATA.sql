@@ -21,6 +21,19 @@ INSERT INTO hearmed_reference.clinics
 VALUES
 ('HearMed Dublin', '#0BB4C4', '#FFFFFF', '123 Main Street', 'Dublin', 'Dublin', '+353 1 234 5678', true, NOW(), 'system');
 
+-- ========================================================
+-- ROLES (hearmed_reference.roles) — Default roles
+-- ========================================================
+INSERT INTO hearmed_reference.roles
+(role_name, display_name, description, permissions, is_active)
+VALUES
+('admin', 'Administrator', 'Full system access', '["view_all", "create_all", "edit_all", "delete_all", "manage_staff", "manage_roles"]'::jsonb, true),
+('manager', 'Manager', 'Clinic management and staff oversight', '["view_own_clinic", "create_appointments", "edit_own_clinic", "manage_staff"]'::jsonb, true),
+('dispenser', 'Dispenser', 'Dispense healthcare products and services', '["view_appointments", "dispense_products", "record_outcomes"]'::jsonb, true),
+('audiologist', 'Audiologist', 'Perform audiological services and assessments', '["view_patients", "create_notes", "order_tests", "record_assessments"]'::jsonb, true),
+('receptionist', 'Receptionist', 'Reception and appointment scheduling', '["view_patients", "create_appointments", "manage_calendar"]'::jsonb, true),
+('finance', 'Finance Officer', 'Invoice and payment management', '["view_invoices", "edit_invoices", "record_payments", "generate_reports"]'::jsonb, true);
+
 -- Get the clinic ID for use in subsequent inserts
 DO $$
 DECLARE

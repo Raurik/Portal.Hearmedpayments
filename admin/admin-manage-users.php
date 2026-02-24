@@ -37,6 +37,36 @@ class HearMed_Admin_Manage_Users {
         ) ?: [];
     }
 
+    private function get_roles() {
+        return HearMed_DB::get_results(
+            "SELECT id, role_name, display_name
+             FROM hearmed_reference.roles
+             WHERE is_active = true
+             ORDER BY display_name"
+        ) ?: [];
+    }
+
+    private function get_available_wp_user_ids() {
+        global $wpdb;
+        // Get all WP user IDs that are already assigned to staff
+        $assigned = HearMed_DB::get_results(
+            "SELECT wp_user_id FROM hearmed_reference.staff WHERE wp_user_id IS NOT NULL"
+        ) ?: [];
+        $assigned_ids = array_map(function($s) { return (int)$s->wp_user_id; }, $assigned);
+
+        // Get all WP users
+        $all_users = $wpdb->get_results("SELECT ID FROM $wpdb->users ORDER BY ID");
+        
+        // Find first available WP user not assigned to staff
+        foreach ($all_users as $user) {
+            if (!in_array((int)$user->ID, $assigned_ids)) {
+                return (int)$user->ID;
+            }
+        }
+        
+        return null; // No available users
+    }
+
     private function get_staff_clinics() {
         return HearMed_DB::get_results(
             "SELECT staff_id, clinic_id, is_primary_clinic
@@ -50,7 +80,9 @@ class HearMed_Admin_Manage_Users {
         $staff = $this->get_staff();
         
         $clinics = $this->get_clinics();
+        $roles = $this->get_roles();
         $staff_clinics = $this->get_staff_clinics();
+        $first_available_wp_user_id = $this->get_available_wp_user_ids();
 
         $clinic_map = [];
         foreach ($clinics as $c) {
@@ -176,7 +208,12 @@ class HearMed_Admin_Manage_Users {
                         <div class="hm-form-row">
                             <div class="hm-form-group">
                                 <label>Role *</label>
-                                <input type="text" id="hmu-role" placeholder="e.g. Dispenser, Admin">
+                                <select id="hmu-role">
+                                    <option value="">— Select Role —</option>
+                                    <?php foreach ($roles as $r): ?>
+                                        <option value="<?php echo esc_attr($r->role_name); ?>"><?php echo esc_html($r->display_name); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
                             <div class="hm-form-group">
                                 <label>Employee Number</label>
@@ -244,7 +281,8 @@ class HearMed_Admin_Manage_Users {
                         <div class="hm-form-row">
                             <div class="hm-form-group">
                                 <label>Set New Password <span id="hmu-pass-req" style="color:#ef4444;">*</span></label>
-                                <input type="password" id="hmu-pass" placeholder="Required for new staff">
+                                <input type="password" id="hmu-pass" placeholder="Required for new staff" onkeyup="hmUsers.checkPasswordStrength()">
+                                <div id="hmu-pass-strength" style="font-size:12px;color:#dc2626;margin-top:4px;font-weight:500;"></div>
                             </div>
                             <div class="hm-form-group">
                                 <label>Confirm Password <span id="hmu-pass2-req" style="color:#ef4444;display:none;">*</span></label>
@@ -253,7 +291,7 @@ class HearMed_Admin_Manage_Users {
                         </div>
                         <div class="hm-form-row">
                             <div class="hm-form-group" style="font-size:12px;color:#64748b;" id="hmu-passes-help">
-                                <strong>New staff:</strong> Password required. Will be marked temporary so user must change on first login.<br>
+                                <strong>New staff:</strong> Password required. Must have 8+ chars, 1 uppercase, 1 special char. Will be marked temporary so user must change on first login.<br>
                                 <strong>Edit staff:</strong> Password optional. Leave blank to keep current password.
                             </div>
                         </div>
@@ -269,7 +307,36 @@ class HearMed_Admin_Manage_Users {
         <script>
         var hmUsers = {
             clinics: <?php echo json_encode(array_map(function($c){ return ['id'=>(int)$c->id,'name'=>$c->clinic_name]; }, $clinics), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>,
+            roles: <?php echo json_encode(array_map(function($r){ return ['name'=>$r->role_name,'display'=>$r->display_name]; }, $roles), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>,
+            firstAvailableWpUserId: <?php echo $first_available_wp_user_id ? json_encode((int)$first_available_wp_user_id) : 'null'; ?>,
             isNewStaff: false,
+            validatePassword: function(pass) {
+                // At least 8 characters
+                if (pass.length < 8) return 'At least 8 characters';
+                // At least one uppercase letter
+                if (!/[A-Z]/.test(pass)) return 'At least one uppercase letter';
+                // At least one special character
+                if (!/[!@#$%^&*()_\-=+\[\]{}|;:'",.<>?/\\]/.test(pass)) return 'At least one special character (!@#$%^&* etc)';
+                return null; // Valid
+            },
+            checkPasswordStrength: function() {
+                var pass = document.getElementById('hmu-pass').value;
+                var feedback = document.getElementById('hmu-pass-strength');
+                
+                if (!pass) {
+                    feedback.textContent = '';
+                    return;
+                }
+                
+                var error = this.validatePassword(pass);
+                if (error) {
+                    feedback.textContent = '⚠ ' + error;
+                    feedback.style.color = '#dc2626';
+                } else {
+                    feedback.textContent = '✓ Strong password';
+                    feedback.style.color = '#16a34a';
+                }
+            },
             open: function(data) {
                 var isEdit = !!(data && data.id);
                 this.isNewStaff = !isEdit;
@@ -283,7 +350,8 @@ class HearMed_Admin_Manage_Users {
                 document.getElementById('hmu-role').value = isEdit ? (data.role || '') : '';
                 document.getElementById('hmu-emp').value = isEdit ? (data.employee_number || '') : '';
                 document.getElementById('hmu-hire').value = isEdit ? (data.hire_date || '') : '';
-                document.getElementById('hmu-wp').value = isEdit ? (data.wp_user_id || '') : '';
+                // Auto-populate WP user ID only for new staff
+                document.getElementById('hmu-wp').value = isEdit ? (data.wp_user_id || '') : (this.firstAvailableWpUserId || '');
                 document.getElementById('hmu-active').checked = isEdit ? !!data.is_active : true;
                 document.getElementById('hmu-username').value = isEdit ? (data.username || data.email || '') : '';
                 document.getElementById('hmu-2fa').checked = isEdit ? !!data.two_factor_enabled : false;
@@ -293,6 +361,7 @@ class HearMed_Admin_Manage_Users {
                 document.getElementById('hmu-pass').placeholder = this.isNewStaff ? 'Required' : 'Leave blank to keep current';
                 document.getElementById('hmu-pass-req').style.display = this.isNewStaff ? 'inline' : 'none';
                 document.getElementById('hmu-pass2-req').style.display = this.isNewStaff ? 'inline' : 'none';
+                document.getElementById('hmu-pass-strength').textContent = '';
                 hmUsers.toggleSecret();
 
                 document.querySelectorAll('.hm-staff-clinic').forEach(function(cb) {
@@ -357,8 +426,10 @@ class HearMed_Admin_Manage_Users {
                 
                 // Password validation if provided
                 if (pass || pass2) {
-                    if (pass.length < 8) {
-                        alert('Password must be at least 8 characters.');
+                    // Check password meets requirements
+                    var passError = this.validatePassword(pass);
+                    if (passError) {
+                        alert('Password error: ' + passError);
                         return;
                     }
                     if (pass !== pass2) {
@@ -435,6 +506,28 @@ class HearMed_Admin_Manage_Users {
 
         if (!$first || !$last || !$email || !$role) { wp_send_json_error('Missing fields'); return; }
 
+        // Validate password if provided (backend check)
+        $new_password = (string) ($_POST['new_password'] ?? '');
+        $is_new_staff = intval($_POST['is_new_staff'] ?? 0) === 1;
+        
+        if ($new_password !== '') {
+            if (strlen($new_password) < 8) {
+                wp_send_json_error('Password must be at least 8 characters');
+                return;
+            }
+            if (!preg_match('/[A-Z]/', $new_password)) {
+                wp_send_json_error('Password must contain at least one uppercase letter');
+                return;
+            }
+            if (!preg_match('/[!@#$%^&*()_\-=+\[\]{}|;:\'",.><?\\/\\\\]/', $new_password)) {
+                wp_send_json_error('Password must contain at least one special character');
+                return;
+            }
+        } elseif ($is_new_staff) {
+            wp_send_json_error('Password is required when creating new staff');
+            return;
+        }
+
         $data = [
             'first_name' => $first,
             'last_name' => $last,
@@ -509,16 +602,7 @@ class HearMed_Admin_Manage_Users {
             return;
         }
 
-        // For NEW staff (create), password is REQUIRED
-        // For EDIT, password is optional (only update if provided)
-        $new_password = (string) ($_POST['new_password'] ?? '');
-        $is_new_staff = intval($_POST['is_new_staff'] ?? 0) === 1;
-        
-        if ($is_new_staff && $new_password === '') {
-            wp_send_json_error('Password is required when creating new staff');
-            return;
-        }
-        
+        // Password handling: set if provided
         if ($new_password !== '') {
             // When admin sets password on creation, mark as temp so user must change on first login
             $is_temp = $is_new_staff ? true : false;
