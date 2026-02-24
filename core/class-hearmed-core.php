@@ -156,14 +156,14 @@ class HearMed_Core {
     /**
      * Get the full database table name for a given slug.
      *
-     * NOW RETURNS POSTGRESQL SCHEMA.TABLE FORMAT!
-     * Uses mapping from HearMed_PG::table()
+     * Returns PostgreSQL schema.table format.
+     * Uses mapping from HearMed_DB::table()
      *
      * @param string $slug Table slug (e.g. 'appointments', 'calendar_settings')
      * @return string Full table name with schema
      */
     public static function table( $slug ) {
-        return HearMed_PG::table( $slug );
+        return HearMed_DB::table( $slug );
     }
 
     /**
