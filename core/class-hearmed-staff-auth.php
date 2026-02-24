@@ -64,7 +64,7 @@ class HearMed_Staff_Auth {
 
         // Don't auto-set password - admin must explicitly set on creation
         // password_hash stays NULL until first password is set
-        HearMed_DB::insert(
+        $insert_result = HearMed_DB::insert(
             'hearmed_reference.staff_auth',
             [
                 'staff_id' => $staff_id,
@@ -76,8 +76,17 @@ class HearMed_Staff_Auth {
                 'updated_at' => current_time( 'mysql' ),
             ]
         );
+        
+        if (!$insert_result) {
+            error_log('[HearMed_Staff_Auth] Failed to insert staff_auth for staff_id=' . $staff_id . ', error: ' . HearMed_DB::last_error());
+            return null;
+        }
 
-        return self::get_auth_by_staff_id( $staff_id );
+        $auth = self::get_auth_by_staff_id( $staff_id );
+        if (!$auth) {
+            error_log('[HearMed_Staff_Auth] Insert succeeded but get_auth_by_staff_id returned null for staff_id=' . $staff_id);
+        }
+        return $auth;
     }
 
     public static function set_password( $staff_id, $password, $is_temp = false ) {

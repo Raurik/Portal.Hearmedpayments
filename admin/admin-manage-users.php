@@ -529,6 +529,12 @@ class HearMed_Admin_Manage_Users {
 
         $username = sanitize_text_field($_POST['username'] ?? $email);
         $auth = HearMed_Staff_Auth::ensure_auth_for_staff($id, $email, $username);
+        
+        if (!$auth) {
+            error_log('[HearMed] Failed to create staff_auth for staff_id=' . $id . ', error: ' . HearMed_DB::last_error());
+            wp_send_json_error('Failed to create staff authentication record: ' . (HearMed_DB::last_error() ?: 'Unknown error'));
+            return;
+        }
 
         // For NEW staff (create), password is REQUIRED
         // For EDIT, password is optional (only update if provided)
