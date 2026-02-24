@@ -19,75 +19,54 @@ class HearMed_Admin_Calendar_Settings {
 
         ob_start();
         ?>
-        <div class="hm-settings-main" id="hm-calendar-settings-app">
-            <div class="hm-settings-header">Calendar Settings</div>
-            <div class="hm-settings-subtitle">Adjust your scheduling and display preferences.</div>
-            <div class="hm-settings-grid">
-                <div class="hm-settings-cards">
-                    <div class="hm-settings-card">
-                        <div class="hm-settings-card-hd">🕐 Time &amp; View</div>
-                        <div class="hm-settings-card-body">
-                            <div class="hm-settings-tog"><label for="hs-start">Start time</label><input id="hs-start" type="time" value="09:00"></div>
-                            <div class="hm-settings-tog"><label for="hs-end">End time</label><input id="hs-end" type="time" value="18:00"></div>
-                            <div class="hm-settings-tog"><label for="hs-interval">Time interval</label><select id="hs-interval"><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30" selected>30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></div>
-                            <div class="hm-settings-tog"><label for="hs-slotH">Slot height</label><select id="hs-slotH"><option value="compact">Compact</option><option value="regular" selected>Regular</option><option value="large">Large</option></select></div>
-                            <div class="hm-settings-tog"><label for="hs-view">Default timeframe</label><select id="hs-view"><option value="day">Day</option><option value="week" selected>Week</option></select></div>
-                        </div>
-                    </div>
-                    <div class="hm-settings-card">
-                        <div class="hm-settings-card-hd">🛡 Rules &amp; Safety</div>
-                        <div class="hm-settings-card-body">
-                            <div class="hm-settings-tog"><label><input id="hs-cancelReason" type="checkbox" checked> Require cancellation reason</label></div>
-                            <div class="hm-settings-tog"><label><input id="hs-hideCancelled" type="checkbox" checked> Hide cancelled appointments</label></div>
-                            <div class="hm-settings-tog"><label><input id="hs-reschedNote" type="checkbox"> Require reschedule note</label></div>
-                            <div class="hm-settings-tog"><label><input id="hs-locMismatch" type="checkbox"> Prevent mismatched location bookings</label></div>
-                        </div>
-                    </div>
-                    <div class="hm-settings-card">
-                        <div class="hm-settings-card-hd">📅 Availability</div>
-                        <div class="hm-settings-card-body">
-                            <div class="hm-settings-tog"><div>Enabled days</div><div>
-                                <label><input class="hs-day" type="checkbox" value="mon" checked> Mon</label>
-                                <label><input class="hs-day" type="checkbox" value="tue" checked> Tue</label>
-                                <label><input class="hs-day" type="checkbox" value="wed" checked> Wed</label>
-                                <label><input class="hs-day" type="checkbox" value="thu" checked> Thu</label>
-                                <label><input class="hs-day" type="checkbox" value="fri" checked> Fri</label>
-                                <label><input class="hs-day" type="checkbox" value="sat"> Sat</label>
-                                <label><input class="hs-day" type="checkbox" value="sun"> Sun</label>
-                            </div></div>
-                            <div class="hm-settings-tog"><label><input id="hs-clinicColour" type="checkbox"> Apply clinic colour to working times</label></div>
-                        </div>
-                    </div>
+        <div id="hm-app" class="hm-calendar" data-module="calendar" data-view="settings">
+            <div class="hm-page">
+                <div class="hm-page-header">
+                    <h1 class="hm-page-title">Calendar Settings</h1>
+                    <div class="hm-page-subtitle">Adjust your scheduling and display preferences.</div>
                 </div>
-                <div>
-                    <div class="hm-settings-card">
-                        <div class="hm-settings-card-hd">👁 Display Preferences</div>
-                        <div class="hm-settings-card-body">
-                            <div class="hm-settings-tog"><label><input id="hs-timeInline" type="checkbox"> Display time inline with patient name</label></div>
-                            <div class="hm-settings-tog"><label><input id="hs-hideEnd" type="checkbox" checked> Hide appointment end time</label></div>
-                            <div class="hm-settings-tog"><div>Outcome style</div><div>
-                                <label><input type="radio" name="hs-outcome" value="default" checked> Default</label>
-                                <label><input type="radio" name="hs-outcome" value="small"> Small</label>
-                                <label><input type="radio" name="hs-outcome" value="tag"> Tag</label>
-                                <label><input type="radio" name="hs-outcome" value="popover"> Popover</label>
-                            </div></div>
-                            <div class="hm-settings-tog"><label><input id="hs-fullName" type="checkbox"> Display full resource name</label></div>
+
+                <div class="hm-card-grid hm-card-grid--2">
+                    <div class="hm-card">
+                        <div class="hm-card-hd">Time &amp; View</div>
+                        <div class="hm-card-body">
+                            <div class="hm-srow"><span class="hm-slbl">Start time</span><span class="hm-sval"><input id="hs-start" class="hm-inp" type="time" value="09:00"></span></div>
+                            <div class="hm-srow"><span class="hm-slbl">End time</span><span class="hm-sval"><input id="hs-end" class="hm-inp" type="time" value="18:00"></span></div>
+                            <div class="hm-srow"><span class="hm-slbl">Time interval</span><span class="hm-sval"><select id="hs-interval" class="hm-dd"><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30" selected>30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></span></div>
+                            <div class="hm-srow"><span class="hm-slbl">Slot height</span><span class="hm-sval"><select id="hs-slotH" class="hm-dd"><option value="compact">Compact</option><option value="regular" selected>Regular</option><option value="large">Large</option></select></span></div>
+                            <div class="hm-srow"><span class="hm-slbl">Default timeframe</span><span class="hm-sval"><select id="hs-view" class="hm-dd"><option value="day">Day</option><option value="week" selected>Week</option></select></span></div>
                         </div>
                     </div>
-                    <div class="hm-settings-preview">
-                        <div class="hm-settings-appt-card" id="hs-preview-card">
-                            <div class="hm-settings-appt-name" id="hs-preview-name">Joe Bloggs</div>
-                            <div class="hm-settings-appt-badges" id="hs-preview-badges">
-                                <span class="hm-settings-badge">C</span>
-                                <span class="hm-settings-badge">R</span>
-                                <span class="hm-settings-badge">VM</span>
+
+                    <div>
+                        <div class="hm-card">
+                            <div class="hm-card-hd">Display Preferences</div>
+                            <div class="hm-card-body">
+                                <div class="hm-srow"><label class="hm-day-check"><input id="hs-timeInline" type="checkbox"> Display time inline with patient name</label></div>
+                                <div class="hm-srow"><label class="hm-day-check"><input id="hs-hideEnd" type="checkbox" checked> Hide appointment end time</label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Outcome style</span><span class="hm-sval"><label><input type="radio" name="hs-outcome" value="default" checked> Default</label> <label><input type="radio" name="hs-outcome" value="small"> Small</label></span></div>
+                                <div class="hm-srow"><label class="hm-day-check"><input id="hs-fullName" type="checkbox"> Display full resource name</label></div>
                             </div>
-                            <div class="hm-settings-appt-time" id="hs-preview-time">09:00</div>
-                            <div class="hm-settings-appt-meta" id="hs-preview-meta">Follow up · Cosgrove's Pharmacy</div>
+                        </div>
+
+                        <div class="hm-card">
+                            <div class="hm-card-hd">Preview</div>
+                            <div class="hm-card-body">
+                                <div class="hm-appt-preview-card" id="hs-preview-card">
+                                    <div class="hm-appt-outcome" style="display:none"></div>
+                                    <div class="hm-appt-body">
+                                        <div class="hm-appt-name" id="hs-preview-name">Joe Bloggs</div>
+                                        <div style="margin:6px 0" id="hs-preview-badges"><span class="hm-badge hm-badge-c">C</span> <span class="hm-badge hm-badge-r">R</span> <span class="hm-badge hm-badge-v">VM</span></div>
+                                        <div class="hm-appt-time" id="hs-preview-time">09:00</div>
+                                        <div class="hm-appt-meta" id="hs-preview-meta">Follow up · Cosgrove's Pharmacy</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
         </div>
                 <?php if ( $show_debug ): ?>
                 <div style="margin-top:18px;padding:12px;border-top:1px solid var(--hm-border);">
