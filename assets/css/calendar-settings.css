@@ -1,101 +1,24 @@
-/* Calendar Settings Page Styles */
-.hm-settings-main {
-  max-width: 1100px;
-  margin: 40px auto;
-  padding: 0 24px;
-}
-.hm-settings-header {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 18px;
-}
-.hm-settings-subtitle {
-  font-size: 1.1rem;
-  color: #64748b;
-  margin-bottom: 28px;
-}
-.hm-settings-grid {
-  display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 32px;
-}
-.hm-settings-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-.hm-settings-card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(15,23,42,0.07);
-  padding: 28px 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.hm-settings-card-hd {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #0f172a;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.hm-settings-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.hm-settings-tog {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.hm-settings-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 8px;
-  font-size: 0.95em;
-  background: #e0e7ef;
-  color: #2563eb;
-  margin-right: 8px;
-  font-weight: 500;
-}
-.hm-settings-preview {
-  background: #f3f4f6;
-  border-radius: 10px;
-  min-height: 140px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 18px;
-}
-.hm-settings-appt-card {
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-  padding: 18px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 320px;
-}
-.hm-settings-appt-name {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #374151;
-}
-.hm-settings-appt-badges {
-  margin-bottom: 6px;
-}
-.hm-settings-appt-time {
-  font-size: 1rem;
-  color: #2563eb;
-  font-weight: 500;
-}
-.hm-settings-appt-meta {
-  font-size: 0.95em;
-  color: #64748b;
+/* Calendar Settings Page Styles (scoped) */
+.hm-settings-main{box-sizing:border-box}
+.hm-settings-main .hm-settings-container{max-width:1100px;margin:24px auto;padding:0 16px}
+.hm-settings-main .hm-settings-header{font-size:1.75rem;font-weight:700;color:#0f172a;margin-bottom:12px}
+.hm-settings-main .hm-settings-subtitle{font-size:1rem;color:#64748b;margin-bottom:20px}
+.hm-settings-main .hm-settings-grid{display:grid;grid-template-columns:1fr 360px;gap:20px}
+.hm-settings-main .hm-settings-cards{display:flex;flex-direction:column;gap:18px}
+.hm-settings-main .hm-settings-card{background:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(15,23,42,0.06);padding:20px;display:flex;flex-direction:column;gap:10px}
+.hm-settings-main .hm-settings-card-hd{font-size:1.1rem;font-weight:600;color:#0f172a;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.hm-settings-main .hm-settings-card-body{display:flex;flex-direction:column;gap:10px}
+.hm-settings-main .hm-settings-tog{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}
+.hm-settings-main .hm-settings-badge{display:inline-block;padding:4px 10px;border-radius:8px;font-size:.95em;background:#e0e7ef;color:#2563eb;margin-right:8px;font-weight:500}
+.hm-settings-main .hm-settings-preview{background:#f3f4f6;border-radius:8px;min-height:120px;display:flex;align-items:center;justify-content:center;margin-top:12px;overflow:hidden}
+.hm-settings-main .hm-settings-appt-card{background:#fff;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,0.06);padding:14px 18px;display:flex;flex-direction:column;gap:8px;width:300px}
+.hm-settings-main .hm-settings-appt-name{font-size:1.05rem;font-weight:600;color:#374151}
+.hm-settings-main .hm-settings-appt-badges{margin-bottom:6px;display:flex;gap:6px}
+.hm-settings-main .hm-settings-appt-time{font-size:1rem;color:#2563eb;font-weight:600}
+.hm-settings-main .hm-settings-appt-meta{font-size:.95rem;color:#64748b}
+
+/* small screen adjustments */
+@media(max-width:880px){
+  .hm-settings-main .hm-settings-grid{grid-template-columns:1fr}
+  .hm-settings-main .hm-settings-cards{order:2}
 }
