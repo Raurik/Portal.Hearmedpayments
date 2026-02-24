@@ -111,7 +111,14 @@ class HearMed_Admin_Dispenser_Schedules {
     public function render() {
         if ( ! is_user_logged_in() ) return '<p>Please log in.</p>';
 
+        // Inline debug: log context and query
+        echo '<pre style="background:#fef2f2;color:#b91c1c;padding:8px 12px;border-radius:6px;font-size:13px;">';
+        echo 'DEBUG: $_GET = ' . print_r($_GET, true) . "\n";
+        echo 'DEBUG: $_POST = ' . print_r($_POST, true) . "\n";
+        echo 'DEBUG: Calling get_schedules()...\n';
         $rows = $this->get_schedules();
+        echo 'DEBUG: $rows = ' . print_r($rows, true) . "\n";
+        echo '</pre>';
         $staff = $this->get_staff();
         $clinics = $this->get_clinics();
         $days = $this->day_labels();
