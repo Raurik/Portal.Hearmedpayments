@@ -18,6 +18,7 @@ var SettingsPage = {
         var bg = $('#hs-appt-bg').val() || '#0BB4C4';
         var font = $('#hs-appt-font').val() || '#ffffff';
         var badge = $('#hs-appt-badge').val() || '#3b82f6';
+        var badgeFont = $('#hs-appt-badge-font').val() || '#ffffff';
         var meta = $('#hs-appt-meta').val() || '#38bdf8';
 
         var $card = $('#hs-preview-card');
@@ -26,7 +27,7 @@ var SettingsPage = {
             $('#hs-preview-name').text(name).css('color', font);
             $('#hs-preview-time').text(start).css('color', badge);
             $('#hs-preview-meta').text('Follow up · Cosgrove\'s Pharmacy').css('color', meta);
-            $card.find('.hm-badge').css({'background': badge, 'color': '#fff'});
+            $card.find('.hm-badge').css({'background': badge, 'color': badgeFont});
             $card.removeClass('outcome-default outcome-small outcome-tag outcome-popover');
             $card.addClass('outcome-' + outcome);
         }

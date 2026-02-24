@@ -85,6 +85,7 @@ class HearMed_Admin_Calendar_Settings {
                                         <label class="hm-color-label">BG<br><input type="color" id="hs-appt-bg" name="appt_bg_color" value="#0BB4C4" class="hm-color-box"></label>
                                         <label class="hm-color-label">Font<br><input type="color" id="hs-appt-font" name="appt_font_color" value="#ffffff" class="hm-color-box"></label>
                                         <label class="hm-color-label">Badge<br><input type="color" id="hs-appt-badge" name="appt_badge_color" value="#3b82f6" class="hm-color-box"></label>
+                                        <label class="hm-color-label">Badge Font<br><input type="color" id="hs-appt-badge-font" name="appt_badge_font_color" value="#ffffff" class="hm-color-box"></label>
                                         <label class="hm-color-label">Meta<br><input type="color" id="hs-appt-meta" name="appt_meta_color" value="#38bdf8" class="hm-color-box"></label>
                                     </div>
                                 </span>
