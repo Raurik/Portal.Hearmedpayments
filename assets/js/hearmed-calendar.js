@@ -578,6 +578,10 @@ var Settings={
         h+='</ul></div></div>';
 
         // Close grid
+        // Preview area (appointment block preview)
+        h+='<div class="hm-card hm-card-grid-full" style="margin-top:18px">';
+        h+='<div class="hm-card-hd"><h3>Preview</h3></div>';
+        h+='<div class="hm-card-body"><div id="hs-preview" class="hs-preview-container"></div></div>';
         h+='</div>';
 
         // Save area
@@ -587,7 +591,39 @@ var Settings={
         this.$el.html(h);
         $('#hs-sortList').sortable({handle:'.hm-sort-grip'});
     },
-    bind:function(){var self=this;$(document).on('click','#hs-save',function(){self.save();});},
+    bind:function(){var self=this;$(document).on('click','#hs-save',function(){self.save();});
+        // update preview when inputs change
+        $(document).on('change', '#hs-start,#hs-end,#hs-interval,#hs-slotH,#hs-view, input[name="hs-outcome"], #hs-fullName, .hs-day, #hs-timeInline, #hs-hideEnd, #hs-clinicColour', function(){
+            try{ self.updatePreview(); }catch(e){console.error(e);} 
+        });
+        // also update when sort list changes (order)
+        $(document).on('sortupdate', '#hs-sortList', function(){ try{ self.updatePreview(); }catch(e){console.error(e);} });
+    },
+
+    updatePreview:function(){
+        var data=this.data||{};
+        var start=$('#hs-start').val()||data.start_time||'09:00';
+        var name='Joe Bloggs';
+        var svc='Follow up';
+        var clinic='Cosgrove\'s Pharmacy';
+        var outcome=$('input[name="hs-outcome"]:checked').val()||data.outcome_style||'default';
+        var fullName = $('#hs-fullName').is(':checked') || (data.display_full_name==='yes');
+
+        var html='';
+        html+='<div class="hm-appt-preview">';
+        html+='<div class="hm-appt-outcome">Outcome</div>';
+        html+='<div class="hm-appt-body">';
+        html+='<div class="hm-appt-name">'+name+'</div>';
+        html+='<div class="hm-appt-time">'+start+'</div>';
+        html+='<div class="hm-appt-meta">'+svc+' · '+clinic+'</div>';
+        html+='</div>';
+        html+='</div>';
+        $('#hs-preview').html(html);
+        // style variations
+        var $card=$('#hs-preview .hm-appt-preview');
+        $card.removeClass('outcome-default outcome-small outcome-tag outcome-popover');
+        $card.addClass('outcome-'+(outcome||'default'));
+    },
     save:function(){
         var days=[];$('.hs-day:checked').each(function(){days.push($(this).val());});
         var order=[];$('#hs-sortList .hm-sort-item').each(function(){order.push($(this).data('id'));});

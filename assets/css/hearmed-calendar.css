@@ -392,6 +392,23 @@
   border-right: none;
 }
 
+/* ============================================================
+   SETTINGS PREVIEW (admin settings preview appointment block)
+   ============================================================ */
+.hs-preview-container{display:flex;flex-direction:column;gap:12px}
+.hm-appt-preview{border-radius:10px;overflow:hidden;display:flex;flex-direction:column;width:100%;max-width:680px;border:1px solid var(--hm-border);box-shadow:var(--hm-shadow-sm)}
+.hm-appt-preview .hm-appt-outcome{background:linear-gradient(90deg,#2dd4bf,#06b6d4);color:#fff;padding:10px 12px;font-weight:700}
+.hm-appt-preview .hm-appt-body{padding:14px;background:linear-gradient(180deg,#06b6d4,#0bb4c4);color:#fff}
+.hm-appt-preview .hm-appt-name{font-weight:800;font-size:1.05rem;margin-bottom:6px}
+.hm-appt-preview .hm-appt-time{font-weight:600;opacity:0.95;margin-bottom:6px}
+.hm-appt-preview .hm-appt-meta{font-size:0.95rem;opacity:0.95}
+
+/* Outcome style variations */
+.hm-appt-preview.outcome-default .hm-appt-outcome{background:linear-gradient(90deg,#10b981,#06b6d4)}
+.hm-appt-preview.outcome-small .hm-appt-body{background:linear-gradient(180deg,#06b6d4,#0891b2);padding:8px}
+.hm-appt-preview.outcome-tag .hm-appt-body{background:linear-gradient(180deg,#06b6d4,#0bb4c4);padding:10px}
+.hm-appt-preview.outcome-popover .hm-appt-body{background:linear-gradient(180deg,#06b6d4,#0bb4c4);opacity:0.95}
+
 #hm-app.hm-calendar .hm-prov-ini {
   font-weight: 800;
   font-size: 12px;
