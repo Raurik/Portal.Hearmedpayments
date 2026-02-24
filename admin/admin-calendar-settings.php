@@ -72,7 +72,7 @@ class HearMed_Admin_Calendar_Settings {
                         <div class="hm-appt-preview outcome-default">
                             <div class="hm-appt-outcome">Outcome</div>
                             <div class="hm-appt-body">
-                                <div class="hm-appt-name">Joe Bloggs</div>
+                                <div class="hm-appt-name">Piet Pompies</div>
                                 <div class="hm-appt-time">09:00</div>
                                 <div class="hm-appt-meta">Follow up · Cosgrove's Pharmacy</div>
                             </div>
@@ -83,6 +83,25 @@ class HearMed_Admin_Calendar_Settings {
             </div>
         </div>
             <?php
+            if ( current_user_can( 'manage_options' ) ) : ?>
+                <script>
+                (function(){
+                    try{
+                        console.log('HM-DEBUG (admin):', window.HM || 'HM missing');
+                        console.log('hearmed-calendar script present?', typeof Settings !== 'undefined');
+                        console.log('#hm-app element', document.getElementById('hm-app'));
+                        // quick ajax test
+                        var ajax = (window.HM && window.HM.ajax_url) || '/wp-admin/admin-ajax.php';
+                        var nonce = (window.HM && window.HM.nonce) || '';
+                        fetch(ajax, {
+                            method:'POST',
+                            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                            body:new URLSearchParams({action:'hm_get_settings',nonce:nonce})
+                        }).then(function(r){return r.text().then(function(t){console.log('hm_get_settings status',r.status,'body',t);});}).catch(function(e){console.error('hm_get_settings fetch error',e);});
+                    }catch(e){console.error('HM-DEBUG admin error',e);}    
+                })();
+                </script>
+            <?php endif;
             return ob_get_clean();
     }
 }
