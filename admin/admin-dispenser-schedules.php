@@ -1,3 +1,10 @@
+<?php
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+class HearMed_Admin_Dispenser_Schedules {
+
+    // ...existing code...
+
     // Render a calendar-style detail page for a staff member
     private function render_detail_page($staff_data, $clinics, $days) {
         ob_start();
@@ -78,32 +85,6 @@
             echo "<script>window.location.href='" . strtok($_SERVER['REQUEST_URI'], '?') . "?staff=" . (int)$staff_data['staff_id'] . "';</script>";
         }
         return ob_get_clean();
-    }
-<?php
-/**
- * HearMed Admin — Dispenser Schedules
- * Shortcode: [hearmed_dispenser_schedules]
- * PostgreSQL CRUD for hearmed_reference.dispenser_schedules
- */
-if ( ! defined( 'ABSPATH' ) ) exit;
-
-class HearMed_Admin_Dispenser_Schedules {
-
-    public function __construct() {
-        add_shortcode( 'hearmed_dispenser_schedules', [ $this, 'render' ] );
-        add_action( 'wp_ajax_hm_admin_save_schedule', [ $this, 'ajax_save' ] );
-        add_action( 'wp_ajax_hm_admin_delete_schedule', [ $this, 'ajax_delete' ] );
-    }
-
-    private function get_schedules() {
-        return HearMed_DB::get_results(
-            "SELECT ds.id, ds.staff_id, ds.clinic_id, ds.day_of_week, ds.rotation_weeks, ds.week_number, ds.is_active,
-                    s.first_name, s.last_name, s.role, c.clinic_name
-             FROM hearmed_reference.dispenser_schedules ds
-             JOIN hearmed_reference.staff s ON s.id = ds.staff_id
-             JOIN hearmed_reference.clinics c ON c.id = ds.clinic_id
-             ORDER BY c.clinic_name, s.last_name, s.first_name, ds.day_of_week"
-        ) ?: [];
     }
 
     private function get_staff() {
