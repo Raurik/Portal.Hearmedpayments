@@ -58,10 +58,20 @@ add_action( 'wp_ajax_hm_save_dispenser_order', 'hm_ajax_save_dispenser_order' );
 // ================================================================
 function hm_ajax_get_settings() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
+
+    try {
         // PostgreSQL only - no $wpdb needed
-    $t = HearMed_Portal::table( 'calendar_settings' );
-    if ( HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) === null ) { wp_send_json_success( [] ); return; }
-    wp_send_json_success( HearMed_DB::get_row( "SELECT * FROM {$t} LIMIT 1", ARRAY_A ) ?: [] );
+        $t = HearMed_Portal::table( 'calendar_settings' );
+        if ( HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) === null ) { wp_send_json_success( [] ); return; }
+        wp_send_json_success( HearMed_DB::get_row( "SELECT * FROM {$t} LIMIT 1", ARRAY_A ) ?: [] );
+    } catch ( Throwable $e ) {
+        // In debug mode return detailed error to AJAX caller; otherwise generic message
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            wp_send_json_error( [ 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString() ] );
+        } else {
+            wp_send_json_error( 'Server error' );
+        }
+    }
 }
 
 function hm_ajax_save_settings() {
