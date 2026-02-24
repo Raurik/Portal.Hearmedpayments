@@ -169,19 +169,19 @@ class HearMed_Admin_Clinics {
                             </div>
                         </div>
 
-                        <div class="hm-form-row">
-                            <div class="hm-form-group hm-form-sm">
-                                <label>Eircode</label>
-                                <input type="text" id="hmc-eircode" placeholder="R35 AB12">
-                            </div>
-                            <div class="hm-form-group hm-form-sm">
-                                <label>Calendar Colour</label>
-                                <input type="color" id="hmc-colour" value="#0BB4C4">
-                            </div>
-                            <div class="hm-form-group hm-form-sm">
-                                <label>Text Colour</label>
-                                <input type="color" id="hmc-text-colour" value="#ffffff">
-                            </div>
+                        <div class="hm-form-group hm-form-sm">
+                            <label>Eircode</label>
+                            <input type="text" id="hmc-eircode" placeholder="R35 AB12">
+                        </div>
+
+                        <div class="hm-form-group hm-form-sm">
+                            <label>Calendar Colour</label>
+                            <input type="color" id="hmc-colour" value="#0BB4C4">
+                        </div>
+
+                        <div class="hm-form-group hm-form-sm">
+                            <label>Text Colour</label>
+                            <input type="color" id="hmc-text-colour" value="#ffffff">
                         </div>
 
                         <div class="hm-form-group">

@@ -511,7 +511,7 @@
 }
 
 #hm-clinics-app .hm-btn-primary {
-    background: #0BB4C4;
+    background: #3b82f6;
     color: #fff;
     padding: 9px 22px;
     border: none;
@@ -520,12 +520,12 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
-    box-shadow: 0 1px 3px rgba(11, 180, 196, 0.2);
+    box-shadow: 0 1px 3px rgba(59, 130, 246, 0.25);
 }
 
 #hm-clinics-app .hm-btn-primary:hover {
-    background: #0a9eac;
-    box-shadow: 0 2px 6px rgba(11, 180, 196, 0.3);
+    background: #2563eb;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
 }
 
 #hm-clinics-app .hm-btn {
