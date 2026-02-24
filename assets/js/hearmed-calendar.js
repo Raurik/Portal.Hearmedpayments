@@ -77,31 +77,28 @@ var Cal={
             '<div class="hm-toolbar">'+
                 '<div class="hm-tb-left">'+
                     '<button class="hm-nav-btn" id="hm-prev">'+IC.chevL+'</button>'+
-                    '<button class="hm-nav-btn" id="hm-next">'+IC.chevR+'</button>'+
+        var outcome=$('input[name="hs-outcome"]:checked').val()||data.outcome_style||'default';
                     '<div class="hm-date-box" id="hm-dateBox">'+IC.cal+' <span id="hm-dateLbl"></span><input type="date" id="hm-datePick" style="position:absolute;opacity:0;width:1px;height:1px;"></div>'+
                 '</div>'+
-                '<div class="hm-tb-right">'+
-                    '<div class="hm-view-tog"><button class="hm-view-btn" data-v="day">Day</button><button class="hm-view-btn" data-v="week">Week</button></div>'+
-                    '<button class="hm-icon-btn" id="hm-cog" title="Settings">'+IC.cog+'</button>'+
-                    '<button class="hm-icon-btn" onclick="window.print()" title="Print">'+IC.print+'</button>'+
-                    '<div class="hm-sep"></div>'+
-                    '<select class="hm-dd" id="hm-clinicF"><option value="">All Clinics</option></select>'+
-                    '<select class="hm-dd" id="hm-dispF"><option value="">All Assignees</option></select>'+
-                    '<div style="position:relative"><button class="hm-plus-btn" id="hm-plusBtn">'+IC.plus+'</button>'+
-                        '<div class="hm-plus-menu" id="hm-plusMenu">'+
-                            '<div class="hm-plus-item" data-act="appointment">'+IC.cal+' Appointment</div>'+
-                            '<div class="hm-plus-item" data-act="patient">'+IC.user+' Patient</div>'+
-                            '<div class="hm-plus-item" data-act="holiday">'+IC.clock+' Holiday / Unavailability</div>'+
-                        '</div>'+
-                    '</div>'+
-                '</div>'+
+        html += '<div class="hm-appt-preview-wrap">';
+        html += '<div class="hm-appt-preview outcome-'+esc(outcome)+'">';
+        html += '<div class="hm-appt-body">';
+        html += '<div class="hm-appt-name">'+(fullName?name:name.split(' ')[0])+'</div>';
+        html += '<div class="hm-appt-badges">';
+        html += '<span class="hm-badge">C</span>';
+        html += '<span class="hm-badge">R</span>';
+        html += '<span class="hm-badge">VM</span>';
+        html += '</div>';
+        html += '<div class="hm-appt-time">'+start+'</div>';
+        html += '<div class="hm-appt-meta">'+svc+' · '+clinic+'</div>';
+        html += '</div>'; // body
+        html += '</div>'; // card
+        html += '</div>'; // wrap
             '</div>'+
             '<div class="hm-grid-wrap" id="hm-gridWrap"><div class="hm-grid" id="hm-grid"></div></div>'+
-        '</div>'+
-        '<div class="hm-pop" id="hm-pop"></div>'+
-        '<div class="hm-cog-panel" id="hm-cogPanel">'+
-            '<h3>Settings <button class="hm-cog-x" id="hm-cogX">'+IC.x+'</button></h3>'+
-            '<div class="hm-cog-section"><div class="hm-cog-label">Mode</div><div class="hm-cog-tog" id="hm-cogMode"><button class="hm-cog-tog-btn" data-v="people">People</button><button class="hm-cog-tog-btn" data-v="clinics">Clinics</button></div></div>'+
+        var $newCard = $('#hs-preview .hm-appt-preview');
+        $newCard.removeClass('outcome-default outcome-small outcome-tag outcome-popover');
+        $newCard.addClass('outcome-'+(outcome||'default'));
             '<div class="hm-cog-section"><div class="hm-cog-label">Timeframe</div><div class="hm-cog-tog" id="hm-cogTime"><button class="hm-cog-tog-btn" data-v="day">Day</button><button class="hm-cog-tog-btn" data-v="week">Week</button></div></div>'+
             '<div class="hm-cog-ft"><button class="hm-btn" id="hm-cogCancel">Cancel</button><button class="hm-btn hm-btn-teal" id="hm-cogSave">Save</button></div>'+
         '</div>'
