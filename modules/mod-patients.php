@@ -1275,6 +1275,20 @@ function hm_ajax_create_patient_repair() {
         if ( $dev ) $product_id = $dev->product_id ? (int) $dev->product_id : null;
     }
 
+    // Get clinic_id from the patient record
+    $clinic_id = null;
+    $patient = $db->get_row( "SELECT clinic_id FROM hearmed_core.patients WHERE id = \$1", [ $pid ] );
+    if ( $patient && $patient->clinic_id ) {
+        $clinic_id = (int) $patient->clinic_id;
+    }
+
+    // Resolve manufacturer_id — from form, or from product record
+    $mfr_id = intval( $_POST['manufacturer_id'] ?? 0 ) ?: null;
+    if ( ! $mfr_id && $product_id ) {
+        $prod = $db->get_row( "SELECT manufacturer_id FROM hearmed_reference.products WHERE id = \$1", [ $product_id ] );
+        if ( $prod && $prod->manufacturer_id ) $mfr_id = (int) $prod->manufacturer_id;
+    }
+
     // Build insert data — start with columns guaranteed to exist in schema
     $data = [
         'patient_id'       => $pid,
@@ -1283,7 +1297,8 @@ function hm_ajax_create_patient_repair() {
         'serial_number'    => sanitize_text_field( $_POST['serial_number'] ?? '' ),
         'warranty_status'  => sanitize_text_field( $_POST['warranty_status'] ?? 'Unknown' ),
         'repair_notes'     => sanitize_textarea_field( $_POST['repair_notes'] ?? '' ),
-        'manufacturer_id'  => intval( $_POST['manufacturer_id'] ?? 0 ) ?: null,
+        'manufacturer_id'  => $mfr_id,
+        'clinic_id'        => $clinic_id,
         'date_booked'      => date( 'Y-m-d' ),
         'repair_status'    => 'Booked',
         'staff_id'         => $staff_id ?: null,

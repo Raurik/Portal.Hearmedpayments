@@ -741,7 +741,7 @@ function initProfile(){
         // Load manufacturers
         $.post(_hm.ajax,{action:'hm_get_manufacturers',nonce:_hm.nonce},function(r){
             var $sel=$('#repair-mfr');$sel.empty().append('<option value="">— Select manufacturer —</option>');
-            if(r&&r.success&&r.data){r.data.forEach(function(m){$sel.append('<option value="'+m._ID+'" data-warranty="'+esc(m.warranty_terms||'')+'">'+esc(m.name)+'</option>');});}
+            if(r&&r.success&&r.data){r.data.forEach(function(m){$sel.append('<option value="'+(m.id||m._ID)+'" data-warranty="'+esc(m.warranty_terms||'')+'">'+esc(m.name)+'</option>');});}
         });
         // Auto-detect warranty from product warranty_expiry
         if(ppId){
@@ -852,8 +852,11 @@ function initProfile(){
             printRepairDocket($(this).data('id'));
         });
         $c.off('click','.hm-repair-send').on('click','.hm-repair-send',function(){
-            var rid=$(this).data('id');$(this).prop('disabled',true).text('Sending…');
-            $.post(_hm.ajax,{action:'hm_update_repair_status',nonce:_hm.nonce,_ID:rid,status:'Sent'},function(r){if(r.success){toast('Marked as Sent');loadRepairs($c);}else toast('Error','error');});
+            var rid=$(this).data('id'),$b=$(this);
+            var sentTo=prompt('Sending to which manufacturer / lab?','');
+            if(sentTo===null)return;
+            $b.prop('disabled',true).text('Sending…');
+            $.post(_hm.ajax,{action:'hm_update_repair_status',nonce:_hm.nonce,_ID:rid,status:'Sent',sent_to:sentTo},function(r){if(r.success){toast('Marked as Sent');loadRepairs($c);}else toast('Error','error');});
         });
         $c.off('click','.hm-repair-receive').on('click','.hm-repair-receive',function(){
             var rid=$(this).data('id');$(this).prop('disabled',true).text('Processing…');
