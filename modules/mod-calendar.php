@@ -221,7 +221,8 @@ function hm_ajax_get_dispensers() {
                    ARRAY_AGG(sc.clinic_id) as clinic_ids
             FROM hearmed_reference.staff s
             LEFT JOIN hearmed_reference.staff_clinics sc ON s.id = sc.staff_id
-            WHERE s.is_active = true";
+            WHERE s.is_active = true
+              AND LOWER(s.role) IN ('dispenser','audiologist','c_level','hm_clevel')";
     if ( $clinic_id ) {
         $sql .= " AND (sc.clinic_id = $clinic_id OR sc.clinic_id IS NULL)";
     }
