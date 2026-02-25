@@ -51,7 +51,7 @@ class HearMed_Admin_Dispenser_Schedules {
                 foreach ($clinicGroups as $clinic) {
                 ?>
                 <div style="min-width:260px;flex:1 1 320px;">
-                    <div style="font-weight:600;font-size:17px;margin-bottom:10px;letter-spacing:0.5px;">
+                    <div style="font-weight:600;font-size:15px;margin-bottom:10px;color:#151B33;">
                         <?php echo esc_html($clinic['name']); ?>
                     </div>
                     <table class="hm-table" style="width:100%;">
@@ -89,11 +89,6 @@ class HearMed_Admin_Dispenser_Schedules {
                 <?php } ?>
             </div>
         </div>
-        <style>
-        #hm-schedule-detail-page .hm-btn { font-size:14px; }
-        #hm-schedule-detail-page table th, #hm-schedule-detail-page table td { font-size:14px; }
-        #hm-schedule-detail-page h2 { font-size:22px; }
-        </style>
         <?php
         // Handle delete
         if (!empty($_POST['delete_schedule_id'])) {

@@ -194,7 +194,7 @@ class HearMed_Admin_Settings {
                         <option value="privacy_notice">Privacy Notice</option>
                         <option value="other">Other</option>
                     </select>
-                    <input type="text" id="hm-gdpr-doc-name" placeholder="Document name..." style="flex:1;">
+                    <input type="text" id="hm-gdpr-doc-name" class="hm-search-input" placeholder="Document name..." style="flex:1;">
                     <label class="hm-btn hm-btn-teal" style="cursor:pointer;margin:0;">
                         Upload PDF
                         <input type="file" id="hm-gdpr-doc-file" accept=".pdf" style="display:none;" onchange="hmGdpr.upload()">

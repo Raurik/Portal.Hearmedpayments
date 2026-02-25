@@ -39,6 +39,19 @@ add_action( 'admin_menu', function() {
     );
 });
 
+// Enqueue admin CSS on this page
+add_action( 'admin_enqueue_scripts', function ( $hook ) {
+    if ( 'tools_page_hearmed-system-status' !== $hook ) {
+        return;
+    }
+    wp_enqueue_style(
+        'hearmed-admin',
+        HEARMED_URL . 'assets/css/hearmed-admin.css',
+        [],
+        HEARMED_VERSION
+    );
+});
+
 /**
  * Render system status page
  */
@@ -51,14 +64,16 @@ function hearmed_render_system_status_page() {
     $checks = hearmed_run_system_checks();
     
     ?>
-    <div class="wrap">
-        <h1>🔧 HearMed Portal - System Status</h1>
-        <p>Version: <strong><?php echo HEARMED_VERSION; ?></strong></p>
+    <div class="hm-admin">
+        <div class="hm-admin-hd">
+            <h2>System Status</h2>
+        </div>
+        <p style="color:#64748b;font-size:13px;margin-bottom:20px;">
+            Version: <strong><?php echo HEARMED_VERSION; ?></strong>
+        </p>
         
-        <hr>
-        
-        <h2>Core System</h2>
-        <table class="widefat">
+        <h3 class="hm-section-heading">Core System</h3>
+        <table class="hm-table">
             <thead>
                 <tr>
                     <th>Component</th>
@@ -70,15 +85,15 @@ function hearmed_render_system_status_page() {
                 <?php foreach ( $checks['core'] as $check ): ?>
                 <tr>
                     <td><?php echo esc_html( $check['name'] ); ?></td>
-                    <td><?php echo $check['status'] ? '✅ OK' : '❌ Failed'; ?></td>
+                    <td><?php echo $check['status'] ? '<span class="hm-badge hm-badge-green">OK</span>' : '<span class="hm-badge hm-badge-red">Failed</span>'; ?></td>
                     <td><?php echo esc_html( $check['message'] ); ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
         
-        <h2>Database Tables</h2>
-        <table class="widefat">
+        <h3 class="hm-section-heading">Database Tables</h3>
+        <table class="hm-table">
             <thead>
                 <tr>
                     <th>Table</th>
@@ -90,15 +105,15 @@ function hearmed_render_system_status_page() {
                 <?php foreach ( $checks['tables'] as $table ): ?>
                 <tr>
                     <td><code><?php echo esc_html( $table['name'] ); ?></code></td>
-                    <td><?php echo $table['exists'] ? '✅ Exists' : '❌ Missing'; ?></td>
-                    <td><?php echo $table['exists'] ? number_format( $table['count'] ) . ' rows' : 'N/A'; ?></td>
+                    <td><?php echo $table['exists'] ? '<span class="hm-badge hm-badge-green">Exists</span>' : '<span class="hm-badge hm-badge-red">Missing</span>'; ?></td>
+                    <td><?php echo $table['exists'] ? number_format( $table['count'] ) . ' rows' : '—'; ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
         
-        <h2>Assets</h2>
-        <table class="widefat">
+        <h3 class="hm-section-heading">Assets</h3>
+        <table class="hm-table">
             <thead>
                 <tr>
                     <th>File</th>
@@ -112,15 +127,15 @@ function hearmed_render_system_status_page() {
                 <tr>
                     <td><code><?php echo esc_html( $asset['name'] ); ?></code></td>
                     <td><?php echo esc_html( $asset['type'] ); ?></td>
-                    <td><?php echo $asset['exists'] ? '✅ Found' : '❌ Missing'; ?></td>
-                    <td><?php echo $asset['exists'] ? size_format( $asset['size'] ) : 'N/A'; ?></td>
+                    <td><?php echo $asset['exists'] ? '<span class="hm-badge hm-badge-green">Found</span>' : '<span class="hm-badge hm-badge-red">Missing</span>'; ?></td>
+                    <td><?php echo $asset['exists'] ? size_format( $asset['size'] ) : '—'; ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
         
-        <h2>Loaded Modules</h2>
-        <table class="widefat">
+        <h3 class="hm-section-heading">Loaded Modules</h3>
+        <table class="hm-table">
             <thead>
                 <tr>
                     <th>Module</th>
@@ -133,26 +148,23 @@ function hearmed_render_system_status_page() {
                 <tr>
                     <td><?php echo esc_html( $module['name'] ); ?></td>
                     <td><code><?php echo esc_html( $module['file'] ); ?></code></td>
-                    <td><?php echo $module['loaded'] ? '✅ Loaded' : '⚠️ Not loaded'; ?></td>
+                    <td><?php echo $module['loaded'] ? '<span class="hm-badge hm-badge-green">Loaded</span>' : '<span class="hm-badge hm-badge-yellow">Not loaded</span>'; ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
         
-        <hr>
-        
-        <h2>Quick Actions</h2>
-        <p>
-            <a href="<?php echo admin_url( 'admin.php?page=hearmed-system-status&action=clear_cache' ); ?>" class="button">Clear Plugin Cache</a>
-            <a href="<?php echo home_url( '/calendar/' ); ?>" class="button button-primary" target="_blank">Test Calendar Page</a>
-            <a href="<?php echo home_url( '/patients/' ); ?>" class="button button-primary" target="_blank">Test Patients Page</a>
-        </p>
+        <h3 class="hm-section-heading">Quick Actions</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="<?php echo admin_url( 'admin.php?page=hearmed-system-status&action=clear_cache' ); ?>" class="hm-btn">Clear Plugin Cache</a>
+            <a href="<?php echo home_url( '/calendar/' ); ?>" class="hm-btn hm-btn-teal" target="_blank">Test Calendar Page</a>
+            <a href="<?php echo home_url( '/patients/' ); ?>" class="hm-btn hm-btn-teal" target="_blank">Test Patients Page</a>
+        </div>
         
         <?php if ( isset( $_GET['action'] ) && $_GET['action'] === 'clear_cache' ): ?>
             <?php
-            // Clear any transients or caches
             delete_transient( 'hearmed_system_status' );
-            echo '<div class="notice notice-success"><p>Cache cleared!</p></div>';
+            echo '<div class="hm-alert hm-alert-success" style="margin-top:16px;">Cache cleared successfully.</div>';
             ?>
         <?php endif; ?>
     </div>

@@ -54,9 +54,16 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
     }
 
     wp_enqueue_style(
+        'hearmed-admin',
+        HEARMED_URL . 'assets/css/hearmed-admin.css',
+        [],
+        HEARMED_VERSION
+    );
+
+    wp_enqueue_style(
         'hearmed-debug',
         HEARMED_URL . 'assets/css/hearmed-debug.css',
-        [],
+        [ 'hearmed-admin' ],
         HEARMED_VERSION
     );
 
@@ -117,153 +124,154 @@ function hm_render_debug_page() {
     $tables = hm_debug_table_status();
 
     ?>
-    <div class="wrap" id="hm-debug-wrap">
-        <h1>🔍 HearMed Debug / Health Check</h1>
-        <p>
+    <div class="hm-admin" id="hm-debug-wrap">
+        <div class="hm-admin-hd">
+            <h2>Debug / Health Check</h2>
+        </div>
+        <p style="color:#64748b;font-size:13px;margin-bottom:20px;">
             Plugin version: <strong><?php echo esc_html( HEARMED_VERSION ); ?></strong> &nbsp;|&nbsp;
             Generated: <strong><?php echo esc_html( current_time( 'mysql' ) ); ?></strong>
         </p>
 
         <!-- ── A. Environment ─────────────────────────────────── -->
-        <div class="hm-debug-section">
-            <h2>A. Environment</h2>
-            <table class="hm-debug-table widefat striped">
-                <thead>
-                    <tr><th>Setting</th><th>Value</th></tr>
-                </thead>
-                <tbody>
-                    <?php foreach ( $env as $label => $value ) : ?>
-                    <tr>
-                        <td><?php echo esc_html( $label ); ?></td>
-                        <td><?php echo esc_html( $value ); ?></td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
+        <h3 class="hm-section-heading">A. Environment</h3>
+        <table class="hm-table">
+            <thead>
+                <tr><th>Setting</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $env as $label => $value ) : ?>
+                <tr>
+                    <td><?php echo esc_html( $label ); ?></td>
+                    <td><?php echo esc_html( $value ); ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
 
         <!-- ── B. Module / shortcode detection ───────────────── -->
-        <div class="hm-debug-section">
-            <h2>B. Module / Shortcode Detection</h2>
-            <p>
-                HearMed loads module assets <em>conditionally</em>: a module's CSS and JS are
-                only enqueued when a page's content contains the corresponding shortcode.
-                Use this section to check which HearMed shortcodes appear on a given page.
-            </p>
+        <h3 class="hm-section-heading">B. Module / Shortcode Detection</h3>
+        <p style="font-size:13px;color:#64748b;margin-bottom:14px;">
+            HearMed loads module assets <em>conditionally</em>: a module's CSS and JS are
+            only enqueued when a page's content contains the corresponding shortcode.
+            Use this section to check which HearMed shortcodes appear on a given page.
+        </p>
 
-            <?php
-            // Optional: if a page ID was submitted (GET, read-only), show its shortcodes.
-            $page_id = 0;
-            if (
-                isset( $_GET['hm_debug_page_id'], $_GET['hm_debug_sc_nonce'] ) &&
-                wp_verify_nonce( sanitize_key( $_GET['hm_debug_sc_nonce'] ), 'hm_debug_sc' )
-            ) {
-                $page_id = absint( $_GET['hm_debug_page_id'] );
-            }
-            if ( $page_id ) {
-                $post = get_post( $page_id );
-                if ( $post && 'page' === $post->post_type ) {
-                    echo '<h3>Shortcodes detected on page ID ' . esc_html( $page_id ) . ' — <em>' . esc_html( $post->post_title ) . '</em></h3>';
-                    echo '<ul>';
-                    $found_any = false;
-                    foreach ( $shortcode_map as $shortcode => $module ) {
-                        if ( has_shortcode( $post->post_content, $shortcode ) ) {
-                            $found_any = true;
-                            echo '<li><code>[' . esc_html( $shortcode ) . ']</code> → module: <strong>' . esc_html( $module ) . '</strong></li>';
-                        }
+        <?php
+        $page_id = 0;
+        if (
+            isset( $_GET['hm_debug_page_id'], $_GET['hm_debug_sc_nonce'] ) &&
+            wp_verify_nonce( sanitize_key( $_GET['hm_debug_sc_nonce'] ), 'hm_debug_sc' )
+        ) {
+            $page_id = absint( $_GET['hm_debug_page_id'] );
+        }
+        if ( $page_id ) {
+            $post = get_post( $page_id );
+            if ( $post && 'page' === $post->post_type ) {
+                echo '<div class="hm-alert hm-alert-info"><strong>Shortcodes on page #' . esc_html( $page_id ) . ' — ' . esc_html( $post->post_title ) . ':</strong><ul style="margin:8px 0 0 18px;">';
+                $found_any = false;
+                foreach ( $shortcode_map as $shortcode => $module ) {
+                    if ( has_shortcode( $post->post_content, $shortcode ) ) {
+                        $found_any = true;
+                        echo '<li><code>[' . esc_html( $shortcode ) . ']</code> → <strong>' . esc_html( $module ) . '</strong></li>';
                     }
-                    if ( ! $found_any ) {
-                        echo '<li>No HearMed shortcodes found on this page.</li>';
-                    }
-                    echo '</ul>';
-                } else {
-                    echo '<p class="hm-debug-warn">⚠ Page ID ' . esc_html( $page_id ) . ' not found or is not a page.</p>';
                 }
+                if ( ! $found_any ) {
+                    echo '<li>No HearMed shortcodes found on this page.</li>';
+                }
+                echo '</ul></div>';
+            } else {
+                echo '<div class="hm-alert hm-alert-warning">Page ID ' . esc_html( $page_id ) . ' not found or is not a page.</div>';
             }
-            ?>
+        }
+        ?>
 
-            <form method="get" action="">
-                <input type="hidden" name="page" value="hearmed-debug">
-                <?php wp_nonce_field( 'hm_debug_sc', 'hm_debug_sc_nonce' ); ?>
-                <label for="hm_debug_page_id"><strong>Check a page:</strong></label>
-                <input type="number" id="hm_debug_page_id" name="hm_debug_page_id"
-                       value="<?php echo esc_attr( $page_id ?: '' ); ?>"
-                       placeholder="Enter page ID" style="width:140px;">
-                <button type="submit" class="button">Check Page</button>
-            </form>
+        <form method="get" action="" style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">
+            <input type="hidden" name="page" value="hearmed-debug">
+            <?php wp_nonce_field( 'hm_debug_sc', 'hm_debug_sc_nonce' ); ?>
+            <label for="hm_debug_page_id"><strong>Check a page:</strong></label>
+            <input type="number" id="hm_debug_page_id" name="hm_debug_page_id"
+                   class="hm-filter-select"
+                   value="<?php echo esc_attr( $page_id ?: '' ); ?>"
+                   placeholder="Page ID" style="width:120px;">
+            <button type="submit" class="hm-btn hm-btn-teal">Check Page</button>
+        </form>
 
-            <p style="margin-top:12px;">All registered HearMed shortcodes:</p>
-            <ul>
-                <?php foreach ( $shortcode_map as $shortcode => $module ) : ?>
-                <li><code>[<?php echo esc_html( $shortcode ); ?>]</code> → <em><?php echo esc_html( $module ); ?></em></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-
-        <!-- ── C. AJAX Health Checks ─────────────────────────── -->
-        <div class="hm-debug-section">
-            <h2>C. AJAX Health Checks</h2>
-
-            <div class="hm-nonce-info">
-                <strong>Nonce status:</strong>
-                A fresh <code>hm_nonce</code> has been generated for this session and passed
-                to the buttons below. Each button sends a live request to
-                <code>admin-ajax.php</code> using the same nonce that the portal scripts use.
-            </div>
-
-            <p>
-                <button id="hm-debug-run-all" class="button button-primary">▶ Run All Checks</button>
-            </p>
-
-            <?php foreach ( $ajax_checks as $check ) : ?>
-            <div class="hm-ajax-row" data-action="<?php echo esc_attr( $check['action'] ); ?>">
-                <div class="hm-ajax-row-header">
-                    <button class="button hm-debug-run-btn">Run</button>
-                    <code><?php echo esc_html( $check['action'] ); ?></code>
-                    <span class="hm-ajax-status"></span>
-                    <?php if ( ! $check['registered'] ) : ?>
-                    <span class="hm-debug-warn">(⚠ action not registered — module may not be loaded)</span>
-                    <?php endif; ?>
-                </div>
-                <div class="hm-ajax-result"></div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-
-        <!-- ── D. Database / Tables ───────────────────────────── -->
-        <div class="hm-debug-section">
-            <h2>D. Database / Tables</h2>
-            <table class="hm-debug-table widefat">
-                <thead>
-                    <tr>
-                        <th>Table</th>
-                        <th>Status</th>
-                        <th>Row count</th>
-                    </tr>
-                </thead>
+        <details style="margin-bottom:24px;">
+            <summary style="cursor:pointer;font-size:13px;color:#64748b;">Show all registered shortcodes</summary>
+            <table class="hm-table" style="margin-top:10px;">
+                <thead><tr><th>Shortcode</th><th>Module</th></tr></thead>
                 <tbody>
-                    <?php foreach ( $tables as $t ) : ?>
-                    <tr>
-                        <td><code><?php echo esc_html( $t['full_name'] ); ?></code></td>
-                        <td>
-                            <?php if ( $t['exists'] ) : ?>
-                                <span class="hm-debug-ok">✅ Exists</span>
-                            <?php else : ?>
-                                <span class="hm-debug-err">❌ Missing</span>
-                            <?php endif; ?>
-                        </td>
-                        <td><?php echo $t['exists'] ? esc_html( number_format( (int) $t['count'] ) ) : 'N/A'; ?></td>
-                    </tr>
-                    <?php endforeach; ?>
+                <?php foreach ( $shortcode_map as $shortcode => $module ) : ?>
+                <tr>
+                    <td><code>[<?php echo esc_html( $shortcode ); ?>]</code></td>
+                    <td><?php echo esc_html( $module ); ?></td>
+                </tr>
+                <?php endforeach; ?>
                 </tbody>
             </table>
-            <p style="font-size:12px;color:#666;margin-top:8px;">
-                Tables are resolved via <code>HearMed_DB::table()</code> to their PostgreSQL schema-qualified names.
-                "Missing" means the table does not yet exist in the Railway PostgreSQL database.
-            </p>
+        </details>
+
+        <!-- ── C. AJAX Health Checks ─────────────────────────── -->
+        <h3 class="hm-section-heading">C. AJAX Health Checks</h3>
+
+        <div class="hm-nonce-info">
+            <strong>Nonce status:</strong>
+            A fresh <code>hm_nonce</code> has been generated for this session and passed
+            to the buttons below. Each button sends a live request to
+            <code>admin-ajax.php</code> using the same nonce that the portal scripts use.
         </div>
 
-    </div><!-- /#hm-debug-wrap -->
+        <p style="margin-bottom:14px;">
+            <button id="hm-debug-run-all" class="hm-btn hm-btn-teal">▶ Run All Checks</button>
+        </p>
+
+        <?php foreach ( $ajax_checks as $check ) : ?>
+        <div class="hm-ajax-row" data-action="<?php echo esc_attr( $check['action'] ); ?>">
+            <div class="hm-ajax-row-header">
+                <button class="hm-btn hm-btn-sm">Run</button>
+                <code><?php echo esc_html( $check['action'] ); ?></code>
+                <span class="hm-ajax-status"></span>
+                <?php if ( ! $check['registered'] ) : ?>
+                <span class="hm-badge hm-badge-yellow">Action not registered</span>
+                <?php endif; ?>
+            </div>
+            <div class="hm-ajax-result"></div>
+        </div>
+        <?php endforeach; ?>
+
+        <!-- ── D. Database / Tables ───────────────────────────── -->
+        <h3 class="hm-section-heading">D. Database / Tables</h3>
+        <table class="hm-table">
+            <thead>
+                <tr>
+                    <th>Table</th>
+                    <th>Status</th>
+                    <th>Row count</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $tables as $t ) : ?>
+                <tr>
+                    <td><code><?php echo esc_html( $t['full_name'] ); ?></code></td>
+                    <td>
+                        <?php if ( $t['exists'] ) : ?>
+                            <span class="hm-badge hm-badge-green">Exists</span>
+                            <?php else : ?>
+                            <span class="hm-badge hm-badge-red">Missing</span>
+                        <?php endif; ?>
+                    </td>
+                    <td><?php echo $t['exists'] ? esc_html( number_format( (int) $t['count'] ) ) : '—'; ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <p style="font-size:12px;color:#94a3b8;margin-top:8px;">
+            Tables are resolved via <code>HearMed_DB::table()</code> to their PostgreSQL schema-qualified names.
+            "Missing" means the table does not yet exist in the Railway PostgreSQL database.
+        </p>
+
+    </div><!-- /.hm-admin -->
     <?php
 }
 

@@ -89,7 +89,7 @@ class HearMed_Staff_Login {
             </div>
 
             <?php if ( ! empty( $errors ) ): ?>
-                <div style="margin-bottom:16px;padding:12px 14px;border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;border-radius:10px;">
+                <div class="hm-alert hm-alert-error">
                     <?php echo esc_html( implode( ' ', $errors ) ); ?>
                 </div>
             <?php endif; ?>
