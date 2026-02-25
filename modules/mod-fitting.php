@@ -51,13 +51,7 @@ function hm_render_fitting_page() {
     ob_start(); ?>
     <style>
     /* ── Awaiting Fitting — hmf- namespace ── */
-    /* Hide WP page title on this shortcode page */
-    .page .entry-title,
-    .page .page-title,
-    .page .wp-block-post-title,
-    article > .entry-title:first-child { display:none !important; }
-
-    .hmf-stats{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+    .hmf-stats{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
     .hmf-stat{background:#fff;border-radius:10px;padding:14px 20px;flex:1;min-width:140px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(15,23,42,.03);}
     .hmf-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;}
     .hmf-stat-val{font-size:22px;font-weight:700;color:#0f172a;margin-top:2px;}
@@ -139,34 +133,30 @@ function hm_render_fitting_page() {
     .hmf-success{background:#d1fae5;color:#065f46;padding:12px 16px;border-radius:8px;font-size:12px;font-weight:500;margin-top:10px;text-align:center;}
     .hmf-warning{background:#fef3cd;color:#92400e;padding:12px 16px;border-radius:8px;font-size:12px;font-weight:500;margin-top:10px;}
 
-    /* Filter bar */
-    .hmf-filters{display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap;}
-    .hmf-filter-group{display:flex;align-items:center;gap:6px;}
-    .hmf-filter-group label{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
-    .hmf-filter-group select{padding:6px 28px 6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#1e293b;background:#fff;min-width:160px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;}
-    .hmf-filter-group select:focus{outline:none;border-color:#0BB4C4;box-shadow:0 0 0 3px rgba(11,180,196,.1);}
-    .hmf-filter-reset{padding:6px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:600;color:#64748b;background:#fff;cursor:pointer;transition:all .15s;}
-    .hmf-filter-reset:hover{border-color:#0BB4C4;color:#0BB4C4;}
+    /* Filter bar — integrated toolbar */
+    .hmf-toolbar{display:flex;align-items:center;gap:16px;padding:10px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:16px;}
+    .hmf-toolbar-label{font-size:11px;font-weight:600;color:#475569;white-space:nowrap;}
+    .hmf-toolbar select{padding:7px 30px 7px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;color:#1e293b;background:#fff;min-width:170px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color .15s;}
+    .hmf-toolbar select:focus{outline:none;border-color:#0BB4C4;box-shadow:0 0 0 2px rgba(11,180,196,.12);}
+    .hmf-toolbar-sep{width:1px;height:24px;background:#e2e8f0;}
+    .hmf-toolbar-reset{padding:6px 14px;border:none;border-radius:6px;font-size:11px;font-weight:600;color:#64748b;background:#e2e8f0;cursor:pointer;transition:all .15s;}
+    .hmf-toolbar-reset:hover{background:#0BB4C4;color:#fff;}
 
-    /* Totals footer */
-    .hmf-totals{display:flex;gap:14px;margin-top:20px;flex-wrap:wrap;}
-    .hmf-total-card{background:#fff;border-radius:10px;padding:16px 20px;flex:1;min-width:200px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(15,23,42,.03);}
-    .hmf-total-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;margin-bottom:2px;}
-    .hmf-total-val{font-size:24px;font-weight:700;color:#0f172a;}
-    .hmf-total-val.green{color:#059669;}
-    .hmf-total-val.blue{color:#2563eb;}
-    .hmf-total-val.purple{color:#7c3aed;}
-    .hmf-total-sub{font-size:10px;color:#94a3b8;margin-top:4px;}
+    /* Totals footer — clean summary strip */
+    .hmf-summary{margin-top:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;}
+    .hmf-summary-row{display:flex;align-items:center;}
+    .hmf-summary-cell{flex:1;padding:14px 20px;text-align:center;position:relative;}
+    .hmf-summary-cell + .hmf-summary-cell{border-left:1px solid #e2e8f0;}
+    .hmf-summary-cell-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;font-weight:600;margin-bottom:2px;}
+    .hmf-summary-cell-val{font-size:20px;font-weight:700;color:#0f172a;}
+    .hmf-summary-cell-val.green{color:#059669;}
+    .hmf-summary-cell-val.blue{color:#2563eb;}
+    .hmf-summary-cell-val.purple{color:#7c3aed;}
+    .hmf-summary-cell-sub{font-size:10px;color:#94a3b8;margin-top:2px;}
     </style>
 
     <div id="hm-app" class="hm-calendar" data-module="admin" data-view="fitting">
         <div class="hm-page">
-            <div class="hmf-page-top" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <div>
-                    <h1 style="font-size:22px;font-weight:700;color:#0f172a;margin:0;">Awaiting Fitting</h1>
-                    <div style="color:#94a3b8;font-size:12px;margin-top:4px;">Track hearing aid orders from approval through to fitting &amp; payment.</div>
-                </div>
-            </div>
 
             <!-- Stats -->
             <div class="hmf-stats">
@@ -188,21 +178,17 @@ function hm_render_fitting_page() {
                 </div>
             </div>
 
-            <!-- Filter Bar -->
-            <div class="hmf-filters">
-                <div class="hmf-filter-group">
-                    <label>Clinic</label>
-                    <select id="hmf-filter-clinic" onchange="hmFitting.applyFilters()">
-                        <option value="">All Clinics</option>
-                    </select>
-                </div>
-                <div class="hmf-filter-group">
-                    <label>Dispenser</label>
-                    <select id="hmf-filter-dispenser" onchange="hmFitting.applyFilters()">
-                        <option value="">All Dispensers</option>
-                    </select>
-                </div>
-                <button class="hmf-filter-reset" onclick="hmFitting.resetFilters()">Reset</button>
+            <!-- Toolbar: Filters -->
+            <div class="hmf-toolbar">
+                <span class="hmf-toolbar-label">Filter by</span>
+                <select id="hmf-filter-clinic" onchange="hmFitting.applyFilters()">
+                    <option value="">All Clinics</option>
+                </select>
+                <select id="hmf-filter-dispenser" onchange="hmFitting.applyFilters()">
+                    <option value="">All Dispensers</option>
+                </select>
+                <div class="hmf-toolbar-sep"></div>
+                <button class="hmf-toolbar-reset" onclick="hmFitting.resetFilters()">Reset Filters</button>
             </div>
 
             <!-- Table loaded via AJAX -->
@@ -210,8 +196,8 @@ function hm_render_fitting_page() {
                 <div style="text-align:center;padding:40px;color:#94a3b8;"><div class="hm-spinner"></div></div>
             </div>
 
-            <!-- Totals (populated by JS) -->
-            <div id="hmf-totals" class="hmf-totals" style="display:none;"></div>
+            <!-- Summary (populated by JS) -->
+            <div id="hmf-totals" class="hmf-summary" style="display:none;"></div>
         </div>
     </div>
 
@@ -531,22 +517,24 @@ function hm_render_fitting_page() {
             var monthName = now.toLocaleString('default', { month: 'long' });
 
             container.innerHTML =
-                '<div class="hmf-total-card">' +
-                    '<div class="hmf-total-label">Total Awaiting Fitting</div>' +
-                    '<div class="hmf-total-val green">' + totalAwaiting + '</div>' +
-                '</div>' +
-                '<div class="hmf-total-card">' +
-                    '<div class="hmf-total-label">Fitting Before End of ' + hmFE(monthName) + '</div>' +
-                    '<div class="hmf-total-val blue">' + fittingBeforeEOM + '</div>' +
-                    '<div class="hmf-total-sub">Scheduled before ' + hmFD(endOfMonth) + '</div>' +
-                '</div>' +
-                '<div class="hmf-total-card">' +
-                    '<div class="hmf-total-label">PRSI to Claim</div>' +
-                    '<div class="hmf-total-val purple">' + prsiCount + '</div>' +
-                    '<div class="hmf-total-sub">' + hmFE(cycleLabel) + '</div>' +
+                '<div class="hmf-summary-row">' +
+                    '<div class="hmf-summary-cell">' +
+                        '<div class="hmf-summary-cell-label">Total Awaiting Fitting</div>' +
+                        '<div class="hmf-summary-cell-val green">' + totalAwaiting + '</div>' +
+                    '</div>' +
+                    '<div class="hmf-summary-cell">' +
+                        '<div class="hmf-summary-cell-label">Fitting Before End of ' + hmFE(monthName) + '</div>' +
+                        '<div class="hmf-summary-cell-val blue">' + fittingBeforeEOM + '</div>' +
+                        '<div class="hmf-summary-cell-sub">Scheduled before ' + hmFD(endOfMonth) + '</div>' +
+                    '</div>' +
+                    '<div class="hmf-summary-cell">' +
+                        '<div class="hmf-summary-cell-label">PRSI to Claim</div>' +
+                        '<div class="hmf-summary-cell-val purple">' + prsiCount + '</div>' +
+                        '<div class="hmf-summary-cell-sub">' + hmFE(cycleLabel) + '</div>' +
+                    '</div>' +
                 '</div>';
 
-            container.style.display = 'flex';
+            container.style.display = 'block';
         },
 
         // ── SERIAL NUMBER MODAL ──
