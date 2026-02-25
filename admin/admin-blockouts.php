@@ -170,27 +170,23 @@ class HearMed_Admin_Blockouts {
                         <div class="hm-form-row">
                             <div class="hm-form-group">
                                 <label>Appointment Type</label>
-                                <div style="display:flex;gap:4px;">
-                                    <select id="hmb-appt-type" style="flex:1">
-                                        <option value="">All Types</option>
-                                        <?php foreach ($appt_types as $at): ?>
-                                            <option value="<?php echo (int) $at->id; ?>"><?php echo esc_html($at->type_name); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('appointment_type','Appointment Type','hmb-appt-type')" title="Add new type" style="padding:4px 10px;">+</button>
-                                </div>
+                                <select id="hmb-appt-type" data-entity="appointment_type" data-label="Appointment Type">
+                                    <option value="">All Types</option>
+                                    <?php foreach ($appt_types as $at): ?>
+                                        <option value="<?php echo (int) $at->id; ?>"><?php echo esc_html($at->type_name); ?></option>
+                                    <?php endforeach; ?>
+                                    <option value="__add_new__">+ Add New…</option>
+                                </select>
                             </div>
                             <div class="hm-form-group">
                                 <label>Clinic</label>
-                                <div style="display:flex;gap:4px;">
-                                    <select id="hmb-clinic" style="flex:1">
-                                        <option value="">All Clinics</option>
-                                        <?php foreach ($clinics as $c): ?>
-                                            <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('clinic','Clinic','hmb-clinic')" title="Add new clinic" style="padding:4px 10px;">+</button>
-                                </div>
+                                <select id="hmb-clinic" data-entity="clinic" data-label="Clinic">
+                                    <option value="">All Clinics</option>
+                                    <?php foreach ($clinics as $c): ?>
+                                        <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
+                                    <?php endforeach; ?>
+                                    <option value="__add_new__">+ Add New…</option>
+                                </select>
                             </div>
                         </div>
                         <div class="hm-form-group">

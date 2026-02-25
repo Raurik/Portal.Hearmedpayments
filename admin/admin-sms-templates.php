@@ -126,10 +126,16 @@ class HearMed_Admin_SMS_Templates {
                             </div>
                             <div class="hm-form-group" style="flex:1">
                                 <label>Category</label>
-                                <select id="hmsms-category">
+                                <select id="hmsms-category" data-entity="sms_category" data-label="Category">
                                     <?php foreach ($this->categories as $val => $label): ?>
                                         <option value="<?php echo esc_attr($val); ?>"><?php echo esc_html($label); ?></option>
                                     <?php endforeach; ?>
+                                    <?php foreach (hm_get_dropdown_options('sms_category') as $custom): ?>
+                                        <?php if (!array_key_exists($custom, $this->categories)): ?>
+                                        <option value="<?php echo esc_attr($custom); ?>"><?php echo esc_html(ucfirst($custom)); ?></option>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                    <option value="__add_new__">+ Add New…</option>
                                 </select>
                             </div>
                         </div>

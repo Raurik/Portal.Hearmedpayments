@@ -198,15 +198,13 @@ class HearMed_Admin_Resources {
                         <input type="hidden" id="hmr-room-id">
                         <div class="hm-form-group">
                             <label>Clinic *</label>
-                            <div style="display:flex;gap:4px;">
-                                <select id="hmr-room-clinic" style="flex:1">
+                                <select id="hmr-room-clinic" data-entity="clinic" data-label="Clinic">
                                     <option value="">Select clinic</option>
                                     <?php foreach ($clinics as $c): ?>
                                         <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
                                     <?php endforeach; ?>
+                                    <option value="__add_new__">+ Add New…</option>
                                 </select>
-                                <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('clinic','Clinic',['hmr-room-clinic','hmr-equip-clinic'])" title="Add new clinic" style="padding:4px 10px;">+</button>
-                            </div>
                         </div>
                         <div class="hm-form-group">
                             <label>Room Name *</label>
@@ -232,15 +230,13 @@ class HearMed_Admin_Resources {
                         <div class="hm-form-row">
                             <div class="hm-form-group">
                                 <label>Clinic *</label>
-                                <div style="display:flex;gap:4px;">
-                                    <select id="hmr-equip-clinic" style="flex:1" onchange="hmRes.filterRooms()">
+                                    <select id="hmr-equip-clinic" data-entity="clinic" data-label="Clinic" onchange="hmRes.filterRooms()">
                                         <option value="">Select clinic</option>
                                         <?php foreach ($clinics as $c): ?>
                                             <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
                                         <?php endforeach; ?>
+                                        <option value="__add_new__">+ Add New…</option>
                                     </select>
-                                    <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('clinic','Clinic',['hmr-room-clinic','hmr-equip-clinic'])" title="Add new clinic" style="padding:4px 10px;">+</button>
-                                </div>
                             </div>
                             <div class="hm-form-group">
                                 <label>Room</label>
@@ -256,15 +252,13 @@ class HearMed_Admin_Resources {
                             </div>
                             <div class="hm-form-group" style="flex:1">
                                 <label>Resource Type *</label>
-                                <div style="display:flex;gap:4px;">
-                                    <select id="hmr-equip-type" style="flex:1;">
+                                    <select id="hmr-equip-type" data-entity="resource_type" data-label="Resource Type">
                                         <option value="">Select type</option>
                                         <?php foreach ($resource_types as $t): ?>
                                             <option value="<?php echo esc_attr($t->type_name); ?>"><?php echo esc_html($t->type_name); ?></option>
                                         <?php endforeach; ?>
+                                        <option value="__add_new__">+ Add New…</option>
                                     </select>
-                                    <button type="button" class="hm-btn hm-btn-sm" onclick="hmRes.addType()" title="Add new type" style="padding:6px 8px;white-space:nowrap;">+</button>
-                                </div>
                             </div>
                         </div>
                         <div class="hm-form-group">

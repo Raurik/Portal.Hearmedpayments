@@ -26,6 +26,7 @@ function hm_quick_add_handler() {
     if (empty($name)) { wp_send_json_error('Name is required'); return; }
 
     $now = current_time('mysql');
+    $id  = null;
 
     switch ($entity) {
         case 'manufacturer':
@@ -67,12 +68,104 @@ function hm_quick_add_handler() {
             if ($id) wp_send_json_success(['id' => $id, 'name' => $name]);
             break;
 
+        case 'resource_type':
+            $exists = HearMed_DB::get_row(
+                "SELECT id, type_name FROM hearmed_reference.resource_types WHERE type_name = $1",
+                [$name]
+            );
+            if ($exists) {
+                wp_send_json_success(['id' => $name, 'name' => $name]);
+                return;
+            }
+            $id = HearMed_DB::insert('hearmed_reference.resource_types', [
+                'type_name'  => $name,
+                'is_active'  => true,
+                'sort_order' => 0,
+                'created_at' => $now,
+            ]);
+            if ($id) wp_send_json_success(['id' => $name, 'name' => $name]);
+            break;
+
+        case 'bundled_category':
+            // Ensure table exists
+            $check = HearMed_DB::get_var("SELECT to_regclass('hearmed_reference.bundled_categories')");
+            if ($check === null) {
+                HearMed_DB::get_results("CREATE TABLE IF NOT EXISTS hearmed_reference.bundled_categories (
+                    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+                    category_name VARCHAR(100) NOT NULL UNIQUE,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    sort_order INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )");
+            }
+            $id = HearMed_DB::insert('hearmed_reference.bundled_categories', [
+                'category_name' => $name,
+                'created_at'    => $now,
+            ]);
+            if ($id) wp_send_json_success(['id' => $name, 'name' => $name]); // value = name not id
+            break;
+
         default:
-            wp_send_json_error('Unknown entity type');
-            return;
+            // Generic dropdown option — stored in dropdown_options table
+            hm_ensure_dropdown_options_table();
+            $field = sanitize_key($entity);
+            // Check for duplicate
+            $exists = HearMed_DB::get_var(
+                "SELECT id FROM hearmed_reference.dropdown_options WHERE field_name = $1 AND option_value = $2",
+                [$field, $name]
+            );
+            if ($exists) {
+                wp_send_json_success(['id' => $name, 'name' => $name]);
+                return;
+            }
+            $id = HearMed_DB::insert('hearmed_reference.dropdown_options', [
+                'field_name'   => $field,
+                'option_value' => $name,
+                'option_label' => $name,
+                'is_active'    => true,
+                'created_at'   => $now,
+            ]);
+            if ($id) wp_send_json_success(['id' => $name, 'name' => $name]); // value = name
+            break;
     }
 
     if (empty($id)) {
         wp_send_json_error(HearMed_DB::last_error() ?: 'Database error');
     }
+}
+
+/**
+ * Ensure the dropdown_options table exists for storing custom dropdown entries.
+ */
+function hm_ensure_dropdown_options_table() {
+    static $checked = false;
+    if ($checked) return;
+    $checked = true;
+    $exists = HearMed_DB::get_var("SELECT to_regclass('hearmed_reference.dropdown_options')");
+    if ($exists !== null) return;
+    HearMed_DB::get_results("CREATE TABLE IF NOT EXISTS hearmed_reference.dropdown_options (
+        id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+        field_name VARCHAR(50) NOT NULL,
+        option_value VARCHAR(100) NOT NULL,
+        option_label VARCHAR(100) NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(field_name, option_value)
+    )");
+}
+
+/**
+ * Helper: get custom dropdown options for a given field.
+ * Returns array of option_value strings.
+ */
+function hm_get_dropdown_options($field_name) {
+    hm_ensure_dropdown_options_table();
+    $rows = HearMed_DB::get_results(
+        "SELECT option_value, option_label FROM hearmed_reference.dropdown_options
+         WHERE field_name = $1 AND is_active = true ORDER BY sort_order, option_label",
+        [$field_name]
+    );
+    if (!$rows) return [];
+    return array_map(function($r) { return $r->option_value; }, $rows);
 }

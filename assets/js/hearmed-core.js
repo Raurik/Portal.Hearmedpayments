@@ -249,43 +249,80 @@
 })(jQuery);
 
 /**
- * Generic Quick-Add for dropdowns.
- * Usage: hmQuickAdd('manufacturer', 'Brand', ['selectId1','selectId2'], {dataName: true})
- * @param {string}   entity   - Entity type: manufacturer|clinic|role|appointment_type
- * @param {string}   label    - Display label for prompt, e.g. "Brand"
- * @param {string|string[]} selectIds - ID(s) of <select> elements to update
- * @param {object}   opts     - Options: {dataName:bool, useRoleName:bool, setValue:bool}
+ * Global inline "Add New" handler for <select data-entity="xxx">.
+ * When a user picks the "+ Add New…" option (value="__add_new__"),
+ * this prompts for a name, saves via AJAX, inserts the new <option>
+ * into ALL selects sharing the same data-entity, and selects it.
  */
-function hmQuickAdd(entity, label, selectIds, opts) {
-    opts = opts || {};
-    var name = prompt('Enter new ' + label + ' name:');
-    if (!name || !name.trim()) return;
-    name = name.trim();
-    jQuery.post(HM.ajax_url, {
-        action: 'hm_quick_add',
-        nonce: HM.nonce,
-        entity: entity,
-        name: name
-    }, function(r) {
-        if (r.success) {
-            var ids = Array.isArray(selectIds) ? selectIds : [selectIds];
-            ids.forEach(function(sid) {
-                var sel = document.getElementById(sid);
-                if (!sel) return;
-                var opt = document.createElement('option');
-                opt.value = r.data.id;
-                opt.textContent = r.data.name;
-                if (opts.dataName) opt.setAttribute('data-name', r.data.name);
-                if (opts.useRoleName) { opt.value = r.data.role_name; opt.textContent = r.data.name; }
-                sel.appendChild(opt);
-            });
-            // Select the new value in the first dropdown
-            var first = document.getElementById(ids[0]);
-            if (first && opts.setValue !== false) first.value = r.data.id;
-            if (first && opts.useRoleName) first.value = r.data.role_name;
-            if (typeof HM.toast === 'function') HM.toast(label + ' "' + r.data.name + '" added', 'success');
-        } else {
-            alert(r.data || 'Error adding ' + label.toLowerCase());
+(function() {
+    document.addEventListener('change', function(e) {
+        var sel = e.target;
+        if (sel.tagName !== 'SELECT' || sel.value !== '__add_new__') return;
+
+        var entity = sel.getAttribute('data-entity');
+        if (!entity) { sel.value = ''; return; }
+
+        // Prompt label from data-label or entity name
+        var label = sel.getAttribute('data-label') || entity.replace(/_/g, ' ');
+        var name = prompt('Enter new ' + label + ':');
+
+        if (!name || !name.trim()) {
+            sel.value = ''; // reset to blank
+            return;
         }
+        name = name.trim();
+
+        jQuery.post(HM.ajax_url, {
+            action: 'hm_quick_add',
+            nonce: HM.nonce,
+            entity: entity,
+            name: name
+        }, function(r) {
+            if (!r.success) {
+                alert(r.data || 'Error adding ' + label);
+                sel.value = '';
+                return;
+            }
+
+            var newId    = r.data.id;
+            var newName  = r.data.name;
+            var roleKey  = r.data.role_name || null;
+
+            // Insert new option into ALL selects with same data-entity
+            var siblings = document.querySelectorAll('select[data-entity="' + entity + '"]');
+            siblings.forEach(function(s) {
+                // Check it doesn't already exist
+                var exists = false;
+                for (var i = 0; i < s.options.length; i++) {
+                    if (s.options[i].value == newId) { exists = true; break; }
+                }
+                if (!exists) {
+                    var opt = document.createElement('option');
+                    // For role dropdowns that use role_name as value
+                    opt.value = roleKey || newId;
+                    opt.textContent = newName;
+                    if (s.getAttribute('data-name-attr')) {
+                        opt.setAttribute('data-name', newName);
+                    }
+                    // Insert before the "+ Add New…" option
+                    var addNewOpt = s.querySelector('option[value="__add_new__"]');
+                    if (addNewOpt) {
+                        s.insertBefore(opt, addNewOpt);
+                    } else {
+                        s.appendChild(opt);
+                    }
+                }
+            });
+
+            // Select the new value in the dropdown that triggered it
+            sel.value = roleKey || newId;
+
+            // Fire change event so any onchange handlers run
+            sel.dispatchEvent(new Event('change', {bubbles: true}));
+
+            if (typeof HM.toast === 'function') {
+                HM.toast(newName + ' added', 'success');
+            }
+        });
     });
-}
+})();

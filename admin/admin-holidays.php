@@ -159,12 +159,17 @@ class HearMed_Admin_Holidays {
                             </div>
                             <div class="hm-form-group">
                                 <label>Type</label>
-                                <select id="hmh-type">
-                                    <option value="holiday">Holiday</option>
-                                    <option value="sick">Sick Leave</option>
-                                    <option value="personal">Personal Day</option>
-                                    <option value="training">Training</option>
-                                    <option value="other">Other</option>
+                                <?php $hol_defaults = ['holiday'=>'Holiday','sick'=>'Sick Leave','personal'=>'Personal Day','training'=>'Training','other'=>'Other']; ?>
+                                <select id="hmh-type" data-entity="holiday_type" data-label="Leave Type">
+                                    <?php foreach ($hol_defaults as $hk => $hv): ?>
+                                        <option value="<?php echo esc_attr($hk); ?>"><?php echo esc_html($hv); ?></option>
+                                    <?php endforeach; ?>
+                                    <?php foreach (hm_get_dropdown_options('holiday_type') as $custom): ?>
+                                        <?php if (!array_key_exists($custom, $hol_defaults)): ?>
+                                        <option value="<?php echo esc_attr($custom); ?>"><?php echo esc_html(ucfirst($custom)); ?></option>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                    <option value="__add_new__">+ Add New…</option>
                                 </select>
                             </div>
                         </div>

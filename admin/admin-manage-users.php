@@ -210,15 +210,13 @@ class HearMed_Admin_Manage_Users {
                         <div class="hm-form-row">
                             <div class="hm-form-group">
                                 <label>Role *</label>
-                                <div style="display:flex;gap:4px;">
-                                    <select id="hmu-role" style="flex:1">
-                                        <option value="">— Select Role —</option>
-                                        <?php foreach ($roles as $r): ?>
-                                            <option value="<?php echo esc_attr($r->role_name); ?>"><?php echo esc_html($r->display_name); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('role','Role','hmu-role',{useRoleName:true})" title="Add new role" style="padding:4px 10px;">+</button>
-                                </div>
+                                <select id="hmu-role" data-entity="role" data-label="Role">
+                                    <option value="">— Select Role —</option>
+                                    <?php foreach ($roles as $r): ?>
+                                        <option value="<?php echo esc_attr($r->role_name); ?>"><?php echo esc_html($r->display_name); ?></option>
+                                    <?php endforeach; ?>
+                                    <option value="__add_new__">+ Add New…</option>
+                                </select>
                             </div>
                             <div class="hm-form-group">
                                 <label>Employee Number</label>

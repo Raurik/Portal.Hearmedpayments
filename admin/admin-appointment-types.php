@@ -141,14 +141,18 @@ class HearMed_Admin_Appointment_Types {
                             </div>
                             <div class="hm-form-group">
                                 <label>Category</label>
-                                <select class="hm-inp" id="hma-category">
+                                <?php $cat_defaults = ['consultation'=>'Consultation','service'=>'Service','review'=>'Review','diagnostic'=>'Diagnostic','fitting'=>'Fitting','repair'=>'Repair']; ?>
+                                <select class="hm-inp" id="hma-category" data-entity="appt_category" data-label="Category">
                                     <option value="">— None —</option>
-                                    <option value="consultation">Consultation</option>
-                                    <option value="service">Service</option>
-                                    <option value="review">Review</option>
-                                    <option value="diagnostic">Diagnostic</option>
-                                    <option value="fitting">Fitting</option>
-                                    <option value="repair">Repair</option>
+                                    <?php foreach ($cat_defaults as $ck => $cv): ?>
+                                        <option value="<?php echo esc_attr($ck); ?>"><?php echo esc_html($cv); ?></option>
+                                    <?php endforeach; ?>
+                                    <?php foreach (hm_get_dropdown_options('appt_category') as $custom): ?>
+                                        <?php if (!array_key_exists($custom, $cat_defaults)): ?>
+                                        <option value="<?php echo esc_attr($custom); ?>"><?php echo esc_html(ucfirst($custom)); ?></option>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                    <option value="__add_new__">+ Add New…</option>
                                 </select>
                             </div>
                         </div>

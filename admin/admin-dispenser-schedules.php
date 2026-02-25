@@ -103,15 +103,13 @@ class HearMed_Admin_Dispenser_Schedules {
                         <div class="hm-form-row">
                             <div class="hm-form-group">
                                 <label>Clinic *</label>
-                                <div style="display:flex;gap:4px;">
-                                    <select id="hmse-clinic" style="flex:1">
+                                    <select id="hmse-clinic" data-entity="clinic" data-label="Clinic">
                                         <option value="">Select clinic</option>
                                         <?php foreach ($clinics as $c): ?>
                                             <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
                                         <?php endforeach; ?>
+                                        <option value="__add_new__">+ Add New…</option>
                                     </select>
-                                    <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('clinic','Clinic',['hmse-clinic','hms-clinic'])" title="Add new clinic" style="padding:4px 10px;">+</button>
-                                </div>
                             </div>
                             <div class="hm-form-group">
                                 <label>Day *</label>
@@ -363,15 +361,13 @@ class HearMed_Admin_Dispenser_Schedules {
                             </div>
                             <div class="hm-form-group">
                                 <label>Clinic *</label>
-                                <div style="display:flex;gap:4px;">
-                                    <select id="hms-clinic" style="flex:1">
+                                    <select id="hms-clinic" data-entity="clinic" data-label="Clinic">
                                         <option value="">Select clinic</option>
                                         <?php foreach ( $clinics as $c ): ?>
                                             <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html( $c->clinic_name ); ?></option>
                                         <?php endforeach; ?>
+                                        <option value="__add_new__">+ Add New…</option>
                                     </select>
-                                    <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('clinic','Clinic',['hmse-clinic','hms-clinic'])" title="Add new clinic" style="padding:4px 10px;">+</button>
-                                </div>
                             </div>
                         </div>
                         <div class="hm-form-row">

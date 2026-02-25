@@ -225,15 +225,13 @@ class HearMed_Admin_Products {
                             <div class="hm-form-row">
                                 <div class="hm-form-group">
                                     <label>Manufacturer *</label>
-                                    <div style="display:flex;gap:4px;">
-                                        <select id="hmp-manufacturer" style="flex:1" onchange="hmProd.genCode()">
-                                            <option value="">Select brand</option>
-                                            <?php foreach ($manufacturers as $m): ?>
-                                                <option value="<?php echo (int) $m->id; ?>" data-name="<?php echo esc_attr($m->name); ?>"><?php echo esc_html($m->name); ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('manufacturer','Brand',['hmp-manufacturer','hmp-bnd-mfr','hmp-acc-mfr'],{dataName:true})" title="Add new brand" style="padding:4px 10px;">+</button>
-                                    </div>
+                                    <select id="hmp-manufacturer" data-entity="manufacturer" data-label="Brand" data-name-attr="1" onchange="hmProd.genCode()">
+                                        <option value="">Select brand</option>
+                                        <?php foreach ($manufacturers as $m): ?>
+                                            <option value="<?php echo (int) $m->id; ?>" data-name="<?php echo esc_attr($m->name); ?>"><?php echo esc_html($m->name); ?></option>
+                                        <?php endforeach; ?>
+                                        <option value="__add_new__">+ Add New…</option>
+                                    </select>
                                 </div>
                                 <div class="hm-form-group">
                                     <label>Model * <span style="font-size:11px;color:var(--hm-text-light);">(e.g. Allure M)</span></label>
@@ -243,11 +241,17 @@ class HearMed_Admin_Products {
                             <div class="hm-form-row">
                                 <div class="hm-form-group">
                                     <label>Style *</label>
-                                    <select id="hmp-style" onchange="hmProd.genCode()">
+                                    <select id="hmp-style" data-entity="ha_style" data-label="Style" onchange="hmProd.genCode()">
                                         <option value="">Select</option>
                                         <?php foreach (self::$ha_styles as $s): ?>
                                             <option value="<?php echo esc_attr($s); ?>"><?php echo esc_html($s); ?></option>
                                         <?php endforeach; ?>
+                                        <?php foreach (hm_get_dropdown_options('ha_style') as $custom): ?>
+                                            <?php if (!in_array($custom, self::$ha_styles)): ?>
+                                            <option value="<?php echo esc_attr($custom); ?>"><?php echo esc_html($custom); ?></option>
+                                            <?php endif; ?>
+                                        <?php endforeach; ?>
+                                        <option value="__add_new__">+ Add New…</option>
                                     </select>
                                 </div>
                                 <div class="hm-form-group">
@@ -262,13 +266,18 @@ class HearMed_Admin_Products {
                                 </div>
                                 <div class="hm-form-group">
                                     <label>Power</label>
-                                    <select id="hmp-power">
+                                    <?php $power_defaults = ['Rechargeable','312 Battery','13 Battery','10 Battery','675 Battery']; ?>
+                                    <select id="hmp-power" data-entity="power_type" data-label="Power Type">
                                         <option value="">Select</option>
-                                        <option value="Rechargeable">Rechargeable</option>
-                                        <option value="312 Battery">312 Battery</option>
-                                        <option value="13 Battery">13 Battery</option>
-                                        <option value="10 Battery">10 Battery</option>
-                                        <option value="675 Battery">675 Battery</option>
+                                        <?php foreach ($power_defaults as $pw): ?>
+                                            <option value="<?php echo esc_attr($pw); ?>"><?php echo esc_html($pw); ?></option>
+                                        <?php endforeach; ?>
+                                        <?php foreach (hm_get_dropdown_options('power_type') as $custom): ?>
+                                            <?php if (!in_array($custom, $power_defaults)): ?>
+                                            <option value="<?php echo esc_attr($custom); ?>"><?php echo esc_html($custom); ?></option>
+                                            <?php endif; ?>
+                                        <?php endforeach; ?>
+                                        <option value="__add_new__">+ Add New…</option>
                                     </select>
                                 </div>
                             </div>
@@ -319,27 +328,23 @@ class HearMed_Admin_Products {
                             <div class="hm-form-row">
                                 <div class="hm-form-group">
                                     <label>Manufacturer</label>
-                                    <div style="display:flex;gap:4px;">
-                                        <select id="hmp-bnd-mfr" style="flex:1">
-                                            <option value="">Select brand</option>
-                                            <?php foreach ($manufacturers as $m): ?>
-                                                <option value="<?php echo (int) $m->id; ?>"><?php echo esc_html($m->name); ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('manufacturer','Brand',['hmp-manufacturer','hmp-bnd-mfr','hmp-acc-mfr'],{dataName:true})" title="Add new brand" style="padding:4px 10px;">+</button>
-                                    </div>
+                                    <select id="hmp-bnd-mfr" data-entity="manufacturer" data-label="Brand">
+                                        <option value="">Select brand</option>
+                                        <?php foreach ($manufacturers as $m): ?>
+                                            <option value="<?php echo (int) $m->id; ?>"><?php echo esc_html($m->name); ?></option>
+                                        <?php endforeach; ?>
+                                        <option value="__add_new__">+ Add New…</option>
+                                    </select>
                                 </div>
                                 <div class="hm-form-group">
                                     <label>Category *</label>
-                                    <div style="display:flex;gap:4px;">
-                                        <select id="hmp-bnd-cat" style="flex:1" onchange="hmProd.toggleSpeaker()">
-                                            <option value="">Select</option>
-                                            <?php foreach ($bundled_cats as $bc): ?>
-                                                <option value="<?php echo esc_attr($bc); ?>"><?php echo esc_html($bc); ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <button class="hm-btn hm-btn-sm" onclick="hmProd.addBundledCat()" title="Add new category" style="padding:4px 10px;">+</button>
-                                    </div>
+                                    <select id="hmp-bnd-cat" data-entity="bundled_category" data-label="Category" onchange="hmProd.toggleSpeaker()">
+                                        <option value="">Select</option>
+                                        <?php foreach ($bundled_cats as $bc): ?>
+                                            <option value="<?php echo esc_attr($bc); ?>"><?php echo esc_html($bc); ?></option>
+                                        <?php endforeach; ?>
+                                        <option value="__add_new__">+ Add New…</option>
+                                    </select>
                                 </div>
                             </div>
                             <!-- Speaker sub-fields (shown when category = Speaker) -->
@@ -359,11 +364,17 @@ class HearMed_Admin_Products {
                                     </div>
                                     <div class="hm-form-group">
                                         <label>Power</label>
-                                        <select id="hmp-spk-power">
+                                        <select id="hmp-spk-power" data-entity="speaker_power" data-label="Speaker Power">
                                             <option value="">Select</option>
                                             <?php foreach (self::$speaker_powers as $val => $lbl): ?>
                                                 <option value="<?php echo esc_attr($val); ?>"><?php echo esc_html($lbl); ?></option>
                                             <?php endforeach; ?>
+                                            <?php foreach (hm_get_dropdown_options('speaker_power') as $custom): ?>
+                                                <?php if (!array_key_exists($custom, self::$speaker_powers)): ?>
+                                                <option value="<?php echo esc_attr($custom); ?>"><?php echo esc_html($custom); ?></option>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                            <option value="__add_new__">+ Add New…</option>
                                         </select>
                                     </div>
                                 </div>
@@ -395,15 +406,13 @@ class HearMed_Admin_Products {
                             <div class="hm-form-row">
                                 <div class="hm-form-group">
                                     <label>Manufacturer</label>
-                                    <div style="display:flex;gap:4px;">
-                                        <select id="hmp-acc-mfr" style="flex:1">
-                                            <option value="">Select brand</option>
-                                            <?php foreach ($manufacturers as $m): ?>
-                                                <option value="<?php echo (int) $m->id; ?>"><?php echo esc_html($m->name); ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('manufacturer','Brand',['hmp-manufacturer','hmp-bnd-mfr','hmp-acc-mfr'],{dataName:true})" title="Add new brand" style="padding:4px 10px;">+</button>
-                                    </div>
+                                    <select id="hmp-acc-mfr" data-entity="manufacturer" data-label="Brand">
+                                        <option value="">Select brand</option>
+                                        <?php foreach ($manufacturers as $m): ?>
+                                            <option value="<?php echo (int) $m->id; ?>"><?php echo esc_html($m->name); ?></option>
+                                        <?php endforeach; ?>
+                                        <option value="__add_new__">+ Add New…</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="hm-form-row">

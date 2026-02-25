@@ -183,27 +183,23 @@ class HearMed_Admin_Groups {
                         <div class="hm-form-row">
                             <div class="hm-form-group">
                                 <label>Clinic</label>
-                                <div style="display:flex;gap:4px;">
-                                    <select id="hmg-clinic" style="flex:1">
-                                        <option value="">All Clinics</option>
-                                        <?php foreach ($clinics as $c): ?>
-                                            <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('clinic','Clinic','hmg-clinic')" title="Add new clinic" style="padding:4px 10px;">+</button>
-                                </div>
+                                <select id="hmg-clinic" data-entity="clinic" data-label="Clinic">
+                                    <option value="">All Clinics</option>
+                                    <?php foreach ($clinics as $c): ?>
+                                        <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
+                                    <?php endforeach; ?>
+                                    <option value="__add_new__">+ Add New…</option>
+                                </select>
                             </div>
                             <div class="hm-form-group">
                                 <label>Role</label>
-                                <div style="display:flex;gap:4px;">
-                                    <select id="hmg-role" style="flex:1">
-                                        <option value="">No Role</option>
-                                        <?php foreach ($roles as $r): ?>
-                                            <option value="<?php echo (int) $r->id; ?>"><?php echo esc_html($r->role_name); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('role','Role','hmg-role')" title="Add new role" style="padding:4px 10px;">+</button>
-                                </div>
+                                <select id="hmg-role" data-entity="role" data-label="Role">
+                                    <option value="">No Role</option>
+                                    <?php foreach ($roles as $r): ?>
+                                        <option value="<?php echo (int) $r->id; ?>"><?php echo esc_html($r->role_name); ?></option>
+                                    <?php endforeach; ?>
+                                    <option value="__add_new__">+ Add New…</option>
+                                </select>
                             </div>
                         </div>
                         <div class="hm-form-group">
