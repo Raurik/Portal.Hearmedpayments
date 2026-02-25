@@ -48,7 +48,7 @@ class HearMed_Admin_SMS_Templates {
         $t = HearMed_DB::table('sms_templates');
         $check = HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) );
         if ($check === null) return [];
-        return HearMed_DB::get_results("SELECT * FROM {$t} ORDER BY category, template_name") ?: [];
+        return HearMed_DB::get_results("SELECT * FROM {$t} WHERE is_active = true ORDER BY category, template_name") ?: [];
     }
 
     public function render() {
@@ -58,6 +58,7 @@ class HearMed_Admin_SMS_Templates {
 
         ob_start(); ?>
         <div class="hm-admin">
+            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>SMS Templates</h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmSms.open()">+ Add Template</button>

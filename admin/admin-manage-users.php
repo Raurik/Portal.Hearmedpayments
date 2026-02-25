@@ -138,6 +138,7 @@ class HearMed_Admin_Manage_Users {
 
         ob_start(); ?>
         <div class="hm-admin" id="hm-users-admin">
+            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Staff</h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmUsers.open()">+ Add Staff</button>

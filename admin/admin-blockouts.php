@@ -51,6 +51,7 @@ class HearMed_Admin_Blockouts {
              FROM {$t} b
              LEFT JOIN hearmed_reference.clinics c ON b.clinic_id = c.id
              LEFT JOIN hearmed_reference.appointment_types at ON b.appointment_type_id = at.id
+             WHERE b.is_active = true
              ORDER BY b.day_of_week, b.start_time"
         ) ?: [];
     }
@@ -64,6 +65,7 @@ class HearMed_Admin_Blockouts {
 
         ob_start(); ?>
         <div class="hm-admin">
+            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Calendar Blockouts</h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmBlock.open()">+ Add Blockout Rule</button>

@@ -40,6 +40,7 @@ class HearMed_Admin_Calendar_Settings {
         ?>
         <div id="hm-app" class="hm-calendar" data-module="calendar" data-view="settings">
             <div class="hm-page">
+                <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
                 <div class="hm-page-header">
                     <h1 class="hm-page-title">Calendar Settings</h1>
                     <div class="hm-page-subtitle">Adjust your scheduling and display preferences.</div>

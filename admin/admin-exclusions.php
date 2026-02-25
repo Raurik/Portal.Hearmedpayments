@@ -32,6 +32,7 @@ class HearMed_Admin_Exclusions {
 
         ob_start(); ?>
         <div class="hm-admin">
+            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Exclusion Types</h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmExcl.open()">+ Add Exclusion Type</button>

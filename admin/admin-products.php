@@ -2,7 +2,7 @@
 /**
  * HearMed Admin — Products & Services
  * Shortcode: [hearmed_products]
- * 3 primary tabs: Hearing Aids, Services, Bundled Items
+ * 5 primary tabs: Hearing Aids, Services, Bundled Items, Accessories, Consumables
  * All stored in hearmed_reference.products with item_type discriminator.
  *
  * @package HearMed_Portal
@@ -13,9 +13,11 @@ if (!defined('ABSPATH')) exit;
 class HearMed_Admin_Products {
 
     private static $item_types = [
-        'product' => 'Hearing Aids',
-        'service' => 'Services',
-        'bundled' => 'Bundled Items',
+        'product'    => 'Hearing Aids',
+        'service'    => 'Services',
+        'bundled'    => 'Bundled Items',
+        'accessory'  => 'Accessories',
+        'consumable' => 'Consumables',
     ];
 
     private static $ha_styles = ['BTE','RIC','ITE','ITC','CIC','IIC','CROS','BiCROS','Other'];
@@ -105,11 +107,12 @@ class HearMed_Admin_Products {
 
         ob_start(); ?>
         <div class="hm-admin">
+            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Products &amp; Services</h2>
                 <div style="display:flex;gap:8px;">
-                    <button class="hm-btn" onclick="hmProd.showImport()">Import CSV</button>
-                    <button class="hm-btn" onclick="hmProd.downloadTemplate()">Download Template</button>
+                    <button class="hm-btn hm-btn-teal" style="background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;" onclick="hmProd.showImport()">&#8593; Import CSV</button>
+                    <button class="hm-btn hm-btn-teal" style="background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;" onclick="hmProd.downloadTemplate()">&#8595; Download Template</button>
                     <button class="hm-btn hm-btn-teal" onclick="hmProd.open()">+ Add <?php echo esc_html(rtrim(self::$item_types[$active_tab], 's')); ?></button>
                 </div>
             </div>
@@ -133,12 +136,15 @@ class HearMed_Admin_Products {
                 <thead>
                     <tr>
                         <?php if ($active_tab === 'product'): ?>
-                            <th>Model</th><th>Brand</th><th>Code</th><th>Style</th><th>Tech Level</th>
+                            <th>Model</th><th>Brand</th><th>Code</th><th>Style</th><th>Tech Level</th><th>Power</th>
                             <th class="hm-num">Cost</th><th class="hm-num">Retail</th>
                         <?php elseif ($active_tab === 'service'): ?>
                             <th>Name</th><th>Code</th><th class="hm-num">Retail</th>
                         <?php elseif ($active_tab === 'bundled'): ?>
                             <th>Name</th><th>Brand</th><th>Code</th><th>Category</th>
+                            <th class="hm-num">Cost</th><th class="hm-num">Retail</th>
+                        <?php elseif ($active_tab === 'accessory' || $active_tab === 'consumable'): ?>
+                            <th>Name</th><th>Brand</th><th>Code</th>
                             <th class="hm-num">Cost</th><th class="hm-num">Retail</th>
                         <?php endif; ?>
                         <th style="width:100px"></th>
@@ -155,6 +161,7 @@ class HearMed_Admin_Products {
                             <td><code style="font-size:11px;"><?php echo esc_html($p->product_code ?: '—'); ?></code></td>
                             <td><?php echo esc_html($p->category ?: '—'); ?></td>
                             <td><?php echo esc_html($p->tech_level ?: '—'); ?></td>
+                            <td><?php echo esc_html($p->power_type ?: '—'); ?></td>
                             <td class="hm-num"><?php echo $p->cost_price !== null ? '€' . number_format((float) $p->cost_price, 2) : '—'; ?></td>
                             <td class="hm-num"><?php echo $p->retail_price !== null ? '€' . number_format((float) $p->retail_price, 2) : '—'; ?></td>
                         <?php elseif ($active_tab === 'service'): ?>
@@ -182,6 +189,12 @@ class HearMed_Admin_Products {
                                     ?>)</span>
                                 <?php endif; endif; ?>
                             </td>
+                            <td class="hm-num"><?php echo $p->cost_price !== null ? '€' . number_format((float) $p->cost_price, 2) : '—'; ?></td>
+                            <td class="hm-num"><?php echo $p->retail_price !== null ? '€' . number_format((float) $p->retail_price, 2) : '—'; ?></td>
+                        <?php elseif ($active_tab === 'accessory' || $active_tab === 'consumable'): ?>
+                            <td><strong><?php echo esc_html($p->product_name); ?></strong></td>
+                            <td><?php echo esc_html($p->manufacturer_name ?: '—'); ?></td>
+                            <td><code style="font-size:11px;"><?php echo esc_html($p->product_code ?: '—'); ?></code></td>
                             <td class="hm-num"><?php echo $p->cost_price !== null ? '€' . number_format((float) $p->cost_price, 2) : '—'; ?></td>
                             <td class="hm-num"><?php echo $p->retail_price !== null ? '€' . number_format((float) $p->retail_price, 2) : '—'; ?></td>
                         <?php endif; ?>
@@ -244,6 +257,17 @@ class HearMed_Admin_Products {
                                 <div class="hm-form-group">
                                     <label>Auto Code</label>
                                     <input type="text" id="hmp-code-ha" readonly style="background:#f1f5f9;font-family:monospace;font-weight:600;">
+                                </div>
+                                <div class="hm-form-group">
+                                    <label>Power</label>
+                                    <select id="hmp-power">
+                                        <option value="">Select</option>
+                                        <option value="Rechargeable">Rechargeable</option>
+                                        <option value="312 Battery">312 Battery</option>
+                                        <option value="13 Battery">13 Battery</option>
+                                        <option value="10 Battery">10 Battery</option>
+                                        <option value="675 Battery">675 Battery</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="hm-form-row">
@@ -350,6 +374,41 @@ class HearMed_Admin_Products {
                                 </div>
                             </div>
                         </div>
+
+                        <!-- ===== ACCESSORY / CONSUMABLE FIELDS ===== -->
+                        <div id="hmp-acc-fields" class="hmp-type-fields" style="display:<?php echo ($active_tab === 'accessory' || $active_tab === 'consumable') ? 'block' : 'none'; ?>">
+                            <div class="hm-form-row">
+                                <div class="hm-form-group" style="flex:2">
+                                    <label>Item Name *</label>
+                                    <input type="text" id="hmp-acc-name" placeholder="e.g. Cleaning Spray" oninput="hmProd.genAccCode()">
+                                </div>
+                                <div class="hm-form-group" style="flex:1">
+                                    <label>Auto Code</label>
+                                    <input type="text" id="hmp-code-acc" readonly style="background:#f1f5f9;font-family:monospace;font-weight:600;">
+                                </div>
+                            </div>
+                            <div class="hm-form-row">
+                                <div class="hm-form-group">
+                                    <label>Manufacturer</label>
+                                    <select id="hmp-acc-mfr">
+                                        <option value="">Select brand</option>
+                                        <?php foreach ($manufacturers as $m): ?>
+                                            <option value="<?php echo (int) $m->id; ?>"><?php echo esc_html($m->name); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="hm-form-row">
+                                <div class="hm-form-group">
+                                    <label>Cost Price (€)</label>
+                                    <input type="number" id="hmp-acc-cost" step="0.01" min="0" placeholder="0.00">
+                                </div>
+                                <div class="hm-form-group">
+                                    <label>Retail Price (€)</label>
+                                    <input type="number" id="hmp-acc-retail" step="0.01" min="0" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmProd.close()">Cancel</button>
@@ -419,6 +478,13 @@ class HearMed_Admin_Products {
                 words.forEach(function(w) { var l = w.replace(/[^A-Za-z0-9]/g,'').substring(0,1).toUpperCase(); if(l) code += l; });
                 document.getElementById('hmp-code-bnd').value = code;
             },
+            genAccCode: function() {
+                var name = document.getElementById('hmp-acc-name').value.trim();
+                var words = name.split(/\s+/);
+                var code = '';
+                words.forEach(function(w) { var l = w.replace(/[^A-Za-z0-9]/g,'').substring(0,1).toUpperCase(); if(l) code += l; });
+                document.getElementById('hmp-code-acc').value = code;
+            },
 
             toggleSpeaker: function() {
                 var cat = document.getElementById('hmp-bnd-cat').value;
@@ -445,16 +511,24 @@ class HearMed_Admin_Products {
             open: function(data) {
                 var isEdit = !!(data && data.id);
                 var type = this.activeTab;
-                var titles = {product:'Hearing Aid', service:'Service', bundled:'Bundled Item'};
+                var titles = {product:'Hearing Aid', service:'Service', bundled:'Bundled Item', accessory:'Accessory', consumable:'Consumable'};
                 document.getElementById('hm-prod-modal-title').textContent = (isEdit ? 'Edit ' : 'Add ') + (titles[type] || 'Item');
                 document.getElementById('hmp-id').value = isEdit ? data.id : '';
                 document.getElementById('hmp-item-type').value = type;
+
+                // Show/hide correct field set
+                document.querySelectorAll('.hmp-type-fields').forEach(function(el) { el.style.display = 'none'; });
+                if (type === 'product') document.getElementById('hmp-product-fields').style.display = 'block';
+                else if (type === 'service') document.getElementById('hmp-service-fields').style.display = 'block';
+                else if (type === 'bundled') document.getElementById('hmp-bundled-fields').style.display = 'block';
+                else if (type === 'accessory' || type === 'consumable') document.getElementById('hmp-acc-fields').style.display = 'block';
 
                 if (type === 'product') {
                     document.getElementById('hmp-manufacturer').value = isEdit && data.manufacturer_id ? data.manufacturer_id : '';
                     document.getElementById('hmp-model').value        = isEdit ? (data.product_name || '') : '';
                     document.getElementById('hmp-style').value        = isEdit ? (data.category || '') : '';
                     document.getElementById('hmp-tech').value         = isEdit ? (data.tech_level || '') : '';
+                    document.getElementById('hmp-power').value        = isEdit ? (data.power_type || '') : '';
                     document.getElementById('hmp-code-ha').value      = isEdit ? (data.product_code || '') : '';
                     document.getElementById('hmp-cost-ha').value      = isEdit && data.cost_price != null ? data.cost_price : '';
                     document.getElementById('hmp-retail-ha').value    = isEdit && data.retail_price != null ? data.retail_price : '';
@@ -472,6 +546,12 @@ class HearMed_Admin_Products {
                     document.getElementById('hmp-cost-bnd').value     = isEdit && data.cost_price != null ? data.cost_price : '';
                     document.getElementById('hmp-retail-bnd').value   = isEdit && data.retail_price != null ? data.retail_price : '';
                     hmProd.toggleSpeaker();
+                } else if (type === 'accessory' || type === 'consumable') {
+                    document.getElementById('hmp-acc-name').value     = isEdit ? (data.product_name || '') : '';
+                    document.getElementById('hmp-code-acc').value     = isEdit ? (data.product_code || '') : '';
+                    document.getElementById('hmp-acc-mfr').value      = isEdit && data.manufacturer_id ? data.manufacturer_id : '';
+                    document.getElementById('hmp-acc-cost').value     = isEdit && data.cost_price != null ? data.cost_price : '';
+                    document.getElementById('hmp-acc-retail').value   = isEdit && data.retail_price != null ? data.retail_price : '';
                 }
 
                 document.getElementById('hm-prod-modal').classList.add('open');
@@ -497,6 +577,7 @@ class HearMed_Admin_Products {
                     payload.manufacturer_id = document.getElementById('hmp-manufacturer').value;
                     payload.category        = document.getElementById('hmp-style').value;
                     payload.tech_level      = document.getElementById('hmp-tech').value;
+                    payload.power_type      = document.getElementById('hmp-power').value;
                     payload.product_code    = document.getElementById('hmp-code-ha').value;
                     payload.cost_price      = document.getElementById('hmp-cost-ha').value;
                     payload.retail_price    = document.getElementById('hmp-retail-ha').value;
@@ -517,6 +598,14 @@ class HearMed_Admin_Products {
                     payload.speaker_power    = document.getElementById('hmp-spk-power').value;
                     payload.cost_price       = document.getElementById('hmp-cost-bnd').value;
                     payload.retail_price     = document.getElementById('hmp-retail-bnd').value;
+                } else if (type === 'accessory' || type === 'consumable') {
+                    var accName = document.getElementById('hmp-acc-name').value.trim();
+                    if (!accName) { alert('Item name is required.'); return; }
+                    payload.product_name    = accName;
+                    payload.product_code    = document.getElementById('hmp-code-acc').value;
+                    payload.manufacturer_id = document.getElementById('hmp-acc-mfr').value;
+                    payload.cost_price      = document.getElementById('hmp-acc-cost').value;
+                    payload.retail_price    = document.getElementById('hmp-acc-retail').value;
                 }
 
                 var btn = document.getElementById('hmp-save-btn');
@@ -558,14 +647,20 @@ class HearMed_Admin_Products {
                 var type = hmProd.activeTab;
                 var headers, filename;
                 if (type === 'product') {
-                    headers = 'manufacturer,model,style,tech_level,cost_price,retail_price';
+                    headers = 'manufacturer,model,style,tech_level,power_type,cost_price,retail_price';
                     filename = 'hearing_aids_template.csv';
                 } else if (type === 'service') {
                     headers = 'service_name,retail_price';
                     filename = 'services_template.csv';
-                } else {
+                } else if (type === 'bundled') {
                     headers = 'item_name,manufacturer,category,speaker_length,speaker_power,cost_price,retail_price';
                     filename = 'bundled_items_template.csv';
+                } else if (type === 'accessory') {
+                    headers = 'item_name,manufacturer,cost_price,retail_price';
+                    filename = 'accessories_template.csv';
+                } else {
+                    headers = 'item_name,manufacturer,cost_price,retail_price';
+                    filename = 'consumables_template.csv';
                 }
                 var blob = new Blob([headers + '\n'], {type:'text/csv'});
                 var a = document.createElement('a');
@@ -612,6 +707,7 @@ class HearMed_Admin_Products {
             $data['manufacturer_id'] = !empty($_POST['manufacturer_id']) ? intval($_POST['manufacturer_id']) : null;
             $data['category']        = sanitize_text_field($_POST['category'] ?? '');   // Style (BTE/RIC/etc)
             $data['tech_level']      = sanitize_text_field($_POST['tech_level'] ?? ''); // Free text now
+            $data['power_type']      = sanitize_text_field($_POST['power_type'] ?? '');
             $data['cost_price']      = $_POST['cost_price'] !== '' ? floatval($_POST['cost_price']) : null;
             $data['retail_price']    = $_POST['retail_price'] !== '' ? floatval($_POST['retail_price']) : null;
         } elseif ($type === 'service') {
@@ -623,6 +719,10 @@ class HearMed_Admin_Products {
             $data['speaker_power']    = sanitize_text_field($_POST['speaker_power'] ?? '');
             $data['cost_price']       = $_POST['cost_price'] !== '' ? floatval($_POST['cost_price']) : null;
             $data['retail_price']     = $_POST['retail_price'] !== '' ? floatval($_POST['retail_price']) : null;
+        } elseif ($type === 'accessory' || $type === 'consumable') {
+            $data['manufacturer_id'] = !empty($_POST['manufacturer_id']) ? intval($_POST['manufacturer_id']) : null;
+            $data['cost_price']      = $_POST['cost_price'] !== '' ? floatval($_POST['cost_price']) : null;
+            $data['retail_price']    = $_POST['retail_price'] !== '' ? floatval($_POST['retail_price']) : null;
         }
 
         $table = 'hearmed_reference.products';
@@ -727,6 +827,14 @@ class HearMed_Admin_Products {
                 $data['cost_price']       = ($r['cost_price'] ?? '') !== '' ? floatval($r['cost_price']) : null;
                 $data['retail_price']     = ($r['retail_price'] ?? '') !== '' ? floatval($r['retail_price']) : null;
                 $data['product_code']     = self::generate_code('bundled', ['name' => $data['product_name']]);
+            } elseif ($type === 'accessory' || $type === 'consumable') {
+                $mfr_name = trim($r['manufacturer'] ?? '');
+                $mfr_id   = $mfr_map[strtolower($mfr_name)] ?? null;
+                $data['manufacturer_id'] = $mfr_id;
+                $data['product_name']    = trim($r['item_name'] ?? '');
+                $data['cost_price']      = ($r['cost_price'] ?? '') !== '' ? floatval($r['cost_price']) : null;
+                $data['retail_price']    = ($r['retail_price'] ?? '') !== '' ? floatval($r['retail_price']) : null;
+                $data['product_code']    = self::generate_code('bundled', ['name' => $data['product_name']]);
             }
 
             if (!empty($data['product_name'])) {

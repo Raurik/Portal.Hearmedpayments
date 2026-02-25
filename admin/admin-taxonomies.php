@@ -46,12 +46,14 @@ class HearMed_Admin_Taxonomies {
             $rows = HearMed_DB::get_results(
                 "SELECT id, name, country, website, support_phone, support_email, is_active
                  FROM hearmed_reference.manufacturers
+                 WHERE is_active = true
                  ORDER BY name"
             ) ?: [];
         } elseif ($tag === 'hearmed_range_settings') {
             $rows = HearMed_DB::get_results(
                 "SELECT id, range_name, price_total, price_ex_prsi, is_active
                  FROM hearmed_reference.hearmed_range
+                 WHERE is_active = true
                  ORDER BY range_name"
             ) ?: [];
         } elseif ($tag === 'hearmed_lead_types') {
@@ -60,6 +62,7 @@ class HearMed_Admin_Taxonomies {
                         p.source_name as parent_name
                  FROM hearmed_reference.referral_sources r
                  LEFT JOIN hearmed_reference.referral_sources p ON r.parent_id = p.id
+                 WHERE r.is_active = true
                  ORDER BY r.source_name"
             ) ?: [];
             $parents = HearMed_DB::get_results(
@@ -69,6 +72,7 @@ class HearMed_Admin_Taxonomies {
 
         ob_start(); ?>
         <div class="hm-admin">
+            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2><?php echo esc_html($cfg['title']); ?></h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmTax.open('<?php echo esc_attr($tag); ?>')">+ Add <?php echo esc_html($cfg['singular']); ?></button>
