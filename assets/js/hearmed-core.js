@@ -481,93 +481,142 @@
  * HM Table Enhancer — auto-adds search, column filters, and pagination
  * to all .hm-table elements. Tables with [data-no-enhance] are skipped.
  */
-(function() {
+(function($) {
     function enhanceTables() {
-        var tables = document.querySelectorAll('table.hm-table');
-        tables.forEach(function(table) {
+        $('table.hm-table').each(function() {
+            var table = this;
             if (table.getAttribute('data-no-enhance') !== null) return;
-            // Skip diagnostic tables (system-status, debug)
-            var view = table.closest('[data-view]');
-            if (view) {
-                var vn = view.getAttribute('data-view');
-                if (vn === 'hearmed_system_status' || vn === 'hearmed_debug') return;
-            }
-            // Skip if already enhanced
             if (table.getAttribute('data-enhanced')) return;
             table.setAttribute('data-enhanced', '1');
 
-            var tbody = table.querySelector('tbody');
-            if (!tbody) return;
-            var allRows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
-            if (allRows.length < 2) return; // no point for 0-1 rows
+            var $table = $(table);
+            var $tbody = $table.find('tbody');
+            if (!$tbody.length) return;
+            var $allRows = $tbody.find('> tr');
+            if ($allRows.length < 1) return;
 
-            // Build filter bar
-            var filterBar = document.createElement('div');
-            filterBar.className = 'hm-table-filter-bar';
-            filterBar.innerHTML =
+            // ── Detect filterable columns ───────────────────────
+            var $headers = $table.find('thead th');
+            var filterCols = []; // [{index, label, values:[]}]
+            $headers.each(function(ci) {
+                var headerText = $(this).text().trim();
+                // Skip action/empty columns & numeric columns
+                if (!headerText || headerText === '' || $(this).css('width') === '100px') return;
+                if (/^(cost|retail|price|sort|days|target)/i.test(headerText)) return;
+                // Collect unique values
+                var vals = {};
+                var count = 0;
+                $allRows.each(function() {
+                    var $td = $(this).find('td').eq(ci);
+                    if (!$td.length) return;
+                    // Get text, strip badges/buttons, trim
+                    var txt = $td.clone().find('button,.hm-btn,.hm-btn-sm').remove().end().text().trim();
+                    if (txt && txt !== '—' && txt !== '-') {
+                        if (!vals[txt]) count++;
+                        vals[txt] = true;
+                    }
+                });
+                // Only make a filter if 2-30 unique values and not all unique
+                if (count >= 2 && count <= 30 && count < $allRows.length) {
+                    filterCols.push({index: ci, label: headerText, values: Object.keys(vals).sort()});
+                }
+            });
+
+            // ── Build filter bar ────────────────────────────────
+            var filterBarHtml = '<div class="hm-table-filter-bar">' +
                 '<div class="hm-tf-left">' +
-                    '<input type="text" class="hm-tf-search" placeholder="Search…">' +
+                    '<input type="text" class="hm-tf-search" placeholder="Search\u2026">' +
                 '</div>' +
-                '<div class="hm-tf-right">' +
-                    '<label class="hm-tf-label">Show</label>' +
-                    '<select class="hm-tf-perpage">' +
-                        '<option value="20">20</option>' +
-                        '<option value="50">50</option>' +
-                        '<option value="100">100</option>' +
-                        '<option value="300">300</option>' +
-                        '<option value="0">All</option>' +
-                    '</select>' +
-                    '<label class="hm-tf-label">entries</label>' +
-                '</div>';
+                '<div class="hm-tf-right">';
 
-            // Build pagination bar
-            var paginationBar = document.createElement('div');
-            paginationBar.className = 'hm-table-pagination';
+            // Column filter dropdowns
+            for (var f = 0; f < filterCols.length; f++) {
+                var fc = filterCols[f];
+                filterBarHtml += '<select class="hm-tf-col-filter" data-col="' + fc.index + '">' +
+                    '<option value="">All ' + fc.label + '</option>';
+                for (var v = 0; v < fc.values.length; v++) {
+                    var safeVal = fc.values[v].replace(/"/g, '&quot;');
+                    filterBarHtml += '<option value="' + safeVal + '">' + fc.values[v] + '</option>';
+                }
+                filterBarHtml += '</select>';
+            }
 
-            // Insert before table wrapper or table
-            var wrapper = table.closest('.hm-table-wrap') || table.parentNode;
-            wrapper.parentNode.insertBefore(filterBar, wrapper);
-            wrapper.parentNode.insertBefore(paginationBar, wrapper.nextSibling);
+            filterBarHtml += '<select class="hm-tf-perpage">' +
+                    '<option value="20">20 rows</option>' +
+                    '<option value="50">50 rows</option>' +
+                    '<option value="100">100 rows</option>' +
+                    '<option value="300">300 rows</option>' +
+                    '<option value="0">All rows</option>' +
+                '</select>' +
+                '</div></div>';
 
-            var searchInput = filterBar.querySelector('.hm-tf-search');
-            var perPageSel  = filterBar.querySelector('.hm-tf-perpage');
-            var currentPage = 1;
-            var filteredRows = allRows.slice();
+            // ── Build pagination bar ────────────────────────────
+            var $filterBar = $(filterBarHtml);
+            var $paginationBar = $('<div class="hm-table-pagination"></div>');
+
+            // Insert around table
+            var $wrapper = $table.closest('.hm-table-wrap, .hm-card');
+            if ($wrapper.length) {
+                $wrapper.before($filterBar);
+                $wrapper.after($paginationBar);
+            } else {
+                $table.before($filterBar);
+                $table.after($paginationBar);
+            }
+
+            var $searchInput = $filterBar.find('.hm-tf-search');
+            var $perPageSel  = $filterBar.find('.hm-tf-perpage');
+            var $colFilters  = $filterBar.find('.hm-tf-col-filter');
+            var currentPage  = 1;
+            var filteredRows = $allRows.toArray();
 
             function filterRows() {
-                var term = searchInput.value.toLowerCase().trim();
+                var term = $searchInput.val().toLowerCase().trim();
+                var colFiltersActive = [];
+                $colFilters.each(function() {
+                    var val = $(this).val();
+                    if (val) colFiltersActive.push({col: parseInt($(this).attr('data-col'), 10), val: val});
+                });
+
                 filteredRows = [];
-                allRows.forEach(function(row) {
-                    var text = row.textContent.toLowerCase();
-                    var match = !term || text.indexOf(term) !== -1;
-                    if (match) filteredRows.push(row);
+                $allRows.each(function() {
+                    var $row = $(this);
+                    // Text search
+                    if (term && $row.text().toLowerCase().indexOf(term) === -1) return;
+                    // Column filters
+                    for (var i = 0; i < colFiltersActive.length; i++) {
+                        var cf = colFiltersActive[i];
+                        var $td = $row.find('td').eq(cf.col);
+                        var cellText = $td.clone().find('button,.hm-btn,.hm-btn-sm').remove().end().text().trim();
+                        if (cellText !== cf.val) return;
+                    }
+                    filteredRows.push(this);
                 });
                 currentPage = 1;
                 renderPage();
             }
 
             function renderPage() {
-                var perPage = parseInt(perPageSel.value, 10) || 0;
+                var perPage = parseInt($perPageSel.val(), 10) || 0;
                 var total = filteredRows.length;
                 var totalPages = perPage > 0 ? Math.ceil(total / perPage) : 1;
                 if (currentPage > totalPages) currentPage = totalPages;
                 if (currentPage < 1) currentPage = 1;
 
                 // Hide all, show only current page
-                allRows.forEach(function(r) { r.style.display = 'none'; });
+                $allRows.hide();
                 var start = perPage > 0 ? (currentPage - 1) * perPage : 0;
                 var end   = perPage > 0 ? start + perPage : total;
                 for (var i = start; i < end && i < total; i++) {
-                    filteredRows[i].style.display = '';
+                    $(filteredRows[i]).show();
                 }
 
                 // Build pagination
                 var showing = Math.min(end, total);
-                var html = '<span class="hm-tp-info">Showing ' + (total > 0 ? start + 1 : 0) + '–' + showing + ' of ' + total + '</span>';
+                var html = '<span class="hm-tp-info">Showing ' + (total > 0 ? start + 1 : 0) + '\u2013' + showing + ' of ' + total + '</span>';
                 if (totalPages > 1) {
                     html += '<span class="hm-tp-btns">';
                     html += '<button class="hm-tp-btn" data-page="prev" ' + (currentPage <= 1 ? 'disabled' : '') + '>&laquo; Prev</button>';
-                    // Show max 7 page buttons
                     var startP = Math.max(1, currentPage - 3);
                     var endP = Math.min(totalPages, startP + 6);
                     if (endP - startP < 6) startP = Math.max(1, endP - 6);
@@ -577,24 +626,20 @@
                     html += '<button class="hm-tp-btn" data-page="next" ' + (currentPage >= totalPages ? 'disabled' : '') + '>Next &raquo;</button>';
                     html += '</span>';
                 }
-                paginationBar.innerHTML = html;
+                $paginationBar.html(html);
             }
 
-            searchInput.addEventListener('input', function() {
-                // Debounce
-                clearTimeout(searchInput._hmt);
-                searchInput._hmt = setTimeout(filterRows, 200);
+            // Event bindings
+            $searchInput.on('input', function() {
+                clearTimeout($searchInput.data('_hmt'));
+                $searchInput.data('_hmt', setTimeout(filterRows, 200));
             });
-
-            perPageSel.addEventListener('change', function() {
-                currentPage = 1;
-                renderPage();
-            });
-
-            paginationBar.addEventListener('click', function(e) {
-                var btn = e.target.closest('.hm-tp-btn');
-                if (!btn || btn.disabled) return;
-                var pg = btn.getAttribute('data-page');
+            $perPageSel.on('change', function() { currentPage = 1; renderPage(); });
+            $colFilters.on('change', filterRows);
+            $paginationBar.on('click', '.hm-tp-btn', function() {
+                var $btn = $(this);
+                if ($btn.prop('disabled')) return;
+                var pg = $btn.attr('data-page');
                 if (pg === 'prev') currentPage--;
                 else if (pg === 'next') currentPage++;
                 else currentPage = parseInt(pg, 10);
@@ -606,12 +651,10 @@
         });
     }
 
-    // Run on DOMContentLoaded
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', enhanceTables);
-    } else {
+    // Run when DOM is ready (jQuery ensures proper timing)
+    $(document).ready(function() {
         enhanceTables();
-    }
+    });
     // Expose for manual re-init (e.g. after AJAX reload)
     window.hmEnhanceTables = enhanceTables;
-})();
+})(jQuery);

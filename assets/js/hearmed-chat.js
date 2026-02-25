@@ -466,15 +466,58 @@
 
     function startDm(otherUserId) {
         ajax('hm_chat_create_dm', { other_user_id: otherUserId }).then(res => {
-            if (res.success) {
-                closeDmModal();
-                loadChannels();
-                // Open the new DM channel after channels reload
-                setTimeout(() => {
-                    const ch = channelMap[res.data.channel_id];
-                    if (ch) openChannel(ch);
-                }, 600);
+            if (!res.success) {
+                alert('Could not start conversation. Please try again.');
+                return;
             }
+            closeDmModal();
+            const channelId = res.data.channel_id;
+
+            // Reload channels, then open the DM once the channel data is in channelMap
+            ajax('hm_chat_get_channels', {}, 'GET').then(chRes => {
+                if (!chRes.success) return;
+
+                const channels = chRes.data;
+                el.channelsList.innerHTML = '';
+                el.dmsList.innerHTML = '';
+                channelMap = {};
+
+                channels.forEach(ch => {
+                    channelMap[ch.id] = ch;
+                    const isDm      = ch.type === 'dm';
+                    const isCompany = ch.type === 'company';
+                    const icon      = isCompany ? '#' : isDm ? '👤' : '🔒';
+                    const preview   = ch.last_message
+                        ? escHtml(ch.last_message.substring(0, 40)) + (ch.last_message.length > 40 ? '…' : '')
+                        : '';
+                    const badge = ch.unread > 0
+                        ? `<span class="hm-chat-unread-badge">${ch.unread > 99 ? '99+' : ch.unread}</span>`
+                        : '';
+
+                    const item = document.createElement('div');
+                    item.className = 'hm-chat-channel-item';
+                    item.dataset.channelId = ch.id;
+                    item.innerHTML = `
+                        <span class="hm-chat-ch-icon">${icon}</span>
+                        <div class="hm-chat-ch-body">
+                            <div class="hm-chat-ch-name">${escHtml(ch.name || 'Unknown')}</div>
+                            <div class="hm-chat-ch-preview">${preview}</div>
+                        </div>
+                        ${badge}
+                    `;
+                    item.addEventListener('click', () => openChannel(ch));
+
+                    if (isDm) {
+                        el.dmsList.appendChild(item);
+                    } else {
+                        el.channelsList.appendChild(item);
+                    }
+                });
+
+                // Now open the DM we just created/found
+                const target = channelMap[channelId];
+                if (target) openChannel(target);
+            });
         });
     }
 

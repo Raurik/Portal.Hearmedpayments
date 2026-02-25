@@ -194,7 +194,7 @@
    TABLE FILTER BAR & PAGINATION
    ============================================================ */
 
-#hm-app .hm-table-filter-bar {
+.hm-table-filter-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -202,80 +202,82 @@
   margin-bottom: 10px;
   flex-wrap: wrap;
 }
-#hm-app .hm-tf-left { flex: 1 1 220px; min-width: 180px; }
-#hm-app .hm-tf-right {
+.hm-tf-left { flex: 1 1 200px; min-width: 160px; }
+.hm-tf-right {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
+  flex-wrap: wrap;
 }
-#hm-app .hm-tf-search {
+.hm-tf-search {
   width: 100%;
-  max-width: 280px;
+  max-width: 260px;
   padding: 7px 10px;
   font-size: 13px;
-  border: 1px solid var(--hm-border);
-  border-radius: var(--hm-radius);
+  border: 1px solid var(--hm-border, #d1d5db);
+  border-radius: var(--hm-radius, 6px);
   background: #fff;
   outline: none;
   transition: border-color 0.15s;
 }
-#hm-app .hm-tf-search:focus {
-  border-color: var(--hm-primary);
+.hm-tf-search:focus {
+  border-color: var(--hm-primary, #0066cc);
   box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.12);
 }
-#hm-app .hm-tf-label {
-  font-size: 12px;
-  color: var(--hm-muted);
-  font-weight: 500;
-}
-#hm-app .hm-tf-perpage {
+.hm-tf-perpage,
+.hm-tf-col-filter {
   padding: 6px 8px;
-  font-size: 13px;
-  border: 1px solid var(--hm-border);
-  border-radius: var(--hm-radius);
+  font-size: 12px;
+  border: 1px solid var(--hm-border, #d1d5db);
+  border-radius: var(--hm-radius, 6px);
   background: #fff;
   cursor: pointer;
+  color: var(--hm-text, #1e293b);
+  max-width: 160px;
+}
+.hm-tf-col-filter {
+  font-weight: 500;
 }
 
 /* Pagination */
-#hm-app .hm-table-pagination {
+.hm-table-pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   margin-top: 10px;
   flex-wrap: wrap;
+  min-height: 28px;
 }
-#hm-app .hm-tp-info {
+.hm-tp-info {
   font-size: 12px;
-  color: var(--hm-muted);
+  color: var(--hm-muted, #64748b);
 }
-#hm-app .hm-tp-btns {
+.hm-tp-btns {
   display: flex;
   gap: 4px;
 }
-#hm-app .hm-tp-btn {
+.hm-tp-btn {
   padding: 5px 10px;
   font-size: 12px;
   font-weight: 500;
-  border: 1px solid var(--hm-border);
-  border-radius: var(--hm-radius);
+  border: 1px solid var(--hm-border, #d1d5db);
+  border-radius: var(--hm-radius, 6px);
   background: #fff;
   cursor: pointer;
-  color: var(--hm-text);
+  color: var(--hm-text, #1e293b);
   transition: all 0.15s;
 }
-#hm-app .hm-tp-btn:hover:not(:disabled) {
-  border-color: var(--hm-primary);
-  color: var(--hm-primary);
+.hm-tp-btn:hover:not(:disabled) {
+  border-color: var(--hm-primary, #0066cc);
+  color: var(--hm-primary, #0066cc);
 }
-#hm-app .hm-tp-btn.active {
-  background: var(--hm-primary);
+.hm-tp-btn.active {
+  background: var(--hm-primary, #0066cc);
   color: #fff;
-  border-color: var(--hm-primary);
+  border-color: var(--hm-primary, #0066cc);
 }
-#hm-app .hm-tp-btn:disabled {
+.hm-tp-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }

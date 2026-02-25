@@ -44,6 +44,7 @@ class HearMed_TeamChat {
             'hm_chat_create_dm',
             'hm_chat_mark_read',
             'hm_chat_pusher_auth',
+            'hm_chat_search_users',
         ];
         foreach ( $actions as $action ) {
             add_action( "wp_ajax_{$action}", [ __CLASS__, str_replace( 'hm_chat_', 'ajax_', $action ) ] );
@@ -613,6 +614,64 @@ class HearMed_TeamChat {
     // =========================================================================
     // PUSHER HTTP API HELPER (no SDK required)
     // =========================================================================
+
+    /**
+     * AJAX: Search staff by name for DM modal.
+     * Available to ALL logged-in staff (not just admins).
+     */
+    public static function ajax_search_users(): void {
+        check_ajax_referer( 'hm_chat_nonce', 'nonce' );
+        if ( ! is_user_logged_in() ) wp_send_json_error( 'Not logged in', 401 );
+
+        $query   = sanitize_text_field( $_GET['q'] ?? '' );
+        $current = get_current_user_id();
+
+        if ( ! $query ) {
+            wp_send_json_success( [] );
+            return;
+        }
+
+        $rows = HearMed_DB::get_results(
+            "SELECT wp_user_id, first_name, last_name, role
+             FROM hearmed_reference.staff
+             WHERE is_active = true
+               AND wp_user_id IS NOT NULL
+               AND wp_user_id != $1
+               AND (
+                   first_name ILIKE $2
+                   OR last_name ILIKE $2
+                   OR (first_name || ' ' || last_name) ILIKE $2
+               )
+             ORDER BY first_name, last_name
+             LIMIT 15",
+            [ $current, '%' . $query . '%' ]
+        );
+
+        $result = [];
+        foreach ( $rows as $row ) {
+            $result[] = [
+                'id'   => (int) $row->wp_user_id,
+                'name' => trim( $row->first_name . ' ' . $row->last_name ),
+                'role' => self::format_role( $row->role ?? '' ),
+            ];
+        }
+
+        wp_send_json_success( $result );
+    }
+
+    private static function format_role( string $role ): string {
+        $map = [
+            'hm_clevel'    => 'C-Level',
+            'hm_admin'     => 'Administrator',
+            'hm_finance'   => 'Finance',
+            'hm_dispenser' => 'Audiologist',
+            'hm_reception' => 'Reception',
+            'hm_ca'        => 'Clinical Assistant',
+            'hm_scheme'    => 'Scheme',
+            'administrator' => 'Super Admin',
+        ];
+        return $map[ $role ] ?? ucfirst( str_replace( 'hm_', '', $role ) );
+    }
 
     /**
      * Trigger a Pusher event via the HTTP API.
