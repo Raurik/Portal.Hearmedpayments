@@ -57,7 +57,7 @@ class HearMed_Admin_Appointment_Types {
                 <thead>
                     <tr>
                         <th>Name</th>
-                        <th>Colour</th>
+                        <th>Preview</th>
                         <th>Duration</th>
                         <th>Category</th>
                         <th>Sales Opp.</th>
@@ -68,7 +68,8 @@ class HearMed_Admin_Appointment_Types {
                 <tbody>
                     <?php foreach ($types as $t):
                         $row = json_encode((array) $t, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
-                        $colour = $t->colour ?: ($t->service_color ?? '#3B82F6');
+                        $colour = $t->service_color ?? '#3B82F6';
+                        $text_colour = $t->text_color ?? '#FFFFFF';
                     ?>
                     <tr>
                         <td>
@@ -78,9 +79,11 @@ class HearMed_Admin_Appointment_Types {
                             </div>
                         </td>
                         <td>
-                            <span style="color:var(--hm-text-light);font-size:13px;"><?php echo esc_html($colour); ?></span>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span style="display:inline-block;width:40px;height:20px;border-radius:3px;background:<?php echo esc_attr($colour); ?>;color:<?php echo esc_attr($text_colour); ?>;font-size:9px;line-height:20px;text-align:center;font-weight:600;">Abc</span>
+                            </div>
                         </td>
-                        <td><?php echo intval($t->duration ?: ($t->duration_minutes ?? 30)); ?> min</td>
+                        <td><?php echo intval($t->duration_minutes ?? 30); ?> min</td>
                         <td><?php echo esc_html($t->appointment_category ?? '—'); ?></td>
                         <td>
                             <?php if (!empty($t->sales_opportunity) && $t->sales_opportunity): ?>
@@ -123,8 +126,12 @@ class HearMed_Admin_Appointment_Types {
                                 <input type="text" class="hm-inp" id="hma-name" placeholder="e.g. Hearing Test">
                             </div>
                             <div class="hm-form-group" style="flex:1">
-                                <label>Colour</label>
+                                <label>Block Colour</label>
                                 <input type="color" id="hma-colour" value="#3B82F6" class="hm-color-box" style="width:100%;height:38px;">
+                            </div>
+                            <div class="hm-form-group" style="flex:1">
+                                <label>Text Colour</label>
+                                <input type="color" id="hma-text-colour" value="#FFFFFF" class="hm-color-box" style="width:100%;height:38px;">
                             </div>
                         </div>
                         <div class="hm-form-row">
@@ -175,8 +182,9 @@ class HearMed_Admin_Appointment_Types {
                 document.getElementById('hm-appt-title').textContent = isEdit ? 'Edit Appointment Type' : 'Add Appointment Type';
                 document.getElementById('hma-id').value       = isEdit ? data.id : '';
                 document.getElementById('hma-name').value     = isEdit ? (data.service_name || '') : '';
-                document.getElementById('hma-colour').value   = isEdit ? (data.colour || data.service_color || '#3B82F6') : '#3B82F6';
-                document.getElementById('hma-duration').value = isEdit ? (data.duration || data.duration_minutes || 30) : 30;
+                document.getElementById('hma-colour').value   = isEdit ? (data.service_color || '#3B82F6') : '#3B82F6';
+                document.getElementById('hma-text-colour').value = isEdit ? (data.text_color || '#FFFFFF') : '#FFFFFF';
+                document.getElementById('hma-duration').value = isEdit ? (data.duration_minutes || 30) : 30;
                 document.getElementById('hma-category').value = isEdit ? (data.appointment_category || '') : '';
                 document.getElementById('hma-sales').checked  = isEdit ? !!data.sales_opportunity : false;
                 document.getElementById('hma-income').checked = isEdit ? (data.income_bearing !== false && data.income_bearing !== 'f') : true;
@@ -199,6 +207,7 @@ class HearMed_Admin_Appointment_Types {
                     id:                 document.getElementById('hma-id').value,
                     service_name:       name,
                     colour:             document.getElementById('hma-colour').value,
+                    text_color:         document.getElementById('hma-text-colour').value,
                     duration:           document.getElementById('hma-duration').value,
                     appointment_category: document.getElementById('hma-category').value,
                     sales_opportunity:  document.getElementById('hma-sales').checked ? 1 : 0,
@@ -239,6 +248,7 @@ class HearMed_Admin_Appointment_Types {
         $data = [
             'service_name'        => $name,
             'service_color'       => sanitize_hex_color($_POST['colour'] ?? '#3B82F6') ?: '#3B82F6',
+            'text_color'          => sanitize_hex_color($_POST['text_color'] ?? '#FFFFFF') ?: '#FFFFFF',
             'duration_minutes'    => intval($_POST['duration'] ?? 30),
             'appointment_category'=> sanitize_text_field($_POST['appointment_category'] ?? ''),
             'sales_opportunity'   => !empty($_POST['sales_opportunity']),
