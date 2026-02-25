@@ -208,6 +208,15 @@ class HearMed_Enqueue {
             'hearmed_brands', 'hearmed_range_settings', 'hearmed_lead_types',
             'hearmed_admin_groups', 'hearmed_admin_resources',
             'hearmed_dispenser_schedules', 'hearmed_staff_login',
+            // Calendar admin sub-pages
+            'hearmed_admin_blockouts', 'hearmed_admin_holidays', 'hearmed_admin_exclusions',
+            // Settings sub-pages
+            'hearmed_finance_settings', 'hearmed_comms_settings', 'hearmed_document_types',
+            'hearmed_form_settings', 'hearmed_cash_settings', 'hearmed_ai_settings',
+            'hearmed_pusher_settings', 'hearmed_gdpr_settings', 'hearmed_admin_alerts',
+            'hearmed_admin_report_layout', 'hearmed_admin_patient_overview',
+            // Chat admin
+            'hearmed_chat_logs',
         ];
 
         foreach ( $portal_shortcodes as $shortcode ) {
@@ -322,6 +331,26 @@ class HearMed_Enqueue {
             'hearmed_admin_resources',
             'hearmed_dispenser_schedules',
             'hearmed_staff_login',
+            // Calendar-related admin pages that use hm-admin layout
+            'hearmed_calendar_settings',
+            'hearmed_appointment_types',
+            'hearmed_admin_blockouts',
+            'hearmed_admin_holidays',
+            'hearmed_admin_exclusions',
+            // Settings sub-pages (admin-settings.php)
+            'hearmed_finance_settings',
+            'hearmed_comms_settings',
+            'hearmed_document_types',
+            'hearmed_form_settings',
+            'hearmed_cash_settings',
+            'hearmed_ai_settings',
+            'hearmed_pusher_settings',
+            'hearmed_gdpr_settings',
+            'hearmed_admin_alerts',
+            'hearmed_admin_report_layout',
+            'hearmed_admin_patient_overview',
+            // Chat admin
+            'hearmed_chat_logs',
         ]);
     }
     
