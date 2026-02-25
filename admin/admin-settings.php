@@ -73,6 +73,15 @@ class HearMed_Admin_Settings {
                 ['key' => 'hm_ai_auto_save', 'label' => 'Auto-save Transcriptions (skip review)', 'type' => 'toggle', 'default' => '0'],
             ],
         ],
+        'hearmed_pusher_settings' => [
+            'title' => 'Pusher Settings (Team Chat)',
+            'fields' => [
+                 ['key' => 'hm_pusher_app_id',     'label' => 'Pusher App ID',     'type' => 'text',     'default' => ''],
+                 ['key' => 'hm_pusher_app_key',    'label' => 'Pusher App Key',    'type' => 'text',     'default' => ''],
+                 ['key' => 'hm_pusher_app_secret', 'label' => 'Pusher App Secret', 'type' => 'password', 'default' => ''],
+                 ['key' => 'hm_pusher_cluster',    'label' => 'Pusher Cluster',    'type' => 'text',     'default' => 'eu'],
+            ],
+        ],
         'hearmed_gdpr_settings' => [
             'title' => 'GDPR Settings',
             'fields' => [

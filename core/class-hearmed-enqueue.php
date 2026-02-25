@@ -281,6 +281,9 @@ class HearMed_Enqueue {
         
         $this->detect_and_load( 'notifications', $content, [
             'hearmed_notifications',
+        ]);
+
+        $this->detect_and_load( 'chat', $content, [
             'hearmed_team_chat',
         ]);
         
