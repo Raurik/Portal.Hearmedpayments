@@ -459,7 +459,7 @@ class HearMed_Admin_Products {
                                     <select id="hmp-range">
                                         <option value="">— Select Range —</option>
                                         <?php foreach ($hearmed_ranges as $hr): ?>
-                                            <option value="<?php echo (int) $hr->id; ?>" data-price="<?php echo esc_attr($hr->price_total); ?>" data-exprsi="<?php echo esc_attr($hr->price_ex_prsi); ?>"><?php echo esc_html($hr->range_name); ?><?php if ($hr->price_total): ?> (€<?php echo number_format((float)$hr->price_total, 2); ?>)<?php endif; ?></option>
+                                            <option value="<?php echo (int) $hr->id; ?>" data-price="<?php echo esc_attr($hr->price_total); ?>" data-exprsi="<?php echo esc_attr($hr->price_ex_prsi); ?>"><?php echo esc_html($hr->range_name); ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>

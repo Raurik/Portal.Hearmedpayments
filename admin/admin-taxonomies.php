@@ -142,8 +142,8 @@ class HearMed_Admin_Taxonomies {
                             <td><?php echo $r->is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
                         <?php elseif ($tag === 'hearmed_range_settings'): ?>
                             <td><strong><?php echo esc_html($r->range_name); ?></strong></td>
-                            <td class="hm-num"><?php echo $r->price_total !== null ? '€' . esc_html(number_format((float) $r->price_total, 2)) : '—'; ?></td>
-                            <td class="hm-num"><?php echo $r->price_ex_prsi !== null ? '€' . esc_html(number_format((float) $r->price_ex_prsi, 2)) : '—'; ?></td>
+                            <td class="hm-num"><?php $pt = floatval($r->price_total ?? 0); echo $pt > 0 ? '€' . esc_html(number_format($pt, 2)) : '—'; ?></td>
+                            <td class="hm-num"><?php $pe = floatval($r->price_ex_prsi ?? 0); echo $pe > 0 ? '€' . esc_html(number_format($pe, 2)) : '—'; ?></td>
                             <td><?php echo $r->is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
                         <?php else: ?>
                             <td><strong><?php echo esc_html($r->source_name); ?></strong></td>
@@ -315,11 +315,11 @@ class HearMed_Admin_Taxonomies {
                 var otherDesc = data && data.manufacturer_other_desc ? data.manufacturer_other_desc : '';
                 document.getElementById('hmt-mfr-other-desc').value = otherDesc;
                 hmTax._toggleOther();
-                document.getElementById('hmt-price-total').value = data && data.price_total !== null && data.price_total !== undefined ? data.price_total : '';
-                document.getElementById('hmt-price-ex-prsi').value = data && data.price_ex_prsi !== null && data.price_ex_prsi !== undefined ? data.price_ex_prsi : '';
+                document.getElementById('hmt-price-total').value = data && data.price_total != null && data.price_total !== '' ? parseFloat(data.price_total) : '';
+                document.getElementById('hmt-price-ex-prsi').value = data && data.price_ex_prsi != null && data.price_ex_prsi !== '' ? parseFloat(data.price_ex_prsi) : '';
                 document.getElementById('hmt-parent').value = data && data.parent_id ? data.parent_id : '';
                 document.getElementById('hmt-sort').value = data && (data.sort_order !== null && data.sort_order !== undefined) ? data.sort_order : '0';
-                document.getElementById('hmt-active').checked = data && data.is_active === false ? false : true;
+                document.getElementById('hmt-active').checked = data ? (data.is_active === 'f' || data.is_active === false || data.is_active === 0 || data.is_active === '0' ? false : true) : true;
 
                 document.querySelectorAll('.hm-tax-fields').forEach(function(el) {
                     el.style.display = (el.getAttribute('data-tag') === tag) ? 'block' : 'none';
@@ -428,9 +428,11 @@ class HearMed_Admin_Taxonomies {
             $data['is_active'] = $is_active;
         } elseif ($tag === 'hearmed_range_settings') {
             $data['range_name'] = $name;
-            $data['price_total'] = $_POST['price_total'] !== '' ? floatval($_POST['price_total']) : null;
-            $data['price_ex_prsi'] = $_POST['price_ex_prsi'] !== '' ? floatval($_POST['price_ex_prsi']) : null;
-            $data['is_active'] = $is_active;
+            $pt = isset($_POST['price_total']) ? preg_replace('/[^0-9.]/', '', $_POST['price_total']) : '';
+            $pe = isset($_POST['price_ex_prsi']) ? preg_replace('/[^0-9.]/', '', $_POST['price_ex_prsi']) : '';
+            $data['price_total'] = $pt !== '' ? (float) $pt : null;
+            $data['price_ex_prsi'] = $pe !== '' ? (float) $pe : null;
+            $data['is_active'] = (bool) $is_active;
         } elseif ($tag === 'hearmed_lead_types') {
             $data['source_name'] = $name;
             $data['parent_id'] = $_POST['parent_id'] !== '' ? intval($_POST['parent_id']) : null;
