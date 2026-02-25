@@ -42,7 +42,23 @@ CREATE TABLE IF NOT EXISTS hearmed_reference.resources (
 ALTER TABLE hearmed_reference.resources
     ADD COLUMN IF NOT EXISTS clinic_id INTEGER REFERENCES hearmed_reference.clinics(id);
 
--- 3. Add clinic_id and role_id to staff_groups table
+-- 3. Create staff_groups table if it doesn't exist, then add clinic_id and role_id
+CREATE TABLE IF NOT EXISTS hearmed_reference.staff_groups (
+    id          BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    group_name  VARCHAR(150) NOT NULL,
+    description TEXT,
+    is_active   BOOLEAN DEFAULT TRUE NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS hearmed_reference.staff_group_members (
+    id         BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    group_id   BIGINT REFERENCES hearmed_reference.staff_groups(id) ON DELETE CASCADE,
+    staff_id   BIGINT REFERENCES hearmed_reference.staff(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 ALTER TABLE hearmed_reference.staff_groups
     ADD COLUMN IF NOT EXISTS clinic_id INTEGER REFERENCES hearmed_reference.clinics(id),
     ADD COLUMN IF NOT EXISTS role_id INTEGER REFERENCES hearmed_reference.roles(id);
