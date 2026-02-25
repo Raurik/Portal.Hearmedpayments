@@ -227,6 +227,8 @@ class HearMed_Enqueue {
             'hearmed_admin_report_layout', 'hearmed_admin_patient_overview',
             // Chat admin
             'hearmed_chat_logs',
+            // Document template editor
+            'hearmed_document_template_editor',
         ];
 
         foreach ( $portal_shortcodes as $shortcode ) {

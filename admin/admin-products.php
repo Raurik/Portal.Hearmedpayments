@@ -99,6 +99,15 @@ class HearMed_Admin_Products {
             HearMed_DB::get_results("ALTER TABLE hearmed_reference.manufacturers
                 ADD COLUMN IF NOT EXISTS manufacturer_category VARCHAR(100) DEFAULT ''");
         }
+        // manufacturer_other_desc on manufacturers
+        $check3 = HearMed_DB::get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_reference' AND table_name = 'manufacturers' AND column_name = 'manufacturer_other_desc'"
+        );
+        if ($check3 === null) {
+            HearMed_DB::get_results("ALTER TABLE hearmed_reference.manufacturers
+                ADD COLUMN IF NOT EXISTS manufacturer_other_desc VARCHAR(255) DEFAULT ''");
+        }
     }
 
     private function get_products($type = null) {

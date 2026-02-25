@@ -99,6 +99,7 @@ class HearMed_Core {
             HEARMED_PATH . 'admin/admin-chat-logs.php',
             HEARMED_PATH . 'admin/admin-roles.php',
             HEARMED_PATH . 'admin/admin-availability.php',
+            HEARMED_PATH . 'admin/admin-document-templates.php',
         ];
         foreach ( $admin_shortcode_files as $file ) {
             if ( file_exists( $file ) ) {

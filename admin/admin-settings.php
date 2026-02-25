@@ -40,12 +40,7 @@ class HearMed_Admin_Settings {
                 ['key' => 'hm_email_from_address', 'label' => 'Email From Address', 'type' => 'text', 'default' => ''],
             ],
         ],
-        'hearmed_document_types' => [
-            'title' => 'Document Types',
-            'fields' => [
-                ['key' => 'hm_document_types', 'label' => 'Document Types (one per line)', 'type' => 'textarea', 'default' => "Case History\nSales Order\nConsent Form\nAudiogram\nGP Referral\nHearing Test\nRepair Form\nFitting Receipt\nPhone Call Log\nENT Referral\nOther"],
-            ],
-        ],
+        /* Document Types shortcode now handled by admin-document-templates.php */
         'hearmed_form_settings' => [
             'title' => 'Form & Input Settings',
             'fields' => [
