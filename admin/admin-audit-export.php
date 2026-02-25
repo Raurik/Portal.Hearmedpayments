@@ -147,7 +147,10 @@ class HearMed_Admin_AuditLog {
 
         ob_start(); ?>
         <style>
-        .hm-export-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+        .hm-export-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+        .hm-export-left{display:flex;flex-direction:column;gap:16px;}
+        .hm-export-right{display:flex;flex-direction:column;}
+        .hm-export-right .hm-settings-panel{flex:1;display:flex;flex-direction:column;}
         @media(max-width:800px){.hm-export-grid{grid-template-columns:1fr;}}
         .hm-export-checks{display:flex;flex-wrap:wrap;gap:4px 8px;}
         .hm-export-checks label{display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:3px 0;}
@@ -158,45 +161,56 @@ class HearMed_Admin_AuditLog {
             <div class="hm-admin-hd"><h2>Data Export</h2></div>
 
             <div class="hm-export-grid">
-            <!-- ===== SECTION 1: Single Patient Export ===== -->
-            <div class="hm-settings-panel">
-                <h3 style="font-size:14px;margin-bottom:6px;">Single Patient Export</h3>
-                <p style="color:var(--hm-text-light);font-size:12px;margin-bottom:14px;">Export all data for a specific patient (GDPR Right of Access / Right to Portability).</p>
+            <!-- LEFT COLUMN -->
+            <div class="hm-export-left">
+                <!-- Single Patient Export -->
+                <div class="hm-settings-panel">
+                    <h3 style="font-size:14px;margin-bottom:6px;">Single Patient Export</h3>
+                    <p style="color:var(--hm-text-light);font-size:12px;margin-bottom:14px;">Export all data for a specific patient (GDPR Right of Access / Right to Portability).</p>
 
-                <div class="hm-form-group">
-                    <label>Patient Search</label>
-                    <input type="text" id="hmde-search" placeholder="Type patient name or H-number..." oninput="hmExport.search(this.value)">
-                    <div id="hmde-results" style="margin-top:6px"></div>
-                </div>
-
-                <div id="hmde-selected" style="display:none;margin-top:12px;">
                     <div class="hm-form-group">
-                        <strong id="hmde-patient-name" style="font-size:13px;"></strong>
-                        <input type="hidden" id="hmde-patient-id">
+                        <label>Patient Search</label>
+                        <input type="text" id="hmde-search" placeholder="Type patient name or H-number..." oninput="hmExport.search(this.value)">
+                        <div id="hmde-results" style="margin-top:6px"></div>
                     </div>
 
-                    <div class="hm-form-group">
-                        <label style="font-weight:500;margin-bottom:6px;display:block;font-size:11px;color:#475569;">Data Sections to Export</label>
-                        <div class="hm-export-checks">
-                            <label><input type="checkbox" class="hmde-section" value="patient" checked> Patient Details</label>
-                            <label><input type="checkbox" class="hmde-section" value="appointments" checked> Appointments</label>
-                            <label><input type="checkbox" class="hmde-section" value="orders" checked> Orders</label>
-                            <label><input type="checkbox" class="hmde-section" value="invoices" checked> Invoices</label>
-                            <label><input type="checkbox" class="hmde-section" value="payments" checked> Payments</label>
-                            <label><input type="checkbox" class="hmde-section" value="notes" checked> Notes</label>
-                            <label><input type="checkbox" class="hmde-section" value="forms" checked> Forms</label>
-                            <label><input type="checkbox" class="hmde-section" value="devices" checked> Devices</label>
+                    <div id="hmde-selected" style="display:none;margin-top:12px;">
+                        <div class="hm-form-group">
+                            <strong id="hmde-patient-name" style="font-size:13px;"></strong>
+                            <input type="hidden" id="hmde-patient-id">
+                        </div>
+
+                        <div class="hm-form-group">
+                            <label style="font-weight:500;margin-bottom:6px;display:block;font-size:11px;color:#475569;">Data Sections to Export</label>
+                            <div class="hm-export-checks">
+                                <label><input type="checkbox" class="hmde-section" value="patient" checked> Patient Details</label>
+                                <label><input type="checkbox" class="hmde-section" value="appointments" checked> Appointments</label>
+                                <label><input type="checkbox" class="hmde-section" value="orders" checked> Orders</label>
+                                <label><input type="checkbox" class="hmde-section" value="invoices" checked> Invoices</label>
+                                <label><input type="checkbox" class="hmde-section" value="payments" checked> Payments</label>
+                                <label><input type="checkbox" class="hmde-section" value="notes" checked> Notes</label>
+                                <label><input type="checkbox" class="hmde-section" value="forms" checked> Forms</label>
+                                <label><input type="checkbox" class="hmde-section" value="devices" checked> Devices</label>
+                            </div>
+                        </div>
+
+                        <div style="display:flex;gap:8px;margin-top:10px;">
+                            <button class="hm-btn hm-btn-teal hm-btn-sm" onclick="hmExport.exportData('json')">Export JSON</button>
+                            <button class="hm-btn hm-btn-sm" onclick="hmExport.exportData('csv')">Export CSV</button>
                         </div>
                     </div>
+                </div>
 
-                    <div style="display:flex;gap:8px;margin-top:10px;">
-                        <button class="hm-btn hm-btn-teal hm-btn-sm" onclick="hmExport.exportData('json')">Export JSON</button>
-                        <button class="hm-btn hm-btn-sm" onclick="hmExport.exportData('csv')">Export CSV</button>
-                    </div>
+                <!-- Patient Anonymisation -->
+                <div class="hm-settings-panel">
+                    <h3 style="font-size:14px;margin-bottom:6px;">Patient Anonymisation (Right to Erasure)</h3>
+                    <p style="color:var(--hm-text-light);font-size:12px;margin-bottom:10px;">Anonymises personal data while preserving financial and appointment records for Revenue/HSE compliance. This action cannot be undone.</p>
+                    <button class="hm-btn hm-btn-red hm-btn-sm" disabled>Anonymise Patient (Select patient first)</button>
                 </div>
             </div>
 
-            <!-- ===== SECTION 2: All Patients Bulk Export ===== -->
+            <!-- RIGHT COLUMN: All Patients Bulk Export (stretches to match left) -->
+            <div class="hm-export-right">
             <div class="hm-settings-panel">
                 <h3 style="font-size:14px;margin-bottom:6px;">All Patients Export</h3>
                 <p style="color:var(--hm-text-light);font-size:12px;margin-bottom:14px;">Bulk export data for ALL patients. Large exports may take a moment.</p>
@@ -228,14 +242,8 @@ class HearMed_Admin_AuditLog {
                     <span id="hmde-bulk-status" style="font-size:12px;color:var(--hm-text-light);"></span>
                 </div>
             </div>
-            </div><!-- /hm-export-grid -->
-
-            <!-- ===== SECTION 3: Anonymisation ===== -->
-            <div class="hm-settings-panel" style="margin-top:16px;max-width:calc(50% - 8px);">
-                <h3 style="font-size:14px;margin-bottom:6px;">Patient Anonymisation (Right to Erasure)</h3>
-                <p style="color:var(--hm-text-light);font-size:12px;margin-bottom:10px;">Anonymises personal data while preserving financial and appointment records for Revenue/HSE compliance. This action cannot be undone.</p>
-                <button class="hm-btn hm-btn-red hm-btn-sm" disabled>Anonymise Patient (Select patient first)</button>
             </div>
+            </div><!-- /hm-export-grid -->
         </div>
 
 
