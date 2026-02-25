@@ -522,6 +522,59 @@
                 }
             });
 
+            // ── Sort arrows on headers ──────────────────────────
+            var sortCol = -1, sortDir = 0; // 0=none, 1=asc, -1=desc
+            $headers.each(function(ci) {
+                var $th = $(this);
+                var text = $th.text().trim();
+                // Skip empty/action columns
+                if (!text || $th.attr('style') && $th.attr('style').indexOf('width:100px') !== -1) return;
+                $th.addClass('hm-sortable');
+                $th.html('<span class="hm-sort-text">' + text + '</span><span class="hm-sort-arrow"></span>');
+                $th.on('click', function() {
+                    if (sortCol === ci) {
+                        sortDir = sortDir === 1 ? -1 : (sortDir === -1 ? 0 : 1);
+                    } else {
+                        sortCol = ci; sortDir = 1;
+                    }
+                    // Update arrow indicators
+                    $headers.find('.hm-sort-arrow').text('');
+                    $headers.removeClass('hm-sort-asc hm-sort-desc');
+                    if (sortDir !== 0) {
+                        $th.find('.hm-sort-arrow').text(sortDir === 1 ? ' \u25B2' : ' \u25BC');
+                        $th.addClass(sortDir === 1 ? 'hm-sort-asc' : 'hm-sort-desc');
+                    }
+                    doSort();
+                });
+            });
+
+            function doSort() {
+                var rowsArr = $allRows.toArray();
+                if (sortDir === 0) {
+                    // Restore original order
+                    rowsArr.sort(function(a, b) {
+                        return $(a).data('_hmOrigIdx') - $(b).data('_hmOrigIdx');
+                    });
+                } else {
+                    rowsArr.sort(function(a, b) {
+                        var aText = $(a).find('td').eq(sortCol).text().trim();
+                        var bText = $(b).find('td').eq(sortCol).text().trim();
+                        // Try numeric sort
+                        var aNum = parseFloat(aText.replace(/[^0-9.\-]/g, ''));
+                        var bNum = parseFloat(bText.replace(/[^0-9.\-]/g, ''));
+                        if (!isNaN(aNum) && !isNaN(bNum)) return (aNum - bNum) * sortDir;
+                        // Fall back to string sort
+                        return aText.localeCompare(bText) * sortDir;
+                    });
+                }
+                // Re-append in new order + update allRows
+                $tbody.append(rowsArr);
+                $allRows = $(rowsArr);
+                filterRows();
+            }
+            // Store original order index
+            $allRows.each(function(i) { $(this).data('_hmOrigIdx', i); });
+
             // ── Build filter bar ────────────────────────────────
             var filterBarHtml = '<div class="hm-table-filter-bar">' +
                 '<div class="hm-tf-left">' +

@@ -282,6 +282,30 @@
   cursor: not-allowed;
 }
 
+/* Sortable Column Headers */
+.hm-sortable {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  white-space: nowrap;
+}
+.hm-sortable:hover {
+  color: var(--hm-primary, #0066cc);
+}
+.hm-sort-arrow {
+  font-size: 10px;
+  color: var(--hm-muted, #94a3b8);
+  margin-left: 2px;
+}
+.hm-sortable:hover .hm-sort-arrow {
+  color: var(--hm-primary, #0066cc);
+}
+.hm-sort-asc .hm-sort-arrow,
+.hm-sort-desc .hm-sort-arrow {
+  color: var(--hm-primary, #0066cc);
+  font-weight: 700;
+}
+
 
 /* ============================================================
    BUTTONS

@@ -12,6 +12,7 @@ class HearMed_Admin_Settings {
     private $pages = [
         'hearmed_finance_settings' => [
             'title' => 'Finance Settings',
+            'custom_render' => 'render_finance',
             'fields' => [
                 ['key' => 'hm_vat_hearing_aids', 'label' => 'VAT Rate — Hearing Aids (%)', 'type' => 'number', 'default' => '0'],
                 ['key' => 'hm_vat_accessories', 'label' => 'VAT Rate — Accessories (%)', 'type' => 'number', 'default' => '0'],
@@ -105,10 +106,21 @@ class HearMed_Admin_Settings {
         ],
         'hearmed_admin_report_layout' => [
             'title' => 'Report Layout',
+            'custom_render' => 'render_report_layout',
             'fields' => [
-                ['key' => 'hm_report_logo_url', 'label' => 'Report Logo URL', 'type' => 'text', 'default' => ''],
+                ['key' => 'hm_report_logo_url', 'label' => 'Report Logo', 'type' => 'text', 'default' => ''],
                 ['key' => 'hm_report_company_name', 'label' => 'Company Name on Reports', 'type' => 'text', 'default' => 'HearMed Acoustic Health Care Ltd'],
-                ['key' => 'hm_report_footer_text', 'label' => 'Report Footer Text', 'type' => 'text', 'default' => ''],
+                ['key' => 'hm_report_footer_text', 'label' => 'Report Footer Text', 'type' => 'textarea', 'default' => ''],
+                ['key' => 'hm_report_terms', 'label' => 'Terms & Conditions', 'type' => 'textarea', 'default' => ''],
+                ['key' => 'hm_report_show_logo', 'label' => 'Show Logo on Reports', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_report_show_company', 'label' => 'Show Company Name', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_report_show_footer', 'label' => 'Show Footer', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_report_show_terms', 'label' => 'Show Terms & Conditions Page', 'type' => 'toggle', 'default' => '0'],
+                ['key' => 'hm_report_show_patient_details', 'label' => 'Show Patient Details Section', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_report_show_audiogram', 'label' => 'Show Audiogram Section', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_report_show_recommendations', 'label' => 'Show Recommendations Section', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_report_show_pricing', 'label' => 'Show Pricing Section', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_report_show_signature', 'label' => 'Show Signature Section', 'type' => 'toggle', 'default' => '1'],
             ],
         ],
         'hearmed_admin_patient_overview' => [
@@ -128,12 +140,18 @@ class HearMed_Admin_Settings {
         add_action('wp_ajax_hm_admin_save_settings_page', [$this, 'ajax_save']);
         add_action('wp_ajax_hm_admin_upload_gdpr_doc', [$this, 'ajax_upload_gdpr_doc']);
         add_action('wp_ajax_hm_admin_delete_gdpr_doc', [$this, 'ajax_delete_gdpr_doc']);
+        add_action('wp_ajax_hm_admin_upload_report_logo', [$this, 'ajax_upload_report_logo']);
     }
 
     public function render($atts, $content, $tag) {
         if (!is_user_logged_in()) return '<p>Please log in.</p>';
         $page = $this->pages[$tag] ?? null;
         if (!$page) return '<p>Unknown settings page.</p>';
+
+        /* --- Custom render dispatch --- */
+        if (!empty($page['custom_render']) && method_exists($this, $page['custom_render'])) {
+            return $this->{$page['custom_render']}($tag, $page);
+        }
 
         ob_start(); ?>
         <style>.hm-secret-wrap{display:flex;gap:8px;align-items:center;}.hm-secret-wrap input{flex:1;}</style>
@@ -322,6 +340,334 @@ class HearMed_Admin_Settings {
         <?php return ob_get_clean();
     }
 
+    /* =============================
+       CUSTOM RENDER: Finance Settings
+       ============================= */
+    public function render_finance($tag, $page) {
+        $v = function($key, $default = '') {
+            return get_option($key, $default);
+        };
+
+        ob_start(); ?>
+        <style>
+        .hm-secret-wrap{display:flex;gap:8px;align-items:center;}.hm-secret-wrap input{flex:1;}
+        .hm-pm-blocks{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+        .hm-pm-block{display:inline-flex;align-items:center;gap:6px;background:var(--hm-primary,#3b82f6);color:#fff;padding:6px 12px;border-radius:6px;font-size:13px;font-weight:500;}
+        .hm-pm-block .hm-pm-x{cursor:pointer;opacity:.7;font-size:15px;line-height:1;}
+        .hm-pm-block .hm-pm-x:hover{opacity:1;}
+        .hm-pm-add-wrap{display:flex;gap:8px;align-items:center;}
+        .hm-pm-add-wrap input{flex:1;max-width:220px;}
+        .hm-vat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;}
+        @media(max-width:600px){.hm-vat-grid{grid-template-columns:1fr;}}
+        </style>
+        <div class="hm-admin">
+            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+            <div class="hm-admin-hd">
+                <h2>Finance Settings</h2>
+                <button class="hm-btn hm-btn-teal" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+            </div>
+
+            <!-- VAT Settings -->
+            <div class="hm-settings-panel" style="margin-bottom:20px;">
+                <h3 style="font-size:15px;margin-bottom:16px;">VAT Settings</h3>
+                <div class="hm-vat-grid">
+                    <?php
+                    $vat_fields = [
+                        ['key' => 'hm_vat_hearing_aids', 'label' => 'Hearing Aids (%)', 'default' => '0'],
+                        ['key' => 'hm_vat_accessories',  'label' => 'Accessories (%)',  'default' => '0'],
+                        ['key' => 'hm_vat_services',     'label' => 'Services (%)',     'default' => '13.5'],
+                        ['key' => 'hm_vat_consumables',  'label' => 'Consumables (%)',  'default' => '23'],
+                        ['key' => 'hm_vat_bundled',      'label' => 'Bundled Items (%)', 'default' => '0'],
+                        ['key' => 'hm_vat_other_aud',    'label' => 'Other Audiological (%)', 'default' => '13.5'],
+                    ];
+                    foreach ($vat_fields as $f): ?>
+                    <div class="hm-form-group" style="margin-bottom:0;">
+                        <label><?php echo esc_html($f['label']); ?></label>
+                        <input type="number" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($v($f['key'], $f['default'])); ?>" step="0.1" min="0">
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <!-- Payment & DSP -->
+            <div class="hm-settings-panel" style="margin-bottom:20px;">
+                <h3 style="font-size:15px;margin-bottom:16px;">Payment &amp; DSP</h3>
+
+                <label style="font-weight:500;margin-bottom:8px;display:block;">Payment Methods</label>
+                <?php
+                $methods_raw = $v('hm_payment_methods', 'Card,Cash,Cheque,Bank Transfer,Finance,PRSI');
+                $methods     = array_filter(array_map('trim', explode(',', $methods_raw)));
+                ?>
+                <div class="hm-pm-blocks" id="hm-pm-blocks">
+                    <?php foreach ($methods as $m): ?>
+                    <span class="hm-pm-block">
+                        <span class="hm-pm-name"><?php echo esc_html($m); ?></span>
+                        <span class="hm-pm-x" onclick="hmFinance.removeMethod(this)" title="Remove">&times;</span>
+                    </span>
+                    <?php endforeach; ?>
+                </div>
+                <div class="hm-pm-add-wrap">
+                    <input type="text" id="hm-pm-new" placeholder="New method name..." class="hm-search-input">
+                    <button type="button" class="hm-btn hm-btn-teal" onclick="hmFinance.addMethod()">+ Add Method</button>
+                </div>
+                <!-- Hidden field that stores comma-separated value for save -->
+                <input type="hidden" class="hm-stg-field" data-key="hm_payment_methods" id="hm-pm-hidden" value="<?php echo esc_attr($methods_raw); ?>">
+
+                <div class="hm-form-group" style="margin-top:20px;">
+                    <label>PRSI Amount Per Ear (€)</label>
+                    <input type="number" class="hm-stg-field" data-key="hm_prsi_amount_per_ear" value="<?php echo esc_attr($v('hm_prsi_amount_per_ear', '500')); ?>" step="1" min="0">
+                </div>
+            </div>
+
+            <!-- Invoice Settings -->
+            <div class="hm-settings-panel">
+                <h3 style="font-size:15px;margin-bottom:16px;">Invoice Settings</h3>
+                <?php
+                $inv_fields = [
+                    ['key' => 'hm_invoice_prefix',     'label' => 'Invoice Number Prefix',  'default' => 'INV-'],
+                    ['key' => 'hm_order_prefix',       'label' => 'Order Number Prefix',    'default' => 'ORD-'],
+                    ['key' => 'hm_credit_note_prefix',  'label' => 'Credit Note Prefix',    'default' => 'CN-'],
+                ];
+                foreach ($inv_fields as $f): ?>
+                <div class="hm-form-group">
+                    <label><?php echo esc_html($f['label']); ?></label>
+                    <input type="text" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($v($f['key'], $f['default'])); ?>">
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <script>
+        var hmFinance = {
+            syncHidden: function() {
+                var names = [];
+                document.querySelectorAll('#hm-pm-blocks .hm-pm-name').forEach(function(el) {
+                    names.push(el.textContent.trim());
+                });
+                document.getElementById('hm-pm-hidden').value = names.join(',');
+            },
+            addMethod: function() {
+                var inp = document.getElementById('hm-pm-new');
+                var name = inp.value.trim();
+                if (!name) return;
+                // Duplicate check
+                var existing = [];
+                document.querySelectorAll('#hm-pm-blocks .hm-pm-name').forEach(function(el) { existing.push(el.textContent.trim().toLowerCase()); });
+                if (existing.indexOf(name.toLowerCase()) !== -1) { inp.value = ''; return; }
+
+                var block = document.createElement('span');
+                block.className = 'hm-pm-block';
+                block.innerHTML = '<span class="hm-pm-name">' + name + '</span><span class="hm-pm-x" onclick="hmFinance.removeMethod(this)" title="Remove">&times;</span>';
+                document.getElementById('hm-pm-blocks').appendChild(block);
+                inp.value = '';
+                hmFinance.syncHidden();
+            },
+            removeMethod: function(x) {
+                if (!confirm('Remove "' + x.previousElementSibling.textContent.trim() + '"?')) return;
+                x.closest('.hm-pm-block').remove();
+                hmFinance.syncHidden();
+            }
+        };
+
+        var hmSettings = {
+            save: function(tag) {
+                hmFinance.syncHidden();
+                var data = { action:'hm_admin_save_settings_page', nonce:HM.nonce, page_tag:tag, settings:{} };
+                document.querySelectorAll('.hm-stg-field').forEach(function(el) {
+                    var key = el.dataset.key;
+                    if (el.type === 'checkbox') data.settings[key] = el.checked ? '1' : '0';
+                    else data.settings[key] = el.value;
+                });
+                data.settings = JSON.stringify(data.settings);
+                var btn = document.getElementById('hms-save-btn');
+                btn.textContent = 'Saving...'; btn.disabled = true;
+                jQuery.post(HM.ajax_url, data, function(r) {
+                    if (r.success) { btn.textContent = '\u2713 Saved'; setTimeout(function(){ btn.textContent = 'Save Settings'; btn.disabled = false; }, 1500); }
+                    else { alert(r.data || 'Error'); btn.textContent = 'Save Settings'; btn.disabled = false; }
+                });
+            },
+            editSecret: function(btn) {
+                var wrap = btn.closest('.hm-secret-wrap');
+                var inp  = wrap.querySelector('input');
+                inp.readOnly = false; inp.type = 'password'; inp.value = ''; inp.style.color = ''; inp.style.letterSpacing = ''; inp.placeholder = 'Enter new value...'; inp.focus();
+                btn.textContent = 'Cancel';
+                btn.onclick = function() { inp.readOnly = true; inp.type = 'text'; inp.value = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'; inp.style.color = '#94a3b8'; inp.style.letterSpacing = '2px'; inp.placeholder = ''; btn.textContent = 'Change'; btn.onclick = function() { hmSettings.editSecret(btn); }; };
+            }
+        };
+        </script>
+        <?php return ob_get_clean();
+    }
+
+    /* =============================
+       CUSTOM RENDER: Report Layout
+       ============================= */
+    public function render_report_layout($tag, $page) {
+        $v = function($key, $default = '') {
+            return get_option($key, $default);
+        };
+
+        $logo_url = $v('hm_report_logo_url', '');
+
+        ob_start(); ?>
+        <style>
+        .hm-secret-wrap{display:flex;gap:8px;align-items:center;}.hm-secret-wrap input{flex:1;}
+        .hm-logo-preview{max-width:200px;max-height:80px;border:1px solid var(--hm-border,#e2e8f0);border-radius:6px;padding:4px;background:#fff;margin-bottom:8px;}
+        .hm-logo-upload-area{display:flex;align-items:center;gap:12px;margin-bottom:4px;}
+        .hm-logo-hint{font-size:12px;color:var(--hm-text-light,#94a3b8);margin-top:4px;}
+        .hm-section-toggles{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;}
+        @media(max-width:600px){.hm-section-toggles{grid-template-columns:1fr;}}
+        </style>
+        <div class="hm-admin">
+            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+            <div class="hm-admin-hd">
+                <h2>Report Layout</h2>
+                <button class="hm-btn hm-btn-teal" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+            </div>
+
+            <!-- Report Branding -->
+            <div class="hm-settings-panel" style="margin-bottom:20px;">
+                <h3 style="font-size:15px;margin-bottom:16px;">Report Branding</h3>
+
+                <div class="hm-form-group">
+                    <label>Report Logo</label>
+                    <?php if ($logo_url): ?>
+                    <div id="hm-logo-preview-wrap">
+                        <img src="<?php echo esc_url($logo_url); ?>" class="hm-logo-preview" id="hm-logo-preview">
+                    </div>
+                    <?php else: ?>
+                    <div id="hm-logo-preview-wrap" style="display:none;">
+                        <img src="" class="hm-logo-preview" id="hm-logo-preview">
+                    </div>
+                    <?php endif; ?>
+                    <div class="hm-logo-upload-area">
+                        <label class="hm-btn" style="cursor:pointer;margin:0;">
+                            Choose PNG
+                            <input type="file" id="hm-logo-file" accept=".png,image/png" style="display:none;" onchange="hmReport.uploadLogo()">
+                        </label>
+                        <?php if ($logo_url): ?>
+                        <button type="button" class="hm-btn hm-btn-red hm-btn-sm" id="hm-logo-remove-btn" onclick="hmReport.removeLogo()">Remove</button>
+                        <?php else: ?>
+                        <button type="button" class="hm-btn hm-btn-red hm-btn-sm" id="hm-logo-remove-btn" onclick="hmReport.removeLogo()" style="display:none;">Remove</button>
+                        <?php endif; ?>
+                    </div>
+                    <p class="hm-logo-hint">Recommended: PNG with transparent background, max 400 &times; 120 px.</p>
+                    <input type="hidden" class="hm-stg-field" data-key="hm_report_logo_url" id="hm-logo-url-field" value="<?php echo esc_attr($logo_url); ?>">
+                </div>
+
+                <div class="hm-form-group">
+                    <label>Company Name on Reports</label>
+                    <input type="text" class="hm-stg-field" data-key="hm_report_company_name" value="<?php echo esc_attr($v('hm_report_company_name', 'HearMed Acoustic Health Care Ltd')); ?>">
+                </div>
+            </div>
+
+            <!-- Report Footer -->
+            <div class="hm-settings-panel" style="margin-bottom:20px;">
+                <h3 style="font-size:15px;margin-bottom:16px;">Report Footer</h3>
+                <div class="hm-form-group">
+                    <label>Footer Text</label>
+                    <textarea class="hm-stg-field" data-key="hm_report_footer_text" rows="6" placeholder="Enter footer text that appears at the bottom of reports..."><?php echo esc_textarea($v('hm_report_footer_text', '')); ?></textarea>
+                </div>
+            </div>
+
+            <!-- Terms & Conditions -->
+            <div class="hm-settings-panel" style="margin-bottom:20px;">
+                <h3 style="font-size:15px;margin-bottom:16px;">Company Terms &amp; Conditions</h3>
+                <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:12px;">This text will be included as a separate Terms &amp; Conditions page at the end of reports when enabled.</p>
+                <div class="hm-form-group">
+                    <textarea class="hm-stg-field" data-key="hm_report_terms" rows="10" placeholder="Enter your company terms and conditions..."><?php echo esc_textarea($v('hm_report_terms', '')); ?></textarea>
+                </div>
+            </div>
+
+            <!-- Report Sections -->
+            <div class="hm-settings-panel">
+                <h3 style="font-size:15px;margin-bottom:16px;">Report Sections</h3>
+                <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:16px;">Toggle which sections appear on generated reports.</p>
+                <div class="hm-section-toggles">
+                    <?php
+                    $toggles = [
+                        ['key' => 'hm_report_show_logo',            'label' => 'Show Logo on Reports',       'default' => '1'],
+                        ['key' => 'hm_report_show_company',         'label' => 'Show Company Name',          'default' => '1'],
+                        ['key' => 'hm_report_show_patient_details', 'label' => 'Show Patient Details',       'default' => '1'],
+                        ['key' => 'hm_report_show_audiogram',       'label' => 'Show Audiogram Section',     'default' => '1'],
+                        ['key' => 'hm_report_show_recommendations', 'label' => 'Show Recommendations',      'default' => '1'],
+                        ['key' => 'hm_report_show_pricing',         'label' => 'Show Pricing Section',       'default' => '1'],
+                        ['key' => 'hm_report_show_signature',       'label' => 'Show Signature Section',     'default' => '1'],
+                        ['key' => 'hm_report_show_footer',          'label' => 'Show Footer',                'default' => '1'],
+                        ['key' => 'hm_report_show_terms',           'label' => 'Show Terms & Conditions Page', 'default' => '0'],
+                    ];
+                    foreach ($toggles as $t): ?>
+                    <label class="hm-toggle-label">
+                        <input type="checkbox" class="hm-stg-field" data-key="<?php echo esc_attr($t['key']); ?>" <?php checked($v($t['key'], $t['default']), '1'); ?>>
+                        <?php echo esc_html($t['label']); ?>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        var hmReport = {
+            uploadLogo: function() {
+                var fileInput = document.getElementById('hm-logo-file');
+                var file = fileInput.files[0];
+                if (!file) return;
+                var fd = new FormData();
+                fd.append('action', 'hm_admin_upload_report_logo');
+                fd.append('nonce', HM.nonce);
+                fd.append('file', file);
+                jQuery.ajax({
+                    url: HM.ajax_url, type: 'POST', data: fd,
+                    processData: false, contentType: false,
+                    success: function(r) {
+                        if (r.success && r.data && r.data.url) {
+                            document.getElementById('hm-logo-url-field').value = r.data.url;
+                            var img = document.getElementById('hm-logo-preview');
+                            img.src = r.data.url;
+                            document.getElementById('hm-logo-preview-wrap').style.display = '';
+                            document.getElementById('hm-logo-remove-btn').style.display = '';
+                        } else {
+                            alert(r.data || 'Upload failed');
+                        }
+                    }
+                });
+                fileInput.value = '';
+            },
+            removeLogo: function() {
+                if (!confirm('Remove report logo?')) return;
+                document.getElementById('hm-logo-url-field').value = '';
+                document.getElementById('hm-logo-preview-wrap').style.display = 'none';
+                document.getElementById('hm-logo-remove-btn').style.display = 'none';
+            }
+        };
+
+        var hmSettings = {
+            save: function(tag) {
+                var data = { action:'hm_admin_save_settings_page', nonce:HM.nonce, page_tag:tag, settings:{} };
+                document.querySelectorAll('.hm-stg-field').forEach(function(el) {
+                    var key = el.dataset.key;
+                    if (el.type === 'checkbox') data.settings[key] = el.checked ? '1' : '0';
+                    else data.settings[key] = el.value;
+                });
+                data.settings = JSON.stringify(data.settings);
+                var btn = document.getElementById('hms-save-btn');
+                btn.textContent = 'Saving...'; btn.disabled = true;
+                jQuery.post(HM.ajax_url, data, function(r) {
+                    if (r.success) { btn.textContent = '\u2713 Saved'; setTimeout(function(){ btn.textContent = 'Save Settings'; btn.disabled = false; }, 1500); }
+                    else { alert(r.data || 'Error'); btn.textContent = 'Save Settings'; btn.disabled = false; }
+                });
+            },
+            editSecret: function(btn) {
+                var wrap = btn.closest('.hm-secret-wrap');
+                var inp  = wrap.querySelector('input');
+                inp.readOnly = false; inp.type = 'password'; inp.value = ''; inp.style.color = ''; inp.style.letterSpacing = ''; inp.placeholder = 'Enter new value...'; inp.focus();
+                btn.textContent = 'Cancel';
+                btn.onclick = function() { inp.readOnly = true; inp.type = 'text'; inp.value = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'; inp.style.color = '#94a3b8'; inp.style.letterSpacing = '2px'; inp.placeholder = ''; btn.textContent = 'Change'; btn.onclick = function() { hmSettings.editSecret(btn); }; };
+            }
+        };
+        </script>
+        <?php return ob_get_clean();
+    }
+
     public function ajax_save() {
         check_ajax_referer('hm_nonce', 'nonce');
         if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
@@ -441,6 +787,33 @@ class HearMed_Admin_Settings {
         } else {
             wp_send_json_success();
         }
+    }
+
+    public function ajax_upload_report_logo() {
+        check_ajax_referer('hm_nonce', 'nonce');
+        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+
+        if (empty($_FILES['file'])) { wp_send_json_error('No file uploaded'); return; }
+        $file = $_FILES['file'];
+
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if ($ext !== 'png') {
+            wp_send_json_error('Only PNG files are allowed');
+            return;
+        }
+
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+        $upload_overrides = ['test_form' => false, 'mimes' => ['png' => 'image/png']];
+        $movefile = wp_handle_upload($file, $upload_overrides);
+
+        if (!$movefile || isset($movefile['error'])) {
+            wp_send_json_error($movefile['error'] ?? 'Upload failed');
+            return;
+        }
+
+        // Save the URL immediately
+        update_option('hm_report_logo_url', $movefile['url']);
+        wp_send_json_success(['url' => $movefile['url']]);
     }
 }
 
