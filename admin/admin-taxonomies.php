@@ -45,7 +45,10 @@ class HearMed_Admin_Taxonomies {
         if ($tag === 'hearmed_brands') {
             $rows = HearMed_DB::get_results(
                 "SELECT id, name, country, website, support_phone, support_email, manufacturer_category, 
-                        COALESCE(manufacturer_other_desc,'') as manufacturer_other_desc, is_active
+                        COALESCE(manufacturer_other_desc,'') as manufacturer_other_desc,
+                        COALESCE(order_email,'') as order_email, COALESCE(order_phone,'') as order_phone,
+                        COALESCE(order_contact_name,'') as order_contact_name, COALESCE(account_number,'') as account_number,
+                        COALESCE(address,'') as address, is_active
                  FROM hearmed_reference.manufacturers
                  WHERE is_active = true
                  ORDER BY name"
@@ -89,8 +92,9 @@ class HearMed_Admin_Taxonomies {
                         <th>Name</th>
                         <th>Category</th>
                         <th>Country</th>
-                        <th>Website</th>
-                        <th>Support</th>
+                        <th>Support Contact</th>
+                        <th>Order Contact</th>
+                        <th>Account #</th>
                         <th>Status</th>
                         <th style="width:100px"></th>
                     </tr>
@@ -125,11 +129,16 @@ class HearMed_Admin_Taxonomies {
                                 echo $cats ? esc_html(implode(', ', $cats)) : '—';
                             ?></td>
                             <td><?php echo esc_html($r->country ?: '—'); ?></td>
-                            <td><?php echo esc_html($r->website ?: '—'); ?></td>
                             <td>
                                 <?php echo esc_html($r->support_email ?: '—'); ?>
-                                <?php if (!empty($r->support_phone)): ?> / <?php echo esc_html($r->support_phone); ?><?php endif; ?>
+                                <?php if (!empty($r->support_phone)): ?><br><small><?php echo esc_html($r->support_phone); ?></small><?php endif; ?>
                             </td>
+                            <td>
+                                <?php echo esc_html($r->order_contact_name ?: '—'); ?>
+                                <?php if (!empty($r->order_email)): ?><br><small><?php echo esc_html($r->order_email); ?></small><?php endif; ?>
+                                <?php if (!empty($r->order_phone)): ?><br><small><?php echo esc_html($r->order_phone); ?></small><?php endif; ?>
+                            </td>
+                            <td><?php echo esc_html($r->account_number ?: '—'); ?></td>
                             <td><?php echo $r->is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
                         <?php elseif ($tag === 'hearmed_range_settings'): ?>
                             <td><strong><?php echo esc_html($r->range_name); ?></strong></td>
@@ -205,6 +214,32 @@ class HearMed_Admin_Taxonomies {
                                     <input type="text" id="hmt-support-phone" placeholder="+353 ...">
                                 </div>
                             </div>
+                            <hr style="margin:12px 0;border:none;border-top:1px solid #e5e7eb;">
+                            <p style="font-size:12px;font-weight:600;color:#6b7280;margin:0 0 8px;">Order Contact Details</p>
+                            <div class="hm-form-row">
+                                <div class="hm-form-group">
+                                    <label>Order Contact Name</label>
+                                    <input type="text" id="hmt-order-contact" placeholder="Orders manager name">
+                                </div>
+                                <div class="hm-form-group">
+                                    <label>Account Number</label>
+                                    <input type="text" id="hmt-account-number" placeholder="e.g. ACC-12345">
+                                </div>
+                            </div>
+                            <div class="hm-form-row">
+                                <div class="hm-form-group">
+                                    <label>Order Email</label>
+                                    <input type="text" id="hmt-order-email" placeholder="orders@brand.com">
+                                </div>
+                                <div class="hm-form-group">
+                                    <label>Order Phone</label>
+                                    <input type="text" id="hmt-order-phone" placeholder="+353 ...">
+                                </div>
+                            </div>
+                            <div class="hm-form-group">
+                                <label>Address</label>
+                                <textarea id="hmt-address" rows="2" placeholder="Manufacturer address for orders" style="font-size:13px;"></textarea>
+                            </div>
                         </div>
 
                         <div class="hm-tax-fields" data-tag="hearmed_range_settings">
@@ -266,6 +301,11 @@ class HearMed_Admin_Taxonomies {
                 document.getElementById('hmt-website').value = data && data.website ? data.website : '';
                 document.getElementById('hmt-support-email').value = data && data.support_email ? data.support_email : '';
                 document.getElementById('hmt-support-phone').value = data && data.support_phone ? data.support_phone : '';
+                document.getElementById('hmt-order-contact').value = data && data.order_contact_name ? data.order_contact_name : '';
+                document.getElementById('hmt-account-number').value = data && data.account_number ? data.account_number : '';
+                document.getElementById('hmt-order-email').value = data && data.order_email ? data.order_email : '';
+                document.getElementById('hmt-order-phone').value = data && data.order_phone ? data.order_phone : '';
+                document.getElementById('hmt-address').value = data && data.address ? data.address : '';
                 // Manufacturer category checkboxes
                 var selCats = data && data.manufacturer_category ? data.manufacturer_category.split(',').map(function(s){return s.trim();}) : [];
                 document.querySelectorAll('.hmt-mfr-cat-cb').forEach(function(cb) {
@@ -312,6 +352,11 @@ class HearMed_Admin_Taxonomies {
                     document.querySelectorAll('.hmt-mfr-cat-cb:checked').forEach(function(cb) { cats.push(cb.value); });
                     payload.manufacturer_category = cats.join(',');
                     payload.manufacturer_other_desc = document.getElementById('hmt-mfr-other-desc').value;
+                    payload.order_contact_name = document.getElementById('hmt-order-contact').value;
+                    payload.account_number = document.getElementById('hmt-account-number').value;
+                    payload.order_email = document.getElementById('hmt-order-email').value;
+                    payload.order_phone = document.getElementById('hmt-order-phone').value;
+                    payload.address = document.getElementById('hmt-address').value;
                 } else if (tag === 'hearmed_range_settings') {
                     payload.price_total = document.getElementById('hmt-price-total').value;
                     payload.price_ex_prsi = document.getElementById('hmt-price-ex-prsi').value;
@@ -375,6 +420,11 @@ class HearMed_Admin_Taxonomies {
             $data['support_phone'] = sanitize_text_field($_POST['support_phone'] ?? '');
             $data['manufacturer_category'] = sanitize_text_field($_POST['manufacturer_category'] ?? '');
             $data['manufacturer_other_desc'] = sanitize_text_field($_POST['manufacturer_other_desc'] ?? '');
+            $data['order_contact_name'] = sanitize_text_field($_POST['order_contact_name'] ?? '');
+            $data['account_number'] = sanitize_text_field($_POST['account_number'] ?? '');
+            $data['order_email'] = sanitize_text_field($_POST['order_email'] ?? '');
+            $data['order_phone'] = sanitize_text_field($_POST['order_phone'] ?? '');
+            $data['address'] = sanitize_textarea_field($_POST['address'] ?? '');
             $data['is_active'] = $is_active;
         } elseif ($tag === 'hearmed_range_settings') {
             $data['range_name'] = $name;
