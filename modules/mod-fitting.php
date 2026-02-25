@@ -51,6 +51,12 @@ function hm_render_fitting_page() {
     ob_start(); ?>
     <style>
     /* ── Awaiting Fitting — hmf- namespace ── */
+    /* Hide WP page title on this shortcode page */
+    .page .entry-title,
+    .page .page-title,
+    .page .wp-block-post-title,
+    article > .entry-title:first-child { display:none !important; }
+
     .hmf-stats{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
     .hmf-stat{background:#fff;border-radius:10px;padding:14px 20px;flex:1;min-width:140px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(15,23,42,.03);}
     .hmf-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;}
@@ -132,13 +138,32 @@ function hm_render_fitting_page() {
 
     .hmf-success{background:#d1fae5;color:#065f46;padding:12px 16px;border-radius:8px;font-size:12px;font-weight:500;margin-top:10px;text-align:center;}
     .hmf-warning{background:#fef3cd;color:#92400e;padding:12px 16px;border-radius:8px;font-size:12px;font-weight:500;margin-top:10px;}
+
+    /* Filter bar */
+    .hmf-filters{display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap;}
+    .hmf-filter-group{display:flex;align-items:center;gap:6px;}
+    .hmf-filter-group label{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
+    .hmf-filter-group select{padding:6px 28px 6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#1e293b;background:#fff;min-width:160px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;}
+    .hmf-filter-group select:focus{outline:none;border-color:#0BB4C4;box-shadow:0 0 0 3px rgba(11,180,196,.1);}
+    .hmf-filter-reset{padding:6px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:600;color:#64748b;background:#fff;cursor:pointer;transition:all .15s;}
+    .hmf-filter-reset:hover{border-color:#0BB4C4;color:#0BB4C4;}
+
+    /* Totals footer */
+    .hmf-totals{display:flex;gap:14px;margin-top:20px;flex-wrap:wrap;}
+    .hmf-total-card{background:#fff;border-radius:10px;padding:16px 20px;flex:1;min-width:200px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(15,23,42,.03);}
+    .hmf-total-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;margin-bottom:2px;}
+    .hmf-total-val{font-size:24px;font-weight:700;color:#0f172a;}
+    .hmf-total-val.green{color:#059669;}
+    .hmf-total-val.blue{color:#2563eb;}
+    .hmf-total-val.purple{color:#7c3aed;}
+    .hmf-total-sub{font-size:10px;color:#94a3b8;margin-top:4px;}
     </style>
 
     <div id="hm-app" class="hm-calendar" data-module="admin" data-view="fitting">
         <div class="hm-page">
-            <div class="hm-page-header" style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="hmf-page-top" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <div>
-                    <h1 class="hm-page-title" style="font-size:22px;font-weight:700;color:#0f172a;margin:0;">Awaiting Fitting</h1>
+                    <h1 style="font-size:22px;font-weight:700;color:#0f172a;margin:0;">Awaiting Fitting</h1>
                     <div style="color:#94a3b8;font-size:12px;margin-top:4px;">Track hearing aid orders from approval through to fitting &amp; payment.</div>
                 </div>
             </div>
@@ -163,10 +188,30 @@ function hm_render_fitting_page() {
                 </div>
             </div>
 
+            <!-- Filter Bar -->
+            <div class="hmf-filters">
+                <div class="hmf-filter-group">
+                    <label>Clinic</label>
+                    <select id="hmf-filter-clinic" onchange="hmFitting.applyFilters()">
+                        <option value="">All Clinics</option>
+                    </select>
+                </div>
+                <div class="hmf-filter-group">
+                    <label>Dispenser</label>
+                    <select id="hmf-filter-dispenser" onchange="hmFitting.applyFilters()">
+                        <option value="">All Dispensers</option>
+                    </select>
+                </div>
+                <button class="hmf-filter-reset" onclick="hmFitting.resetFilters()">Reset</button>
+            </div>
+
             <!-- Table loaded via AJAX -->
             <div id="hmf-content">
                 <div style="text-align:center;padding:40px;color:#94a3b8;"><div class="hm-spinner"></div></div>
             </div>
+
+            <!-- Totals (populated by JS) -->
+            <div id="hmf-totals" class="hmf-totals" style="display:none;"></div>
         </div>
     </div>
 
@@ -275,6 +320,41 @@ function hm_render_fitting_page() {
 
         // ── DATA ──
         orders: [],
+        filtered: [],
+
+        // ── PRSI CYCLE DATE HELPERS ──
+        // Returns the Nth weekday (0=Sun..6=Sat) of a given month/year
+        nthWeekday: function(year, month, weekday, n) {
+            var d = new Date(year, month, 1);
+            var count = 0;
+            while (d.getMonth() === month) {
+                if (d.getDay() === weekday) {
+                    count++;
+                    if (count === n) return new Date(d);
+                }
+                d.setDate(d.getDate() + 1);
+            }
+            return null;
+        },
+
+        // PRSI claiming runs from 2nd Tuesday of current month
+        // to 1st Monday of next month (inclusive)
+        getPRSICycleDates: function() {
+            var now = new Date();
+            var y = now.getFullYear();
+            var m = now.getMonth();
+
+            // 2nd Tuesday of this month (weekday 2 = Tuesday)
+            var secondTuesday = this.nthWeekday(y, m, 2, 2);
+
+            // 1st Monday of next month (weekday 1 = Monday)
+            var nextM = m + 1;
+            var nextY = y;
+            if (nextM > 11) { nextM = 0; nextY++; }
+            var firstMondayNext = this.nthWeekday(nextY, nextM, 1, 1);
+
+            return { start: secondTuesday, end: firstMondayNext };
+        },
 
         // ── LOAD TABLE ──
         load: function() {
@@ -287,11 +367,57 @@ function hm_render_fitting_page() {
             }, function(r) {
                 if (r.success) {
                     self.orders = r.data.orders || [];
-                    self.renderTable(r.data);
+                    self.populateFilters();
+                    self.applyFilters();
                 } else {
                     el.innerHTML = '<div class="hmf-empty"><div class="hmf-empty-icon">&#9888;</div>Error loading data.</div>';
                 }
             });
+        },
+
+        populateFilters: function() {
+            var clinics = {};
+            var dispensers = {};
+            this.orders.forEach(function(o) {
+                if (o.clinic_id && o.clinic_name) clinics[o.clinic_id] = o.clinic_name;
+                if (o.staff_id && o.dispenser_name) dispensers[o.staff_id] = o.dispenser_name;
+            });
+
+            var cSel = document.getElementById('hmf-filter-clinic');
+            var cVal = cSel.value;
+            cSel.innerHTML = '<option value="">All Clinics</option>';
+            Object.keys(clinics).sort(function(a,b){ return clinics[a].localeCompare(clinics[b]); }).forEach(function(id) {
+                cSel.innerHTML += '<option value="' + id + '">' + hmFE(clinics[id]) + '</option>';
+            });
+            cSel.value = cVal;
+
+            var dSel = document.getElementById('hmf-filter-dispenser');
+            var dVal = dSel.value;
+            dSel.innerHTML = '<option value="">All Dispensers</option>';
+            Object.keys(dispensers).sort(function(a,b){ return dispensers[a].localeCompare(dispensers[b]); }).forEach(function(id) {
+                dSel.innerHTML += '<option value="' + id + '">' + hmFE(dispensers[id]) + '</option>';
+            });
+            dSel.value = dVal;
+        },
+
+        applyFilters: function() {
+            var clinicId = document.getElementById('hmf-filter-clinic').value;
+            var staffId  = document.getElementById('hmf-filter-dispenser').value;
+
+            this.filtered = this.orders.filter(function(o) {
+                if (clinicId && String(o.clinic_id) !== clinicId) return false;
+                if (staffId  && String(o.staff_id)  !== staffId)  return false;
+                return true;
+            });
+
+            this.renderTable({ orders: this.filtered });
+            this.renderTotals(this.filtered);
+        },
+
+        resetFilters: function() {
+            document.getElementById('hmf-filter-clinic').value = '';
+            document.getElementById('hmf-filter-dispenser').value = '';
+            this.applyFilters();
         },
 
         renderTable: function(data) {
@@ -300,6 +426,7 @@ function hm_render_fitting_page() {
 
             if (!orders.length) {
                 el.innerHTML = '<div class="hmf-empty"><div class="hmf-empty-icon">&#128588;</div>No hearing aid orders in the pipeline — all clear!</div>';
+                document.getElementById('hmf-totals').style.display = 'none';
                 return;
             }
 
@@ -308,6 +435,8 @@ function hm_render_fitting_page() {
             html += '<th>Patient Name</th>';
             html += '<th>Order #</th>';
             html += '<th>Hearing Aid</th>';
+            html += '<th>Clinic</th>';
+            html += '<th>Dispenser</th>';
             html += '<th>PRSI</th>';
             html += '<th>Order Status</th>';
             html += '<th>Fitting Appt</th>';
@@ -350,6 +479,8 @@ function hm_render_fitting_page() {
                 html += '<td><span class="hmf-patient-name">' + hmFE(o.patient_name) + '</span></td>';
                 html += '<td><span class="hmf-order-num">' + hmFE(o.order_number) + '</span></td>';
                 html += '<td><span class="hmf-product">' + hmFE(o.product_names) + '</span></td>';
+                html += '<td>' + hmFE(o.clinic_name) + '</td>';
+                html += '<td>' + hmFE(o.dispenser_name) + '</td>';
                 html += '<td>' + prsiDot + '</td>';
                 html += '<td><span class="hmf-status ' + statusClass + '">' + statusLabel + '</span></td>';
                 html += '<td>' + fittingDate + '</td>';
@@ -359,6 +490,63 @@ function hm_render_fitting_page() {
 
             html += '</tbody></table></div>';
             el.innerHTML = html;
+        },
+
+        renderTotals: function(orders) {
+            var container = document.getElementById('hmf-totals');
+
+            // 1. Total Awaiting Fitting (status = 'Awaiting Fitting')
+            var awaitingFitting = orders.filter(function(o) { return o.current_status === 'Awaiting Fitting'; });
+            var totalAwaiting = awaitingFitting.length;
+
+            // 2. Fitting before end of month
+            var now = new Date();
+            var endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+            var fittingBeforeEOM = awaitingFitting.filter(function(o) {
+                if (!o.fitting_date_raw) return false;
+                var fd = new Date(o.fitting_date_raw);
+                return fd <= endOfMonth;
+            }).length;
+
+            // 3. PRSI to claim — orders fitted (PRSI applicable) within the current PRSI cycle
+            // PRSI cycle: 2nd Tuesday of this month → 1st Monday of next month
+            var cycle = this.getPRSICycleDates();
+            var prsiCount = 0;
+            if (cycle.start && cycle.end) {
+                // Count Awaiting Fitting orders that are PRSI applicable
+                // and have a fitting date within the PRSI cycle window
+                prsiCount = awaitingFitting.filter(function(o) {
+                    if (!o.prsi_applicable) return false;
+                    if (!o.fitting_date_raw) return true; // PRSI applicable but no date = still in window
+                    var fd = new Date(o.fitting_date_raw);
+                    return fd >= cycle.start && fd <= cycle.end;
+                }).length;
+            }
+
+            var cycleLabel = '';
+            if (cycle.start && cycle.end) {
+                cycleLabel = hmFD(cycle.start) + ' – ' + hmFD(cycle.end);
+            }
+
+            var monthName = now.toLocaleString('default', { month: 'long' });
+
+            container.innerHTML =
+                '<div class="hmf-total-card">' +
+                    '<div class="hmf-total-label">Total Awaiting Fitting</div>' +
+                    '<div class="hmf-total-val green">' + totalAwaiting + '</div>' +
+                '</div>' +
+                '<div class="hmf-total-card">' +
+                    '<div class="hmf-total-label">Fitting Before End of ' + hmFE(monthName) + '</div>' +
+                    '<div class="hmf-total-val blue">' + fittingBeforeEOM + '</div>' +
+                    '<div class="hmf-total-sub">Scheduled before ' + hmFD(endOfMonth) + '</div>' +
+                '</div>' +
+                '<div class="hmf-total-card">' +
+                    '<div class="hmf-total-label">PRSI to Claim</div>' +
+                    '<div class="hmf-total-val purple">' + prsiCount + '</div>' +
+                    '<div class="hmf-total-sub">' + hmFE(cycleLabel) + '</div>' +
+                '</div>';
+
+            container.style.display = 'flex';
         },
 
         // ── SERIAL NUMBER MODAL ──
@@ -624,6 +812,11 @@ function hm_render_fitting_page() {
     // Helpers
     function hmFE(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
     function hmFN(n) { return parseFloat(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+    function hmFD(dt) {
+        if (!dt) return '';
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return dt.getDate() + ' ' + months[dt.getMonth()] + ' ' + dt.getFullYear();
+    }
 
     jQuery(function() { hmFitting.load(); });
     </script>
@@ -645,6 +838,7 @@ function hm_ajax_fitting_load() {
     $orders = $db->get_results(
         "SELECT o.id, o.order_number, o.patient_id, o.current_status,
                 o.prsi_applicable, o.grand_total, o.order_date, o.invoice_id,
+                o.clinic_id, o.staff_id,
                 p.patient_number, p.first_name AS p_first, p.last_name AS p_last,
                 c.clinic_name,
                 CONCAT(s.first_name, ' ', s.last_name) AS dispenser_name,
@@ -713,10 +907,13 @@ function hm_ajax_fitting_load() {
             'patient_id'      => (int)$o->patient_id,
             'dispenser_name'  => $o->dispenser_name ?? '',
             'clinic_name'     => $o->clinic_name ?? '',
+            'clinic_id'       => isset($o->clinic_id) ? (int)$o->clinic_id : null,
+            'staff_id'        => isset($o->staff_id) ? (int)$o->staff_id : null,
             'current_status'  => $o->current_status,
             'prsi_applicable' => (bool)$o->prsi_applicable,
             'product_names'   => $o->product_names ?? '',
             'fitting_date'    => $o->fitting_date ? date('d M Y', strtotime($o->fitting_date)) : '',
+            'fitting_date_raw'=> $o->fitting_date ?? '',
             'grand_total'     => (float)($o->grand_total ?? 0),
             'invoice_id'      => $o->invoice_id ? (int)$o->invoice_id : null,
             'items'           => $items,

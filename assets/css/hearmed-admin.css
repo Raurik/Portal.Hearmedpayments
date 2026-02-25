@@ -9,16 +9,21 @@
 /* ═══════════════════════════════════════
    ADMIN CONSOLE — SETTINGS LANDING GRID
    ═══════════════════════════════════════ */
-.hm-sc { padding: 20px 24px; }
+.hm-sc { padding: 28px 32px; max-width: 1100px; margin: 0 auto; }
 .hm-sc-title {
     font-size: 26px;
     font-weight: 600;
     color: #151B33;
     letter-spacing: -0.02em;
     margin: 0 0 24px;
-    text-align: left;
+    text-align: center;
 }
-.hm-sc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.hm-sc-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    justify-content: center;
+}
 .hm-sc-card {
     background: #fff;
     border: 1px solid #e2e8f0;
@@ -26,6 +31,8 @@
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     transition: box-shadow .15s ease, transform .15s ease;
+    display: flex;
+    flex-direction: column;
 }
 .hm-sc-card:hover {
     box-shadow: 0 4px 14px rgba(0,0,0,0.08);
@@ -41,7 +48,7 @@
 }
 .hm-sc-hd svg { width: 18px; height: 18px; color: #0BB4C4; flex-shrink: 0; }
 .hm-sc-hd span { font-size: 15px; font-weight: 700; color: #151B33; }
-.hm-sc-links { padding: 8px 20px 16px; text-align: center; }
+.hm-sc-links { padding: 10px 20px 18px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; }
 .hm-sc-links a {
     display: block;
     padding: 7px 0;
