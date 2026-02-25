@@ -164,7 +164,6 @@ function hm_patient_audit( $action, $entity_type, $entity_id, $details = '' ) {
     $db = HearMed_DB::instance();
     $db->insert( 'hearmed_admin.audit_log', [
         'user_id'     => get_current_user_id(),
-        'user_name'   => hm_patient_staff_name(),
         'action'      => $action,
         'entity_type' => $entity_type,
         'entity_id'   => $entity_id,
@@ -193,7 +192,7 @@ function hm_generate_patient_number() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_get_patients() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
 
     $db   = HearMed_DB::instance();
     $page = max( 1, intval( $_POST['page'] ?? 1 ) );
@@ -318,7 +317,7 @@ function hm_ajax_get_patients() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_create_patient() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
 
     $fn = sanitize_text_field( $_POST['first_name'] ?? '' );
     $ln = sanitize_text_field( $_POST['last_name']  ?? '' );
@@ -391,7 +390,7 @@ function hm_ajax_create_patient() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_get_patient() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -516,7 +515,7 @@ function hm_ajax_get_patient() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_update_patient() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -570,7 +569,7 @@ function hm_ajax_update_patient() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_get_patient_notes() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -603,7 +602,7 @@ function hm_ajax_get_patient_notes() {
 }
 
 function hm_ajax_save_patient_note() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid  = intval( $_POST['patient_id'] ?? 0 );
     $nid  = intval( $_POST['_ID'] ?? 0 );
     $type = sanitize_text_field( $_POST['note_type'] ?? 'Manual' );
@@ -635,7 +634,7 @@ function hm_ajax_save_patient_note() {
 }
 
 function hm_ajax_delete_patient_note() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $nid = intval( $_POST['_ID'] ?? 0 );
     if ( ! $nid ) wp_send_json_error( 'Missing note ID' );
 
@@ -662,7 +661,7 @@ function hm_ajax_delete_patient_note() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_get_patient_documents() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -692,7 +691,7 @@ function hm_ajax_get_patient_documents() {
 }
 
 function hm_ajax_upload_patient_document() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid  = intval( $_POST['patient_id'] ?? 0 );
     $type = sanitize_text_field( $_POST['document_type'] ?? 'Other' );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
@@ -732,7 +731,7 @@ function hm_ajax_upload_patient_document() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_get_patient_products() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -774,7 +773,7 @@ function hm_ajax_get_patient_products() {
 }
 
 function hm_ajax_add_patient_product() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -809,7 +808,7 @@ function hm_ajax_add_patient_product() {
 }
 
 function hm_ajax_update_patient_product_status() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $id     = intval( $_POST['_ID'] ?? 0 );
     $status = sanitize_text_field( $_POST['status'] ?? 'Inactive' );
     $reason = sanitize_text_field( $_POST['reason'] ?? '' );
@@ -828,7 +827,7 @@ function hm_ajax_update_patient_product_status() {
 }
 
 function hm_ajax_search_products() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $q  = sanitize_text_field( $_POST['q'] ?? '' );
     $db = HearMed_DB::instance();
 
@@ -858,7 +857,7 @@ function hm_ajax_search_products() {
 }
 
 function hm_ajax_get_product_detail() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $id = intval( $_POST['product_id'] ?? 0 );
     if ( ! $id ) wp_send_json_error( 'Missing product_id' );
 
@@ -901,7 +900,7 @@ function hm_ajax_get_product_detail() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_get_patient_appointments() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -952,7 +951,7 @@ function hm_ajax_get_patient_appointments() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_get_patient_orders() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -992,7 +991,7 @@ function hm_ajax_get_patient_orders() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_get_patient_invoices() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -1029,7 +1028,7 @@ function hm_ajax_get_patient_invoices() {
 }
 
 function hm_ajax_download_invoice() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $id = intval( $_GET['_ID'] ?? 0 );
     if ( ! $id ) wp_die( 'Missing invoice ID' );
 
@@ -1050,7 +1049,7 @@ function hm_ajax_download_invoice() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_get_patient_repairs() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -1085,7 +1084,7 @@ function hm_ajax_get_patient_repairs() {
 }
 
 function hm_ajax_create_patient_repair() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -1126,7 +1125,7 @@ function hm_ajax_create_patient_repair() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_get_patient_returns() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -1163,7 +1162,7 @@ function hm_ajax_get_patient_returns() {
 }
 
 function hm_ajax_log_cheque_sent() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $id   = intval( $_POST['_ID'] ?? 0 );
     $date = sanitize_text_field( $_POST['cheque_date'] ?? date( 'Y-m-d' ) );
     if ( ! $id ) wp_send_json_error( 'Missing credit note ID' );
@@ -1188,7 +1187,7 @@ function hm_ajax_log_cheque_sent() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_get_patient_forms() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -1216,7 +1215,7 @@ function hm_ajax_get_patient_forms() {
 }
 
 function hm_ajax_submit_patient_form() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid  = intval( $_POST['patient_id'] ?? 0 );
     $type = sanitize_text_field( $_POST['form_type'] ?? '' );
     if ( ! $pid || ! $type ) wp_send_json_error( 'Patient ID and form type required' );
@@ -1272,7 +1271,7 @@ function hm_ajax_submit_patient_form() {
 }
 
 function hm_ajax_get_form_templates() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
 
     // Pull from admin Form Settings (set via admin console)
     $templates = get_option( 'hm_form_templates', '' );
@@ -1296,7 +1295,7 @@ function hm_ajax_get_form_templates() {
 }
 
 function hm_ajax_download_patient_form() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $id = intval( $_GET['_ID'] ?? 0 );
     if ( ! $id ) wp_die( 'Missing form ID' );
 
@@ -1351,7 +1350,7 @@ function hm_ajax_download_patient_form() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_update_marketing_prefs() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
@@ -1380,7 +1379,7 @@ function hm_ajax_update_marketing_prefs() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_anonymise_patient() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid     = intval( $_POST['patient_id'] ?? 0 );
     $confirm = sanitize_text_field( $_POST['confirm'] ?? '' );
 
@@ -1485,7 +1484,7 @@ function hm_ajax_anonymise_patient() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_export_patient_data() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
     if ( ! hm_patient_is_admin() ) wp_send_json_error( 'Only admin users can export' );
@@ -1512,7 +1511,7 @@ function hm_ajax_export_patient_data() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_save_case_history() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid  = intval( $_POST['patient_id'] ?? 0 );
     $text = sanitize_textarea_field( $_POST['note_text'] ?? '' );
     $type = sanitize_text_field( $_POST['appointment_type'] ?? 'Case History' );
@@ -1538,7 +1537,7 @@ function hm_ajax_save_case_history() {
 }
 
 function hm_ajax_save_ai_transcript() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid  = intval( $_POST['patient_id'] ?? 0 );
     $text = sanitize_textarea_field( $_POST['transcript'] ?? '' );
 
@@ -1565,7 +1564,7 @@ function hm_ajax_save_ai_transcript() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_get_patient_audit() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
     if ( ! hm_patient_is_admin() ) wp_send_json_error( 'Access denied — admin only' );
@@ -1604,7 +1603,7 @@ function hm_ajax_get_patient_audit() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_create_patient_notification() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
+    check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     $msg = sanitize_textarea_field( $_POST['message'] ?? '' );
 
