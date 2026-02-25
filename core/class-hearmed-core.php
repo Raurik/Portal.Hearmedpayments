@@ -115,6 +115,7 @@ class HearMed_Core {
             HEARMED_PATH . 'modules/mod-orders.php',
             HEARMED_PATH . 'modules/mod-approvals.php',
             HEARMED_PATH . 'modules/mod-fitting.php',
+            HEARMED_PATH . 'modules/mod-order-status.php',
             HEARMED_PATH . 'modules/mod-notifications.php',
             HEARMED_PATH . 'modules/mod-repairs.php',
             HEARMED_PATH . 'modules/mod-team-chat.php',
