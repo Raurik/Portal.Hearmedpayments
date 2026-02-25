@@ -44,7 +44,7 @@ A complete Electronic Health Record (EHR) + Practice Management System that hand
 - ✅ 60+ PostgreSQL tables on Railway — correct schema, indexes, FK relationships, helper functions
 - ✅ PostgreSQL connection from SiteGround working via `pg_connect()`
 - ✅ Auto-deployment: GitHub Actions → SSH to SiteGround → `git pull origin main` on every push
-- ✅ All 24 admin pages fully built with PostgreSQL CRUD, AJAX, styled per design system
+- ✅ All 25 admin pages fully built with PostgreSQL CRUD, AJAX, styled per design system
 - ✅ Admin console landing page with card grid linking to all sub-pages
 - ✅ Staff auth system (`class-hearmed-staff-auth.php`) with PostgreSQL-backed credentials + optional TOTP 2FA
 - ✅ Role-based access control (`class-hearmed-auth.php`) with `current_role()`, `current_clinic()`, `can()`, `is_admin()`
@@ -55,6 +55,12 @@ A complete Electronic Health Record (EHR) + Practice Management System that hand
 - ✅ GDPR document upload (admin-settings.php GDPR section)
 - ✅ Audit log viewer + data export (CSV/Excel) with GDPR logging
 - ✅ All syntax errors from MySQL→PostgreSQL conversion fully resolved
+- ✅ Table Enhancer — global search, auto column filters, rows-per-page pagination, sortable column headers
+- ✅ Finance Settings — 3-column layout (VAT, Payment & DSP, Invoice) with auto-numbering
+- ✅ Report Layout — PNG logo upload, footer textarea, T&C page, section visibility toggles
+- ✅ Document Types & Templates — DB-backed CRUD, per-type template section editor, AI keyword rules
+- ✅ GDPR consent modal — required checkbox + privacy policy link before any PDF download
+- ✅ QuickBooks Online direct integration class (`class-hearmed-qbo.php`) — OAuth 2.0 + full API
 
 ### What Remains To Build
 - 🚧 **Patient data migration** — ~5,000 patients from legacy system (CSV import tool needed)
@@ -62,13 +68,25 @@ A complete Electronic Health Record (EHR) + Practice Management System that hand
 - 🚧 **mod-calendar** — framework exists, booking flow not functional
 - 🚧 **mod-orders** — framework exists, order creation not functional
 - 🚧 **mod-approvals** — framework exists, approval flow not functional
-- 🚧 **Invoicing + QBO direct integration** — `HearMed_QBO` class exists, needs completion
+- 🚧 **Invoicing + QBO direct integration** — `HearMed_QBO` class exists with OAuth 2.0, needs QB app approval + production keys
 - 🚧 **mod-reports** — scaffold only
 - 🚧 **mod-commissions** — scaffold only, commission rules seeded in DB
 - 🚧 **mod-notifications** — scaffold only, auto-fired notification triggers not wired
 - 🚧 **mod-repairs** — scaffold only
 - 🚧 **mod-cash** — scaffold only (till reconciliation)
 - 🚧 **KPI dashboard** (mod-kpi) — scaffold only, targets admin page complete
+- 🚧 **PDF generation** — DomPDF library needed for password-protected PDF creation from document templates
+- 🚧 **JotForm integration** — webhook/API to pull patient address, contact details, consent data into patient records
+- 🚧 **JotForm digital consent/signature form** — integrated signature capture for consent forms
+- 🚧 **AI transcription PDF formatting** — OpenRouter/Make.com webhook processes audio → structured sections using template keyword rules
+
+### Pending Setup Actions
+- 📋 **Create WordPress page**: `/document-template-editor/` with shortcode `[hearmed_document_template_editor]` (same Elementor template as other admin pages)
+- 📋 **Run migration**: `MIGRATION_DOCUMENT_TEMPLATES.sql` on Railway PostgreSQL (auto-migrates on first page load, but manual run recommended)
+- 📋 **Install DomPDF**: `composer require dompdf/dompdf` on SiteGround (when ready for PDF generation)
+- 📋 **QuickBooks app**: Register app at developer.intuit.com, get production Client ID/Secret, add to wp-config.php
+- 📋 **JotForm setup**: Create patient intake form, configure webhook to push to portal endpoint
+- 📋 **Privacy Policy URL**: Set in GDPR Settings → used by consent modal on all document downloads
 
 ### Known Issues Requiring Attention
 - ⚠️ `FIX_CALENDAR_SETTINGS_COLUMNS.sql` needs to be run on Railway (15 missing columns in calendar_settings table)
@@ -109,6 +127,7 @@ hearmed-calendar/
 │   ├── class-hearmed-staff-auth.php       ← PostgreSQL-backed staff credentials + optional TOTP 2FA
 │   ├── class-hearmed-enqueue.php          ← Conditional asset loading, detect_and_load() per module
 │   ├── class-hearmed-router.php           ← Shortcode registration & routing
+│   ├── class-hearmed-qbo.php              ← QuickBooks Online direct API (OAuth 2.0, invoice/payment sync)
 │   ├── class-hearmed-ajax.php             ← Central AJAX dispatcher
 │   ├── class-hearmed-logger.php           ← Audit logging to hearmed_admin.audit_log
 │   └── class-hearmed-utils.php            ← Formatting, money, dates, phone, page_url(), Irish formats
@@ -133,6 +152,7 @@ hearmed-calendar/
 │   ├── admin-exclusions.php               ← Resource exclusions by clinic/type
 │   ├── admin-appointment-types.php        ← Appointment type CRUD
 │   ├── admin-chat-logs.php                ← GDPR-compliant chat audit trail (admin only)
+│   ├── admin-document-templates.php       ← Document types CRUD + per-type template section editor
 │   ├── admin-debug.php                    ← WP Admin debug/health check (DB, tables, config)
 │   └── admin-system-status.php            ← WP Admin system status dashboard
 ├── modules/                      ← 12 portal modules (shortcode-based, scaffolds awaiting full build)
@@ -967,11 +987,22 @@ Several SQL migration files exist in the repo root for schema changes that may n
 - `FIX_CALENDAR_SETTINGS_COLUMNS.sql` — Created (needs to be run on Railway)
 
 #### Previous Sessions Summary
-- Built/rebuilt all 24 admin pages from scratch with PostgreSQL CRUD + AJAX
-- Created 6 migration SQL files for schema additions
+- Built/rebuilt all 25 admin pages from scratch with PostgreSQL CRUD + AJAX
+- Created 7 migration SQL files for schema additions (including `MIGRATION_DOCUMENT_TEMPLATES.sql`)
 - Added `HearMed_Auth::current_role()`, `current_clinic()`, `HearMed_Utils::page_url()`
 - Fixed `hearmed_orders` missing from router shortcode_map
 - Added Pusher settings, chat logs admin page, enqueue fix for chat module
 - Converted admin-debug.php and admin-system-status.php to hm-admin pattern
 - Added alert, filter, badge, and section CSS classes to hearmed-admin.css
+- Table Enhancer v2: global search, auto column filters, rows-per-page pagination, sortable column headers (▲/▼)
+- Finance Settings restructured to 3-column grid (VAT, Payment & DSP, Invoice) with auto-numbering
+- Report Layout: PNG logo upload, larger footer textarea, T&C page, 9 section visibility toggles
+- Document Types & Templates system: DB-backed CRUD, card UI, per-type template section editor with drag-reorder
+- AI keyword detection rules for medical history + hearing results sections
+- GDPR consent modal (`hmGdprConsent.require()`) enforced before PDF/document downloads
+- Manufacturer "Other (Please Describe)" field with toggle visibility
+- KPI targets lighter font-weight (400), step=1 on inputs
+- Cash Management narrower bubble (max-width 480px)
+- Dome type/size DB-backed with Add New dropdown
+- Custom render dispatch in admin-settings.php for finance + report sub-pages
 
