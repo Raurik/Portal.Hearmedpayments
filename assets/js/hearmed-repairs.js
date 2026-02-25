@@ -90,13 +90,15 @@
             else if (x.status === 'Received') received++;
             if (x.status !== 'Received' && x.days_open && x.days_open > 14) overdue++;
         });
-        var parts = [];
-        parts.push('Showing ' + allRepairs.length + ' repair' + (allRepairs.length !== 1 ? 's' : ''));
-        if (booked) parts.push(booked + ' booked');
-        if (sent) parts.push(sent + ' sent');
-        if (received) parts.push(received + ' received');
-        if (overdue) parts.push(overdue + ' overdue');
-        $('#hm-repairs-stats').text(parts.join(' — '));
+        function card(val, label) {
+            return '<div class="hm-repair-stat"><div class="hm-repair-stat-val">' + val + '</div><div class="hm-repair-stat-lbl">' + label + '</div></div>';
+        }
+        $('#hm-repairs-stats').html(
+            card(booked, 'Booked') +
+            card(sent, 'Sent') +
+            card(received, 'Received') +
+            card(overdue, 'Overdue (14d+)')
+        );
     }
 
     function renderTable() {

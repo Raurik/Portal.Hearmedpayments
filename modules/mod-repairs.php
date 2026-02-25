@@ -16,6 +16,8 @@ function hm_repairs_render() {
             <h1 class="hm-page-title">Repairs</h1>
         </div>
 
+        <div id="hm-repairs-stats" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;"></div>
+
         <div class="hm-table-filter-bar">
             <div class="hm-tf-left">
                 <input type="text" id="hm-repair-search" class="hm-tf-search" placeholder="Search patient or HMREP…">
@@ -32,8 +34,6 @@ function hm_repairs_render() {
                 </select>
             </div>
         </div>
-
-        <div id="hm-repairs-stats" class="hm-tp-info" style="margin-bottom:8px;"></div>
 
         <div class="hm-card">
             <div id="hm-repairs-table">
