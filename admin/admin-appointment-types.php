@@ -44,6 +44,7 @@ class HearMed_Admin_Appointment_Types {
                 <h2>Appointment Types</h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmApptType.open()">+ Add Type</button>
             </div>
+            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
 
             <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">
                 Define the appointment types available in the calendar. Each type has a colour, duration, and category settings.
@@ -237,8 +238,8 @@ class HearMed_Admin_Appointment_Types {
 
         $data = [
             'service_name'        => $name,
-            'colour'              => sanitize_hex_color($_POST['colour'] ?? '#3B82F6') ?: '#3B82F6',
-            'duration'            => intval($_POST['duration'] ?? 30),
+            'service_color'       => sanitize_hex_color($_POST['colour'] ?? '#3B82F6') ?: '#3B82F6',
+            'duration_minutes'    => intval($_POST['duration'] ?? 30),
             'appointment_category'=> sanitize_text_field($_POST['appointment_category'] ?? ''),
             'sales_opportunity'   => !empty($_POST['sales_opportunity']),
             'income_bearing'      => !empty($_POST['income_bearing']),

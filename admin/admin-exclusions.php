@@ -22,7 +22,7 @@ class HearMed_Admin_Exclusions {
         $t = 'hearmed_reference.exclusion_types';
         $check = HearMed_DB::get_var("SELECT to_regclass('{$t}')");
         if ($check === null) return [];
-        return HearMed_DB::get_results("SELECT * FROM {$t} ORDER BY sort_order, type_name") ?: [];
+        return HearMed_DB::get_results("SELECT * FROM {$t} WHERE is_active = true ORDER BY sort_order, type_name") ?: [];
     }
 
     public function render() {

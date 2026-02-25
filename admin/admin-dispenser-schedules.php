@@ -32,7 +32,7 @@ class HearMed_Admin_Dispenser_Schedules {
                 <h2 style="margin:0;">Dispenser Schedule: <?php echo esc_html($staff_data['staff_name']); ?> <span style="font-size:16px;color:#64748b;">(<?php echo esc_html($staff_data['staff_role']); ?>)</span></h2>
             </div>
             <div style="margin:20px 0 30px 0;">
-                <button class="hm-btn hm-btn-teal" onclick="window.location.href='<?php echo esc_attr( strtok($_SERVER['REQUEST_URI'], '?') ); ?>#add'">+ Add Schedule</button>
+                <button class="hm-btn hm-btn-teal" onclick="hmSchedEdit.open({staff_id:<?php echo (int)$staff_data['staff_id']; ?>})">+ Add Schedule</button>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:32px;">
                 <?php
@@ -75,7 +75,8 @@ class HearMed_Admin_Dispenser_Schedules {
                                 <td><strong><?php echo esc_html($d['day_label']); ?></strong></td>
                                 <td><?php echo esc_html($rotation); ?></td>
                                 <td><?php echo $badge; ?></td>
-                                <td style="text-align:right;">
+                                <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end;">
+                                    <button class="hm-btn hm-btn-sm" onclick='hmSchedEdit.open(<?php echo json_encode($d, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>)'>Edit</button>
                                     <form method="post" style="display:inline;" onsubmit="return confirm('Delete this schedule?');">
                                         <input type="hidden" name="delete_schedule_id" value="<?php echo (int)$d['id']; ?>">
                                         <button class="hm-btn hm-btn-sm hm-btn-red" type="submit">Delete</button>
@@ -88,9 +89,106 @@ class HearMed_Admin_Dispenser_Schedules {
                 </div>
                 <?php } ?>
             </div>
+
+            <!-- Edit Modal (detail page) -->
+            <div class="hm-modal-bg" id="hm-sched-edit-modal">
+                <div class="hm-modal" style="width:520px">
+                    <div class="hm-modal-hd">
+                        <h3 id="hm-sched-edit-title">Edit Schedule</h3>
+                        <button class="hm-modal-x" onclick="hmSchedEdit.close()">&times;</button>
+                    </div>
+                    <div class="hm-modal-body">
+                        <input type="hidden" id="hmse-id">
+                        <input type="hidden" id="hmse-staff" value="<?php echo (int)$staff_data['staff_id']; ?>">
+                        <div class="hm-form-row">
+                            <div class="hm-form-group">
+                                <label>Clinic *</label>
+                                <select id="hmse-clinic">
+                                    <option value="">Select clinic</option>
+                                    <?php foreach ($clinics as $c): ?>
+                                        <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="hm-form-group">
+                                <label>Day *</label>
+                                <select id="hmse-day">
+                                    <?php foreach ($days as $idx => $label): ?>
+                                        <option value="<?php echo (int)$idx; ?>"><?php echo esc_html($label); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="hm-form-row">
+                            <div class="hm-form-group">
+                                <label>Rotation</label>
+                                <select id="hmse-rotation" onchange="document.getElementById('hmse-week-row').style.display=this.value==='2'?'':'none'">
+                                    <option value="1">Weekly</option>
+                                    <option value="2">Every 2 weeks</option>
+                                    <option value="3">Every 3 weeks</option>
+                                    <option value="4">Once a month</option>
+                                </select>
+                            </div>
+                            <div class="hm-form-group" id="hmse-week-row" style="display:none">
+                                <label>Week</label>
+                                <select id="hmse-week">
+                                    <option value="1">Week 1</option>
+                                    <option value="2">Week 2</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="hm-form-group">
+                            <label class="hm-toggle-label">
+                                <input type="checkbox" id="hmse-active" checked>
+                                Active
+                            </label>
+                        </div>
+                    </div>
+                    <div class="hm-modal-ft">
+                        <button class="hm-btn" onclick="hmSchedEdit.close()">Cancel</button>
+                        <button class="hm-btn hm-btn-teal" onclick="hmSchedEdit.save()" id="hmse-save">Save</button>
+                    </div>
+                </div>
+            </div>
         </div>
-        <?php
-        // Handle delete
+
+        <script>
+        var hmSchedEdit = {
+            open: function(data) {
+                var isEdit = !!(data && data.id);
+                document.getElementById('hm-sched-edit-title').textContent = isEdit ? 'Edit Schedule' : 'Add Schedule';
+                document.getElementById('hmse-id').value       = isEdit ? data.id : '';
+                document.getElementById('hmse-clinic').value   = data.clinic_id || '';
+                document.getElementById('hmse-day').value      = data.day_of_week !== undefined ? data.day_of_week : '1';
+                document.getElementById('hmse-rotation').value = data.rotation_weeks || '1';
+                document.getElementById('hmse-week').value     = data.week_number || '1';
+                document.getElementById('hmse-active').checked = data.is_active !== false;
+                document.getElementById('hmse-week-row').style.display = (data.rotation_weeks == 2) ? '' : 'none';
+                document.getElementById('hm-sched-edit-modal').classList.add('open');
+            },
+            close: function() { document.getElementById('hm-sched-edit-modal').classList.remove('open'); },
+            save: function() {
+                var clinic = document.getElementById('hmse-clinic').value;
+                if (!clinic) { alert('Please select a clinic.'); return; }
+                var btn = document.getElementById('hmse-save');
+                btn.textContent = 'Saving...'; btn.disabled = true;
+                jQuery.post(HM.ajax_url, {
+                    action: 'hm_admin_save_dispenser_schedule',
+                    nonce: HM.nonce,
+                    id: document.getElementById('hmse-id').value,
+                    staff_id: document.getElementById('hmse-staff').value,
+                    clinic_id: clinic,
+                    day_of_week: document.getElementById('hmse-day').value,
+                    rotation_weeks: document.getElementById('hmse-rotation').value,
+                    week_number: document.getElementById('hmse-week').value,
+                    is_active: document.getElementById('hmse-active').checked ? 1 : 0
+                }, function(r) {
+                    if (r.success) location.reload();
+                    else { alert(r.data || 'Error'); btn.textContent = 'Save'; btn.disabled = false; }
+                });
+            }
+        };
+        </script>
         if (!empty($_POST['delete_schedule_id'])) {
             $del_id = intval($_POST['delete_schedule_id']);
             HearMed_DB::update('hearmed_reference.dispenser_schedules', ['is_active'=>false,'updated_at'=>current_time('mysql')], ['id'=>$del_id]);
