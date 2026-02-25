@@ -86,9 +86,25 @@ class HearMed_Admin_Products {
     ];
 
     private function get_hearmed_ranges() {
-        return HearMed_DB::get_results(
+        // 1. Try PostgreSQL table first
+        $rows = HearMed_DB::get_results(
             "SELECT id, range_name, price_total, price_ex_prsi FROM hearmed_reference.hearmed_range WHERE is_active = true ORDER BY range_name"
         ) ?: [];
+        if (!empty($rows)) return $rows;
+
+        // 2. Fallback: pull from WP taxonomy 'hearmed-range' (legacy data source)
+        $terms = get_terms(['taxonomy' => 'hearmed-range', 'hide_empty' => false]);
+        if (is_wp_error($terms) || empty($terms)) return [];
+        $out = [];
+        foreach ($terms as $t) {
+            $obj = new \stdClass();
+            $obj->id           = $t->term_id;
+            $obj->range_name   = $t->name;
+            $obj->price_total  = get_term_meta($t->term_id, 'price_total', true) ?: null;
+            $obj->price_ex_prsi = get_term_meta($t->term_id, 'price_ex_prsi', true) ?: null;
+            $out[] = $obj;
+        }
+        return $out;
     }
 
     /** Auto-add missing columns to products/manufacturers tables (runs once per request) */
