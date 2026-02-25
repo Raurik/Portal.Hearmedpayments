@@ -112,6 +112,10 @@ add_action( 'wp_ajax_hm_get_patient_audit',   'hm_ajax_get_patient_audit' );
 // Notifications
 add_action( 'wp_ajax_hm_create_patient_notification', 'hm_ajax_create_patient_notification' );
 
+// Lookup helpers (referral sources / lead types)
+add_action( 'wp_ajax_hm_get_referral_sources', 'hm_ajax_get_referral_sources' );
+add_action( 'wp_ajax_hm_get_staff_list',        'hm_ajax_get_staff_list' );
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  HELPERS
@@ -344,12 +348,15 @@ function hm_ajax_create_patient() {
         'first_name'      => $fn,
         'last_name'       => $ln,
         'is_active'       => true,
-        'prsi_eligible'   => ( $_POST['prsi_eligible'] ?? '0' ) === '1',
         'marketing_email' => ( $_POST['marketing_email'] ?? '0' ) === '1',
         'marketing_sms'   => ( $_POST['marketing_sms'] ?? '0' ) === '1',
         'marketing_phone' => ( $_POST['marketing_phone'] ?? '0' ) === '1',
         'gdpr_consent'    => ( $_POST['gdpr_consent'] ?? '0' ) === '1',
     ];
+
+    // PPS number (stored in prsi_number column)
+    $pps = sanitize_text_field( $_POST['pps_number'] ?? '' );
+    if ( $pps ) $data['prsi_number'] = $pps;
 
     // Only add optional fields if they have values (avoid PG type issues with empty strings)
     $title = sanitize_text_field( $_POST['patient_title'] ?? '' );
@@ -379,24 +386,10 @@ function hm_ajax_create_patient() {
         if ( $ip ) $data['gdpr_consent_ip'] = $ip;
     }
 
-    // Handle referral source — may be text or ID
-    $ref_src = sanitize_text_field( $_POST['referral_source'] ?? '' );
-    if ( $ref_src && is_numeric( $ref_src ) ) {
-        $data['referral_source_id'] = (int) $ref_src;
-    } elseif ( $ref_src ) {
-        $existing = $db->get_var(
-            "SELECT id FROM hearmed_reference.referral_sources WHERE source_name ILIKE \$1 LIMIT 1",
-            [ $ref_src ]
-        );
-        if ( $existing ) {
-            $data['referral_source_id'] = (int) $existing;
-        } else {
-            $new_id = $db->insert( 'hearmed_reference.referral_sources', [
-                'source_name' => $ref_src,
-                'is_active'   => true,
-            ]);
-            if ( $new_id ) $data['referral_source_id'] = (int) $new_id;
-        }
+    // Handle referral source (dropdown sends ID)
+    $ref_src = intval( $_POST['referral_source_id'] ?? 0 );
+    if ( $ref_src ) {
+        $data['referral_source_id'] = $ref_src;
     }
 
     $id = $db->insert( 'hearmed_core.patients', $data );
@@ -410,6 +403,42 @@ function hm_ajax_create_patient() {
     try { hm_patient_audit( 'CREATE', 'patient', $id, [ 'name' => $fn . ' ' . $ln ] ); } catch ( \Throwable $e ) {}
 
     wp_send_json_success( [ 'id' => $id ] );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  3b. LOOKUP HELPERS — referral sources (lead types) & staff list
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_get_referral_sources() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $rows = HearMed_DB::get_results(
+        "SELECT id, source_name FROM hearmed_reference.referral_sources WHERE is_active = true ORDER BY sort_order, source_name"
+    );
+    $out = [];
+    if ( $rows ) {
+        foreach ( $rows as $r ) {
+            $out[] = [ 'id' => (int) $r->id, 'name' => $r->source_name ];
+        }
+    }
+    wp_send_json_success( $out );
+}
+
+function hm_ajax_get_staff_list() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $rows = HearMed_DB::get_results(
+        "SELECT id, full_name, initials, role_type FROM hearmed_reference.staff WHERE is_active = true ORDER BY full_name"
+    );
+    $out = [];
+    if ( $rows ) {
+        foreach ( $rows as $r ) {
+            $out[] = [
+                'id'   => (int) $r->id,
+                'name' => $r->full_name,
+            ];
+        }
+    }
+    wp_send_json_success( $out );
 }
 
 

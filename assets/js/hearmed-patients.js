@@ -200,14 +200,17 @@ function showCreateModal(){
                 '<div class="hm-form-group"><label class="hm-label">Address</label><textarea class="hm-textarea" id="cp-address" rows="2"></textarea></div>'+
                 '<div class="hm-form-row">'+
                     '<div class="hm-form-group"><label class="hm-label">Eircode</label><input type="text" class="hm-inp" id="cp-eircode"></div>'+
-                    '<div class="hm-form-group"><label class="hm-label">Referral source</label><input type="text" class="hm-inp" id="cp-ref"></div>'+
+                    '<div class="hm-form-group"><label class="hm-label">PPS number</label><input type="text" class="hm-inp" id="cp-pps" placeholder="e.g. 1234567AB"></div>'+
                 '</div>'+
                 '<div class="hm-form-row">'+
+                    '<div class="hm-form-group"><label class="hm-label">Referral source</label><select class="hm-dd" id="cp-ref"><option value="">— Select —</option></select></div>'+
                     '<div class="hm-form-group"><label class="hm-label">Dispenser</label><select class="hm-dd" id="cp-dispenser"><option value="">— Select —</option></select></div>'+
+                '</div>'+
+                '<div class="hm-form-row">'+
                     '<div class="hm-form-group"><label class="hm-label">Clinic</label><select class="hm-dd" id="cp-clinic"><option value="">— Select —</option></select></div>'+
+                    '<div class="hm-form-group" style="display:flex;align-items:flex-end;padding-bottom:16px;"></div>'+
                 '</div>'+
                 '<div style="display:flex;gap:20px;flex-wrap:wrap;margin:8px 0;">'+
-                    '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" id="cp-prsi"> PRSI eligible</label>'+
                     '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" id="cp-memail"> Email marketing</label>'+
                     '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" id="cp-msms"> SMS marketing</label>'+
                     '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" id="cp-mphone"> Phone marketing</label>'+
@@ -224,15 +227,16 @@ function showCreateModal(){
         '</div></div>'
     );
     $('#cp-gdpr').on('change',function(){$('#cp-save').prop('disabled',!this.checked);});
-    $.post(_hm.ajax,{action:'hm_get_dispensers',nonce:_hm.nonce},function(r){if(r.success)r.data.forEach(function(d){$('#cp-dispenser').append('<option value="'+d.id+'">'+esc(d.name)+'</option>');});});
+    $.post(_hm.ajax,{action:'hm_get_staff_list',nonce:_hm.nonce},function(r){if(r.success)r.data.forEach(function(d){$('#cp-dispenser').append('<option value="'+d.id+'">'+esc(d.name)+'</option>');});});
     $.post(_hm.ajax,{action:'hm_get_clinics',nonce:_hm.nonce},function(r){if(r.success)r.data.forEach(function(c){$('#cp-clinic').append('<option value="'+c.id+'">'+esc(c.name)+'</option>');});});
+    $.post(_hm.ajax,{action:'hm_get_referral_sources',nonce:_hm.nonce},function(r){if(r.success)r.data.forEach(function(s){$('#cp-ref').append('<option value="'+s.id+'">'+esc(s.name)+'</option>');});});
     $('#cp-cancel,.hm-modal-x').on('click',closeModal);
     $('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
     $('#cp-save').on('click',function(){
         var fn=$.trim($('#cp-fn').val()),ln=$.trim($('#cp-ln').val());
         if(!fn||!ln){toast('First and last name required','error');return;}
         var $btn=$(this).prop('disabled',true).text('Creating…');
-        $.post(_hm.ajax,{action:'hm_create_patient',nonce:_hm.nonce,patient_title:$('#cp-title').val(),first_name:fn,last_name:ln,dob:$('#cp-dob').val(),patient_phone:$('#cp-phone').val(),patient_mobile:$('#cp-mobile').val(),patient_email:$('#cp-email').val(),patient_address:$('#cp-address').val(),patient_eircode:$('#cp-eircode').val(),referral_source:$('#cp-ref').val(),assigned_dispenser_id:$('#cp-dispenser').val(),assigned_clinic_id:$('#cp-clinic').val(),prsi_eligible:$('#cp-prsi').is(':checked')?'1':'0',marketing_email:$('#cp-memail').is(':checked')?'1':'0',marketing_sms:$('#cp-msms').is(':checked')?'1':'0',marketing_phone:$('#cp-mphone').is(':checked')?'1':'0',gdpr_consent:'1'}).done(function(r){
+        $.post(_hm.ajax,{action:'hm_create_patient',nonce:_hm.nonce,patient_title:$('#cp-title').val(),first_name:fn,last_name:ln,dob:$('#cp-dob').val(),patient_phone:$('#cp-phone').val(),patient_mobile:$('#cp-mobile').val(),patient_email:$('#cp-email').val(),patient_address:$('#cp-address').val(),patient_eircode:$('#cp-eircode').val(),pps_number:$('#cp-pps').val(),referral_source_id:$('#cp-ref').val(),assigned_dispenser_id:$('#cp-dispenser').val(),assigned_clinic_id:$('#cp-clinic').val(),marketing_email:$('#cp-memail').is(':checked')?'1':'0',marketing_sms:$('#cp-msms').is(':checked')?'1':'0',marketing_phone:$('#cp-mphone').is(':checked')?'1':'0',gdpr_consent:'1'}).done(function(r){
             if(r.success)window.location=PG+'?id='+r.data.id;
             else{toast(r.data||'Error creating patient','error');$btn.prop('disabled',false).text('Create Patient');}
         }).fail(function(xhr){
