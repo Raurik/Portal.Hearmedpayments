@@ -640,8 +640,9 @@
     accent-color: #0BB4C4;
 }
 
+#hm-clinics-app .hm-btn-teal,
 #hm-clinics-app .hm-btn-primary {
-    background: #3b82f6;
+    background: #0BB4C4;
     color: #fff;
     padding: 7px 18px;
     border: none;
@@ -650,12 +651,13 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
-    box-shadow: 0 1px 3px rgba(59, 130, 246, 0.25);
+    box-shadow: 0 1px 3px rgba(11, 180, 196, 0.25);
 }
 
+#hm-clinics-app .hm-btn-teal:hover,
 #hm-clinics-app .hm-btn-primary:hover {
-    background: #2563eb;
-    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
+    background: #0a9eac;
+    box-shadow: 0 2px 6px rgba(11, 180, 196, 0.35);
 }
 
 #hm-clinics-app .hm-btn {

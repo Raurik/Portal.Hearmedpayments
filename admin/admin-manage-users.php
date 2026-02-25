@@ -22,6 +22,7 @@ class HearMed_Admin_Manage_Users {
                     a.username, a.two_factor_enabled, a.temp_password, a.totp_secret
              FROM hearmed_reference.staff s
              LEFT JOIN hearmed_reference.staff_auth a ON s.id = a.staff_id
+             WHERE s.is_active = true
              ORDER BY s.last_name, s.first_name"
         );
         
@@ -281,12 +282,13 @@ class HearMed_Admin_Manage_Users {
                         <div class="hm-form-row">
                             <div class="hm-form-group">
                                 <label>Set New Password <span id="hmu-pass-req" style="color:#ef4444;">*</span></label>
-                                <input type="password" id="hmu-pass" placeholder="Required for new staff" onkeyup="hmUsers.checkPasswordStrength()">
+                                <input type="password" id="hmu-pass" placeholder="Required for new staff" onkeyup="hmUsers.checkPasswordStrength(); hmUsers.checkPasswordMatch()">
                                 <div id="hmu-pass-strength" style="font-size:12px;color:#dc2626;margin-top:4px;font-weight:500;"></div>
                             </div>
                             <div class="hm-form-group">
                                 <label>Confirm Password <span id="hmu-pass2-req" style="color:#ef4444;display:none;">*</span></label>
-                                <input type="password" id="hmu-pass2">
+                                <input type="password" id="hmu-pass2" onkeyup="hmUsers.checkPasswordMatch()">
+                                <div id="hmu-pass-match" style="font-size:12px;margin-top:4px;font-weight:500;"></div>
                             </div>
                         </div>
                         <div class="hm-form-row">
@@ -318,6 +320,19 @@ class HearMed_Admin_Manage_Users {
                 // At least one special character
                 if (!/[!@#$%^&*()_\-=+\[\]{}|;:'",.<>?/\\]/.test(pass)) return 'At least one special character (!@#$%^&* etc)';
                 return null; // Valid
+            },
+            checkPasswordMatch: function() {
+                var pass = document.getElementById('hmu-pass').value;
+                var pass2 = document.getElementById('hmu-pass2').value;
+                var el = document.getElementById('hmu-pass-match');
+                if (!pass2) { el.textContent = ''; return; }
+                if (pass === pass2) {
+                    el.textContent = '\u2713 Passwords match';
+                    el.style.color = '#16a34a';
+                } else {
+                    el.textContent = '\u2717 Passwords do not match';
+                    el.style.color = '#dc2626';
+                }
             },
             checkPasswordStrength: function() {
                 var pass = document.getElementById('hmu-pass').value;
@@ -597,20 +612,19 @@ class HearMed_Admin_Manage_Users {
         $auth = HearMed_Staff_Auth::ensure_auth_for_staff($id, $email, $username);
         
         if (!$auth) {
-            error_log('[HearMed] Failed to create staff_auth for staff_id=' . $id . ', error: ' . HearMed_DB::last_error());
-            wp_send_json_error('Failed to create staff authentication record: ' . (HearMed_DB::last_error() ?: 'Unknown error'));
-            return;
+            error_log('[HearMed] Warning: Failed to create staff_auth for staff_id=' . $id . ', error: ' . HearMed_DB::last_error());
+            // Don't block the save — staff record is already created
         }
 
-        // Password handling: set if provided
-        if ($new_password !== '') {
+        // Password handling: set if provided (only if auth record exists)
+        if ($new_password !== '' && $auth) {
             // When admin sets password on creation, mark as temp so user must change on first login
             $is_temp = $is_new_staff ? true : false;
             HearMed_Staff_Auth::set_password($id, $new_password, $is_temp);
         }
 
         $enable_2fa = intval($_POST['two_factor_enabled'] ?? 0) === 1;
-        $secret = HearMed_Staff_Auth::set_two_factor($id, $enable_2fa);
+        $secret = $auth ? HearMed_Staff_Auth::set_two_factor($id, $enable_2fa) : null;
 
         wp_send_json_success(['id' => $id, 'totp_secret' => $secret]);
     }

@@ -63,6 +63,7 @@ class HearMed_Admin_Console {
             ['System', [
                 ['AI Settings', 'ai-settings'],
                 ['Alerts Settings', 'alerts'],
+                ['Roles', 'roles'],
             ]],
         ];
 

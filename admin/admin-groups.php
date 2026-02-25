@@ -26,6 +26,7 @@ class HearMed_Admin_Groups {
              LEFT JOIN hearmed_reference.staff_group_members m ON g.id = m.group_id
              LEFT JOIN hearmed_reference.clinics c ON g.clinic_id = c.id
              LEFT JOIN hearmed_reference.roles r ON g.role_id = r.id
+             WHERE g.is_active = true
              GROUP BY g.id, c.clinic_name, r.role_name
              ORDER BY c.clinic_name, r.role_name, g.group_name"
         ) ?: [];
@@ -91,7 +92,7 @@ class HearMed_Admin_Groups {
         // Group by clinic for display
         $by_clinic = [];
         foreach ($payload as $g) {
-            $cname = $g['clinic_name'] ?: 'No Clinic';
+            $cname = $g['clinic_name'] ?: $g['group_name'];
             if (!isset($by_clinic[$cname])) $by_clinic[$cname] = [];
             $by_clinic[$cname][] = $g;
         }
@@ -210,7 +211,6 @@ class HearMed_Admin_Groups {
                                 ?>
                                     <label class="hm-day-check">
                                         <input type="checkbox" class="hm-group-member" value="<?php echo (int) $s->id; ?>">
-                                        <span class="hm-check"></span>
                                         <?php echo esc_html($label); ?>
                                     </label>
                                 <?php endforeach; ?>

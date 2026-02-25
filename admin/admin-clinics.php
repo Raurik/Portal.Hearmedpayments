@@ -39,6 +39,7 @@ class HearMed_Admin_Clinics {
         $rows = HearMed_DB::get_results(
             "SELECT id, clinic_name, address_line1, phone, email, postcode, clinic_color, is_active, opening_hours
              FROM hearmed_reference.clinics
+             WHERE is_active = true
              ORDER BY clinic_name"
         );
 
@@ -207,7 +208,7 @@ class HearMed_Admin_Clinics {
                 </div>
                 <div class="hm-form-ft">
                     <button class="hm-btn" onclick="hmClinic.close()">Cancel</button>
-                    <button class="hm-btn hm-btn-primary" onclick="hmClinic.save()" id="hmc-save-btn">Save Clinic</button>
+                    <button class="hm-btn hm-btn-teal" onclick="hmClinic.save()" id="hmc-save-btn">Save Clinic</button>
                 </div>
             </div>
         </div>
