@@ -26,7 +26,19 @@ VALUES
     ('Other', '#6b7280', 'Other exclusion', 6)
 ON CONFLICT DO NOTHING;
 
--- 2. Add clinic_id to resources table (for clinic equipment tracking)
+-- 2. Create resources table if it doesn't exist, then add clinic_id
+CREATE TABLE IF NOT EXISTS hearmed_reference.resources (
+    id          BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    title       VARCHAR(200) NOT NULL,
+    category    VARCHAR(100),
+    url         VARCHAR(500),
+    description TEXT,
+    sort_order  INTEGER DEFAULT 0 NOT NULL,
+    is_active   BOOLEAN DEFAULT TRUE NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 ALTER TABLE hearmed_reference.resources
     ADD COLUMN IF NOT EXISTS clinic_id INTEGER REFERENCES hearmed_reference.clinics(id);
 
