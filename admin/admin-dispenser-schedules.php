@@ -189,6 +189,8 @@ class HearMed_Admin_Dispenser_Schedules {
             }
         };
         </script>
+        <?php
+        // Handle delete
         if (!empty($_POST['delete_schedule_id'])) {
             $del_id = intval($_POST['delete_schedule_id']);
             HearMed_DB::update('hearmed_reference.dispenser_schedules', ['is_active'=>false,'updated_at'=>current_time('mysql')], ['id'=>$del_id]);
