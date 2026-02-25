@@ -76,6 +76,21 @@ class HearMed_Admin_Products {
         $this->ensure_product_columns();
     }
 
+    /** Category labels per item_type (stored in DB 'category' column) */
+    private static $category_labels = [
+        'product'    => 'Hearing Aid',
+        'service'    => 'Service',
+        'bundled'    => 'Bundled Item',
+        'accessory'  => 'Accessory',
+        'consumable' => 'Consumable',
+    ];
+
+    private function get_hearmed_ranges() {
+        return HearMed_DB::get_results(
+            "SELECT id, range_name, price_total, price_ex_prsi FROM hearmed_reference.hearmed_range WHERE is_active = true ORDER BY range_name"
+        ) ?: [];
+    }
+
     /** Auto-add missing columns to products/manufacturers tables (runs once per request) */
     private function ensure_product_columns() {
         static $done = false;
@@ -118,12 +133,22 @@ class HearMed_Admin_Products {
             HearMed_DB::get_results("ALTER TABLE hearmed_reference.products
                 ADD COLUMN IF NOT EXISTS hearing_aid_class VARCHAR(20) DEFAULT ''");
         }
+        // hearmed_range_id on products (FK to hearmed_range)
+        $check5 = HearMed_DB::get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_reference' AND table_name = 'products' AND column_name = 'hearmed_range_id'"
+        );
+        if ($check5 === null) {
+            HearMed_DB::get_results("ALTER TABLE hearmed_reference.products
+                ADD COLUMN IF NOT EXISTS hearmed_range_id BIGINT");
+        }
     }
 
     private function get_products($type = null) {
-        $sql = "SELECT p.*, m.name AS manufacturer_name
+        $sql = "SELECT p.*, m.name AS manufacturer_name, hr.range_name AS hearmed_range_name
                 FROM hearmed_reference.products p
                 LEFT JOIN hearmed_reference.manufacturers m ON p.manufacturer_id = m.id
+                LEFT JOIN hearmed_reference.hearmed_range hr ON p.hearmed_range_id = hr.id
                 WHERE p.is_active = true";
         $params = [];
         if ($type) {
@@ -186,6 +211,7 @@ class HearMed_Admin_Products {
         $products       = $this->get_products($active_tab);
         $manufacturers  = $this->get_manufacturers();
         $bundled_cats   = $this->get_bundled_categories();
+        $hearmed_ranges = $this->get_hearmed_ranges();
         $vat_options    = self::get_vat_options();
         $vat_default    = self::get_vat_default($active_tab);
 
@@ -216,7 +242,7 @@ class HearMed_Admin_Products {
                 <thead>
                     <tr>
                         <?php if ($active_tab === 'product'): ?>
-                            <th>Name</th><th>Manufacturer</th><th>Model</th><th>Tech Level</th><th>Class</th><th>Style</th><th>Power</th>
+                            <th>Name</th><th>Manufacturer</th><th>Model</th><th>Tech Level</th><th>Class</th><th>Style</th><th>Power</th><th>Range</th>
                             <th>Code</th><th>VAT</th><th class="hm-num">Cost</th><th class="hm-num">Retail</th>
                         <?php elseif ($active_tab === 'service'): ?>
                             <th>Name</th><th>Code</th><th>VAT</th><th class="hm-num">Retail</th>
@@ -245,7 +271,7 @@ class HearMed_Admin_Products {
                                 $p->manufacturer_name ?? '',
                                 $p->product_name ?? '',
                                 $p->tech_level ?? '',
-                                $p->category ?? '',
+                                $p->style ?? '',
                             ]);
                             $display_name = implode(' - ', $name_parts);
                             if ($power_abbr) $display_name .= ' (' . $power_abbr . ')';
@@ -255,8 +281,9 @@ class HearMed_Admin_Products {
                             <td><?php echo esc_html($p->product_name ?: '—'); ?></td>
                             <td><?php echo esc_html($p->tech_level ?: '—'); ?></td>
                             <td><?php echo esc_html($p->hearing_aid_class ?: '—'); ?></td>
-                            <td><?php echo esc_html($p->category ?: '—'); ?></td>
+                            <td><?php echo esc_html($p->style ?: '—'); ?></td>
                             <td><?php echo esc_html($p->power_type ?: '—'); ?></td>
+                            <td><?php echo esc_html($p->hearmed_range_name ?? '—'); ?></td>
                             <td><code style="font-size:11px;"><?php echo esc_html($p->product_code ?: '—'); ?></code></td>
                             <td><?php echo esc_html($p->vat_category ?: '—'); ?></td>
                             <td class="hm-num"><?php echo $p->cost_price !== null ? '€' . number_format((float) $p->cost_price, 2) : '—'; ?></td>
@@ -410,6 +437,15 @@ class HearMed_Admin_Products {
                                 <div class="hm-form-group">
                                     <label>Auto Code</label>
                                     <input type="text" id="hmp-code-ha" readonly style="background:#f1f5f9;font-family:monospace;font-weight:600;">
+                                </div>
+                                <div class="hm-form-group">
+                                    <label>HearMed Range</label>
+                                    <select id="hmp-range">
+                                        <option value="">— Select Range —</option>
+                                        <?php foreach ($hearmed_ranges as $hr): ?>
+                                            <option value="<?php echo (int) $hr->id; ?>" data-price="<?php echo esc_attr($hr->price_total); ?>" data-exprsi="<?php echo esc_attr($hr->price_ex_prsi); ?>"><?php echo esc_html($hr->range_name); ?><?php if ($hr->price_total): ?> (€<?php echo number_format((float)$hr->price_total, 2); ?>)<?php endif; ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
                                 <div class="hm-form-group">
                                     <label>Power</label>
@@ -815,10 +851,11 @@ class HearMed_Admin_Products {
                 if (type === 'product') {
                     document.getElementById('hmp-manufacturer').value = isEdit && data.manufacturer_id ? data.manufacturer_id : '';
                     document.getElementById('hmp-model').value        = isEdit ? (data.product_name || '') : '';
-                    document.getElementById('hmp-style').value        = isEdit ? (data.category || '') : '';
+                    document.getElementById('hmp-style').value        = isEdit ? (data.style || '') : '';
                     document.getElementById('hmp-tech').value         = isEdit ? (data.tech_level || '') : '';
                     document.getElementById('hmp-ha-class').value     = isEdit ? (data.hearing_aid_class || '') : '';
                     document.getElementById('hmp-power').value        = isEdit ? (data.power_type || '') : '';
+                    document.getElementById('hmp-range').value        = isEdit ? (data.hearmed_range_id || '') : '';
                     document.getElementById('hmp-code-ha').value      = isEdit ? (data.product_code || '') : '';
                     document.getElementById('hmp-cost-ha').value      = isEdit && data.cost_price != null ? data.cost_price : '';
                     document.getElementById('hmp-retail-ha').value    = isEdit && data.retail_price != null ? data.retail_price : '';
@@ -874,7 +911,8 @@ class HearMed_Admin_Products {
                     if (!document.getElementById('hmp-ha-class').value) { alert('Class is required.'); return; }
                     payload.product_name       = model;
                     payload.manufacturer_id    = document.getElementById('hmp-manufacturer').value;
-                    payload.category           = document.getElementById('hmp-style').value;
+                    payload.style              = document.getElementById('hmp-style').value;
+                    payload.hearmed_range_id   = document.getElementById('hmp-range').value;
                     payload.tech_level         = document.getElementById('hmp-tech').value;
                     payload.hearing_aid_class  = document.getElementById('hmp-ha-class').value;
                     payload.power_type         = document.getElementById('hmp-power').value;
@@ -1012,10 +1050,14 @@ class HearMed_Admin_Products {
             'vat_category' => sanitize_text_field($_POST['vat_category'] ?? ''),
         ];
 
+        // Auto-set category from item_type
+        $data['category'] = self::$category_labels[$type] ?? 'Hearing Aid';
+
         if ($type === 'product') {
             $data['manufacturer_id'] = !empty($_POST['manufacturer_id']) ? intval($_POST['manufacturer_id']) : null;
-            $data['category']        = sanitize_text_field($_POST['category'] ?? '');   // Style (BTE/RIC/etc)
-            $data['tech_level']      = sanitize_text_field($_POST['tech_level'] ?? ''); // Free text now
+            $data['style']           = sanitize_text_field($_POST['style'] ?? '');
+            $data['hearmed_range_id']= !empty($_POST['hearmed_range_id']) ? intval($_POST['hearmed_range_id']) : null;
+            $data['tech_level']      = sanitize_text_field($_POST['tech_level'] ?? '');
             $data['hearing_aid_class'] = sanitize_text_field($_POST['hearing_aid_class'] ?? '');
             $data['power_type']      = sanitize_text_field($_POST['power_type'] ?? '');
             $data['cost_price']      = $_POST['cost_price'] !== '' ? floatval($_POST['cost_price']) : null;
@@ -1105,6 +1147,7 @@ class HearMed_Admin_Products {
 
             $data = [
                 'item_type'  => $type,
+                'category'   => self::$category_labels[$type] ?? 'Hearing Aid',
                 'is_active'  => true,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -1115,7 +1158,7 @@ class HearMed_Admin_Products {
                 $mfr_id   = $mfr_map[strtolower($mfr_name)] ?? null;
                 $data['manufacturer_id'] = $mfr_id;
                 $data['product_name']    = trim($r['model'] ?? '');
-                $data['category']        = trim($r['style'] ?? '');
+                $data['style']           = trim($r['style'] ?? '');
                 $data['tech_level']      = trim($r['tech_level'] ?? '');
                 $data['cost_price']      = ($r['cost_price'] ?? '') !== '' ? floatval($r['cost_price']) : null;
                 $data['retail_price']    = ($r['retail_price'] ?? '') !== '' ? floatval($r['retail_price']) : null;
@@ -1124,7 +1167,7 @@ class HearMed_Admin_Products {
                     'manufacturer_name' => $mfr_name,
                     'model'             => $data['product_name'],
                     'tech_level'        => $data['tech_level'],
-                    'style'             => $data['category'],
+                    'style'             => $data['style'],
                 ]);
             } elseif ($type === 'service') {
                 $data['product_name']  = trim($r['service_name'] ?? '');
