@@ -251,11 +251,35 @@
    ADMIN SHARED COMPONENTS
    ═══════════════════════════════════════ */
 .hm-settings-panel {
-    background: transparent;
-    border: none;
+    background: #fff;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
-    padding: 0;
-    max-width: 700px;
+    padding: 20px 24px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    margin-bottom: 16px;
+}
+
+/* When table is inside a settings panel, remove table's own card styling to avoid double border */
+.hm-settings-panel .hm-table {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0;
+    background: transparent;
+}
+
+/* Settings panels used for forms — constrain input widths */
+.hm-settings-panel .hm-form-group input[type="text"],
+.hm-settings-panel .hm-form-group input[type="number"],
+.hm-settings-panel .hm-form-group input[type="password"],
+.hm-settings-panel .hm-form-group input[type="email"],
+.hm-settings-panel .hm-form-group select {
+    max-width: 420px;
+    width: 100%;
+}
+.hm-settings-panel .hm-form-group textarea {
+    max-width: 520px;
+    width: 100%;
 }
 .hm-settings-panel .hm-form-group { margin-bottom: 12px; }
 .hm-settings-panel .hm-form-group:last-child { margin-bottom: 0; }
@@ -269,9 +293,21 @@
 .hm-settings-panel .hm-form-group input,
 .hm-settings-panel .hm-form-group textarea,
 .hm-settings-panel .hm-form-group select {
-    font-size: 12px;
-    padding: 6px 10px;
+    font-size: 13px;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
     border-radius: 6px;
+    background: #fff;
+    color: #334155;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    line-height: 1.5;
+}
+.hm-settings-panel .hm-form-group input:focus,
+.hm-settings-panel .hm-form-group textarea:focus,
+.hm-settings-panel .hm-form-group select:focus {
+    outline: none;
+    border-color: #0BB4C4;
+    box-shadow: 0 0 0 3px rgba(11, 180, 196, 0.1);
 }
 .hm-settings-panel .hm-form-group textarea {
     min-height: 60px;
@@ -292,6 +328,33 @@
 .hm-filter-toggle:hover { color: #94a3b8; }
 .hm-num { text-align: right; font-variant-numeric: tabular-nums; }
 .hm-table-count { padding: 10px 14px; font-size: 12px; color: #94a3b8; }
+
+/* ═══════════════════════════════════════
+   TAB BAR — Shared horizontal tabs
+   ═══════════════════════════════════════ */
+.hm-tab-bar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #edf2f7;
+    flex-wrap: wrap;
+}
+.hm-tab {
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #94a3b8;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.12s;
+}
+.hm-tab:hover { color: #64748b; }
+.hm-tab.active {
+    font-weight: 700;
+    color: #0BB4C4;
+    border-bottom-color: #0BB4C4;
+}
 
 /* ═══════════════════════════════════════
    CLINICS — FULL PAGE LAYOUT

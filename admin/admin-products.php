@@ -65,12 +65,12 @@ class HearMed_Admin_Products {
             </div>
 
             <!-- Category Tabs -->
-            <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--hm-border-light);padding-bottom:0;">
+            <div class="hm-tab-bar">
                 <?php foreach (self::$item_types as $key => $label):
                     $active = ($key === $active_tab);
                 ?>
                 <a href="?tab=<?php echo esc_attr($key); ?>"
-                   style="padding:10px 18px;font-size:13px;font-weight:<?php echo $active ? '700' : '500'; ?>;color:<?php echo $active ? 'var(--hm-teal)' : 'var(--hm-text-light)'; ?>;text-decoration:none;border-bottom:<?php echo $active ? '2px solid var(--hm-teal)' : '2px solid transparent'; ?>;margin-bottom:-2px;">
+                   class="hm-tab<?php echo $active ? ' active' : ''; ?>">
                     <?php echo esc_html($label); ?>
                 </a>
                 <?php endforeach; ?>

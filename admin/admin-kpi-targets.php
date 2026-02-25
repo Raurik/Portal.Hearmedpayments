@@ -86,12 +86,12 @@ class HearMed_Admin_KPI_Targets {
             </p>
 
             <!-- Dispenser Tabs -->
-            <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--hm-border-light);flex-wrap:wrap;">
+            <div class="hm-tab-bar">
                 <?php foreach ($tabs as $tab):
                     $is_active = ($tab['id'] == $active_tab);
                 ?>
                 <a href="?staff=<?php echo esc_attr($tab['id']); ?>"
-                   style="padding:10px 16px;font-size:13px;font-weight:<?php echo $is_active ? '700' : '500'; ?>;color:<?php echo $is_active ? 'var(--hm-teal)' : 'var(--hm-text-light)'; ?>;text-decoration:none;border-bottom:<?php echo $is_active ? '2px solid var(--hm-teal)' : '2px solid transparent'; ?>;margin-bottom:-2px;">
+                   class="hm-tab<?php echo $is_active ? ' active' : ''; ?>">
                     <?php echo esc_html($tab['label']); ?>
                 </a>
                 <?php endforeach; ?>

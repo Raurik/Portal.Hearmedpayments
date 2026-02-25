@@ -331,6 +331,7 @@ class HearMed_Enqueue {
             'hearmed_admin_resources',
             'hearmed_dispenser_schedules',
             'hearmed_staff_login',
+            'hearmed_kpi_targets',
             // Calendar-related admin pages that use hm-admin layout
             'hearmed_calendar_settings',
             'hearmed_appointment_types',
