@@ -26,8 +26,13 @@
    ============================================================ */
 
 #hm-app {
-  background: #f8fafc;
-  padding: 24px;
+  background: transparent;
+  padding: 0;
+}
+
+#hm-app .hm-page {
+  background: transparent;
+  padding: 0;
 }
 
 /* ============================================================
@@ -48,7 +53,7 @@
 
 #hm-app .hm-page-subtitle {
   font-size: 14px;
-  color: #64748b;
+  color: #fff;
   margin-top: 4px;
   padding-left: 0;
 }
@@ -310,13 +315,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 320px;
+  min-height: 160px;
   height: 100%;
 }
 #hm-app .hm-appt-preview-card {
   width: 100%;
   max-width: 340px;
-  min-height: 180px;
+  min-height: 90px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -326,12 +331,11 @@
   font-size: 1rem;
 }
 #hm-app .hm-appt-body {
-  flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 10px;
-  padding: 24px 28px;
+  gap: 6px;
+  padding: 12px 14px;
 }
 
 /* Hide tick for unchecked, show blue tick for checked */

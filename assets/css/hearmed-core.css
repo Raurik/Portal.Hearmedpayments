@@ -267,6 +267,22 @@
   text-decoration: underline;
 }
 
+#hm-app .hm-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--hm-teal);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  margin: 0 0 10px;
+}
+
+#hm-app .hm-back-btn:hover {
+  color: var(--hm-teal-hover);
+  text-decoration: underline;
+}
+
 
 /* ============================================================
    FORMS

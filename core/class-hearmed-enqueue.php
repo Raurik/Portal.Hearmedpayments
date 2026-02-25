@@ -125,6 +125,16 @@ class HearMed_Enqueue {
             $this->get_file_version( 'assets/js/hearmed-core.js' ),
             true
         );
+
+        if ( $this->is_portal_page() ) {
+            wp_enqueue_script(
+                'hearmed-back-btn',
+                HEARMED_URL . 'assets/js/hearmed-back-btn.js',
+                [ 'hearmed-core' ],
+                $this->get_file_version( 'assets/js/hearmed-back-btn.js' ),
+                true
+            );
+        }
         
         // Load calendar settings from PostgreSQL
         $settings = [];
