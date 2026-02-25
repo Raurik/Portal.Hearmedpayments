@@ -57,7 +57,7 @@ class HearMed_Admin_Taxonomies {
             $rows = HearMed_DB::get_results(
                 "SELECT id, range_name, price_total, price_ex_prsi, is_active
                  FROM hearmed_reference.hearmed_range
-                 WHERE is_active = true
+                 WHERE COALESCE(is_active::text,'true') NOT IN ('false','f','0')
                  ORDER BY range_name"
             ) ?: [];
         } elseif ($tag === 'hearmed_lead_types') {

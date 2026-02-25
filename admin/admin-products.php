@@ -86,9 +86,9 @@ class HearMed_Admin_Products {
     ];
 
     private function get_hearmed_ranges() {
-        // 1. Try PostgreSQL table first
+        // 1. Try PostgreSQL table first (cast is_active to handle boolean/int mismatch)
         $rows = HearMed_DB::get_results(
-            "SELECT id, range_name, price_total, price_ex_prsi FROM hearmed_reference.hearmed_range WHERE is_active = true ORDER BY range_name"
+            "SELECT id, range_name, price_total, price_ex_prsi FROM hearmed_reference.hearmed_range WHERE COALESCE(is_active::text,'true') NOT IN ('false','f','0') ORDER BY range_name"
         ) ?: [];
         if (!empty($rows)) return $rows;
 
