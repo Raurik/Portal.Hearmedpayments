@@ -1102,7 +1102,7 @@
   border-color: #ef4444;
 }
 
-/* ── Green dot indicator (inside badges) ── */
+/* ── Dot indicators (inside badges) ── */
 .hm-dot-green {
   display: inline-block;
   width: 8px;
@@ -1110,6 +1110,26 @@
   border-radius: 50%;
   background: #22c55e;
   box-shadow: 0 0 6px rgba(34,197,94,0.6);
+  margin-right: 2px;
+  vertical-align: middle;
+}
+.hm-dot-red {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239,68,68,0.55);
+  margin-right: 2px;
+  vertical-align: middle;
+}
+.hm-dot-amber {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245,158,11,0.55);
   margin-right: 2px;
   vertical-align: middle;
 }

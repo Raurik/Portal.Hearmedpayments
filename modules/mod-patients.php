@@ -915,11 +915,34 @@ function hm_ajax_add_patient_product() {
 
     $product_id = intval( $_POST['product_id'] ?? 0 ) ?: null;
 
+    // Serial number uniqueness check
+    $serial_left  = sanitize_text_field( $_POST['serial_number_left'] ?? '' );
+    $serial_right = sanitize_text_field( $_POST['serial_number_right'] ?? '' );
+
+    if ( $serial_left ) {
+        $dup = $db->get_var(
+            "SELECT id FROM hearmed_core.patient_devices
+             WHERE (serial_number_left = \$1 OR serial_number_right = \$1)
+               AND device_status = 'Active'",
+            [ $serial_left ]
+        );
+        if ( $dup ) wp_send_json_error( 'Serial number (Left) "' . $serial_left . '" is already assigned to an active device.' );
+    }
+    if ( $serial_right ) {
+        $dup = $db->get_var(
+            "SELECT id FROM hearmed_core.patient_devices
+             WHERE (serial_number_left = \$1 OR serial_number_right = \$1)
+               AND device_status = 'Active'",
+            [ $serial_right ]
+        );
+        if ( $dup ) wp_send_json_error( 'Serial number (Right) "' . $serial_right . '" is already assigned to an active device.' );
+    }
+
     $id = $db->insert( 'hearmed_core.patient_devices', [
         'patient_id'          => $pid,
         'product_id'          => $product_id,
-        'serial_number_left'  => sanitize_text_field( $_POST['serial_number_left'] ?? '' ),
-        'serial_number_right' => sanitize_text_field( $_POST['serial_number_right'] ?? '' ),
+        'serial_number_left'  => $serial_left,
+        'serial_number_right' => $serial_right,
         'fitting_date'        => $fit_date,
         'warranty_expiry'     => sanitize_text_field( $_POST['warranty_expiry'] ?? '' ) ?: null,
         'device_status'       => 'Active',

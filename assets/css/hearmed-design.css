@@ -383,23 +383,21 @@
   font-size: var(--hm-font-size-xs);
   font-weight: 600;
   border-radius: var(--hm-radius-full);
-  background: var(--hm-bg-hover);
-  color: var(--hm-text-light);
 }
 
-#hm-app .hm-badge-success {
+#hm-app .hm-badge-success, #hm-app .hm-badge-green {
   background: rgba(16, 185, 129, 0.1);
-  color: var(--hm-success);
+  color: var(--hm-success, #059669);
 }
 
-#hm-app .hm-badge-warning {
+#hm-app .hm-badge-warning, #hm-app .hm-badge-amber {
   background: rgba(245, 158, 11, 0.1);
-  color: var(--hm-warning);
+  color: var(--hm-warning, #d97706);
 }
 
-#hm-app .hm-badge-error {
+#hm-app .hm-badge-error, #hm-app .hm-badge-red {
   background: rgba(239, 68, 68, 0.1);
-  color: var(--hm-error);
+  color: var(--hm-error, #dc2626);
 }
 
 /* ============================================================================
@@ -584,18 +582,4 @@
   left: 5px;
 }
 
-/* Minimal Teal Icon */
-.hm-icon {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  background-color: var(--hm-teal);
-  mask: url('/assets/icons/minimal-icon.svg') no-repeat center;
-  -webkit-mask: url('/assets/icons/minimal-icon.svg') no-repeat center;
-  mask-size: contain;
-  -webkit-mask-size: contain;
-}
-
-.hm-icon:hover {
-  background-color: var(--hm-teal-hover);
-}
+/* Minimal Teal Icon — legacy mask removed; inline SVGs used now */

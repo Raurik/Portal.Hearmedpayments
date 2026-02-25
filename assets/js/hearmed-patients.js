@@ -11,6 +11,7 @@ function euro(v){return '€'+parseFloat(v||0).toFixed(2);}
 function esc(s){if(!s)return '';var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 function fmtDate(d){if(!d)return '—';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
 function fmtDateTime(d){if(!d)return '—';var dt=new Date(d);return dt.toLocaleDateString('en-IE')+' '+dt.toLocaleTimeString('en-IE',{hour:'2-digit',minute:'2-digit'});}
+function fmtDaysRemaining(days){if(days===null||days===undefined)return '';days=Math.abs(parseInt(days,10));if(days>=365){var y=Math.floor(days/365);return y+'yr'+(y>1?'s':'');}if(days>=30){var m=Math.floor(days/30);return m+'mo';}return days+'d';}
 function initials(n){if(!n)return '?';var p=n.trim().split(' ');return(p[0][0]+(p.length>1?p[p.length-1][0]:'')).toUpperCase();}
 function toast(msg,type){var t=$('<div class="hm-toast hm-toast-'+(type||'success')+'">'+esc(msg)+'</div>');$('body').append(t);setTimeout(function(){t.fadeOut(300,function(){t.remove();});},3000);}
 function closeModal(){$('#hm-modal-overlay').remove();}
@@ -161,7 +162,7 @@ function initList(){
                 var la=p.last_appt_date?fmtDate(p.last_appt_date)+(p.last_appt_time?' '+p.last_appt_time.substr(0,5):''):'—';
                 var phoneCell=p.phone?'<div class="hm-pt-phone-cell">'+HM_ICONS.phone+'<span>'+esc(p.phone)+'</span></div>':'—';
                 var apptCell=la!=='—'?'<div class="hm-pt-appt-cell">'+HM_ICONS.calendar+'<span>'+la+'</span></div>':'—';
-                var sb=p.is_active?'<span class="hm-badge hm-badge-green">Active</span>':'<span class="hm-badge hm-badge-gray">Inactive</span>';
+                var sb=p.is_active?'<span class="hm-badge hm-badge-green"><span class="hm-dot-green"></span> Active</span>':'<span class="hm-badge hm-badge-red"><span class="hm-dot-red"></span> Inactive</span>';
                 h+='<tr class="hm-pt-row" data-id="'+p.id+'"><td class="hm-pt-hnum">'+esc(p.patient_number)+'</td>'+
                     '<td><div class="hm-pt-name-cell">'+HM_ICONS.person+'<a href="#" class="hm-pt-name-link" data-id="'+p.id+'">'+esc(p.name)+'</a></div></td>'+
                     '<td>'+fmtDate(p.dob)+'</td><td>'+phoneCell+'</td><td class="hm-pt-lastappt">'+apptCell+'</td>'+
@@ -280,7 +281,10 @@ function initProfile(){
         var wh='';
         if(p.warranty_status&&p.warranty_status!=='none'){
             var wc=p.warranty_status==='expired'?'hm-badge-red':p.warranty_status==='expiring'?'hm-badge-amber':'hm-badge-green';
-            var wl=p.warranty_status==='expired'?'Warranty Expired':p.warranty_status==='expiring'?'Warranty '+p.warranty_days+'d':'<span class="hm-dot-green"></span> In Warranty';
+            var wl;
+            if(p.warranty_status==='expired'){wl='<span class="hm-dot-red"></span> Warranty Expired';}
+            else if(p.warranty_status==='expiring'){wl='<span class="hm-dot-amber"></span> Warranty '+fmtDaysRemaining(p.warranty_days);}
+            else{wl='<span class="hm-dot-green"></span> In Warranty';}
             wh='<span class="hm-badge '+wc+'">'+wl+'</span>';
         }
         // Active/inactive indicator light
@@ -578,16 +582,17 @@ function initProfile(){
         });
 
         function buildDeviceCard(pr,isAct){
-            var sc={Active:'hm-badge-green',Inactive:'hm-badge-gray',Lost:'hm-badge-red',Replaced:'hm-badge-amber'}[pr.status]||'hm-badge-gray';
+            var sc={Active:'hm-badge-green',Inactive:'hm-badge-red',Lost:'hm-badge-red',Replaced:'hm-badge-amber'}[pr.status]||'hm-badge-gray';
             // Warranty badge
             var wbadge='';
             if(pr.warranty_expiry){
                 var wexp=new Date(pr.warranty_expiry),now=new Date(),wdays=Math.ceil((wexp-now)/(1000*60*60*24));
-                if(wdays<0) wbadge='<span class="hm-badge hm-badge-sm hm-badge-red">Warranty Expired</span>';
-                else if(wdays<=90) wbadge='<span class="hm-badge hm-badge-sm hm-badge-amber">Warranty '+wdays+'d</span>';
-                else wbadge='<span class="hm-badge hm-badge-sm hm-badge-green"><span class="hm-dot-green"></span> In Warranty</span>';
+                if(wdays<0) wbadge='<span class="hm-badge hm-badge-sm hm-badge-red"><span class="hm-dot-red"></span> Warranty Expired</span>';
+                else if(wdays<=90) wbadge='<span class="hm-badge hm-badge-sm hm-badge-amber"><span class="hm-dot-amber"></span> Warranty '+fmtDaysRemaining(wdays)+'</span>';
+                else wbadge='<span class="hm-badge hm-badge-sm hm-badge-green"><span class="hm-dot-green"></span> In Warranty ('+fmtDaysRemaining(wdays)+')</span>';
             }
-            var activeBadge=isAct?'<span class="hm-badge hm-badge-sm hm-badge-green"><span class="hm-dot-green"></span> Active</span>':'<span class="hm-badge hm-badge-sm '+sc+'">'+esc(pr.status)+'</span>';
+            var inactiveDot=sc==='hm-badge-red'?'<span class="hm-dot-red"></span> ':'<span class="hm-dot-amber"></span> ';
+            var activeBadge=isAct?'<span class="hm-badge hm-badge-sm hm-badge-green"><span class="hm-dot-green"></span> Active</span>':'<span class="hm-badge hm-badge-sm '+sc+'">'+inactiveDot+esc(pr.status)+'</span>';
 
             var card='<div class="hm-ha-card'+(isAct?' hm-ha-card-active':'')+'" data-device-id="'+pr._ID+'">';
 
@@ -765,7 +770,7 @@ function initProfile(){
             var reason=$('#exch-reason').val();if(!reason){toast('Select a reason','error');return;}
             var amt=parseFloat($('#exch-amount').val())||0;
             $(this).prop('disabled',true).text('Processing…');
-            $.post(_hm.ajax,{action:'hm_create_exchange',nonce:_hm.nonce,patient_id:pid,patient_product_id:ppId,reason:reason,credit_amount:amt,refund_type:$('#exch-refund-type').val(),notes:$('#exch-notes').val()},function(r){
+            $.post(_hm.ajax,{action:'hm_create_exchange',nonce:_hm.nonce,patient_id:pid,device_id:ppId,reason:reason,credit_amount:amt,refund_type:$('#exch-refund-type').val(),notes:$('#exch-notes').val()},function(r){
                 closeModal();
                 if(r.success){toast('Exchange processed — Credit Note '+r.data.credit_note_number);if(cb)cb();}
                 else toast(r.data||'Error','error');
@@ -790,7 +795,7 @@ function initProfile(){
                 var actions='';
                 if(x.status==='Booked')actions='<button class="hm-btn hm-btn-outline hm-btn-sm hm-repair-send" data-id="'+x._ID+'">Mark Sent</button>';
                 else if(x.status==='Sent')actions='<button class="hm-btn hm-btn-outline hm-btn-sm hm-repair-receive" data-id="'+x._ID+'">Received Back</button>';
-                h+='<tr'+rowClass+'><td><code class="hm-pt-hnum">'+esc(x.repair_number||'—')+'</code></td><td>'+esc(x.product_name)+(x.manufacturer_name?' <span style="color:#94a3b8;font-size:12px;">('+esc(x.manufacturer_name)+')</span>':'')+'</td><td style="font-size:13px;">'+esc(x.repair_reason||'—')+'</td><td>'+fmtDate(x.date_booked)+'</td><td><span class="hm-badge hm-badge-sm '+sc+'">'+esc(x.status)+'</span></td><td style="text-align:center;">'+(x.days_open||'—')+'</td><td>'+(x.under_warranty?'<span class="hm-badge hm-badge-sm hm-badge-green">Yes</span>':'<span class="hm-badge hm-badge-sm hm-badge-gray">'+(x.warranty_status||'No')+'</span>')+'</td><td>'+actions+'</td></tr>'+
+                h+='<tr'+rowClass+'><td><code class="hm-pt-hnum">'+esc(x.repair_number||'—')+'</code></td><td>'+esc(x.product_name)+(x.manufacturer_name?' <span style="color:#94a3b8;font-size:12px;">('+esc(x.manufacturer_name)+')</span>':'')+'</td><td style="font-size:13px;">'+esc(x.repair_reason||'—')+'</td><td>'+fmtDate(x.date_booked)+'</td><td><span class="hm-badge hm-badge-sm '+sc+'">'+esc(x.status)+'</span></td><td style="text-align:center;">'+(x.days_open||'—')+'</td><td>'+(x.under_warranty?'<span class="hm-badge hm-badge-sm hm-badge-green"><span class="hm-dot-green"></span> Yes</span>':'<span class="hm-badge hm-badge-sm hm-badge-red"><span class="hm-dot-red"></span> '+(x.warranty_status||'No')+'</span>')+'</td><td>'+actions+'</td></tr>'+
                 (x.repair_notes?'<tr'+rowClass+'><td colspan="8"><div class="hm-appt-note">'+esc(x.repair_notes)+'</div></td></tr>':'');
             });h+='</tbody></table>';}
             $c.html(h+'</div>');
@@ -798,11 +803,11 @@ function initProfile(){
         $c.off('click','#hm-log-repair-btn').on('click','#hm-log-repair-btn',function(){showLogRepairModal(0,'','','',function(){toast('Repair logged');loadRepairs($c);});});
         $c.off('click','.hm-repair-send').on('click','.hm-repair-send',function(){
             var rid=$(this).data('id');$(this).prop('disabled',true).text('Sending…');
-            $.post(_hm.ajax,{action:'hm_update_repair_status',nonce:_hm.nonce,repair_id:rid,status:'Sent'},function(r){if(r.success){toast('Marked as Sent');loadRepairs($c);}else toast('Error','error');});
+            $.post(_hm.ajax,{action:'hm_update_repair_status',nonce:_hm.nonce,_ID:rid,status:'Sent'},function(r){if(r.success){toast('Marked as Sent');loadRepairs($c);}else toast('Error','error');});
         });
         $c.off('click','.hm-repair-receive').on('click','.hm-repair-receive',function(){
             var rid=$(this).data('id');$(this).prop('disabled',true).text('Processing…');
-            $.post(_hm.ajax,{action:'hm_update_repair_status',nonce:_hm.nonce,repair_id:rid,status:'Received'},function(r){if(r.success){toast('Marked as Received — dispenser notified');loadRepairs($c);}else toast('Error','error');});
+            $.post(_hm.ajax,{action:'hm_update_repair_status',nonce:_hm.nonce,_ID:rid,status:'Received'},function(r){if(r.success){toast('Marked as Received — dispenser notified');loadRepairs($c);}else toast('Error','error');});
         });
     }
 

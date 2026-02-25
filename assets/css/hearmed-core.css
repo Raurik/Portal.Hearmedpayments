@@ -467,17 +467,17 @@
   align-items: center;
   gap: 5px;
   font-size: 12px;
-  font-weight: 500;
-  color: var(--hm-text-light);
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
 }
 
-#hm-app .hm-badge::before {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--hm-text-muted);
-}
+/* Badge colour variants */
+#hm-app .hm-badge-green  { background: rgba(16,185,129,0.1);  color: #059669; }
+#hm-app .hm-badge-red    { background: rgba(239,68,68,0.1);   color: #dc2626; }
+#hm-app .hm-badge-amber  { background: #fef3c7;               color: #92400e; }
+#hm-app .hm-badge-blue   { background: #dbeafe;               color: #1e40af; }
+#hm-app .hm-badge-gray   { background: #f1f5f9;               color: #64748b; }
 
 
 /* ============================================================
