@@ -235,6 +235,8 @@ function showCreateModal(){
     $('#cp-save').on('click',function(){
         var fn=$.trim($('#cp-fn').val()),ln=$.trim($('#cp-ln').val());
         if(!fn||!ln){toast('First and last name required','error');return;}
+        var ph=$.trim($('#cp-phone').val()),mob=$.trim($('#cp-mobile').val());
+        if(!ph&&!mob){toast('Phone or mobile number is required','error');return;}
         var $btn=$(this).prop('disabled',true).text('Creating…');
         $.post(_hm.ajax,{action:'hm_create_patient',nonce:_hm.nonce,patient_title:$('#cp-title').val(),first_name:fn,last_name:ln,dob:$('#cp-dob').val(),patient_phone:$('#cp-phone').val(),patient_mobile:$('#cp-mobile').val(),patient_email:$('#cp-email').val(),patient_address:$('#cp-address').val(),patient_eircode:$('#cp-eircode').val(),pps_number:$('#cp-pps').val(),referral_source_id:$('#cp-ref').val(),assigned_dispenser_id:$('#cp-dispenser').val(),assigned_clinic_id:$('#cp-clinic').val(),marketing_email:$('#cp-memail').is(':checked')?'1':'0',marketing_sms:$('#cp-msms').is(':checked')?'1':'0',marketing_phone:$('#cp-mphone').is(':checked')?'1':'0',gdpr_consent:'1'}).done(function(r){
             if(r.success)window.location=PG+'?id='+r.data.id;

@@ -427,14 +427,14 @@ function hm_ajax_get_referral_sources() {
 function hm_ajax_get_staff_list() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $rows = HearMed_DB::get_results(
-        "SELECT id, full_name, initials, role_type FROM hearmed_reference.staff WHERE is_active = true ORDER BY full_name"
+        "SELECT id, first_name, last_name, role FROM hearmed_reference.staff WHERE is_active = true AND LOWER(role) = 'dispenser' ORDER BY last_name, first_name"
     );
     $out = [];
     if ( $rows ) {
         foreach ( $rows as $r ) {
             $out[] = [
                 'id'   => (int) $r->id,
-                'name' => $r->full_name,
+                'name' => trim( $r->first_name . ' ' . $r->last_name ),
             ];
         }
     }
