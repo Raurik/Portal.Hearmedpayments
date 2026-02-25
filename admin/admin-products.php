@@ -30,6 +30,9 @@ class HearMed_Admin_Products {
         'mould' => 'Mould',
     ];
 
+    private static $dome_types = ['Open','Closed','Power','Double','Tulip','Bass','Other'];
+    private static $dome_sizes = ['XS','S','M','L','XL'];
+
     /** Build VAT options dynamically from finance settings */
     private static function get_vat_options() {
         $rates = [
@@ -497,26 +500,32 @@ class HearMed_Admin_Products {
                                 <div class="hm-form-row">
                                     <div class="hm-form-group">
                                         <label>Dome Type</label>
-                                        <select id="hmp-dome-type" onchange="hmProd.genBndName()">
+                                        <select id="hmp-dome-type" data-entity="dome_type" data-label="Dome Type" onchange="hmProd.genBndName()">
                                             <option value="">Select</option>
-                                            <option value="Open">Open</option>
-                                            <option value="Closed">Closed</option>
-                                            <option value="Power">Power</option>
-                                            <option value="Double">Double</option>
-                                            <option value="Tulip">Tulip</option>
-                                            <option value="Bass">Bass</option>
-                                            <option value="Other">Other</option>
+                                            <?php foreach (self::$dome_types as $dt): ?>
+                                                <option value="<?php echo esc_attr($dt); ?>"><?php echo esc_html($dt); ?></option>
+                                            <?php endforeach; ?>
+                                            <?php foreach (hm_get_dropdown_options('dome_type') as $custom): ?>
+                                                <?php if (!in_array($custom, self::$dome_types)): ?>
+                                                <option value="<?php echo esc_attr($custom); ?>"><?php echo esc_html($custom); ?></option>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                            <option value="__add_new__">+ Add New…</option>
                                         </select>
                                     </div>
                                     <div class="hm-form-group">
                                         <label>Dome Size</label>
-                                        <select id="hmp-dome-size" onchange="hmProd.genBndName()">
+                                        <select id="hmp-dome-size" data-entity="dome_size" data-label="Dome Size" onchange="hmProd.genBndName()">
                                             <option value="">Select</option>
-                                            <option value="XS">XS</option>
-                                            <option value="S">S</option>
-                                            <option value="M">M</option>
-                                            <option value="L">L</option>
-                                            <option value="XL">XL</option>
+                                            <?php foreach (self::$dome_sizes as $ds): ?>
+                                                <option value="<?php echo esc_attr($ds); ?>"><?php echo esc_html($ds); ?></option>
+                                            <?php endforeach; ?>
+                                            <?php foreach (hm_get_dropdown_options('dome_size') as $custom): ?>
+                                                <?php if (!in_array($custom, self::$dome_sizes)): ?>
+                                                <option value="<?php echo esc_attr($custom); ?>"><?php echo esc_html($custom); ?></option>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                            <option value="__add_new__">+ Add New…</option>
                                         </select>
                                     </div>
                                 </div>

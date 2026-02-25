@@ -314,6 +314,18 @@
             fields: [
                 {key:'name', label:'Category Name *', type:'text', required:true, placeholder:'e.g. Dome'}
             ]
+        },
+        dome_type: {
+            title: 'Add Dome Type',
+            fields: [
+                {key:'name', label:'Dome Type *', type:'text', required:true, placeholder:'e.g. Vented'}
+            ]
+        },
+        dome_size: {
+            title: 'Add Dome Size',
+            fields: [
+                {key:'name', label:'Dome Size *', type:'text', required:true, placeholder:'e.g. 8mm'}
+            ]
         }
     };
 
