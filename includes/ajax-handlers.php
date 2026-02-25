@@ -39,11 +39,15 @@ function hm_quick_add_handler() {
             break;
 
         case 'clinic':
-            $id = HearMed_DB::insert('hearmed_reference.clinics', [
+            $clinic_data = [
                 'clinic_name' => $name,
                 'is_active'   => true,
                 'created_at'  => $now,
-            ]);
+            ];
+            if (!empty($_POST['address'])) $clinic_data['address_line1'] = sanitize_text_field($_POST['address']);
+            if (!empty($_POST['phone']))   $clinic_data['phone']         = sanitize_text_field($_POST['phone']);
+            if (!empty($_POST['email']))   $clinic_data['email']         = sanitize_email($_POST['email']);
+            $id = HearMed_DB::insert('hearmed_reference.clinics', $clinic_data);
             if ($id) wp_send_json_success(['id' => $id, 'name' => $name]);
             break;
 
@@ -59,12 +63,15 @@ function hm_quick_add_handler() {
             break;
 
         case 'appointment_type':
-            $id = HearMed_DB::insert('hearmed_reference.appointment_types', [
-                'type_name'    => $name,
-                'service_color'=> '#0BB4C4',
-                'is_active'    => true,
-                'created_at'   => $now,
-            ]);
+            $appt_data = [
+                'type_name'     => $name,
+                'service_color' => '#0BB4C4',
+                'is_active'     => true,
+                'created_at'    => $now,
+            ];
+            if (!empty($_POST['duration'])) $appt_data['duration_minutes'] = intval($_POST['duration']);
+            if (!empty($_POST['colour']))   $appt_data['service_color']    = sanitize_hex_color($_POST['colour']);
+            $id = HearMed_DB::insert('hearmed_reference.appointment_types', $appt_data);
             if ($id) wp_send_json_success(['id' => $id, 'name' => $name]);
             break;
 

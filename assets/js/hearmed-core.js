@@ -250,52 +250,169 @@
 
 /**
  * Global inline "Add New" handler for <select data-entity="xxx">.
- * Entities with dedicated admin pages navigate there.
- * Others prompt for a name, save via AJAX, and insert the new <option>.
+ * Opens a quick-add modal with fields appropriate for the entity type.
+ * Saves via AJAX and inserts the new <option> into all matching selects.
  */
 (function() {
-    // Map entity types to their admin settings pages
-    var entityPages = {
-        manufacturer:    '/admin-console/brands/',
-        clinic:          '/admin-console/manage-clinics/',
-        role:            '/admin-console/roles/',
-        appointment_type:'/admin-console/appointment-types/',
-        resource_type:   '/admin-console/resources/'
+    // Define the fields needed for each entity quick-add
+    var entitySchemas = {
+        manufacturer: {
+            title: 'Add Manufacturer',
+            fields: [
+                {key:'name', label:'Manufacturer Name *', type:'text', required:true, placeholder:'e.g. Oticon'}
+            ]
+        },
+        clinic: {
+            title: 'Add Clinic',
+            fields: [
+                {key:'name',    label:'Clinic Name *', type:'text', required:true, placeholder:'e.g. Dublin North'},
+                {key:'address', label:'Address',       type:'text', placeholder:'Street address'},
+                {key:'phone',   label:'Phone',         type:'text', placeholder:'e.g. 01 234 5678'},
+                {key:'email',   label:'Email',         type:'email',placeholder:'clinic@example.com'}
+            ]
+        },
+        role: {
+            title: 'Add Role',
+            fields: [
+                {key:'name', label:'Role Name *', type:'text', required:true, placeholder:'e.g. Clinical Assistant'}
+            ]
+        },
+        appointment_type: {
+            title: 'Add Appointment Type',
+            fields: [
+                {key:'name',     label:'Type Name *',         type:'text',   required:true, placeholder:'e.g. Follow-Up'},
+                {key:'duration', label:'Duration (minutes)',   type:'number', placeholder:'30'},
+                {key:'colour',   label:'Block Colour',        type:'color',  defaultVal:'#0BB4C4'}
+            ]
+        },
+        resource_type: {
+            title: 'Add Resource Type',
+            fields: [
+                {key:'name', label:'Type Name *', type:'text', required:true, placeholder:'e.g. Audiometer'}
+            ]
+        },
+        ha_style: {
+            title: 'Add Style',
+            fields: [
+                {key:'name', label:'Style Name *', type:'text', required:true, placeholder:'e.g. BTE'}
+            ]
+        },
+        power_type: {
+            title: 'Add Power Type',
+            fields: [
+                {key:'name', label:'Power Type *', type:'text', required:true, placeholder:'e.g. Rechargeable'}
+            ]
+        },
+        speaker_power: {
+            title: 'Add Speaker Power',
+            fields: [
+                {key:'name', label:'Speaker Power *', type:'text', required:true, placeholder:'e.g. Power 100'}
+            ]
+        },
+        bundled_category: {
+            title: 'Add Category',
+            fields: [
+                {key:'name', label:'Category Name *', type:'text', required:true, placeholder:'e.g. Dome'}
+            ]
+        }
     };
 
-    document.addEventListener('change', function(e) {
-        var sel = e.target;
-        if (sel.tagName !== 'SELECT' || sel.value !== '__add_new__') return;
+    var _activeSel = null; // store the select that triggered the modal
 
-        var entity = sel.getAttribute('data-entity');
-        if (!entity) { sel.value = ''; return; }
+    // Build modal DOM once
+    function ensureModal() {
+        if (document.getElementById('hm-quickadd-modal')) return;
+        var html = '<div class="hm-modal-bg" id="hm-quickadd-modal">' +
+            '<div class="hm-modal" style="width:460px">' +
+            '<div class="hm-modal-hd"><h3 id="hm-qa-title">Add New</h3>' +
+            '<button class="hm-modal-x" id="hm-qa-close">&times;</button></div>' +
+            '<div class="hm-modal-body" id="hm-qa-body"></div>' +
+            '<div class="hm-modal-ft">' +
+            '<button class="hm-btn" id="hm-qa-cancel">Cancel</button>' +
+            '<button class="hm-btn hm-btn-teal" id="hm-qa-save">Save</button>' +
+            '</div></div></div>';
+        var div = document.createElement('div');
+        div.innerHTML = html;
+        document.body.appendChild(div.firstChild);
 
-        // If entity has a dedicated admin page, navigate there
-        if (entityPages[entity]) {
-            sel.value = ''; // reset before navigating
-            window.open(entityPages[entity], '_blank');
-            return;
-        }
+        document.getElementById('hm-qa-close').addEventListener('click', closeModal);
+        document.getElementById('hm-qa-cancel').addEventListener('click', closeModal);
+        document.getElementById('hm-qa-save').addEventListener('click', doSave);
+    }
 
-        // Otherwise prompt inline for static/custom entities
-        var label = sel.getAttribute('data-label') || entity.replace(/_/g, ' ');
-        var name = prompt('Enter new ' + label + ':');
+    function closeModal() {
+        var m = document.getElementById('hm-quickadd-modal');
+        if (m) m.classList.remove('open');
+        if (_activeSel) { _activeSel.value = ''; _activeSel = null; }
+    }
 
-        if (!name || !name.trim()) {
-            sel.value = ''; // reset to blank
-            return;
-        }
-        name = name.trim();
+    function openModal(sel, entity) {
+        ensureModal();
+        _activeSel = sel;
+        var schema = entitySchemas[entity];
+        if (!schema) { sel.value = ''; return; }
 
-        jQuery.post(HM.ajax_url, {
-            action: 'hm_quick_add',
-            nonce: HM.nonce,
-            entity: entity,
-            name: name
-        }, function(r) {
+        document.getElementById('hm-qa-title').textContent = schema.title;
+        var body = document.getElementById('hm-qa-body');
+        body.innerHTML = '';
+        body.setAttribute('data-entity', entity);
+
+        schema.fields.forEach(function(f) {
+            var grp = document.createElement('div');
+            grp.className = 'hm-form-group';
+            grp.style.marginBottom = '12px';
+
+            var lbl = document.createElement('label');
+            lbl.textContent = f.label;
+            grp.appendChild(lbl);
+
+            var inp = document.createElement('input');
+            inp.type = f.type || 'text';
+            inp.setAttribute('data-key', f.key);
+            inp.className = 'hm-qa-field';
+            if (f.placeholder) inp.placeholder = f.placeholder;
+            if (f.required) inp.required = true;
+            if (f.defaultVal) inp.value = f.defaultVal;
+            if (f.type === 'color') { inp.style.height = '38px'; inp.style.padding = '2px'; }
+            grp.appendChild(inp);
+
+            body.appendChild(grp);
+        });
+
+        document.getElementById('hm-quickadd-modal').classList.add('open');
+        // Focus first field
+        var first = body.querySelector('input');
+        if (first) setTimeout(function() { first.focus(); }, 100);
+    }
+
+    function doSave() {
+        var body = document.getElementById('hm-qa-body');
+        var entity = body.getAttribute('data-entity');
+        var fields = body.querySelectorAll('.hm-qa-field');
+        var payload = { action: 'hm_quick_add', nonce: HM.nonce, entity: entity };
+        var valid = true;
+
+        fields.forEach(function(inp) {
+            var key = inp.getAttribute('data-key');
+            payload[key] = inp.value.trim();
+            if (inp.required && !payload[key]) {
+                inp.style.borderColor = '#ef4444';
+                valid = false;
+            } else {
+                inp.style.borderColor = '';
+            }
+        });
+
+        if (!valid) return;
+
+        var btn = document.getElementById('hm-qa-save');
+        btn.textContent = 'Saving…'; btn.disabled = true;
+
+        jQuery.post(HM.ajax_url, payload, function(r) {
+            btn.textContent = 'Save'; btn.disabled = false;
+
             if (!r.success) {
-                alert(r.data || 'Error adding ' + label);
-                sel.value = '';
+                alert(r.data || 'Error adding item');
                 return;
             }
 
@@ -308,7 +425,7 @@
             siblings.forEach(function(s) {
                 var exists = false;
                 for (var i = 0; i < s.options.length; i++) {
-                    if (s.options[i].value == newId) { exists = true; break; }
+                    if (s.options[i].value == (roleKey || newId)) { exists = true; break; }
                 }
                 if (!exists) {
                     var opt = document.createElement('option');
@@ -326,12 +443,30 @@
                 }
             });
 
-            sel.value = roleKey || newId;
-            sel.dispatchEvent(new Event('change', {bubbles: true}));
+            // Set the value on the select that triggered this
+            if (_activeSel) {
+                _activeSel.value = roleKey || newId;
+                _activeSel.dispatchEvent(new Event('change', {bubbles: true}));
+            }
+            _activeSel = null;
+
+            // Close modal
+            document.getElementById('hm-quickadd-modal').classList.remove('open');
 
             if (typeof HM.toast === 'function') {
                 HM.toast(newName + ' added', 'success');
             }
         });
+    }
+
+    // Delegated change handler on all selects
+    document.addEventListener('change', function(e) {
+        var sel = e.target;
+        if (sel.tagName !== 'SELECT' || sel.value !== '__add_new__') return;
+
+        var entity = sel.getAttribute('data-entity');
+        if (!entity) { sel.value = ''; return; }
+
+        openModal(sel, entity);
     });
 })();
