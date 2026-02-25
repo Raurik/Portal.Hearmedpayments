@@ -103,9 +103,9 @@ class HearMed_Admin_Appointment_Type_Detail {
         #hm-app .hm-color-box         { width:44px; height:28px; border:1px solid #e2e8f0; border-radius:5px; padding:1px; cursor:pointer; }
         #hm-app .hm-color-row .hm-sval { width:auto; }
 
-        /* Checkboxes — real CSS ticks (not default browser) */
+        /* Checkboxes — hide native input, show custom hm-check box */
         #hm-app .hm-day-check       { display:inline-flex; align-items:center; gap:8px; font-size:13px; color:#334155; cursor:pointer; }
-        #hm-app .hm-day-check input  { position:absolute; opacity:0; width:0; height:0; pointer-events:none; }
+        #hm-app .hm-day-check input  { display:none !important; }
         #hm-app .hm-check            { width:16px; height:16px; border-radius:4px; border:1.5px solid #cbd5e1; background:#fff; position:relative; flex-shrink:0; transition:all .15s ease; }
         #hm-app .hm-day-check input:checked + .hm-check { background:#0BB4C4; border-color:#0BB4C4; }
         #hm-app .hm-day-check input:checked + .hm-check::after {
