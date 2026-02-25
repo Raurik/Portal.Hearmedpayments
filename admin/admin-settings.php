@@ -76,8 +76,8 @@ class HearMed_Admin_Settings {
         'hearmed_pusher_settings' => [
             'title' => 'Pusher Settings (Team Chat)',
             'fields' => [
-                 ['key' => 'hm_pusher_app_id',     'label' => 'Pusher App ID',     'type' => 'text',     'default' => ''],
-                 ['key' => 'hm_pusher_app_key',    'label' => 'Pusher App Key',    'type' => 'text',     'default' => ''],
+                 ['key' => 'hm_pusher_app_id',     'label' => 'Pusher App ID',     'type' => 'password', 'default' => ''],
+                 ['key' => 'hm_pusher_app_key',    'label' => 'Pusher App Key',    'type' => 'password', 'default' => ''],
                  ['key' => 'hm_pusher_app_secret', 'label' => 'Pusher App Secret', 'type' => 'password', 'default' => ''],
                  ['key' => 'hm_pusher_cluster',    'label' => 'Pusher Cluster',    'type' => 'text',     'default' => 'eu'],
             ],
@@ -136,6 +136,7 @@ class HearMed_Admin_Settings {
         if (!$page) return '<p>Unknown settings page.</p>';
 
         ob_start(); ?>
+        <style>.hm-secret-wrap{display:flex;gap:8px;align-items:center;}.hm-secret-wrap input{flex:1;}</style>
         <div class="hm-admin">
             <div class="hm-admin-hd">
                 <h2><?php echo esc_html($page['title']); ?></h2>
@@ -170,7 +171,14 @@ class HearMed_Admin_Settings {
                                 <?php endforeach; ?>
                             </select>
                         <?php elseif ($f['type'] === 'password'): ?>
-                            <input type="password" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($val); ?>">
+                            <?php if ($val !== '' && $val !== $f['default']): ?>
+                            <div class="hm-secret-wrap" data-key="<?php echo esc_attr($f['key']); ?>">
+                                <input type="text" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="••••••••" readonly style="color:#94a3b8;letter-spacing:2px;">
+                                <button type="button" class="hm-btn hm-btn-sm" onclick="hmSettings.editSecret(this)">Change</button>
+                            </div>
+                            <?php else: ?>
+                            <input type="password" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="" placeholder="Enter value...">
+                            <?php endif; ?>
                         <?php else: ?>
                             <input type="<?php echo $f['type'] === 'number' ? 'number' : 'text'; ?>" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($val); ?>" <?php echo $f['type'] === 'number' ? 'step="0.1" min="0"' : ''; ?>>
                         <?php endif; ?>
@@ -274,6 +282,7 @@ class HearMed_Admin_Settings {
                 document.querySelectorAll('.hm-stg-field').forEach(function(el) {
                     var key = el.dataset.key;
                     if (el.type === 'checkbox') data.settings[key] = el.checked ? '1' : '0';
+                    else if (el.readOnly && el.value === '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022') return; // skip masked secrets
                     else data.settings[key] = el.value;
                 });
                 data.settings = JSON.stringify(data.settings);
@@ -284,6 +293,28 @@ class HearMed_Admin_Settings {
                     if (r.success) { btn.textContent = '✓ Saved'; setTimeout(function(){ btn.textContent = 'Save Settings'; btn.disabled = false; }, 1500); }
                     else { alert(r.data || 'Error'); btn.textContent = 'Save Settings'; btn.disabled = false; }
                 });
+            },
+            editSecret: function(btn) {
+                var wrap = btn.closest('.hm-secret-wrap');
+                var inp  = wrap.querySelector('input');
+                inp.readOnly = false;
+                inp.type  = 'password';
+                inp.value = '';
+                inp.style.color = '';
+                inp.style.letterSpacing = '';
+                inp.placeholder = 'Enter new value...';
+                inp.focus();
+                btn.textContent = 'Cancel';
+                btn.onclick = function() {
+                    inp.readOnly = true;
+                    inp.type  = 'text';
+                    inp.value = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
+                    inp.style.color = '#94a3b8';
+                    inp.style.letterSpacing = '2px';
+                    inp.placeholder = '';
+                    btn.textContent = 'Change';
+                    btn.onclick = function() { hmSettings.editSecret(btn); };
+                };
             }
         };
         </script>
