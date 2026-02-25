@@ -161,7 +161,22 @@ class HearMed_Admin_AuditLog {
                         <strong id="hmde-patient-name"></strong>
                         <input type="hidden" id="hmde-patient-id">
                     </div>
-                    <div style="display:flex;gap:8px;">
+
+                    <div class="hm-form-group">
+                        <label style="font-weight:600;margin-bottom:8px;display:block;">Data Sections to Export</label>
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                            <label class="hm-day-check"><input type="checkbox" class="hmde-section" value="patient" checked> <span class="hm-check"></span> Patient Details</label>
+                            <label class="hm-day-check"><input type="checkbox" class="hmde-section" value="appointments" checked> <span class="hm-check"></span> Appointments</label>
+                            <label class="hm-day-check"><input type="checkbox" class="hmde-section" value="orders" checked> <span class="hm-check"></span> Orders</label>
+                            <label class="hm-day-check"><input type="checkbox" class="hmde-section" value="invoices" checked> <span class="hm-check"></span> Invoices</label>
+                            <label class="hm-day-check"><input type="checkbox" class="hmde-section" value="payments" checked> <span class="hm-check"></span> Payments</label>
+                            <label class="hm-day-check"><input type="checkbox" class="hmde-section" value="notes" checked> <span class="hm-check"></span> Notes</label>
+                            <label class="hm-day-check"><input type="checkbox" class="hmde-section" value="forms" checked> <span class="hm-check"></span> Forms</label>
+                            <label class="hm-day-check"><input type="checkbox" class="hmde-section" value="devices" checked> <span class="hm-check"></span> Devices</label>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;gap:8px;margin-top:12px;">
                         <button class="hm-btn hm-btn-teal" onclick="hmExport.exportData('json')">Export as JSON</button>
                         <button class="hm-btn" onclick="hmExport.exportData('csv')">Export as CSV</button>
                     </div>
@@ -211,7 +226,10 @@ class HearMed_Admin_AuditLog {
             exportData: function(format) {
                 var pid = document.getElementById('hmde-patient-id').value;
                 if (!pid) { alert('Select a patient first.'); return; }
-                jQuery.post(HM.ajax_url, { action:'hm_admin_export_patient', nonce:HM.nonce, patient_id:pid, format:format }, function(r) {
+                var sections = [];
+                document.querySelectorAll('.hmde-section:checked').forEach(function(cb) { sections.push(cb.value); });
+                if (!sections.length) { alert('Select at least one data section.'); return; }
+                jQuery.post(HM.ajax_url, { action:'hm_admin_export_patient', nonce:HM.nonce, patient_id:pid, format:format, sections:JSON.stringify(sections) }, function(r) {
                     if (!r.success) { alert(r.data || 'Export failed'); return; }
                     var filename = r.data.filename || ('patient-export.' + format);
                     var mime = r.data.mime || 'application/octet-stream';
@@ -244,16 +262,20 @@ class HearMed_Admin_AuditLog {
         );
         if (!$patient) { wp_send_json_error('Patient not found'); return; }
 
-        $data = [
-            'patient' => (array) $patient,
-            'appointments' => HearMed_DB::get_results("SELECT * FROM hearmed_core.appointments WHERE patient_id = $1 ORDER BY appointment_date DESC", [$patient_id]) ?: [],
-            'orders' => HearMed_DB::get_results("SELECT * FROM hearmed_core.orders WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [],
-            'invoices' => HearMed_DB::get_results("SELECT * FROM hearmed_core.invoices WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [],
-            'payments' => HearMed_DB::get_results("SELECT * FROM hearmed_core.payments WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [],
-            'notes' => HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_notes WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [],
-            'forms' => HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_forms WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [],
-            'devices' => HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_devices WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [],
-        ];
+        $sections = json_decode(stripslashes($_POST['sections'] ?? '[]'), true);
+        if (!is_array($sections) || empty($sections)) {
+            $sections = ['patient','appointments','orders','invoices','payments','notes','forms','devices'];
+        }
+
+        $data = [];
+        if (in_array('patient', $sections))      $data['patient']      = (array) $patient;
+        if (in_array('appointments', $sections))  $data['appointments'] = HearMed_DB::get_results("SELECT * FROM hearmed_core.appointments WHERE patient_id = $1 ORDER BY appointment_date DESC", [$patient_id]) ?: [];
+        if (in_array('orders', $sections))        $data['orders']       = HearMed_DB::get_results("SELECT * FROM hearmed_core.orders WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
+        if (in_array('invoices', $sections))      $data['invoices']     = HearMed_DB::get_results("SELECT * FROM hearmed_core.invoices WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
+        if (in_array('payments', $sections))      $data['payments']     = HearMed_DB::get_results("SELECT * FROM hearmed_core.payments WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
+        if (in_array('notes', $sections))         $data['notes']        = HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_notes WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
+        if (in_array('forms', $sections))         $data['forms']        = HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_forms WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
+        if (in_array('devices', $sections))       $data['devices']      = HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_devices WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
 
         $exported_by = get_current_user_id();
         HearMed_DB::insert('hearmed_admin.gdpr_exports', [

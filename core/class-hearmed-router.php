@@ -26,6 +26,7 @@ class HearMed_Router {
         'hearmed_appointment_types' => [ 'module' => 'calendar', 'view' => 'appointment-types' ],
         'hearmed_blockouts' => [ 'module' => 'calendar', 'view' => 'blockouts' ],
         'hearmed_holidays' => [ 'module' => 'calendar', 'view' => 'holidays' ],
+        'hearmed_exclusions' => [ 'module' => 'calendar', 'view' => 'exclusions' ],
         
         // Patients
         'hearmed_patients' => [ 'module' => 'patients', 'view' => 'list' ],

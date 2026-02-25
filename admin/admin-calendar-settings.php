@@ -11,11 +11,19 @@ class HearMed_Admin_Calendar_Settings {
         add_shortcode('hearmed_calendar_settings', [$this, 'render']);
     }
 
+    private function get_saved_settings() {
+        $row = HearMed_DB::get_row("SELECT * FROM hearmed_core.calendar_settings LIMIT 1");
+        if (!$row) return [];
+        return (array) $row;
+    }
+
     public function render() {
         if (!is_user_logged_in()) return '<p>Please log in.</p>';
 
-        // Show debug output to admins or when ?hm_debug=1
-        $show_debug = ( current_user_can( 'manage_options' ) || ( isset( $_GET['hm_debug'] ) && current_user_can( 'edit_posts' ) ) );
+        $saved = $this->get_saved_settings();
+        $s = function($key, $default) use ($saved) {
+            return isset($saved[$key]) && $saved[$key] !== '' ? $saved[$key] : $default;
+        };
 
         ob_start();
         ?>
@@ -31,11 +39,11 @@ class HearMed_Admin_Calendar_Settings {
                     <div class="hm-card">
                         <div class="hm-card-hd">Time &amp; View</div>
                         <div class="hm-card-body">
-                            <div class="hm-srow"><span class="hm-slbl">Start time</span><span class="hm-sval"><input id="hs-start" name="start_time" class="hm-inp" type="time" value="09:00"></span></div>
-                            <div class="hm-srow"><span class="hm-slbl">End time</span><span class="hm-sval"><input id="hs-end" name="end_time" class="hm-inp" type="time" value="18:00"></span></div>
-                            <div class="hm-srow"><span class="hm-slbl">Time interval</span><span class="hm-sval"><select id="hs-interval" name="time_interval" class="hm-dd"><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30" selected>30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></span></div>
-                            <div class="hm-srow"><span class="hm-slbl">Slot height</span><span class="hm-sval"><select id="hs-slotH" name="slot_height" class="hm-dd"><option value="compact">Compact</option><option value="regular" selected>Regular</option><option value="large">Large</option></select></span></div>
-                            <div class="hm-srow"><span class="hm-slbl">Default timeframe</span><span class="hm-sval"><select id="hs-view" name="default_view" class="hm-dd"><option value="day">Day</option><option value="week" selected>Week</option></select></span></div>
+                            <div class="hm-srow"><span class="hm-slbl">Start time</span><span class="hm-sval"><input id="hs-start" name="start_time" class="hm-inp" type="time" value="<?php echo esc_attr($s('start_time', '09:00')); ?>"></span></div>
+                            <div class="hm-srow"><span class="hm-slbl">End time</span><span class="hm-sval"><input id="hs-end" name="end_time" class="hm-inp" type="time" value="<?php echo esc_attr($s('end_time', '18:00')); ?>"></span></div>
+                            <div class="hm-srow"><span class="hm-slbl">Time interval</span><span class="hm-sval"><select id="hs-interval" name="time_interval" class="hm-dd"><?php foreach ([15=>'15 minutes',20=>'20 minutes',30=>'30 minutes',45=>'45 minutes',60=>'60 minutes'] as $v=>$l): ?><option value="<?php echo $v; ?>" <?php selected($s('time_interval','30'), $v); ?>><?php echo $l; ?></option><?php endforeach; ?></select></span></div>
+                            <div class="hm-srow"><span class="hm-slbl">Slot height</span><span class="hm-sval"><select id="hs-slotH" name="slot_height" class="hm-dd"><?php foreach (['compact'=>'Compact','regular'=>'Regular','large'=>'Large'] as $v=>$l): ?><option value="<?php echo $v; ?>" <?php selected($s('slot_height','regular'), $v); ?>><?php echo $l; ?></option><?php endforeach; ?></select></span></div>
+                            <div class="hm-srow"><span class="hm-slbl">Default timeframe</span><span class="hm-sval"><select id="hs-view" name="default_view" class="hm-dd"><?php foreach (['day'=>'Day','week'=>'Week'] as $v=>$l): ?><option value="<?php echo $v; ?>" <?php selected($s('default_view','week'), $v); ?>><?php echo $l; ?></option><?php endforeach; ?></select></span></div>
                         </div>
                     </div>
                     <!-- Block 2: Display Preferences (now includes color pickers) -->
@@ -44,14 +52,14 @@ class HearMed_Admin_Calendar_Settings {
                         <div class="hm-card-body">
                             <div class="hm-srow">
                                 <label class="hm-day-check">
-                                    <input id="hs-timeInline" name="show_time_inline" type="checkbox">
+                                    <input id="hs-timeInline" name="show_time_inline" type="checkbox" <?php checked($s('show_time_inline', ''), 'on'); ?>>
                                     <span class="hm-check"></span>
                                     Display time inline with patient name
                                 </label>
                             </div>
                             <div class="hm-srow">
                                 <label class="hm-day-check">
-                                    <input id="hs-hideEnd" name="hide_end_time" type="checkbox" checked>
+                                    <input id="hs-hideEnd" name="hide_end_time" type="checkbox" <?php checked($s('hide_end_time', 'on'), 'on'); ?>>
                                     <span class="hm-check"></span>
                                     Hide appointment end time
                                 </label>
@@ -60,12 +68,12 @@ class HearMed_Admin_Calendar_Settings {
                                 <span class="hm-slbl">Outcome style</span>
                                 <span class="hm-sval">
                                     <label>
-                                        <input type="radio" name="outcome_style" value="default" checked>
+                                        <input type="radio" name="outcome_style" value="default" <?php checked($s('outcome_style', 'default'), 'default'); ?>>
                                         <span class="hm-check"></span>
                                         Default
                                     </label>
                                     <label>
-                                        <input type="radio" name="outcome_style" value="small">
+                                        <input type="radio" name="outcome_style" value="small" <?php checked($s('outcome_style', 'default'), 'small'); ?>>
                                         <span class="hm-check"></span>
                                         Small
                                     </label>
@@ -73,7 +81,7 @@ class HearMed_Admin_Calendar_Settings {
                             </div>
                             <div class="hm-srow">
                                 <label class="hm-day-check">
-                                    <input id="hs-fullName" name="display_full_name" type="checkbox">
+                                    <input id="hs-fullName" name="display_full_name" type="checkbox" <?php checked($s('display_full_name', ''), 'on'); ?>>
                                     <span class="hm-check"></span>
                                     Display full resource name
                                 </label>
@@ -82,11 +90,11 @@ class HearMed_Admin_Calendar_Settings {
                                 <span class="hm-slbl">Appointment Colors</span>
                                 <span class="hm-sval hm-color-pickers">
                                     <div class="hm-color-label-group">
-                                        <label class="hm-color-label">BG<br><input type="color" id="hs-appt-bg" name="appt_bg_color" value="#0BB4C4" class="hm-color-box"></label>
-                                        <label class="hm-color-label">Font<br><input type="color" id="hs-appt-font" name="appt_font_color" value="#ffffff" class="hm-color-box"></label>
-                                        <label class="hm-color-label">Badge<br><input type="color" id="hs-appt-badge" name="appt_badge_color" value="#3b82f6" class="hm-color-box"></label>
-                                        <label class="hm-color-label">Badge Font<br><input type="color" id="hs-appt-badge-font" name="appt_badge_font_color" value="#ffffff" class="hm-color-box"></label>
-                                        <label class="hm-color-label">Meta<br><input type="color" id="hs-appt-meta" name="appt_meta_color" value="#38bdf8" class="hm-color-box"></label>
+                                        <label class="hm-color-label">BG<br><input type="color" id="hs-appt-bg" name="appt_bg_color" value="<?php echo esc_attr($s('appt_bg_color','#0BB4C4')); ?>" class="hm-color-box"></label>
+                                        <label class="hm-color-label">Font<br><input type="color" id="hs-appt-font" name="appt_font_color" value="<?php echo esc_attr($s('appt_font_color','#ffffff')); ?>" class="hm-color-box"></label>
+                                        <label class="hm-color-label">Badge<br><input type="color" id="hs-appt-badge" name="appt_badge_color" value="<?php echo esc_attr($s('appt_badge_color','#3b82f6')); ?>" class="hm-color-box"></label>
+                                        <label class="hm-color-label">Badge Font<br><input type="color" id="hs-appt-badge-font" name="appt_badge_font_color" value="<?php echo esc_attr($s('appt_badge_font_color','#ffffff')); ?>" class="hm-color-box"></label>
+                                        <label class="hm-color-label">Meta<br><input type="color" id="hs-appt-meta" name="appt_meta_color" value="<?php echo esc_attr($s('appt_meta_color','#38bdf8')); ?>" class="hm-color-box"></label>
                                     </div>
                                 </span>
                             </div>
@@ -111,25 +119,6 @@ class HearMed_Admin_Calendar_Settings {
             </div>
         </div>
             <?php
-            if ( current_user_can( 'manage_options' ) ) : ?>
-                <script>
-                (function(){
-                    try{
-                        console.log('HM-DEBUG (admin):', window.HM || 'HM missing');
-                        console.log('hearmed-calendar script present?', typeof Settings !== 'undefined');
-                        console.log('#hm-app element', document.getElementById('hm-app'));
-                        // quick ajax test
-                        var ajax = (window.HM && window.HM.ajax_url) || '/wp-admin/admin-ajax.php';
-                        var nonce = (window.HM && window.HM.nonce) || '';
-                        fetch(ajax, {
-                            method:'POST',
-                            headers:{'Content-Type':'application/x-www-form-urlencoded'},
-                            body:new URLSearchParams({action:'hm_get_settings',nonce:nonce})
-                        }).then(function(r){return r.text().then(function(t){console.log('hm_get_settings status',r.status,'body',t);});}).catch(function(e){console.error('hm_get_settings fetch error',e);});
-                    }catch(e){console.error('HM-DEBUG admin error',e);}    
-                })();
-                </script>
-            <?php endif;
             return ob_get_clean();
     }
 }

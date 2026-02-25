@@ -30,6 +30,7 @@ class HearMed_Admin_Console {
                 ['Dispenser Schedules', 'dispenser-schedules'],
                 ['Blockouts', 'blockouts'],
                 ['Holidays', 'holidays'],
+                ['Exclusion Types', 'exclusions'],
             ]],
             ['Products', [
                 ['Products & Services', 'manage-products'],

@@ -17,6 +17,7 @@ class HearMed_Admin_Settings {
                 ['key' => 'hm_vat_accessories', 'label' => 'VAT Rate — Accessories (%)', 'type' => 'number', 'default' => '0'],
                 ['key' => 'hm_vat_services', 'label' => 'VAT Rate — Services (%)', 'type' => 'number', 'default' => '13.5'],
                 ['key' => 'hm_vat_consumables', 'label' => 'VAT Rate — Consumables (%)', 'type' => 'number', 'default' => '23'],
+                ['key' => 'hm_vat_bundled', 'label' => 'VAT Rate — Bundled Items (%)', 'type' => 'number', 'default' => '0'],
                 ['key' => 'hm_vat_other_aud', 'label' => 'VAT Rate — Other Audiological (%)', 'type' => 'number', 'default' => '13.5'],
                 ['key' => 'hm_payment_methods', 'label' => 'Payment Methods (comma-separated)', 'type' => 'text', 'default' => 'Card,Cash,Cheque,Bank Transfer,Finance,PRSI'],
                 ['key' => 'hm_prsi_amount_per_ear', 'label' => 'PRSI Amount Per Ear (€)', 'type' => 'number', 'default' => '500'],

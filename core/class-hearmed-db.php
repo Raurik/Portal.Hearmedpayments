@@ -57,6 +57,7 @@ class HearMed_DB {
         'staff_groups'             => 'hearmed_reference.staff_groups',
         'staff_group_members'      => 'hearmed_reference.staff_group_members',
         'resources'                => 'hearmed_reference.resources',
+        'exclusion_types'          => 'hearmed_reference.exclusion_types',
 
         // ── hearmed_core ──────────────────────────────────────────────────
         'patients'                 => 'hearmed_core.patients',          // ← WAS WRONG (was hearmed_reference)

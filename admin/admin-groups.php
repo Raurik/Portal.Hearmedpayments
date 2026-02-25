@@ -1,8 +1,11 @@
 <?php
 /**
- * HearMed Admin — Groups
+ * HearMed Admin — Staff Groups (by Clinic & Role)
  * Shortcode: [hearmed_admin_groups]
- * PostgreSQL CRUD for staff_groups and staff_group_members
+ * Organises staff by clinic and role assignment.
+ *
+ * @package HearMed_Portal
+ * @since   5.1.0
  */
 if (!defined('ABSPATH')) exit;
 
@@ -16,28 +19,39 @@ class HearMed_Admin_Groups {
 
     private function get_groups() {
         return HearMed_DB::get_results(
-            "SELECT g.id, g.group_name, g.description, g.is_active,
+            "SELECT g.id, g.group_name, g.description, g.is_active, g.clinic_id, g.role_id,
+                    c.clinic_name, r.role_name,
                     COUNT(m.staff_id) AS member_count
              FROM hearmed_reference.staff_groups g
              LEFT JOIN hearmed_reference.staff_group_members m ON g.id = m.group_id
-             GROUP BY g.id
-             ORDER BY g.group_name"
+             LEFT JOIN hearmed_reference.clinics c ON g.clinic_id = c.id
+             LEFT JOIN hearmed_reference.roles r ON g.role_id = r.id
+             GROUP BY g.id, c.clinic_name, r.role_name
+             ORDER BY c.clinic_name, r.role_name, g.group_name"
         ) ?: [];
     }
 
     private function get_memberships() {
         return HearMed_DB::get_results(
-            "SELECT group_id, staff_id
-             FROM hearmed_reference.staff_group_members"
+            "SELECT group_id, staff_id FROM hearmed_reference.staff_group_members"
         ) ?: [];
     }
 
     private function get_staff() {
         return HearMed_DB::get_results(
-            "SELECT id, first_name, last_name
-             FROM hearmed_reference.staff
-             WHERE is_active = true
-             ORDER BY last_name, first_name"
+            "SELECT id, first_name, last_name FROM hearmed_reference.staff WHERE is_active = true ORDER BY last_name, first_name"
+        ) ?: [];
+    }
+
+    private function get_clinics() {
+        return HearMed_DB::get_results(
+            "SELECT id, clinic_name FROM hearmed_reference.clinics WHERE is_active = true ORDER BY clinic_name"
+        ) ?: [];
+    }
+
+    private function get_roles() {
+        return HearMed_DB::get_results(
+            "SELECT id, role_name FROM hearmed_reference.roles WHERE is_active = true ORDER BY role_name"
         ) ?: [];
     }
 
@@ -47,6 +61,8 @@ class HearMed_Admin_Groups {
         $groups = $this->get_groups();
         $memberships = $this->get_memberships();
         $staff = $this->get_staff();
+        $clinics = $this->get_clinics();
+        $roles = $this->get_roles();
 
         $group_members = [];
         foreach ($memberships as $m) {
@@ -55,63 +71,93 @@ class HearMed_Admin_Groups {
             $group_members[$gid][] = (int) $m->staff_id;
         }
 
-        $staff_map = [];
-        foreach ($staff as $s) {
-            $staff_map[$s->id] = trim($s->first_name . ' ' . $s->last_name);
-        }
-
         $payload = [];
         foreach ($groups as $g) {
             $gid = (int) $g->id;
             $payload[] = [
                 'id' => $gid,
-                'group_name' => $g->group_name,
-                'description' => $g->description,
-                'is_active' => (bool) $g->is_active,
-                'member_ids' => $group_members[$gid] ?? [],
+                'group_name'   => $g->group_name,
+                'description'  => $g->description,
+                'is_active'    => (bool) $g->is_active,
+                'clinic_id'    => $g->clinic_id,
+                'clinic_name'  => $g->clinic_name,
+                'role_id'      => $g->role_id,
+                'role_name'    => $g->role_name,
+                'member_ids'   => $group_members[$gid] ?? [],
                 'member_count' => (int) $g->member_count,
             ];
+        }
+
+        // Group by clinic for display
+        $by_clinic = [];
+        foreach ($payload as $g) {
+            $cname = $g['clinic_name'] ?: 'No Clinic';
+            if (!isset($by_clinic[$cname])) $by_clinic[$cname] = [];
+            $by_clinic[$cname][] = $g;
+        }
+
+        $staff_map = [];
+        foreach ($staff as $s) {
+            $staff_map[$s->id] = trim($s->first_name . ' ' . $s->last_name);
         }
 
         ob_start(); ?>
         <div class="hm-admin" id="hm-groups-admin">
             <div class="hm-admin-hd">
-                <h2>Groups</h2>
+                <h2>Staff Groups</h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmGroups.open()">+ Add Group</button>
             </div>
 
+            <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">
+                Organise staff by clinic and role. Groups define who works where and in what capacity.
+            </p>
+
             <?php if (empty($payload)): ?>
-                <div class="hm-empty-state"><p>No groups yet.</p></div>
+                <div class="hm-empty-state"><p>No groups yet. Click "+ Add Group" to get started.</p></div>
             <?php else: ?>
-            <table class="hm-table">
-                <thead>
-                    <tr>
-                        <th>Group</th>
-                        <th>Description</th>
-                        <th class="hm-num">Members</th>
-                        <th>Status</th>
-                        <th style="width:100px"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php foreach ($payload as $g):
-                    $row = json_encode($g, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
-                ?>
-                    <tr>
-                        <td><strong><?php echo esc_html($g['group_name']); ?></strong></td>
-                        <td><?php echo esc_html($g['description'] ?: '—'); ?></td>
-                        <td class="hm-num"><?php echo esc_html((string) $g['member_count']); ?></td>
-                        <td><?php echo $g['is_active'] ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
-                        <td class="hm-table-acts">
-                            <button class="hm-btn hm-btn-sm" onclick='hmGroups.open(<?php echo $row; ?>)'>Edit</button>
-                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmGroups.del(<?php echo (int) $g['id']; ?>,'<?php echo esc_js($g['group_name']); ?>')">Delete</button>
-                        </td>
-                    </tr>
+                <?php foreach ($by_clinic as $clinic_name => $clinic_groups): ?>
+                <div class="hm-settings-panel" style="margin-bottom:16px;">
+                    <h3 style="font-size:15px;margin-bottom:12px;"><?php echo esc_html($clinic_name); ?></h3>
+                    <table class="hm-table">
+                        <thead>
+                            <tr>
+                                <th>Group</th>
+                                <th>Role</th>
+                                <th>Description</th>
+                                <th class="hm-num">Members</th>
+                                <th>Staff</th>
+                                <th>Status</th>
+                                <th style="width:100px"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($clinic_groups as $g):
+                            $row = json_encode($g, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+                            $member_names = [];
+                            foreach ($g['member_ids'] as $sid) {
+                                if (isset($staff_map[$sid])) $member_names[] = $staff_map[$sid];
+                            }
+                        ?>
+                            <tr>
+                                <td><strong><?php echo esc_html($g['group_name']); ?></strong></td>
+                                <td><?php echo $g['role_name'] ? '<span class="hm-badge hm-badge-blue">' . esc_html($g['role_name']) . '</span>' : '—'; ?></td>
+                                <td><?php echo esc_html($g['description'] ?: '—'); ?></td>
+                                <td class="hm-num"><?php echo (int) $g['member_count']; ?></td>
+                                <td style="font-size:12px;color:var(--hm-text-light);"><?php echo esc_html(implode(', ', $member_names) ?: '—'); ?></td>
+                                <td><?php echo $g['is_active'] ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
+                                <td class="hm-table-acts">
+                                    <button class="hm-btn hm-btn-sm" onclick='hmGroups.open(<?php echo $row; ?>)'>Edit</button>
+                                    <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmGroups.del(<?php echo (int) $g['id']; ?>,'<?php echo esc_js($g['group_name']); ?>')">Delete</button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
                 <?php endforeach; ?>
-                </tbody>
-            </table>
             <?php endif; ?>
 
+            <!-- Modal -->
             <div class="hm-modal-bg" id="hm-group-modal">
                 <div class="hm-modal" style="width:640px">
                     <div class="hm-modal-hd">
@@ -121,20 +167,40 @@ class HearMed_Admin_Groups {
                     <div class="hm-modal-body">
                         <input type="hidden" id="hmg-id">
                         <div class="hm-form-row">
-                            <div class="hm-form-group">
+                            <div class="hm-form-group" style="flex:2">
                                 <label>Group Name *</label>
-                                <input type="text" id="hmg-name">
+                                <input type="text" id="hmg-name" placeholder="e.g. Dispensers - Dublin">
                             </div>
-                            <div class="hm-form-group">
+                            <div class="hm-form-group" style="flex:1">
                                 <label class="hm-toggle-label">
                                     <input type="checkbox" id="hmg-active" checked>
                                     Active
                                 </label>
                             </div>
                         </div>
+                        <div class="hm-form-row">
+                            <div class="hm-form-group">
+                                <label>Clinic</label>
+                                <select id="hmg-clinic">
+                                    <option value="">All Clinics</option>
+                                    <?php foreach ($clinics as $c): ?>
+                                        <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="hm-form-group">
+                                <label>Role</label>
+                                <select id="hmg-role">
+                                    <option value="">No Role</option>
+                                    <?php foreach ($roles as $r): ?>
+                                        <option value="<?php echo (int) $r->id; ?>"><?php echo esc_html($r->role_name); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
                         <div class="hm-form-group">
                             <label>Description</label>
-                            <textarea id="hmg-desc" rows="3"></textarea>
+                            <textarea id="hmg-desc" rows="2"></textarea>
                         </div>
                         <div class="hm-form-group">
                             <label>Members</label>
@@ -144,6 +210,7 @@ class HearMed_Admin_Groups {
                                 ?>
                                     <label class="hm-day-check">
                                         <input type="checkbox" class="hm-group-member" value="<?php echo (int) $s->id; ?>">
+                                        <span class="hm-check"></span>
                                         <?php echo esc_html($label); ?>
                                     </label>
                                 <?php endforeach; ?>
@@ -163,10 +230,12 @@ class HearMed_Admin_Groups {
             open: function(data) {
                 var isEdit = !!(data && data.id);
                 document.getElementById('hm-group-title').textContent = isEdit ? 'Edit Group' : 'Add Group';
-                document.getElementById('hmg-id').value = isEdit ? data.id : '';
-                document.getElementById('hmg-name').value = isEdit ? data.group_name : '';
-                document.getElementById('hmg-desc').value = isEdit ? (data.description || '') : '';
+                document.getElementById('hmg-id').value     = isEdit ? data.id : '';
+                document.getElementById('hmg-name').value   = isEdit ? data.group_name : '';
+                document.getElementById('hmg-desc').value   = isEdit ? (data.description || '') : '';
                 document.getElementById('hmg-active').checked = isEdit ? !!data.is_active : true;
+                document.getElementById('hmg-clinic').value = isEdit ? (data.clinic_id || '') : '';
+                document.getElementById('hmg-role').value   = isEdit ? (data.role_id || '') : '';
 
                 document.querySelectorAll('.hm-group-member').forEach(function(cb) {
                     cb.checked = isEdit && data.member_ids ? data.member_ids.indexOf(parseInt(cb.value, 10)) !== -1 : false;
@@ -174,9 +243,7 @@ class HearMed_Admin_Groups {
 
                 document.getElementById('hm-group-modal').classList.add('open');
             },
-            close: function() {
-                document.getElementById('hm-group-modal').classList.remove('open');
-            },
+            close: function() { document.getElementById('hm-group-modal').classList.remove('open'); },
             save: function() {
                 var name = document.getElementById('hmg-name').value.trim();
                 if (!name) { alert('Group name is required.'); return; }
@@ -186,19 +253,20 @@ class HearMed_Admin_Groups {
                     members.push(parseInt(cb.value, 10));
                 });
 
-                var payload = {
+                var btn = document.getElementById('hmg-save');
+                btn.textContent = 'Saving...'; btn.disabled = true;
+
+                jQuery.post(HM.ajax_url, {
                     action: 'hm_admin_save_group',
                     nonce: HM.nonce,
                     id: document.getElementById('hmg-id').value,
                     group_name: name,
                     description: document.getElementById('hmg-desc').value,
                     is_active: document.getElementById('hmg-active').checked ? 1 : 0,
+                    clinic_id: document.getElementById('hmg-clinic').value,
+                    role_id: document.getElementById('hmg-role').value,
                     members: JSON.stringify(members)
-                };
-
-                var btn = document.getElementById('hmg-save');
-                btn.textContent = 'Saving...'; btn.disabled = true;
-                jQuery.post(HM.ajax_url, payload, function(r) {
+                }, function(r) {
                     if (r.success) location.reload();
                     else { alert(r.data || 'Error'); btn.textContent = 'Save'; btn.disabled = false; }
                 });
@@ -222,13 +290,15 @@ class HearMed_Admin_Groups {
 
         $id = intval($_POST['id'] ?? 0);
         $name = sanitize_text_field($_POST['group_name'] ?? '');
-        if (!$name) { wp_send_json_error('Missing fields'); return; }
+        if (!$name) { wp_send_json_error('Group name required'); return; }
 
         $data = [
-            'group_name' => $name,
+            'group_name'  => $name,
             'description' => sanitize_text_field($_POST['description'] ?? ''),
-            'is_active' => intval($_POST['is_active'] ?? 1),
-            'updated_at' => current_time('mysql'),
+            'is_active'   => intval($_POST['is_active'] ?? 1),
+            'clinic_id'   => !empty($_POST['clinic_id']) ? intval($_POST['clinic_id']) : null,
+            'role_id'     => !empty($_POST['role_id']) ? intval($_POST['role_id']) : null,
+            'updated_at'  => current_time('mysql'),
         ];
 
         if ($id) {
@@ -244,22 +314,16 @@ class HearMed_Admin_Groups {
         $member_ids = json_decode(stripslashes($_POST['members'] ?? '[]'), true);
         if (!is_array($member_ids)) $member_ids = [];
 
-        HearMed_DB::get_results(
-            "DELETE FROM hearmed_reference.staff_group_members WHERE group_id = $1",
-            [$id]
-        );
+        HearMed_DB::get_results("DELETE FROM hearmed_reference.staff_group_members WHERE group_id = $1", [$id]);
 
         foreach ($member_ids as $sid) {
             $sid = intval($sid);
             if (!$sid) continue;
-            HearMed_DB::insert(
-                'hearmed_reference.staff_group_members',
-                [
-                    'group_id' => $id,
-                    'staff_id' => $sid,
-                    'created_at' => current_time('mysql')
-                ]
-            );
+            HearMed_DB::insert('hearmed_reference.staff_group_members', [
+                'group_id'   => $id,
+                'staff_id'   => $sid,
+                'created_at' => current_time('mysql'),
+            ]);
         }
 
         wp_send_json_success(['id' => $id]);
