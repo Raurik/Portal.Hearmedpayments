@@ -44,7 +44,7 @@ class HearMed_Admin_Taxonomies {
 
         if ($tag === 'hearmed_brands') {
             $rows = HearMed_DB::get_results(
-                "SELECT id, name, country, website, support_phone, support_email, is_active
+                "SELECT id, name, country, website, support_phone, support_email, manufacturer_category, is_active
                  FROM hearmed_reference.manufacturers
                  WHERE is_active = true
                  ORDER BY name"
@@ -86,6 +86,7 @@ class HearMed_Admin_Taxonomies {
                     <?php if ($tag === 'hearmed_brands'): ?>
                     <tr>
                         <th>Name</th>
+                        <th>Category</th>
                         <th>Country</th>
                         <th>Website</th>
                         <th>Support</th>
@@ -118,6 +119,10 @@ class HearMed_Admin_Taxonomies {
                     <tr>
                         <?php if ($tag === 'hearmed_brands'): ?>
                             <td><strong><?php echo esc_html($r->name); ?></strong></td>
+                            <td><?php
+                                $cats = !empty($r->manufacturer_category) ? array_map('trim', explode(',', $r->manufacturer_category)) : [];
+                                echo $cats ? esc_html(implode(', ', $cats)) : '—';
+                            ?></td>
                             <td><?php echo esc_html($r->country ?: '—'); ?></td>
                             <td><?php echo esc_html($r->website ?: '—'); ?></td>
                             <td>
@@ -163,6 +168,19 @@ class HearMed_Admin_Taxonomies {
                         </div>
 
                         <div class="hm-tax-fields" data-tag="hearmed_brands">
+                            <div class="hm-form-group">
+                                <label>Manufacturer Category</label>
+                                <div id="hmt-mfr-cats" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+                                    <?php
+                                    $mfr_cats = ['Hearing Aids','Consumables','Accessories','Other'];
+                                    foreach ($mfr_cats as $mc): ?>
+                                    <label style="display:flex;align-items:center;gap:4px;font-size:13px;">
+                                        <input type="checkbox" class="hmt-mfr-cat-cb" value="<?php echo esc_attr($mc); ?>">
+                                        <?php echo esc_html($mc); ?>
+                                    </label>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
                             <div class="hm-form-row">
                                 <div class="hm-form-group">
                                     <label>Country</label>
@@ -244,6 +262,11 @@ class HearMed_Admin_Taxonomies {
                 document.getElementById('hmt-website').value = data && data.website ? data.website : '';
                 document.getElementById('hmt-support-email').value = data && data.support_email ? data.support_email : '';
                 document.getElementById('hmt-support-phone').value = data && data.support_phone ? data.support_phone : '';
+                // Manufacturer category checkboxes
+                var selCats = data && data.manufacturer_category ? data.manufacturer_category.split(',').map(function(s){return s.trim();}) : [];
+                document.querySelectorAll('.hmt-mfr-cat-cb').forEach(function(cb) {
+                    cb.checked = selCats.indexOf(cb.value) !== -1;
+                });
                 document.getElementById('hmt-price-total').value = data && data.price_total !== null && data.price_total !== undefined ? data.price_total : '';
                 document.getElementById('hmt-price-ex-prsi').value = data && data.price_ex_prsi !== null && data.price_ex_prsi !== undefined ? data.price_ex_prsi : '';
                 document.getElementById('hmt-parent').value = data && data.parent_id ? data.parent_id : '';
@@ -277,6 +300,9 @@ class HearMed_Admin_Taxonomies {
                     payload.website = document.getElementById('hmt-website').value;
                     payload.support_email = document.getElementById('hmt-support-email').value;
                     payload.support_phone = document.getElementById('hmt-support-phone').value;
+                    var cats = [];
+                    document.querySelectorAll('.hmt-mfr-cat-cb:checked').forEach(function(cb) { cats.push(cb.value); });
+                    payload.manufacturer_category = cats.join(',');
                 } else if (tag === 'hearmed_range_settings') {
                     payload.price_total = document.getElementById('hmt-price-total').value;
                     payload.price_ex_prsi = document.getElementById('hmt-price-ex-prsi').value;
@@ -333,6 +359,7 @@ class HearMed_Admin_Taxonomies {
             $data['website'] = sanitize_text_field($_POST['website'] ?? '');
             $data['support_email'] = sanitize_text_field($_POST['support_email'] ?? '');
             $data['support_phone'] = sanitize_text_field($_POST['support_phone'] ?? '');
+            $data['manufacturer_category'] = sanitize_text_field($_POST['manufacturer_category'] ?? '');
             $data['is_active'] = $is_active;
         } elseif ($tag === 'hearmed_range_settings') {
             $data['range_name'] = $name;

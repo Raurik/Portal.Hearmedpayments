@@ -72,6 +72,33 @@ class HearMed_Admin_Products {
         add_action('wp_ajax_hm_admin_delete_product',  [$this, 'ajax_delete']);
         add_action('wp_ajax_hm_admin_import_products', [$this, 'ajax_import']);
         add_action('wp_ajax_hm_admin_add_bundled_category', [$this, 'ajax_add_bundled_category']);
+        $this->ensure_product_columns();
+    }
+
+    /** Auto-add missing columns to products/manufacturers tables (runs once per request) */
+    private function ensure_product_columns() {
+        static $done = false;
+        if ($done) return;
+        $done = true;
+        // dome_type, dome_size on products
+        $check = HearMed_DB::get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_reference' AND table_name = 'products' AND column_name = 'dome_type'"
+        );
+        if ($check === null) {
+            HearMed_DB::get_results("ALTER TABLE hearmed_reference.products
+                ADD COLUMN IF NOT EXISTS dome_type VARCHAR(50),
+                ADD COLUMN IF NOT EXISTS dome_size VARCHAR(20)");
+        }
+        // manufacturer_category on manufacturers
+        $check2 = HearMed_DB::get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_reference' AND table_name = 'manufacturers' AND column_name = 'manufacturer_category'"
+        );
+        if ($check2 === null) {
+            HearMed_DB::get_results("ALTER TABLE hearmed_reference.manufacturers
+                ADD COLUMN IF NOT EXISTS manufacturer_category VARCHAR(100) DEFAULT ''");
+        }
     }
 
     private function get_products($type = null) {
