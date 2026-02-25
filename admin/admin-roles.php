@@ -165,50 +165,51 @@ class HearMed_Admin_Roles {
                 </div>
             </div>
 
-            <!-- Modal -->
-            <div class="hm-modal-bg" id="hm-role-modal">
-                <div class="hm-modal" style="width:640px">
-                    <div class="hm-modal-hd">
-                        <h3 id="hm-role-title">Add Role</h3>
-                        <button class="hm-modal-x" onclick="hmRoles.close()">&times;</button>
+        </div>
+
+        <!-- Modal – outside #hm-app so it only shows on open -->
+        <div class="hm-modal-bg" id="hm-role-modal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at top left,rgba(148,163,184,.45),rgba(15,23,42,.75));backdrop-filter:blur(8px);z-index:9000;">
+            <div class="hm-modal" style="width:640px">
+                <div class="hm-modal-hd">
+                    <h3 id="hm-role-title">Add Role</h3>
+                    <button class="hm-modal-x" onclick="hmRoles.close()">&times;</button>
+                </div>
+                <div class="hm-modal-body">
+                    <input type="hidden" id="hmrl-id">
+                    <div class="hm-form-row">
+                        <div class="hm-form-group">
+                            <label>Display Name *</label>
+                            <input type="text" id="hmrl-display" placeholder="e.g. Senior Dispenser">
+                        </div>
+                        <div class="hm-form-group">
+                            <label>Internal Name *</label>
+                            <input type="text" id="hmrl-name" placeholder="e.g. senior_dispenser">
+                        </div>
                     </div>
-                    <div class="hm-modal-body">
-                        <input type="hidden" id="hmrl-id">
-                        <div class="hm-form-row">
-                            <div class="hm-form-group">
-                                <label>Display Name *</label>
-                                <input type="text" id="hmrl-display" placeholder="e.g. Senior Dispenser">
-                            </div>
-                            <div class="hm-form-group">
-                                <label>Internal Name *</label>
-                                <input type="text" id="hmrl-name" placeholder="e.g. senior_dispenser">
-                            </div>
-                        </div>
-                        <div class="hm-form-group">
-                            <label>Description</label>
-                            <textarea id="hmrl-desc" rows="2" placeholder="What this role does..."></textarea>
-                        </div>
-                        <div class="hm-form-group">
-                            <label style="margin-bottom:6px;display:block;">Permissions</label>
-                            <div class="hm-perms-grid" id="hmrl-perms">
-                                <?php foreach ($perm_groups as $group => $keys): ?>
-                                    <div class="hm-perm-group-label"><?php echo esc_html($group); ?></div>
-                                    <?php foreach ($keys as $key):
-                                        if (!isset($perms[$key])) continue;
-                                    ?>
-                                        <label>
-                                            <input type="checkbox" class="hm-role-perm" value="<?php echo esc_attr($key); ?>">
-                                            <?php echo esc_html($perms[$key]); ?>
-                                        </label>
-                                    <?php endforeach; ?>
+                    <div class="hm-form-group">
+                        <label>Description</label>
+                        <textarea id="hmrl-desc" rows="2" placeholder="What this role does..."></textarea>
+                    </div>
+                    <div class="hm-form-group">
+                        <label style="margin-bottom:6px;display:block;">Permissions</label>
+                        <div class="hm-perms-grid" id="hmrl-perms">
+                            <?php foreach ($perm_groups as $group => $keys): ?>
+                                <div class="hm-perm-group-label"><?php echo esc_html($group); ?></div>
+                                <?php foreach ($keys as $key):
+                                    if (!isset($perms[$key])) continue;
+                                ?>
+                                    <label>
+                                        <input type="checkbox" class="hm-role-perm" value="<?php echo esc_attr($key); ?>">
+                                        <?php echo esc_html($perms[$key]); ?>
+                                    </label>
                                 <?php endforeach; ?>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
-                    <div class="hm-modal-ft">
-                        <button class="hm-btn" onclick="hmRoles.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmRoles.save()" id="hmrl-save">Save</button>
-                    </div>
+                </div>
+                <div class="hm-modal-ft">
+                    <button class="hm-btn" onclick="hmRoles.close()">Cancel</button>
+                    <button class="hm-btn hm-btn-teal" onclick="hmRoles.save()" id="hmrl-save">Save</button>
                 </div>
             </div>
         </div>
@@ -228,9 +229,9 @@ class HearMed_Admin_Roles {
                     cb.checked = perms.indexOf(cb.value) !== -1;
                 });
 
-                document.getElementById('hm-role-modal').classList.add('open');
+                document.getElementById('hm-role-modal').style.display = 'flex';
             },
-            close: function() { document.getElementById('hm-role-modal').classList.remove('open'); },
+            close: function() { document.getElementById('hm-role-modal').style.display = 'none'; },
             save: function() {
                 var display = document.getElementById('hmrl-display').value.trim();
                 var name    = document.getElementById('hmrl-name').value.trim();
