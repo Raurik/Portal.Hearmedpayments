@@ -41,6 +41,7 @@ class HearMed_Admin_Console {
                 ['SMS Templates', 'sms-templates'],
                 ['Communication Settings', 'communication-settings'],
                 ['Lead Types', 'lead-types'],
+                ['Pusher Settings', 'chat-logs'],
             ]],
             ['Finance', [
                 ['Finance Settings', 'finance-settings'],

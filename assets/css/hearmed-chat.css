@@ -19,9 +19,10 @@
 /* ── SIDEBAR ─────────────────────────────────────────────────────────── */
 
 .hm-chat-sidebar {
-    width: 260px;
-    min-width: 220px;
-    background: #151B33;
+    width: 270px;
+    min-width: 230px;
+    background: #ffffff;
+    border-right: 1px solid #e8f0f2;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -32,71 +33,93 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 16px 14px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 20px 18px 16px;
+    border-bottom: 1px solid #e8f0f2;
+    background: #fff;
 }
 
 .hm-chat-logo {
-    color: #fff;
+    color: #151B33;
     font-size: 16px;
     font-weight: 700;
     letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hm-chat-logo::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #0BB4C4;
+    box-shadow: 0 0 0 3px rgba(11, 180, 196, 0.2);
 }
 
 .hm-chat-new-dm-btn {
-    background: rgba(11, 180, 196, 0.15);
-    border: 1px solid rgba(11, 180, 196, 0.3);
-    border-radius: 6px;
+    background: #f0fbfc;
+    border: 1px solid rgba(11, 180, 196, 0.35);
+    border-radius: 7px;
     color: #0BB4C4;
-    padding: 4px 6px;
+    padding: 5px 7px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    transition: background 0.15s;
+    transition: all 0.15s;
 }
 
 .hm-chat-new-dm-btn:hover {
-    background: rgba(11, 180, 196, 0.3);
+    background: #0BB4C4;
+    color: #fff;
+    border-color: #0BB4C4;
 }
 
 .hm-chat-section-label {
-    padding: 12px 16px 4px;
-    font-size: 11px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.4);
+    padding: 14px 18px 5px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #b0bec5;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
 }
 
 .hm-chat-channel-list {
     flex: 1;
     overflow-y: auto;
-    padding: 2px 8px 8px;
+    padding: 2px 10px 10px;
 }
 
-.hm-chat-channel-list::-webkit-scrollbar { width: 4px; }
-.hm-chat-channel-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.hm-chat-channel-list::-webkit-scrollbar { width: 3px; }
+.hm-chat-channel-list::-webkit-scrollbar-thumb { background: #e2eef0; border-radius: 2px; }
 
 .hm-chat-channel-item {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 10px;
-    border-radius: 8px;
+    padding: 9px 10px;
+    border-radius: 9px;
     cursor: pointer;
-    transition: background 0.12s;
-    color: rgba(255,255,255,0.7);
+    transition: all 0.12s;
+    color: #151B33;
     position: relative;
+    margin-bottom: 1px;
 }
 
 .hm-chat-channel-item:hover {
-    background: rgba(255,255,255,0.06);
-    color: #fff;
+    background: #f0fbfc;
+    color: #0BB4C4;
 }
 
 .hm-chat-channel-item.active {
-    background: rgba(11, 180, 196, 0.18);
-    color: #fff;
+    background: linear-gradient(135deg, rgba(11, 180, 196, 0.1), rgba(11, 180, 196, 0.06));
+    border: 1px solid rgba(11, 180, 196, 0.2);
+}
+
+.hm-chat-channel-item.active .hm-chat-ch-name {
+    color: #0BB4C4;
+    font-weight: 700;
 }
 
 .hm-chat-channel-item.active .hm-chat-ch-icon {
@@ -104,10 +127,15 @@
 }
 
 .hm-chat-ch-icon {
-    font-size: 14px;
+    font-size: 13px;
     flex-shrink: 0;
     width: 20px;
     text-align: center;
+    color: #b0bec5;
+}
+
+.hm-chat-channel-item:hover .hm-chat-ch-icon {
+    color: #0BB4C4;
 }
 
 .hm-chat-ch-body {
@@ -117,7 +145,8 @@
 
 .hm-chat-ch-name {
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
+    color: #0BB4C4;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -126,7 +155,7 @@
 
 .hm-chat-ch-preview {
     font-size: 11px;
-    color: rgba(255,255,255,0.35);
+    color: #94a3b8;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -557,7 +586,7 @@
 .hm-chat-loading {
     padding: 12px;
     font-size: 13px;
-    color: rgba(255,255,255,0.4);
+    color: #b0bec5;
     text-align: center;
 }
 
