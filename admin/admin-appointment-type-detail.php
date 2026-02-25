@@ -377,7 +377,11 @@ class HearMed_Admin_Appointment_Type_Detail {
         </div><!-- #hm-app -->
 
         <script>
-        (function($){
+        jQuery(function($){
+            if (typeof HM === 'undefined') {
+                console.error('[HM ServiceDetail] HM global not found — hearmed-core.js may not be loaded');
+                return;
+            }
             var SVC_ID = <?php echo $service_id; ?>;
             var ajaxUrl = HM.ajax_url || HM.ajax;
             var nonce   = HM.nonce;
@@ -509,7 +513,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                 });
             });
 
-        })(jQuery);
+        });
         </script>
         <?php
         return ob_get_clean();
