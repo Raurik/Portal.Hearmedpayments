@@ -63,6 +63,12 @@ class HearMed_Admin_Roles {
         $perms = self::$available_permissions;
 
         ob_start(); ?>
+        <style>
+        .hm-perms-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px 16px;max-height:280px;overflow-y:auto;padding:8px 12px;border:1px solid var(--hm-border,#e2e8f0);border-radius:8px;background:#f8fafc;}
+        .hm-perms-grid label{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:4px 0;color:#334155;}
+        .hm-perms-grid label input{accent-color:var(--hm-primary,#0BB4C4);width:14px;height:14px;margin:0;}
+        @media(max-width:700px){.hm-perms-grid{grid-template-columns:1fr 1fr;}}
+        </style>
         <div class="hm-admin" id="hm-roles-admin">
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
@@ -70,7 +76,7 @@ class HearMed_Admin_Roles {
                 <button class="hm-btn hm-btn-teal" onclick="hmRoles.open()">+ Add Role</button>
             </div>
 
-            <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">
+            <p style="color:var(--hm-text-light);font-size:12px;margin-bottom:16px;">
                 Define roles and their permissions. Each staff member is assigned a role that controls what they can see and do.
             </p>
 
@@ -102,7 +108,7 @@ class HearMed_Admin_Roles {
                             <td><strong><?php echo esc_html($r->display_name); ?></strong></td>
                             <td><code style="font-size:11px;color:#64748b;"><?php echo esc_html($r->role_name); ?></code></td>
                             <td style="font-size:12px;color:var(--hm-text-light);"><?php echo esc_html($r->description ?: '—'); ?></td>
-                            <td class="hm-num"><?php echo count($role_perms); ?></td>
+                            <td class="hm-num"><span class="hm-badge hm-badge-blue"><?php echo count($role_perms); ?></span></td>
                             <td class="hm-table-acts">
                                 <button class="hm-btn hm-btn-sm" onclick='hmRoles.open(<?php echo $payload; ?>)'>Edit</button>
                                 <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmRoles.del(<?php echo (int) $r->id; ?>,'<?php echo esc_js($r->display_name); ?>')">Delete</button>
@@ -137,10 +143,10 @@ class HearMed_Admin_Roles {
                             <textarea id="hmrl-desc" rows="2" placeholder="What this role does..."></textarea>
                         </div>
                         <div class="hm-form-group">
-                            <label>Permissions</label>
-                            <div id="hmrl-perms" style="display:flex;flex-wrap:wrap;gap:10px;max-height:260px;overflow-y:auto;padding:4px 0;">
+                            <label style="margin-bottom:6px;display:block;">Permissions</label>
+                            <div class="hm-perms-grid" id="hmrl-perms">
                                 <?php foreach ($perms as $key => $label): ?>
-                                    <label class="hm-day-check">
+                                    <label>
                                         <input type="checkbox" class="hm-role-perm" value="<?php echo esc_attr($key); ?>">
                                         <?php echo esc_html($label); ?>
                                     </label>
