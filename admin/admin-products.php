@@ -232,6 +232,7 @@ class HearMed_Admin_Products {
                                                 <option value="<?php echo (int) $m->id; ?>" data-name="<?php echo esc_attr($m->name); ?>"><?php echo esc_html($m->name); ?></option>
                                             <?php endforeach; ?>
                                         </select>
+                                        <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('manufacturer','Brand',['hmp-manufacturer','hmp-bnd-mfr','hmp-acc-mfr'],{dataName:true})" title="Add new brand" style="padding:4px 10px;">+</button>
                                     </div>
                                 </div>
                                 <div class="hm-form-group">
@@ -318,12 +319,15 @@ class HearMed_Admin_Products {
                             <div class="hm-form-row">
                                 <div class="hm-form-group">
                                     <label>Manufacturer</label>
-                                    <select id="hmp-bnd-mfr">
-                                        <option value="">Select brand</option>
-                                        <?php foreach ($manufacturers as $m): ?>
-                                            <option value="<?php echo (int) $m->id; ?>"><?php echo esc_html($m->name); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <div style="display:flex;gap:4px;">
+                                        <select id="hmp-bnd-mfr" style="flex:1">
+                                            <option value="">Select brand</option>
+                                            <?php foreach ($manufacturers as $m): ?>
+                                                <option value="<?php echo (int) $m->id; ?>"><?php echo esc_html($m->name); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('manufacturer','Brand',['hmp-manufacturer','hmp-bnd-mfr','hmp-acc-mfr'],{dataName:true})" title="Add new brand" style="padding:4px 10px;">+</button>
+                                    </div>
                                 </div>
                                 <div class="hm-form-group">
                                     <label>Category *</label>
@@ -391,12 +395,15 @@ class HearMed_Admin_Products {
                             <div class="hm-form-row">
                                 <div class="hm-form-group">
                                     <label>Manufacturer</label>
-                                    <select id="hmp-acc-mfr">
-                                        <option value="">Select brand</option>
-                                        <?php foreach ($manufacturers as $m): ?>
-                                            <option value="<?php echo (int) $m->id; ?>"><?php echo esc_html($m->name); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <div style="display:flex;gap:4px;">
+                                        <select id="hmp-acc-mfr" style="flex:1">
+                                            <option value="">Select brand</option>
+                                            <?php foreach ($manufacturers as $m): ?>
+                                                <option value="<?php echo (int) $m->id; ?>"><?php echo esc_html($m->name); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('manufacturer','Brand',['hmp-manufacturer','hmp-bnd-mfr','hmp-acc-mfr'],{dataName:true})" title="Add new brand" style="padding:4px 10px;">+</button>
+                                    </div>
                                 </div>
                             </div>
                             <div class="hm-form-row">

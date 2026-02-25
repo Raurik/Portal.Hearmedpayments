@@ -247,3 +247,45 @@
     });
     
 })(jQuery);
+
+/**
+ * Generic Quick-Add for dropdowns.
+ * Usage: hmQuickAdd('manufacturer', 'Brand', ['selectId1','selectId2'], {dataName: true})
+ * @param {string}   entity   - Entity type: manufacturer|clinic|role|appointment_type
+ * @param {string}   label    - Display label for prompt, e.g. "Brand"
+ * @param {string|string[]} selectIds - ID(s) of <select> elements to update
+ * @param {object}   opts     - Options: {dataName:bool, useRoleName:bool, setValue:bool}
+ */
+function hmQuickAdd(entity, label, selectIds, opts) {
+    opts = opts || {};
+    var name = prompt('Enter new ' + label + ' name:');
+    if (!name || !name.trim()) return;
+    name = name.trim();
+    jQuery.post(HM.ajax_url, {
+        action: 'hm_quick_add',
+        nonce: HM.nonce,
+        entity: entity,
+        name: name
+    }, function(r) {
+        if (r.success) {
+            var ids = Array.isArray(selectIds) ? selectIds : [selectIds];
+            ids.forEach(function(sid) {
+                var sel = document.getElementById(sid);
+                if (!sel) return;
+                var opt = document.createElement('option');
+                opt.value = r.data.id;
+                opt.textContent = r.data.name;
+                if (opts.dataName) opt.setAttribute('data-name', r.data.name);
+                if (opts.useRoleName) { opt.value = r.data.role_name; opt.textContent = r.data.name; }
+                sel.appendChild(opt);
+            });
+            // Select the new value in the first dropdown
+            var first = document.getElementById(ids[0]);
+            if (first && opts.setValue !== false) first.value = r.data.id;
+            if (first && opts.useRoleName) first.value = r.data.role_name;
+            if (typeof HM.toast === 'function') HM.toast(label + ' "' + r.data.name + '" added', 'success');
+        } else {
+            alert(r.data || 'Error adding ' + label.toLowerCase());
+        }
+    });
+}

@@ -198,12 +198,15 @@ class HearMed_Admin_Resources {
                         <input type="hidden" id="hmr-room-id">
                         <div class="hm-form-group">
                             <label>Clinic *</label>
-                            <select id="hmr-room-clinic">
-                                <option value="">Select clinic</option>
-                                <?php foreach ($clinics as $c): ?>
-                                    <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <div style="display:flex;gap:4px;">
+                                <select id="hmr-room-clinic" style="flex:1">
+                                    <option value="">Select clinic</option>
+                                    <?php foreach ($clinics as $c): ?>
+                                        <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('clinic','Clinic',['hmr-room-clinic','hmr-equip-clinic'])" title="Add new clinic" style="padding:4px 10px;">+</button>
+                            </div>
                         </div>
                         <div class="hm-form-group">
                             <label>Room Name *</label>
@@ -229,12 +232,15 @@ class HearMed_Admin_Resources {
                         <div class="hm-form-row">
                             <div class="hm-form-group">
                                 <label>Clinic *</label>
-                                <select id="hmr-equip-clinic" onchange="hmRes.filterRooms()">
-                                    <option value="">Select clinic</option>
-                                    <?php foreach ($clinics as $c): ?>
-                                        <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                                <div style="display:flex;gap:4px;">
+                                    <select id="hmr-equip-clinic" style="flex:1" onchange="hmRes.filterRooms()">
+                                        <option value="">Select clinic</option>
+                                        <?php foreach ($clinics as $c): ?>
+                                            <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('clinic','Clinic',['hmr-room-clinic','hmr-equip-clinic'])" title="Add new clinic" style="padding:4px 10px;">+</button>
+                                </div>
                             </div>
                             <div class="hm-form-group">
                                 <label>Room</label>

@@ -116,9 +116,12 @@ class HearMed_Admin_Audiometers {
                         </div>
                         <div class="hm-form-row">
                             <div class="hm-form-group"><label>Clinic</label>
-                                <select id="hma-clinic"><option value="">— None —</option>
+                                <div style="display:flex;gap:4px;">
+                                <select id="hma-clinic" style="flex:1"><option value="">— None —</option>
                                 <?php foreach ($clinics as $c): ?><option value="<?php echo $c['id']; ?>"><?php echo esc_html($c['name']); ?></option><?php endforeach; ?>
                                 </select>
+                                <button type="button" class="hm-btn hm-btn-sm" onclick="hmQuickAdd('clinic','Clinic','hma-clinic')" title="Add new clinic" style="padding:4px 10px;">+</button>
+                                </div>
                             </div>
                             <div class="hm-form-group"><label class="hm-toggle-label"><input type="checkbox" id="hma-active" checked> Active</label></div>
                         </div>
