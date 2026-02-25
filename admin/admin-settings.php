@@ -43,10 +43,11 @@ class HearMed_Admin_Settings {
         /* Document Types shortcode now handled by admin-document-templates.php */
         'hearmed_form_settings' => [
             'title' => 'Form & Input Settings',
+            'custom_render' => 'render_form_settings',
             'fields' => [
                 ['key' => 'hm_signature_method', 'label' => 'Signature Capture Method', 'type' => 'select', 'options' => ['wacom' => 'Wacom Signature Pad', 'touch' => 'Touch/Mouse Canvas', 'none' => 'No Signature'], 'default' => 'wacom'],
                 ['key' => 'hm_require_gdpr_consent', 'label' => 'Require GDPR Consent on Forms', 'type' => 'toggle', 'default' => '1'],
-                ['key' => 'hm_form_types', 'label' => 'Form Types (one per line)', 'type' => 'textarea', 'default' => "New Digital Consent Form\nGeneral Consent Form\nAudiogram\nGP/ENT Referral\nHearing Test\nRepair Form\nCase History\nFitting Receipt\nPhone Call Log"],
+                ['key' => 'hm_form_types', 'label' => 'Form Types', 'type' => 'text', 'default' => "New Digital Consent Form\nGeneral Consent Form\nAudiogram\nGP/ENT Referral\nHearing Test\nRepair Form\nCase History\nFitting Receipt\nPhone Call Log"],
             ],
         ],
         'hearmed_cash_settings' => [
@@ -330,6 +331,134 @@ class HearMed_Admin_Settings {
                     btn.textContent = 'Change';
                     btn.onclick = function() { hmSettings.editSecret(btn); };
                 };
+            }
+        };
+        </script>
+        <?php return ob_get_clean();
+    }
+
+    /* =============================
+       CUSTOM RENDER: Form & Input Settings
+       ============================= */
+    public function render_form_settings($tag, $page) {
+        $v = function($key, $default = '') {
+            return get_option($key, $default);
+        };
+
+        $sig_method = $v('hm_signature_method', 'wacom');
+        $gdpr_req   = $v('hm_require_gdpr_consent', '1');
+        $ft_raw     = $v('hm_form_types', "New Digital Consent Form\nGeneral Consent Form\nAudiogram\nGP/ENT Referral\nHearing Test\nRepair Form\nCase History\nFitting Receipt\nPhone Call Log");
+        $form_types = array_filter(array_map('trim', explode("\n", $ft_raw)));
+
+        ob_start(); ?>
+        <style>
+        .hm-ft-blocks{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+        .hm-ft-block{display:inline-flex;align-items:center;gap:5px;background:var(--hm-primary,#3b82f6);color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;}
+        .hm-ft-block .hm-ft-x{cursor:pointer;opacity:.7;font-size:14px;line-height:1;}
+        .hm-ft-block .hm-ft-x:hover{opacity:1;}
+        .hm-ft-add-wrap{display:flex;gap:6px;align-items:center;}
+        .hm-ft-add-wrap input{flex:1;}
+        </style>
+        <div class="hm-admin">
+            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+            <div class="hm-admin-hd">
+                <h2>Form &amp; Input Settings</h2>
+                <button class="hm-btn hm-btn-teal" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+            </div>
+
+            <div class="hm-settings-panel" style="max-width:560px;">
+                <div class="hm-form-group">
+                    <label>Signature Capture Method</label>
+                    <select class="hm-stg-field" data-key="hm_signature_method">
+                        <option value="wacom" <?php selected($sig_method, 'wacom'); ?>>Wacom Signature Pad</option>
+                        <option value="touch" <?php selected($sig_method, 'touch'); ?>>Touch/Mouse Canvas</option>
+                        <option value="none" <?php selected($sig_method, 'none'); ?>>No Signature</option>
+                    </select>
+                </div>
+
+                <div class="hm-form-group">
+                    <label class="hm-toggle-label">
+                        <input type="checkbox" class="hm-stg-field" data-key="hm_require_gdpr_consent" <?php checked($gdpr_req, '1'); ?>>
+                        Require GDPR Consent on Forms
+                    </label>
+                </div>
+            </div>
+
+            <div class="hm-settings-panel" style="max-width:560px;margin-top:16px;">
+                <h3 style="font-size:14px;margin-bottom:12px;">Form Types</h3>
+                <p style="color:var(--hm-text-light);font-size:11px;margin-bottom:10px;">These appear in patient form dropdowns across the portal.</p>
+
+                <div class="hm-ft-blocks" id="hm-ft-blocks">
+                    <?php foreach ($form_types as $ft): ?>
+                    <span class="hm-ft-block">
+                        <span class="hm-ft-name"><?php echo esc_html($ft); ?></span>
+                        <span class="hm-ft-x" onclick="hmFormTypes.remove(this)" title="Remove">&times;</span>
+                    </span>
+                    <?php endforeach; ?>
+                </div>
+                <div class="hm-ft-add-wrap">
+                    <input type="text" id="hm-ft-new" placeholder="New form type..." class="hm-search-input" style="font-size:12px;padding:5px 8px;" onkeydown="if(event.key==='Enter'){event.preventDefault();hmFormTypes.add();}">
+                    <button type="button" class="hm-btn hm-btn-teal hm-btn-sm" onclick="hmFormTypes.add()">+ Add</button>
+                </div>
+                <input type="hidden" class="hm-stg-field" data-key="hm_form_types" id="hm-ft-hidden" value="<?php echo esc_attr($ft_raw); ?>">
+            </div>
+        </div>
+
+        <script>
+        var hmFormTypes = {
+            syncHidden: function() {
+                var names = [];
+                document.querySelectorAll('#hm-ft-blocks .hm-ft-name').forEach(function(el) {
+                    names.push(el.textContent.trim());
+                });
+                document.getElementById('hm-ft-hidden').value = names.join('\n');
+            },
+            add: function() {
+                var inp = document.getElementById('hm-ft-new');
+                var name = inp.value.trim();
+                if (!name) return;
+                // Duplicate check
+                var existing = [];
+                document.querySelectorAll('#hm-ft-blocks .hm-ft-name').forEach(function(el) { existing.push(el.textContent.trim().toLowerCase()); });
+                if (existing.indexOf(name.toLowerCase()) !== -1) { inp.value = ''; return; }
+
+                var block = document.createElement('span');
+                block.className = 'hm-ft-block';
+                block.innerHTML = '<span class="hm-ft-name">' + name.replace(/</g,'&lt;') + '</span><span class="hm-ft-x" onclick="hmFormTypes.remove(this)" title="Remove">&times;</span>';
+                document.getElementById('hm-ft-blocks').appendChild(block);
+                inp.value = '';
+                hmFormTypes.syncHidden();
+            },
+            remove: function(x) {
+                if (!confirm('Remove "' + x.previousElementSibling.textContent.trim() + '"?')) return;
+                x.closest('.hm-ft-block').remove();
+                hmFormTypes.syncHidden();
+            }
+        };
+
+        var hmSettings = {
+            save: function(tag) {
+                hmFormTypes.syncHidden();
+                var data = { action:'hm_admin_save_settings_page', nonce:HM.nonce, page_tag:tag, settings:{} };
+                document.querySelectorAll('.hm-stg-field').forEach(function(el) {
+                    var key = el.dataset.key;
+                    if (el.type === 'checkbox') data.settings[key] = el.checked ? '1' : '0';
+                    else data.settings[key] = el.value;
+                });
+                data.settings = JSON.stringify(data.settings);
+                var btn = document.getElementById('hms-save-btn');
+                btn.textContent = 'Saving...'; btn.disabled = true;
+                jQuery.post(HM.ajax_url, data, function(r) {
+                    if (r.success) { btn.textContent = '\u2713 Saved'; setTimeout(function(){ btn.textContent = 'Save Settings'; btn.disabled = false; }, 1500); }
+                    else { alert(r.data || 'Error'); btn.textContent = 'Save Settings'; btn.disabled = false; }
+                });
+            },
+            editSecret: function(btn) {
+                var wrap = btn.closest('.hm-secret-wrap');
+                var inp  = wrap.querySelector('input');
+                inp.readOnly = false; inp.type = 'password'; inp.value = ''; inp.style.color = ''; inp.style.letterSpacing = ''; inp.placeholder = 'Enter new value...'; inp.focus();
+                btn.textContent = 'Cancel';
+                btn.onclick = function() { inp.readOnly = true; inp.type = 'text'; inp.value = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'; inp.style.color = '#94a3b8'; inp.style.letterSpacing = '2px'; inp.placeholder = ''; btn.textContent = 'Change'; btn.onclick = function() { hmSettings.editSecret(btn); }; };
             }
         };
         </script>
