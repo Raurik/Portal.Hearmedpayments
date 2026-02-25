@@ -264,15 +264,20 @@ class HearMed_Admin_Appointment_Type_Detail {
                                 <?php if (!empty($o->triggers_reminder) && $o->triggers_reminder): ?>
                                     <span class="hm-badge hm-badge-sm" style="background:#a855f7;color:#fff;">SMS</span>
                                 <?php endif; ?>
+                                <?php if (!empty($o->triggers_followup_call) && $o->triggers_followup_call): ?>
+                                    <span class="hm-badge hm-badge-sm" style="background:#f97316;color:#fff;">Call <?php echo intval($o->followup_call_days ?? 7); ?>d</span>
+                                <?php endif; ?>
                                 <button class="hm-btn hm-btn-sm hm-outcome-edit" data-row='<?php echo json_encode([
-                                    'id'                   => (int)$o->id,
-                                    'outcome_name'         => $o->outcome_name,
-                                    'outcome_color'        => $oc,
-                                    'is_invoiceable'       => !empty($o->is_invoiceable) && $o->is_invoiceable,
-                                    'requires_note'        => !empty($o->requires_note) && $o->requires_note,
-                                    'triggers_followup'    => !empty($o->triggers_followup) && $o->triggers_followup,
-                                    'followup_service_ids' => $fu_ids,
-                                    'triggers_reminder'    => !empty($o->triggers_reminder) && $o->triggers_reminder,
+                                    'id'                    => (int)$o->id,
+                                    'outcome_name'          => $o->outcome_name,
+                                    'outcome_color'         => $oc,
+                                    'is_invoiceable'        => !empty($o->is_invoiceable) && $o->is_invoiceable,
+                                    'requires_note'         => !empty($o->requires_note) && $o->requires_note,
+                                    'triggers_followup'     => !empty($o->triggers_followup) && $o->triggers_followup,
+                                    'followup_service_ids'  => $fu_ids,
+                                    'triggers_reminder'     => !empty($o->triggers_reminder) && $o->triggers_reminder,
+                                    'triggers_followup_call'=> !empty($o->triggers_followup_call) && $o->triggers_followup_call,
+                                    'followup_call_days'    => intval($o->followup_call_days ?? 7),
                                 ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>'>Edit</button>
                                 <button class="hm-btn hm-btn-sm hm-btn-red hm-outcome-del" data-id="<?php echo (int)$o->id; ?>" data-name="<?php echo esc_attr($o->outcome_name); ?>">Delete</button>
                             </span>
@@ -377,6 +382,20 @@ class HearMed_Admin_Appointment_Type_Detail {
                                 Triggers SMS reminder
                             </label>
                         </div>
+                        <div class="hm-srow">
+                            <label class="hm-day-check">
+                                <input type="checkbox" id="hmo-followup-call">
+                                <span class="hm-check"></span>
+                                Triggers follow-up call
+                            </label>
+                        </div>
+                        <div id="hmo-followup-call-wrap" style="margin-top:4px;display:none;margin-left:24px;margin-bottom:8px;">
+                            <div class="hm-srow">
+                                <span class="hm-slbl">Call patient after</span>
+                                <span class="hm-sval" style="width:120px;display:flex;align-items:center;gap:6px;"><input type="number" class="hm-inp" id="hmo-call-days" value="7" min="1" max="365" style="width:60px;"> days</span>
+                            </div>
+                            <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">Creates a reminder in the patient file for the dispenser to phone the patient.</p>
+                        </div>
                         <div id="hmo-followup-wrap" style="margin-top:4px;display:none;">
                             <span class="hm-slbl" style="display:block;margin-bottom:8px;">Follow-up appointment type(s)</span>
                             <div class="hm-days-grid" id="hmo-followup-opts">
@@ -465,6 +484,8 @@ class HearMed_Admin_Appointment_Type_Detail {
                     $('#hmo-note').prop('checked', isEdit ? !!data.requires_note : false);
                     $('#hmo-followup').prop('checked', isEdit ? !!data.triggers_followup : false);
                     $('#hmo-reminder').prop('checked', isEdit ? !!data.triggers_reminder : false);
+                    $('#hmo-followup-call').prop('checked', isEdit ? !!data.triggers_followup_call : false);
+                    $('#hmo-call-days').val(isEdit && data.followup_call_days ? data.followup_call_days : 7);
                     // Follow-up services
                     $('.hmo-fu-svc').prop('checked', false);
                     if (isEdit && data.followup_service_ids && data.followup_service_ids.length) {
@@ -473,6 +494,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                         });
                     }
                     $('#hmo-followup-wrap').toggle($('#hmo-followup').is(':checked'));
+                    $('#hmo-followup-call-wrap').toggle($('#hmo-followup-call').is(':checked'));
                     $('#hm-outcome-modal').addClass('open');
                     setTimeout(function(){ $('#hmo-name').focus(); }, 100);
                 },
@@ -483,6 +505,10 @@ class HearMed_Admin_Appointment_Type_Detail {
 
             $('#hmo-followup').on('change', function(){
                 $('#hmo-followup-wrap').toggle(this.checked);
+            });
+
+            $('#hmo-followup-call').on('change', function(){
+                $('#hmo-followup-call-wrap').toggle(this.checked);
             });
 
             $('#hm-add-outcome').on('click', function(){ hmOutcome.open(); });
@@ -510,7 +536,9 @@ class HearMed_Admin_Appointment_Type_Detail {
                     requires_note: $('#hmo-note').is(':checked') ? 1 : 0,
                     triggers_followup: $('#hmo-followup').is(':checked') ? 1 : 0,
                     followup_service_ids: JSON.stringify(fuIds),
-                    triggers_reminder: $('#hmo-reminder').is(':checked') ? 1 : 0
+                    triggers_reminder: $('#hmo-reminder').is(':checked') ? 1 : 0,
+                    triggers_followup_call: $('#hmo-followup-call').is(':checked') ? 1 : 0,
+                    followup_call_days: $('#hmo-call-days').val()
                 }, function(r){
                     btn.text('Save Outcome').prop('disabled', false);
                     if (r.success) location.reload();
@@ -622,6 +650,8 @@ class HearMed_Admin_Appointment_Type_Detail {
             'triggers_followup'    => !empty($_POST['triggers_followup']),
             'followup_service_ids' => wp_json_encode($fu_ids),
             'triggers_reminder'    => !empty($_POST['triggers_reminder']),
+            'triggers_followup_call'=> !empty($_POST['triggers_followup_call']),
+            'followup_call_days'   => max(1, intval($_POST['followup_call_days'] ?? 7)),
             'updated_at'           => current_time('mysql'),
         ];
 

@@ -20,6 +20,12 @@ CREATE TABLE IF NOT EXISTS hearmed_core.outcome_templates (
 ALTER TABLE hearmed_core.outcome_templates
     ADD COLUMN IF NOT EXISTS triggers_reminder boolean DEFAULT false;
 
+ALTER TABLE hearmed_core.outcome_templates
+    ADD COLUMN IF NOT EXISTS triggers_followup_call boolean DEFAULT false;
+
+ALTER TABLE hearmed_core.outcome_templates
+    ADD COLUMN IF NOT EXISTS followup_call_days integer DEFAULT 7;
+
 -- 3. Add missing columns to services table for the detail page
 ALTER TABLE hearmed_reference.services
     ADD COLUMN IF NOT EXISTS text_color character varying(10) DEFAULT '#FFFFFF',
