@@ -93,6 +93,7 @@ class HearMed_Core {
             HEARMED_PATH . 'admin/admin-dispenser-schedules.php',
             HEARMED_PATH . 'admin/admin-staff-login.php',
             HEARMED_PATH . 'admin/admin-appointment-types.php',
+            HEARMED_PATH . 'admin/admin-appointment-type-detail.php',
             HEARMED_PATH . 'admin/admin-blockouts.php',
             HEARMED_PATH . 'admin/admin-holidays.php',
             HEARMED_PATH . 'admin/admin-exclusions.php',
@@ -126,6 +127,8 @@ class HearMed_Core {
             HEARMED_PATH . 'modules/mod-commissions.php',
             HEARMED_PATH . 'modules/mod-kpi.php',
             HEARMED_PATH . 'modules/mod-cash.php',
+            HEARMED_PATH . 'core/class-hearmed-invoice.php',
+            HEARMED_PATH . 'modules/mod-forms.php', 
         ];
         foreach ( $module_files as $file ) {
             if ( file_exists( $file ) ) {

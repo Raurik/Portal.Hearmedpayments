@@ -1380,8 +1380,17 @@ class HearMed_Orders {
         // 7. Status history log
         self::log_status_change($order_id, 'Awaiting Fitting', 'Complete', $user->id ?? null, 'Fitted and paid');
 
-        // 8. ✅ QBO fires HERE — paid invoice only — never before
-        HearMed_Accounting::on_invoice_created($order_id);
+        // Create proper invoice with VAT breakdown and payment record
+        $payment_data = [
+            'amount'         => $amount,
+            'payment_date'   => $fit_date,
+            'payment_method' => $order->payment_method ?? 'Card',
+            'received_by'    => $user->ID ?? null,
+        ];
+        if (class_exists('HearMed_Invoice')) {
+            HearMed_Invoice::create_from_order($order_id, $payment_data);
+        }
+
 
         wp_send_json_success([
             'message'  => 'Fitting complete. Invoice finalised and sent to QuickBooks.',
