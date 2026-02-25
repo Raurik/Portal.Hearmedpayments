@@ -127,7 +127,22 @@ class HearMed_Admin_Appointment_Type_Detail {
         #hm-app .hm-btn-red     { color:#ef4444; }
 
         /* Preview bar */
-        #hm-app #hm-svc-preview { display:inline-block; padding:10px 126px; border-radius:6px; font-size:13px; font-weight:600; white-space:nowrap; }
+        /* Appointment preview card — matches calendar-settings preview */
+        #hm-app .hm-appt-preview-wrap { display:flex; align-items:center; justify-content:center; padding:8px 0; }
+        #hm-app .hm-appt-preview-card { width:100%; max-width:280px; border-radius:8px; overflow:hidden; box-shadow:0 2px 12px rgba(15,23,42,.08); display:flex; flex-direction:column; }
+        #hm-app .hm-appt-outcome-banner { padding:8px 14px; font-size:13px; font-weight:600; color:#fff; background:#22c55e; transition:background .2s; }
+        #hm-app .hm-appt-body { padding:10px 14px; display:flex; flex-direction:column; gap:6px; }
+        #hm-app .hm-appt-name { font-size:13px; font-weight:700; }
+        #hm-app .hm-appt-badges { display:flex; gap:5px; margin:2px 0; }
+        #hm-app .hm-appt-badges .hm-badge { height:18px; min-width:18px; padding:0 5px; border-radius:4px; font-size:9px; font-weight:700; color:#fff; display:inline-flex; align-items:center; justify-content:center; }
+        #hm-app .hm-badge-c { background:#3b82f6; }
+        #hm-app .hm-badge-r { background:#6366f1; }
+        #hm-app .hm-badge-v { background:#8b5cf6; }
+        #hm-app .hm-appt-time { font-size:13px; font-weight:600; color:#0ea5a4; }
+        #hm-app .hm-appt-meta { font-size:12px; color:#64748b; }
+        /* Outcome row hover hint */
+        #hm-app .hm-outcome-row { cursor:pointer; transition:background .15s; }
+        #hm-app .hm-outcome-row:hover { background:#f8fafc; }
 
         /* Modal */
         .hm-modal-bg             { display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:9999; align-items:center; justify-content:center; }
@@ -200,10 +215,18 @@ class HearMed_Admin_Appointment_Type_Detail {
 
                 <!-- Card 3: Preview -->
                 <div class="hm-card">
-                    <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">Preview</div>
-                    <div class="hm-card-body" style="display:flex;align-items:center;justify-content:center;min-height:60px;">
-                        <div id="hm-svc-preview" style="background:<?php echo esc_attr($colour); ?>;color:<?php echo esc_attr($text_colour); ?>;">
-                            <?php echo esc_html($svc->service_name); ?>
+                    <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">Appointment Preview</div>
+                    <div class="hm-card-body">
+                        <div class="hm-appt-preview-wrap">
+                        <div class="hm-appt-preview-card" id="hm-svc-preview" style="background:<?php echo esc_attr($colour); ?>;color:<?php echo esc_attr($text_colour); ?>;">
+                            <div class="hm-appt-outcome-banner" id="hm-preview-banner" style="background:#22c55e;">Outcome</div>
+                            <div class="hm-appt-body">
+                                <div class="hm-appt-name" id="hm-preview-name"><?php echo esc_html($svc->service_name); ?></div>
+                                <div class="hm-appt-badges"><span class="hm-badge hm-badge-c">C</span> <span class="hm-badge hm-badge-r">R</span> <span class="hm-badge hm-badge-v">VM</span></div>
+                                <div class="hm-appt-time">09:00</div>
+                                <div class="hm-appt-meta"><?php echo esc_html($svc->service_name); ?> · Sample Clinic</div>
+                            </div>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -224,7 +247,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                             $oc = $o->outcome_color ?: '#cccccc';
                             $fu_ids = $o->followup_service_ids ? json_decode($o->followup_service_ids, true) : [];
                         ?>
-                        <div class="hm-srow" style="padding:8px 0;border-bottom:1px solid #f1f5f9;" data-id="<?php echo (int)$o->id; ?>">
+                        <div class="hm-srow hm-outcome-row" style="padding:8px 0;border-bottom:1px solid #f1f5f9;" data-id="<?php echo (int)$o->id; ?>" data-color="<?php echo esc_attr($oc); ?>" data-name="<?php echo esc_attr($o->outcome_name); ?>">
                             <span style="width:16px;height:16px;border-radius:4px;background:<?php echo esc_attr($oc); ?>;flex-shrink:0;display:inline-block;"></span>
                             <span class="hm-slbl" style="font-weight:600;color:#0f172a;"><?php echo esc_html($o->outcome_name); ?></span>
                             <span style="display:flex;gap:6px;align-items:center;">
@@ -388,12 +411,23 @@ class HearMed_Admin_Appointment_Type_Detail {
 
             /* ── Live preview ── */
             function updatePreview() {
-                var $p = $('#hm-svc-preview');
-                $p.css({ background: $('#hm-svc-colour').val(), color: $('#hm-svc-text-colour').val() });
-                $p.text($('#hm-svc-name').val() || 'Preview');
+                var bg = $('#hm-svc-colour').val();
+                var fg = $('#hm-svc-text-colour').val();
+                var name = $('#hm-svc-name').val() || 'Preview';
+                $('#hm-svc-preview').css({ background: bg, color: fg });
+                $('#hm-preview-name').text(name);
+                $('.hm-appt-meta').first().text(name + ' · Sample Clinic');
             }
             $('#hm-svc-colour, #hm-svc-text-colour').on('input', updatePreview);
             $('#hm-svc-name').on('input', updatePreview);
+
+            /* ── Outcome row click → update banner preview ── */
+            $(document).on('click', '.hm-outcome-row', function(e) {
+                if ($(e.target).closest('.hm-btn').length) return; // don't trigger on edit/delete buttons
+                var color = $(this).data('color') || '#22c55e';
+                var name  = $(this).data('name') || 'Outcome';
+                $('#hm-preview-banner').css('background', color).text(name);
+            });
 
             /* ── Save details ── */
             $('#hm-svc-save-details').on('click', function(){
