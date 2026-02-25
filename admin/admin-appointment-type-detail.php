@@ -78,27 +78,65 @@ class HearMed_Admin_Appointment_Type_Detail {
         ob_start();
         ?>
         <style>
-        /* Appointment-type-detail supplements (extends calendar-settings.css) */
-        #hm-app .hm-page-header { margin-bottom:24px; }
-        #hm-app .hm-page-title  { font-size:22px; font-weight:700; color:#0f172a; margin:0 0 4px; }
-        #hm-app .hm-page-subtitle { font-size:13px; color:#64748b; }
-        #hm-app .hm-color-box   { width:48px; height:32px; border:1px solid #e2e8f0; border-radius:6px; padding:2px; cursor:pointer; }
+        /* ── Appointment-type-detail ── */
+        #hm-app .hm-page-header   { margin-bottom:18px; }
+        #hm-app .hm-page-title    { font-size:20px; font-weight:800; color:#0f172a; margin:0 0 2px; }
+        #hm-app .hm-page-subtitle { font-size:12px; color:#64748b; }
+
+        /* Cards compact */
+        #hm-app .hm-card           { background:#fff; border-radius:12px; padding:16px 20px; box-shadow:0 1px 4px rgba(15,23,42,.06); }
+        #hm-app .hm-card-hd        { font-size:14px; font-weight:700; color:#0f172a; margin-bottom:14px; }
+        #hm-app .hm-card-body      { }
+        #hm-app .hm-card-grid      { display:grid; gap:16px; margin-bottom:16px; }
+        #hm-app .hm-card-grid--3   { grid-template-columns:1fr 1fr 1fr; }
+
+        /* Settings rows */
+        #hm-app .hm-srow  { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+        #hm-app .hm-slbl  { font-size:13px; color:#334155; flex:1; }
+        #hm-app .hm-sval  { width:150px; flex-shrink:0; }
+
+        /* Inputs */
+        #hm-app .hm-inp,
+        #hm-app .hm-dd    { width:100%; padding:5px 8px; font-size:12px; border:1px solid #e2e8f0; border-radius:5px; color:#0f172a; background:#fff; box-sizing:border-box; }
+
+        /* Colour picker */
+        #hm-app .hm-color-box         { width:44px; height:28px; border:1px solid #e2e8f0; border-radius:5px; padding:1px; cursor:pointer; }
         #hm-app .hm-color-row .hm-sval { width:auto; }
-        #hm-app .hm-card-grid   { margin-bottom:20px; }
-        #hm-app .hm-badge       { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; line-height:1.5; }
-        #hm-app .hm-badge-sm    { font-size:10px; padding:1px 6px; }
+
+        /* Checkboxes — real CSS ticks (not default browser) */
+        #hm-app .hm-day-check       { display:inline-flex; align-items:center; gap:8px; font-size:13px; color:#334155; cursor:pointer; }
+        #hm-app .hm-day-check input  { position:absolute; opacity:0; width:0; height:0; pointer-events:none; }
+        #hm-app .hm-check            { width:16px; height:16px; border-radius:4px; border:1.5px solid #cbd5e1; background:#fff; position:relative; flex-shrink:0; transition:all .15s ease; }
+        #hm-app .hm-day-check input:checked + .hm-check { background:#0BB4C4; border-color:#0BB4C4; }
+        #hm-app .hm-day-check input:checked + .hm-check::after {
+            content:""; position:absolute; left:4px; top:1px; width:5px; height:9px;
+            border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
+        }
+
+        /* Badges */
+        #hm-app .hm-badge       { display:inline-block; padding:2px 7px; border-radius:4px; font-size:10px; font-weight:600; line-height:1.4; }
         #hm-app .hm-badge-amber { background:#fef3c7; color:#92400e; }
         #hm-app .hm-badge-blue  { background:#dbeafe; color:#1e40af; }
         #hm-app .hm-badge-green { background:#dcfce7; color:#166534; }
-        #hm-app .hm-inp, #hm-app .hm-dd { width:100%; padding:6px 10px; font-size:13px; border:1px solid #e2e8f0; border-radius:6px; color:#0f172a; background:#fff; box-sizing:border-box; }
+
+        /* Buttons */
+        #hm-app .hm-btn         { background:none; border:none; font-size:13px; font-weight:600; color:#64748b; cursor:pointer; padding:0; }
+        #hm-app .hm-btn-teal    { color:#0BB4C4; }
+        #hm-app .hm-btn-teal:hover { color:#0a9eac; }
+        #hm-app .hm-btn-sm      { font-size:12px; }
+        #hm-app .hm-btn-red     { color:#ef4444; }
+
+        /* Preview bar */
+        #hm-app #hm-svc-preview { display:inline-block; padding:8px 56px; border-radius:6px; font-size:13px; font-weight:600; white-space:nowrap; }
+
         /* Modal */
         .hm-modal-bg             { display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:9999; align-items:center; justify-content:center; }
         .hm-modal-bg.open        { display:flex; }
         .hm-modal                { background:#fff; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.18); max-height:90vh; overflow-y:auto; }
-        .hm-modal-hd             { display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid #e2e8f0; }
-        .hm-modal-hd h3          { margin:0; font-size:16px; font-weight:600; color:#0f172a; }
+        .hm-modal-hd             { display:flex; justify-content:space-between; align-items:center; padding:14px 24px; border-bottom:1px solid #e2e8f0; }
+        .hm-modal-hd h3          { margin:0; font-size:15px; font-weight:700; color:#0f172a; }
         .hm-modal-x              { background:none; border:none; font-size:22px; color:#94a3b8; cursor:pointer; line-height:1; }
-        .hm-modal-ft             { display:flex; justify-content:flex-end; gap:10px; padding:14px 24px; border-top:1px solid #e2e8f0; }
+        .hm-modal-ft             { display:flex; justify-content:flex-end; gap:10px; padding:12px 24px; border-top:1px solid #e2e8f0; }
         .hm-days-grid            { display:flex; flex-wrap:wrap; gap:8px; }
         </style>
         <div id="hm-app" class="hm-calendar" data-module="calendar" data-view="settings">
@@ -111,12 +149,15 @@ class HearMed_Admin_Appointment_Type_Detail {
                 <div class="hm-page-subtitle">Configure this appointment type's details, outcomes, and staff assignments.</div>
             </div>
 
-            <!-- ═══ ROW 1: Details + Preview ═══ -->
-            <div class="hm-card-grid hm-card-grid--3" style="grid-template-columns:1fr 1fr 300px;">
+            <!-- ═══ ROW 1: Details + Colours + Preview ═══ -->
+            <div class="hm-card-grid hm-card-grid--3">
 
                 <!-- Card 1: Details -->
                 <div class="hm-card">
-                    <div class="hm-card-hd">Details</div>
+                    <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
+                        Details
+                        <button type="button" class="hm-btn hm-btn-teal" id="hm-svc-save-details">Save Details</button>
+                    </div>
                     <div class="hm-card-body">
                         <div class="hm-srow"><span class="hm-slbl">Name</span><span class="hm-sval"><input type="text" class="hm-inp" id="hm-svc-name" value="<?php echo esc_attr($svc->service_name); ?>"></span></div>
                         <div class="hm-srow"><span class="hm-slbl">Duration (min)</span><span class="hm-sval"><input type="number" class="hm-inp" id="hm-svc-duration" value="<?php echo intval($svc->duration_minutes ?? 30); ?>" min="5" step="5"></span></div>
@@ -144,7 +185,7 @@ class HearMed_Admin_Appointment_Type_Detail {
 
                 <!-- Card 2: Colours -->
                 <div class="hm-card">
-                    <div class="hm-card-hd">Colours</div>
+                    <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">Colours</div>
                     <div class="hm-card-body">
                         <div class="hm-srow hm-color-row">
                             <span class="hm-slbl">Block colour</span>
@@ -159,9 +200,9 @@ class HearMed_Admin_Appointment_Type_Detail {
 
                 <!-- Card 3: Preview -->
                 <div class="hm-card">
-                    <div class="hm-card-hd">Preview</div>
-                    <div class="hm-card-body" style="display:flex;align-items:center;justify-content:center;min-height:80px;">
-                        <div id="hm-svc-preview" style="display:inline-block;padding:8px 20px;border-radius:6px;font-size:14px;font-weight:600;background:<?php echo esc_attr($colour); ?>;color:<?php echo esc_attr($text_colour); ?>;">
+                    <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">Preview</div>
+                    <div class="hm-card-body" style="display:flex;align-items:center;justify-content:center;min-height:60px;">
+                        <div id="hm-svc-preview" style="background:<?php echo esc_attr($colour); ?>;color:<?php echo esc_attr($text_colour); ?>;">
                             <?php echo esc_html($svc->service_name); ?>
                         </div>
                     </div>
@@ -169,12 +210,8 @@ class HearMed_Admin_Appointment_Type_Detail {
 
             </div>
 
-            <div style="text-align:right;margin-bottom:20px;">
-                <button type="button" class="hm-btn hm-btn-teal" id="hm-svc-save-details">Save Details</button>
-            </div>
-
             <!-- ═══ ROW 2: Outcomes ═══ -->
-            <div class="hm-card">
+            <div class="hm-card" style="margin-bottom:16px;">
                 <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
                     Outcomes
                     <button class="hm-btn hm-btn-teal" id="hm-add-outcome">+ Add Outcome</button>
@@ -222,7 +259,7 @@ class HearMed_Admin_Appointment_Type_Detail {
             </div>
 
             <!-- ═══ ROW 3: Assignable Staff + Reminders ═══ -->
-            <div class="hm-card-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:0;">
+            <div class="hm-card-grid" style="grid-template-columns:1fr 1fr;">
 
                 <!-- Assignable Staff -->
                 <div class="hm-card">
@@ -236,7 +273,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                             $sname   = trim($st->first_name . ' ' . $st->last_name);
                             $srole   = ucfirst($st->role ?? '');
                         ?>
-                        <div class="hm-srow" style="margin-bottom:10px;">
+                        <div class="hm-srow" style="margin-bottom:6px;">
                             <label class="hm-day-check">
                                 <input type="checkbox" class="hm-staff-cb" value="<?php echo (int)$st->id; ?>" <?php echo $checked; ?>>
                                 <span class="hm-check"></span>
@@ -250,7 +287,7 @@ class HearMed_Admin_Appointment_Type_Detail {
 
                 <!-- Reminders -->
                 <div class="hm-card">
-                    <div class="hm-card-hd">Confirmation &amp; Reminders</div>
+                    <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">Confirmation &amp; Reminders</div>
                     <div class="hm-card-body">
                         <div class="hm-srow">
                             <label class="hm-day-check">
