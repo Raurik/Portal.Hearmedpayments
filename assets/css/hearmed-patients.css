@@ -789,3 +789,101 @@
     font-size: 18px;
   }
 }
+
+
+/* ============================================================
+   MODAL SYSTEM (self-contained for patients module)
+   ============================================================ */
+
+.hm-modal-bg,
+#hm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  z-index: 9999;
+}
+
+.hm-modal {
+  position: relative;
+  width: 100%;
+  max-width: 650px;
+  background: rgba(248, 250, 252, 0.98);
+  border-radius: 14px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.55);
+  overflow: hidden;
+}
+
+.hm-modal-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.hm-modal-x {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #94a3b8;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+.hm-modal-x:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.hm-modal-body {
+  padding: 20px 24px;
+}
+
+.hm-modal-ft {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+/* Form rows (side-by-side fields) */
+.hm-form-row {
+  display: flex;
+  gap: 12px;
+}
+.hm-form-row > .hm-form-group {
+  flex: 1;
+}
+
+/* Inputs / selects used in modals */
+.hm-inp,
+.hm-dd,
+.hm-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+.hm-inp:focus,
+.hm-dd:focus,
+.hm-textarea:focus {
+  outline: none;
+  border-color: #0BB4C4;
+  box-shadow: 0 0 0 3px rgba(11, 180, 196, 0.1);
+}

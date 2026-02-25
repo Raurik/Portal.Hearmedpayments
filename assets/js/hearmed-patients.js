@@ -182,10 +182,10 @@ function initList(){
 function showCreateModal(){
     if($('#hm-modal-overlay').length)return;
     $('body').append(
-        '<div id="hm-modal-overlay" class="hm-modal-bg">'+
-        '<div class="hm-modal" style="max-width:620px;width:100%;">'+
-            '<div class="hm-modal-hd"><span>New Patient</span><button class="hm-modal-x">&times;</button></div>'+
-            '<div class="hm-modal-body" style="max-height:75vh;overflow-y:auto;">'+
+        '<div id="hm-modal-overlay" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,0.65);backdrop-filter:blur(6px);z-index:9999;">'+
+        '<div class="hm-modal" style="position:relative;max-width:620px;width:100%;background:rgba(248,250,252,0.98);border-radius:14px;box-shadow:0 30px 80px rgba(15,23,42,0.55);overflow:hidden;">'+
+            '<div class="hm-modal-hd" style="display:flex;align-items:center;justify-content:space-between;padding:14px 22px 10px;font-size:15px;font-weight:600;color:#0f172a;border-bottom:1px solid #e2e8f0;"><span>New Patient</span><button class="hm-modal-x" style="background:none;border:none;font-size:22px;cursor:pointer;color:#94a3b8;line-height:1;">&times;</button></div>'+
+            '<div class="hm-modal-body" style="padding:20px 24px;max-height:75vh;overflow-y:auto;">'+
                 '<div class="hm-form-row">'+
                     '<div class="hm-form-group" style="flex:0 0 100px;"><label class="hm-label">Title</label><select class="hm-dd" id="cp-title"><option value="">—</option><option>Mr</option><option>Mrs</option><option>Ms</option><option>Miss</option><option>Dr</option><option>Other</option></select></div>'+
                     '<div class="hm-form-group"><label class="hm-label">First name *</label><input type="text" class="hm-inp" id="cp-fn"></div>'+
@@ -220,7 +220,7 @@ function showCreateModal(){
                     '</label>'+
                 '</div>'+
             '</div>'+
-            '<div class="hm-modal-ft"><button class="hm-btn hm-btn-outline" id="cp-cancel">Cancel</button><button class="hm-btn hm-btn-teal" id="cp-save" disabled>Create Patient</button></div>'+
+            '<div class="hm-modal-ft" style="display:flex;justify-content:flex-end;gap:10px;padding:14px 22px;border-top:1px solid #e2e8f0;background:#f8fafc;"><button class="hm-btn hm-btn-outline" id="cp-cancel">Cancel</button><button class="hm-btn hm-btn-primary" id="cp-save" disabled style="padding:8px 20px;">Create Patient</button></div>'+
         '</div></div>'
     );
     $('#cp-gdpr').on('change',function(){$('#cp-save').prop('disabled',!this.checked);});
