@@ -161,15 +161,24 @@ function hm_pg_bool( $v ) {
 }
 
 function hm_patient_audit( $action, $entity_type, $entity_id, $details = '' ) {
-    $db = HearMed_DB::instance();
-    $db->insert( 'hearmed_admin.audit_log', [
-        'user_id'     => get_current_user_id(),
-        'action'      => $action,
-        'entity_type' => $entity_type,
-        'entity_id'   => $entity_id,
-        'details'     => is_array( $details ) ? wp_json_encode( $details ) : $details,
-        'ip_address'  => $_SERVER['REMOTE_ADDR'] ?? '',
-    ]);
+    try {
+        $db = HearMed_DB::instance();
+        $row = [
+            'user_id'     => get_current_user_id(),
+            'action'      => $action,
+            'entity_type' => $entity_type,
+            'entity_id'   => $entity_id,
+            'details'     => is_array( $details ) ? wp_json_encode( $details ) : $details,
+        ];
+        // ip_address is inet type — only set if we have a valid-looking IP
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        if ( $ip && filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+            $row['ip_address'] = $ip;
+        }
+        $db->insert( 'hearmed_admin.audit_log', $row );
+    } catch ( \Throwable $e ) {
+        error_log( '[HearMed Patients] audit_log failed: ' . $e->getMessage() );
+    }
 }
 
 /** Generate next H-XXXXX patient number */
@@ -326,33 +335,49 @@ function hm_ajax_create_patient() {
     $db       = HearMed_DB::instance();
     $staff_id = hm_patient_staff_id();
 
-    $address = sanitize_textarea_field( $_POST['patient_address'] ?? '' );
+    $dob = sanitize_text_field( $_POST['dob'] ?? '' );
+    $clinic_id    = intval( $_POST['assigned_clinic_id'] ?? 0 );
+    $dispenser_id = intval( $_POST['assigned_dispenser_id'] ?? 0 );
 
     $data = [
-        'patient_number'        => hm_generate_patient_number(),
-        'patient_title'         => sanitize_text_field( $_POST['patient_title'] ?? '' ),
-        'first_name'            => $fn,
-        'last_name'             => $ln,
-        'date_of_birth'         => sanitize_text_field( $_POST['dob'] ?? '' ) ?: null,
-        'phone'                 => sanitize_text_field( $_POST['patient_phone'] ?? '' ),
-        'mobile'                => sanitize_text_field( $_POST['patient_mobile'] ?? '' ),
-        'email'                 => sanitize_email( $_POST['patient_email'] ?? '' ),
-        'address_line1'         => $address,
-        'eircode'               => sanitize_text_field( $_POST['patient_eircode'] ?? '' ),
-        'assigned_clinic_id'    => intval( $_POST['assigned_clinic_id'] ?? 0 ) ?: null,
-        'assigned_dispenser_id' => intval( $_POST['assigned_dispenser_id'] ?? 0 ) ?: null,
-        'prsi_eligible'         => ( $_POST['prsi_eligible'] ?? '0' ) === '1',
-        'marketing_email'       => ( $_POST['marketing_email'] ?? '0' ) === '1',
-        'marketing_sms'         => ( $_POST['marketing_sms'] ?? '0' ) === '1',
-        'marketing_phone'       => ( $_POST['marketing_phone'] ?? '0' ) === '1',
-        'gdpr_consent'          => ( $_POST['gdpr_consent'] ?? '0' ) === '1',
-        'gdpr_consent_date'     => ( $_POST['gdpr_consent'] ?? '0' ) === '1' ? date( 'c' ) : null,
-        'gdpr_consent_version'  => '1.0',
-        'gdpr_consent_ip'       => $_SERVER['REMOTE_ADDR'] ?? '',
-        'is_active'             => true,
-        'created_by'            => $staff_id ?: null,
-        'updated_by'            => $staff_id ?: null,
+        'patient_number'  => hm_generate_patient_number(),
+        'first_name'      => $fn,
+        'last_name'       => $ln,
+        'is_active'       => true,
+        'prsi_eligible'   => ( $_POST['prsi_eligible'] ?? '0' ) === '1',
+        'marketing_email' => ( $_POST['marketing_email'] ?? '0' ) === '1',
+        'marketing_sms'   => ( $_POST['marketing_sms'] ?? '0' ) === '1',
+        'marketing_phone' => ( $_POST['marketing_phone'] ?? '0' ) === '1',
+        'gdpr_consent'    => ( $_POST['gdpr_consent'] ?? '0' ) === '1',
     ];
+
+    // Only add optional fields if they have values (avoid PG type issues with empty strings)
+    $title = sanitize_text_field( $_POST['patient_title'] ?? '' );
+    if ( $title )         $data['patient_title'] = $title;
+    if ( $dob )           $data['date_of_birth'] = $dob;
+
+    $phone  = sanitize_text_field( $_POST['patient_phone'] ?? '' );
+    $mobile = sanitize_text_field( $_POST['patient_mobile'] ?? '' );
+    $email  = sanitize_email( $_POST['patient_email'] ?? '' );
+    $addr   = sanitize_textarea_field( $_POST['patient_address'] ?? '' );
+    $eir    = sanitize_text_field( $_POST['patient_eircode'] ?? '' );
+
+    if ( $phone )  $data['phone']         = $phone;
+    if ( $mobile ) $data['mobile']        = $mobile;
+    if ( $email )  $data['email']         = $email;
+    if ( $addr )   $data['address_line1'] = $addr;
+    if ( $eir )    $data['eircode']       = $eir;
+
+    if ( $clinic_id )    $data['assigned_clinic_id']    = $clinic_id;
+    if ( $dispenser_id ) $data['assigned_dispenser_id'] = $dispenser_id;
+    if ( $staff_id )     { $data['created_by'] = $staff_id; $data['updated_by'] = $staff_id; }
+
+    if ( ( $_POST['gdpr_consent'] ?? '0' ) === '1' ) {
+        $data['gdpr_consent_date']    = date( 'Y-m-d H:i:s' );
+        $data['gdpr_consent_version'] = '1.0';
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        if ( $ip ) $data['gdpr_consent_ip'] = $ip;
+    }
 
     // Handle referral source — may be text or ID
     $ref_src = sanitize_text_field( $_POST['referral_source'] ?? '' );
@@ -375,9 +400,14 @@ function hm_ajax_create_patient() {
     }
 
     $id = $db->insert( 'hearmed_core.patients', $data );
-    if ( ! $id ) wp_send_json_error( 'Failed to create patient.' );
+    if ( ! $id ) {
+        $err = HearMed_DB::last_error();
+        error_log( '[HearMed Patients] create failed: ' . $err . ' | data keys: ' . implode( ',', array_keys( $data ) ) );
+        wp_send_json_error( 'Failed to create patient. DB: ' . ( $err ?: 'unknown error' ) );
+    }
 
-    hm_patient_audit( 'CREATE', 'patient', $id, [ 'name' => $fn . ' ' . $ln ] );
+    // Non-critical: audit log (don't let failure block response)
+    try { hm_patient_audit( 'CREATE', 'patient', $id, [ 'name' => $fn . ' ' . $ln ] ); } catch ( \Throwable $e ) {}
 
     wp_send_json_success( [ 'id' => $id ] );
 }

@@ -152,8 +152,8 @@ function initList(){
 
     function load(){
         var $w=$('#hm-pt-table-wrap');$w.html('<div class="hm-loading">Loading…</div>');
-        $.post(_hm.ajax,{action:'hm_get_patients',nonce:_hm.nonce,search:state.search,clinic:state.clinic,dispenser:state.dispenser,referral:state.referral,active:state.active,page:state.page},function(r){
-            if(!r.success){$w.html('<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.warning+'</div><div class="hm-empty-text">Error</div></div>');return;}
+        $.post(_hm.ajax,{action:'hm_get_patients',nonce:_hm.nonce,search:state.search,clinic:state.clinic,dispenser:state.dispenser,referral:state.referral,active:state.active,page:state.page}).done(function(r){
+            if(!r.success){$w.html('<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.warning+'</div><div class="hm-empty-text">Error loading patients</div></div>');return;}
             var d=r.data;
             if(!d.patients.length){$w.html('<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.search+'</div><div class="hm-empty-text">No patients found</div></div>');return;}
             var h='<table class="hm-table hm-pt-table"><thead><tr><th>C-Number</th><th>Full name</th><th>DOB</th><th>Phone</th><th>Last appointment</th><th>Dispenser</th><th>Clinic</th><th>Status</th><th></th></tr></thead><tbody>';
@@ -171,6 +171,9 @@ function initList(){
             h+='</tbody></table>';
             if(d.pages>1){h+='<div class="hm-pagination" style="display:flex;gap:6px;margin-top:16px;align-items:center;">';for(var j=1;j<=d.pages;j++)h+='<button class="hm-btn hm-btn-sm hm-page-btn '+(j===d.page?'hm-btn-teal':'hm-btn-outline')+'" data-page="'+j+'">'+j+'</button>';h+='<span style="color:#94a3b8;font-size:13px;margin-left:8px;">'+d.total+' patients</span></div>';}
             $w.html(h);
+        }).fail(function(xhr){
+            console.error('[HearMed] hm_get_patients failed',xhr.status,xhr.responseText);
+            $w.html('<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.warning+'</div><div class="hm-empty-text">Failed to load patients ('+xhr.status+')</div></div>');
         });
     }
 }
@@ -229,9 +232,12 @@ function showCreateModal(){
         var fn=$.trim($('#cp-fn').val()),ln=$.trim($('#cp-ln').val());
         if(!fn||!ln){toast('First and last name required','error');return;}
         var $btn=$(this).prop('disabled',true).text('Creating…');
-        $.post(_hm.ajax,{action:'hm_create_patient',nonce:_hm.nonce,patient_title:$('#cp-title').val(),first_name:fn,last_name:ln,dob:$('#cp-dob').val(),patient_phone:$('#cp-phone').val(),patient_mobile:$('#cp-mobile').val(),patient_email:$('#cp-email').val(),patient_address:$('#cp-address').val(),patient_eircode:$('#cp-eircode').val(),referral_source:$('#cp-ref').val(),assigned_dispenser_id:$('#cp-dispenser').val(),assigned_clinic_id:$('#cp-clinic').val(),prsi_eligible:$('#cp-prsi').is(':checked')?'1':'0',marketing_email:$('#cp-memail').is(':checked')?'1':'0',marketing_sms:$('#cp-msms').is(':checked')?'1':'0',marketing_phone:$('#cp-mphone').is(':checked')?'1':'0',gdpr_consent:'1'},function(r){
+        $.post(_hm.ajax,{action:'hm_create_patient',nonce:_hm.nonce,patient_title:$('#cp-title').val(),first_name:fn,last_name:ln,dob:$('#cp-dob').val(),patient_phone:$('#cp-phone').val(),patient_mobile:$('#cp-mobile').val(),patient_email:$('#cp-email').val(),patient_address:$('#cp-address').val(),patient_eircode:$('#cp-eircode').val(),referral_source:$('#cp-ref').val(),assigned_dispenser_id:$('#cp-dispenser').val(),assigned_clinic_id:$('#cp-clinic').val(),prsi_eligible:$('#cp-prsi').is(':checked')?'1':'0',marketing_email:$('#cp-memail').is(':checked')?'1':'0',marketing_sms:$('#cp-msms').is(':checked')?'1':'0',marketing_phone:$('#cp-mphone').is(':checked')?'1':'0',gdpr_consent:'1'}).done(function(r){
             if(r.success)window.location=PG+'?id='+r.data.id;
-            else{toast(r.data||'Error','error');$btn.prop('disabled',false).text('Create Patient');}
+            else{toast(r.data||'Error creating patient','error');$btn.prop('disabled',false).text('Create Patient');}
+        }).fail(function(xhr){
+            var msg='Server error';try{var j=JSON.parse(xhr.responseText);if(j&&j.data)msg=j.data;}catch(e){if(xhr.status)msg+=' ('+xhr.status+')';}
+            toast(msg,'error');$btn.prop('disabled',false).text('Create Patient');
         });
     });
 }
