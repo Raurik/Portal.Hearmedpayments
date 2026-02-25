@@ -116,6 +116,21 @@ add_action( 'wp_ajax_hm_create_patient_notification', 'hm_ajax_create_patient_no
 add_action( 'wp_ajax_hm_get_referral_sources', 'hm_ajax_get_referral_sources' );
 add_action( 'wp_ajax_hm_get_staff_list',        'hm_ajax_get_staff_list' );
 
+// Notes — pinned
+add_action( 'wp_ajax_hm_toggle_note_pin',  'hm_ajax_toggle_note_pin' );
+
+// Manufacturers lookup
+add_action( 'wp_ajax_hm_get_manufacturers',  'hm_ajax_get_manufacturers' );
+
+// Repair enhancements
+add_action( 'wp_ajax_hm_update_repair_status', 'hm_ajax_update_repair_status' );
+
+// Exchange flow
+add_action( 'wp_ajax_hm_create_exchange',  'hm_ajax_create_exchange' );
+
+// PRSI claim tracking
+add_action( 'wp_ajax_hm_get_prsi_info',  'hm_ajax_get_prsi_info' );
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  HELPERS
@@ -427,7 +442,7 @@ function hm_ajax_get_referral_sources() {
 function hm_ajax_get_staff_list() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $rows = HearMed_DB::get_results(
-        "SELECT id, full_name, initials, role_type FROM hearmed_reference.staff WHERE is_active = true AND LOWER(role_type) = 'dispenser' ORDER BY full_name"
+        "SELECT id, full_name, initials, role_type FROM hearmed_reference.staff WHERE is_active = true AND role_type = 'dispenser' ORDER BY full_name"
     );
     $out = [];
     if ( $rows ) {
@@ -513,6 +528,41 @@ function hm_ajax_get_patient() {
     $show_prsi    = get_option( 'hm_patient_show_prsi', '1' );
     $is_admin     = hm_patient_is_admin();
 
+    // Warranty status for active devices (green/yellow/red)
+    $warranty_status = 'none';
+    $warranty_days   = null;
+    $active_dev = $db->get_row(
+        "SELECT MIN(warranty_expiry) AS earliest_expiry
+         FROM hearmed_core.patient_devices
+         WHERE patient_id = \$1 AND device_status = 'Active' AND warranty_expiry IS NOT NULL",
+        [ $pid ]
+    );
+    if ( $active_dev && $active_dev->earliest_expiry ) {
+        $wexp  = new DateTime( $active_dev->earliest_expiry );
+        $now   = new DateTime();
+        $wdiff = $now->diff( $wexp );
+        $wdays = (int) $wdiff->format( '%r%a' );
+        $warranty_days = $wdays;
+        if ( $wdays < 0 )        $warranty_status = 'expired';
+        elseif ( $wdays <= 90 )  $warranty_status = 'expiring';
+        else                      $warranty_status = 'active';
+    }
+
+    // PRSI last claimed date (from invoices where prsi_applicable = true)
+    $prsi_claim = $db->get_row(
+        "SELECT MAX(invoice_date) AS last_claim_date
+         FROM hearmed_core.invoices
+         WHERE patient_id = \$1 AND prsi_applicable = true AND payment_status != 'Void'",
+        [ $pid ]
+    );
+    $last_prsi_claim  = $prsi_claim && $prsi_claim->last_claim_date ? $prsi_claim->last_claim_date : ($p->last_prsi_claim_date ?? '');
+    $next_prsi_date   = '';
+    if ( $last_prsi_claim ) {
+        $lcd = new DateTime( $last_prsi_claim );
+        $lcd->modify( '+4 years' );
+        $next_prsi_date = $lcd->format( 'Y-m-d' );
+    }
+
     $data = [
         'id'                    => (int) $p->id,
         'patient_number'        => $p->patient_number,
@@ -529,6 +579,10 @@ function hm_ajax_get_patient() {
         'address'               => trim( implode( ', ', array_filter( [
             $p->address_line1, $p->address_line2, $p->city, $p->county
         ] ) ) ),
+        'address_line1'         => $p->address_line1 ?: '',
+        'address_line2'         => $p->address_line2 ?: '',
+        'city'                  => $p->city ?: '',
+        'county'                => $p->county ?: '',
         'eircode'               => $p->eircode ?: '',
         'assigned_clinic_id'    => $p->assigned_clinic_id ? (int) $p->assigned_clinic_id : null,
         'assigned_dispenser_id' => $p->assigned_dispenser_id ? (int) $p->assigned_dispenser_id : null,
@@ -536,6 +590,8 @@ function hm_ajax_get_patient() {
         'dispenser_name'        => $p->dispenser_name ?: '—',
         'prsi_eligible'         => hm_pg_bool( $p->prsi_eligible ),
         'prsi_number'           => $p->prsi_number ?: '',
+        'last_prsi_claim_date'  => $p->last_prsi_claim_date ?? '',
+        'next_prsi_eligible_date' => $p->next_prsi_eligible_date ?? '',
         'medical_card_number'   => $p->medical_card_number ?: '',
         'referral_source'       => $p->referral_source ?: '',
         'referral_sub_source'   => $p->referral_sub_source ?: '',
@@ -553,16 +609,20 @@ function hm_ajax_get_patient() {
         'last_test_date'        => $p->last_test_date,
         'review_status'         => $review_status,
         'review_days'           => $review_days,
-        'gp_name'               => '',
-        'gp_address'            => '',
-        'nok_name'              => '',
-        'nok_phone'             => '',
+        'gp_name'               => $p->gp_name ?? '',
+        'gp_address'            => $p->gp_address ?? '',
+        'nok_name'              => $p->nok_name ?? '',
+        'nok_phone'             => $p->nok_phone ?? '',
         'stats'                 => $stats,
         'has_finance'           => $show_balance === '1',
         'show_prsi'             => $show_prsi === '1',
         'is_admin'              => $is_admin,
         'can_export'            => $is_admin,
         'show_audit'            => $is_admin,
+        'warranty_status'       => $warranty_status,
+        'warranty_days'         => $warranty_days,
+        'last_prsi_claim_date'  => $last_prsi_claim,
+        'next_prsi_eligible_date' => $next_prsi_date,
     ];
 
     wp_send_json_success( $data );
@@ -589,13 +649,20 @@ function hm_ajax_update_patient() {
         'phone'               => sanitize_text_field( $_POST['patient_phone'] ?? '' ),
         'mobile'              => sanitize_text_field( $_POST['patient_mobile'] ?? '' ),
         'email'               => sanitize_email( $_POST['patient_email'] ?? '' ),
-        'address_line1'       => sanitize_textarea_field( $_POST['patient_address'] ?? '' ),
+        'address_line1'       => sanitize_text_field( $_POST['address_line1'] ?? sanitize_textarea_field( $_POST['patient_address'] ?? '' ) ),
+        'address_line2'       => sanitize_text_field( $_POST['address_line2'] ?? '' ),
+        'city'                => sanitize_text_field( $_POST['city'] ?? '' ),
+        'county'              => sanitize_text_field( $_POST['county'] ?? '' ),
         'eircode'             => sanitize_text_field( $_POST['patient_eircode'] ?? '' ),
         'prsi_number'         => sanitize_text_field( $_POST['prsi_number'] ?? '' ),
         'prsi_eligible'       => ( $_POST['prsi_eligible'] ?? '0' ) === '1',
         'is_active'           => ( $_POST['is_active'] ?? '1' ) === '1',
         'annual_review_date'  => sanitize_text_field( $_POST['annual_review_date'] ?? '' ) ?: null,
         'assigned_clinic_id'  => intval( $_POST['assigned_clinic_id'] ?? 0 ) ?: null,
+        'gp_name'             => sanitize_text_field( $_POST['gp_name'] ?? '' ),
+        'gp_address'          => sanitize_textarea_field( $_POST['gp_address'] ?? '' ),
+        'nok_name'            => sanitize_text_field( $_POST['nok_name'] ?? '' ),
+        'nok_phone'           => sanitize_text_field( $_POST['nok_phone'] ?? '' ),
         'updated_by'          => $staff_id ?: null,
         'updated_at'          => date( 'c' ),
     ];
@@ -635,11 +702,12 @@ function hm_ajax_get_patient_notes() {
     $db   = HearMed_DB::instance();
     $rows = $db->get_results(
         "SELECT n.id, n.note_type, n.note_text, n.created_by, n.created_at,
+                COALESCE(n.is_pinned, false) AS is_pinned,
                 COALESCE(s.first_name || ' ' || s.last_name, 'System') AS created_by_name
          FROM hearmed_core.patient_notes n
          LEFT JOIN hearmed_reference.staff s ON s.id = n.created_by
          WHERE n.patient_id = \$1
-         ORDER BY n.created_at DESC",
+         ORDER BY COALESCE(n.is_pinned, false) DESC, n.created_at DESC",
         [ $pid ]
     );
 
@@ -652,6 +720,7 @@ function hm_ajax_get_patient_notes() {
             '_ID'        => (int) $r->id,
             'note_type'  => $r->note_type,
             'note_text'  => $r->note_text,
+            'is_pinned'  => hm_pg_bool( $r->is_pinned ),
             'created_by' => $r->created_by_name,
             'created_at' => $r->created_at,
             'can_edit'   => $is_admin || (int) $r->created_by === $staff_id,
@@ -1114,12 +1183,16 @@ function hm_ajax_get_patient_repairs() {
 
     $db   = HearMed_DB::instance();
     $rows = $db->get_results(
-        "SELECT r.id, r.serial_number, r.date_booked, r.date_sent, r.date_received,
+        "SELECT r.id, r.repair_number, r.serial_number, r.date_booked, r.date_sent, r.date_received,
                 r.repair_status AS status, r.warranty_status, r.repair_notes,
-                COALESCE(pr.product_name, 'Unknown') AS product_name
+                r.repair_reason, r.under_warranty, r.sent_to,
+                COALESCE(pr.product_name, 'Unknown') AS product_name,
+                COALESCE(m.name, '') AS manufacturer_name,
+                r.created_at
          FROM hearmed_core.repairs r
          LEFT JOIN hearmed_core.patient_devices pd ON pd.id = r.patient_device_id
          LEFT JOIN hearmed_reference.products pr ON pr.id = COALESCE(r.product_id, pd.product_id)
+         LEFT JOIN hearmed_reference.manufacturers m ON m.id = COALESCE(r.manufacturer_id, pr.manufacturer_id)
          WHERE r.patient_id = \$1
          ORDER BY r.date_booked DESC",
         [ $pid ]
@@ -1127,16 +1200,29 @@ function hm_ajax_get_patient_repairs() {
 
     $out = [];
     foreach ( $rows as $r ) {
+        // Calculate days since booked for status colouring
+        $days_open = 0;
+        if ( $r->date_booked && ! $r->date_received ) {
+            $booked = new DateTime( $r->date_booked );
+            $now    = new DateTime();
+            $days_open = (int) $booked->diff( $now )->days;
+        }
         $out[] = [
-            '_ID'            => (int) $r->id,
-            'product_name'   => $r->product_name,
-            'serial_number'  => $r->serial_number ?: '',
-            'date_booked'    => $r->date_booked,
-            'date_sent'      => $r->date_sent,
-            'date_received'  => $r->date_received,
-            'status'         => $r->status ?: 'Booked',
-            'warranty_status'=> $r->warranty_status ?: '',
-            'repair_notes'   => $r->repair_notes ?: '',
+            '_ID'              => (int) $r->id,
+            'repair_number'    => $r->repair_number ?: '',
+            'product_name'     => $r->product_name,
+            'manufacturer'     => $r->manufacturer_name,
+            'serial_number'    => $r->serial_number ?: '',
+            'date_booked'      => $r->date_booked,
+            'date_sent'        => $r->date_sent,
+            'date_received'    => $r->date_received,
+            'status'           => $r->status ?: 'Booked',
+            'warranty_status'  => $r->warranty_status ?: '',
+            'under_warranty'   => hm_pg_bool( $r->under_warranty ?? false ),
+            'repair_notes'     => $r->repair_notes ?: '',
+            'repair_reason'    => $r->repair_reason ?: '',
+            'sent_to'          => $r->sent_to ?: '',
+            'days_open'        => $days_open,
         ];
     }
     wp_send_json_success( $out );
@@ -1164,7 +1250,10 @@ function hm_ajax_create_patient_repair() {
         'product_id'       => $product_id,
         'serial_number'    => sanitize_text_field( $_POST['serial_number'] ?? '' ),
         'warranty_status'  => sanitize_text_field( $_POST['warranty_status'] ?? 'Unknown' ),
+        'under_warranty'   => ( $_POST['under_warranty'] ?? '0' ) === '1',
         'repair_notes'     => sanitize_textarea_field( $_POST['repair_notes'] ?? '' ),
+        'repair_reason'    => sanitize_textarea_field( $_POST['repair_reason'] ?? '' ),
+        'manufacturer_id'  => intval( $_POST['manufacturer_id'] ?? 0 ) ?: null,
         'date_booked'      => date( 'Y-m-d' ),
         'repair_status'    => 'Booked',
         'staff_id'         => $staff_id ?: null,
@@ -1173,8 +1262,14 @@ function hm_ajax_create_patient_repair() {
 
     if ( ! $id ) wp_send_json_error( 'Failed to create repair' );
 
-    hm_patient_audit( 'CREATE_REPAIR', 'repair', $id, [ 'patient_id' => $pid ] );
-    wp_send_json_success( [ 'id' => $id ] );
+    // Generate HMREP number
+    $prefix = get_option( 'hm_repair_prefix', 'HMREP' );
+    $seq    = $db->get_var( "SELECT nextval('hearmed_core.repair_number_seq')" );
+    $repair_number = $prefix . '-' . str_pad( $seq, 4, '0', STR_PAD_LEFT );
+    $db->update( 'hearmed_core.repairs', [ 'repair_number' => $repair_number ], [ 'id' => $id ] );
+
+    hm_patient_audit( 'CREATE_REPAIR', 'repair', $id, [ 'patient_id' => $pid, 'repair_number' => $repair_number ] );
+    wp_send_json_success( [ 'id' => $id, 'repair_number' => $repair_number ] );
 }
 
 
@@ -1697,4 +1792,206 @@ function hm_ajax_create_patient_notification() {
     ]);
 
     wp_send_json_success( [ 'id' => $id ] );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  21. TOGGLE NOTE PIN
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_toggle_note_pin() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $nid = intval( $_POST['_ID'] ?? 0 );
+    if ( ! $nid ) wp_send_json_error( 'Missing note ID' );
+
+    $db   = HearMed_DB::instance();
+    $note = $db->get_row( "SELECT is_pinned, patient_id FROM hearmed_core.patient_notes WHERE id = \$1", [ $nid ] );
+    if ( ! $note ) wp_send_json_error( 'Note not found' );
+
+    $new_val = ! hm_pg_bool( $note->is_pinned ?? false );
+    $db->update( 'hearmed_core.patient_notes', [
+        'is_pinned'  => $new_val,
+        'updated_at' => date( 'c' ),
+    ], [ 'id' => $nid ] );
+
+    hm_patient_audit( $new_val ? 'PIN_NOTE' : 'UNPIN_NOTE', 'patient_note', $nid, [
+        'patient_id' => $note->patient_id,
+    ]);
+
+    wp_send_json_success( [ 'pinned' => $new_val ] );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  22. MANUFACTURERS LOOKUP
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_get_manufacturers() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $rows = HearMed_DB::get_results(
+        "SELECT id, name, warranty_terms FROM hearmed_reference.manufacturers WHERE is_active = true ORDER BY name"
+    );
+    $out = [];
+    if ( $rows ) {
+        foreach ( $rows as $r ) {
+            $out[] = [
+                'id'             => (int) $r->id,
+                'name'           => $r->name,
+                'warranty_terms' => $r->warranty_terms ?: '',
+            ];
+        }
+    }
+    wp_send_json_success( $out );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  23. UPDATE REPAIR STATUS (sent / received back)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_update_repair_status() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $id     = intval( $_POST['_ID'] ?? 0 );
+    $status = sanitize_text_field( $_POST['status'] ?? '' );
+    if ( ! $id || ! $status ) wp_send_json_error( 'Missing repair ID or status' );
+
+    $db       = HearMed_DB::instance();
+    $staff_id = hm_patient_staff_id();
+
+    $update = [
+        'repair_status' => $status,
+        'updated_at'    => date( 'c' ),
+    ];
+
+    if ( $status === 'Sent' ) {
+        $update['date_sent'] = sanitize_text_field( $_POST['date_sent'] ?? date( 'Y-m-d' ) );
+        $update['sent_to']   = sanitize_text_field( $_POST['sent_to'] ?? '' );
+        $update['tracking_number'] = sanitize_text_field( $_POST['tracking_number'] ?? '' );
+    } elseif ( $status === 'Received' ) {
+        $update['date_received'] = sanitize_text_field( $_POST['date_received'] ?? date( 'Y-m-d' ) );
+        $update['received_by']   = $staff_id ?: null;
+    }
+
+    $db->update( 'hearmed_core.repairs', $update, [ 'id' => $id ] );
+
+    // Notify dispenser when repair received back
+    if ( $status === 'Received' ) {
+        $repair = $db->get_row( "SELECT patient_id, staff_id, repair_number FROM hearmed_core.repairs WHERE id = \$1", [ $id ] );
+        if ( $repair && $repair->staff_id ) {
+            try {
+                $db->insert( 'hearmed_communication.internal_notifications', [
+                    'notification_type' => 'Repair Received',
+                    'title'             => 'Repair ' . ( $repair->repair_number ?: '#' . $id ) . ' received back',
+                    'message'           => 'Repair ' . ( $repair->repair_number ?: '#' . $id ) . ' has been received back and is ready for the patient.',
+                    'priority'          => 'normal',
+                    'reference_type'    => 'repair',
+                    'reference_id'      => $id,
+                    'created_by'        => $staff_id ?: null,
+                ]);
+            } catch ( \Throwable $e ) {}
+        }
+    }
+
+    hm_patient_audit( 'UPDATE_REPAIR_STATUS', 'repair', $id, [ 'status' => $status ] );
+    wp_send_json_success( true );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  24. EXCHANGE FLOW
+//      Creates credit note + marks old devices inactive
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_create_exchange() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $pid           = intval( $_POST['patient_id'] ?? 0 );
+    $device_id     = intval( $_POST['device_id'] ?? 0 );
+    $reason        = sanitize_textarea_field( $_POST['reason'] ?? '' );
+    $credit_amount = floatval( $_POST['credit_amount'] ?? 0 );
+
+    if ( ! $pid || ! $device_id ) wp_send_json_error( 'Patient and device required' );
+
+    $db       = HearMed_DB::instance();
+    $staff_id = hm_patient_staff_id();
+
+    $device = $db->get_row( "SELECT * FROM hearmed_core.patient_devices WHERE id = \$1", [ $device_id ] );
+    if ( ! $device ) wp_send_json_error( 'Device not found' );
+
+    $db->begin_transaction();
+
+    try {
+        $db->update( 'hearmed_core.patient_devices', [
+            'device_status'  => 'Replaced',
+            'inactive_reason'=> 'Exchange: ' . $reason,
+            'inactive_date'  => date( 'Y-m-d' ),
+            'updated_at'     => date( 'c' ),
+        ], [ 'id' => $device_id ] );
+
+        $cn_prefix = get_option( 'hm_credit_note_prefix', 'HMCN' );
+        $cn_seq    = $db->get_var( "SELECT COALESCE(MAX(id), 0) + 1 FROM hearmed_core.credit_notes" );
+        $cn_number = $cn_prefix . '-' . str_pad( $cn_seq, 4, '0', STR_PAD_LEFT );
+
+        $cn_id = $db->insert( 'hearmed_core.credit_notes', [
+            'credit_note_number' => $cn_number,
+            'patient_id'         => $pid,
+            'invoice_id'         => $device->invoice_id ?: null,
+            'amount'             => $credit_amount,
+            'reason'             => 'Exchange: ' . $reason,
+            'credit_date'        => date( 'Y-m-d' ),
+            'refund_type'        => sanitize_text_field( $_POST['refund_type'] ?? 'transfer' ),
+            'created_by'         => $staff_id ?: null,
+        ]);
+
+        $db->commit();
+
+        hm_patient_audit( 'CREATE_EXCHANGE', 'credit_note', $cn_id, [
+            'patient_id'    => $pid,
+            'device_id'     => $device_id,
+            'credit_note'   => $cn_number,
+            'credit_amount' => $credit_amount,
+        ]);
+
+        wp_send_json_success( [
+            'credit_note_id'     => $cn_id,
+            'credit_note_number' => $cn_number,
+        ]);
+    } catch ( \Exception $e ) {
+        $db->rollback();
+        wp_send_json_error( 'Exchange failed: ' . $e->getMessage() );
+    }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  25. PRSI INFO
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_get_prsi_info() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $pid = intval( $_POST['patient_id'] ?? 0 );
+    if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
+
+    $db = HearMed_DB::instance();
+
+    $claim = $db->get_row(
+        "SELECT MAX(invoice_date) AS last_claim_date, SUM(prsi_amount) AS total_claimed
+         FROM hearmed_core.invoices
+         WHERE patient_id = \$1 AND prsi_applicable = true AND payment_status != 'Void'",
+        [ $pid ]
+    );
+
+    $last_claim = $claim && $claim->last_claim_date ? $claim->last_claim_date : '';
+    $next_eligible = '';
+    if ( $last_claim ) {
+        $lcd = new DateTime( $last_claim );
+        $lcd->modify( '+4 years' );
+        $next_eligible = $lcd->format( 'Y-m-d' );
+    }
+
+    wp_send_json_success( [
+        'last_claim_date'  => $last_claim,
+        'total_claimed'    => (float) ( $claim->total_claimed ?? 0 ),
+        'next_eligible'    => $next_eligible,
+        'is_eligible_now'  => ! $last_claim || ( new DateTime( $next_eligible ) <= new DateTime() ),
+    ]);
 }

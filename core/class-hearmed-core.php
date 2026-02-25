@@ -118,6 +118,8 @@ class HearMed_Core {
             HEARMED_PATH . 'modules/mod-order-status.php',
             HEARMED_PATH . 'modules/mod-notifications.php',
             HEARMED_PATH . 'modules/mod-repairs.php',
+            HEARMED_PATH . 'modules/mod-refunds.php',
+            HEARMED_PATH . 'modules/mod-stock.php',
             HEARMED_PATH . 'modules/mod-team-chat.php',
             HEARMED_PATH . 'modules/mod-accounting.php',
             HEARMED_PATH . 'modules/mod-reports.php',

@@ -56,6 +56,8 @@ class HearMed_Router {
         
         // Other modules
         'hearmed_repairs' => [ 'module' => 'repairs', 'view' => 'list' ],
+        'hearmed_refunds' => [ 'module' => 'refunds', 'view' => 'list' ],
+        'hearmed_stock' => [ 'module' => 'stock', 'view' => 'list' ],
         'hearmed_notifications' => [ 'module' => 'notifications', 'view' => 'list' ],
         'hearmed_kpi' => [ 'module' => 'kpi', 'view' => 'dashboard' ],
         // NOTE: admin console / admin management shortcodes are registered
