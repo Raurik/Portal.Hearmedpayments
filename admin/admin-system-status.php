@@ -74,7 +74,7 @@ function hearmed_render_system_status_page() {
         </p>
         
         <h3 class="hm-section-heading">Core System</h3>
-        <table class="hm-table">
+        <table class="hm-table" data-no-enhance>
             <thead>
                 <tr>
                     <th>Component</th>
@@ -94,7 +94,7 @@ function hearmed_render_system_status_page() {
         </table>
         
         <h3 class="hm-section-heading">Database Tables</h3>
-        <table class="hm-table">
+        <table class="hm-table" data-no-enhance>
             <thead>
                 <tr>
                     <th>Table</th>
@@ -114,7 +114,7 @@ function hearmed_render_system_status_page() {
         </table>
         
         <h3 class="hm-section-heading">Assets</h3>
-        <table class="hm-table">
+        <table class="hm-table" data-no-enhance>
             <thead>
                 <tr>
                     <th>File</th>
@@ -136,7 +136,7 @@ function hearmed_render_system_status_page() {
         </table>
         
         <h3 class="hm-section-heading">Loaded Modules</h3>
-        <table class="hm-table">
+        <table class="hm-table" data-no-enhance>
             <thead>
                 <tr>
                     <th>Module</th>

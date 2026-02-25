@@ -470,3 +470,142 @@
         openModal(sel, entity);
     });
 })();
+
+/**
+ * HM Table Enhancer — auto-adds search, column filters, and pagination
+ * to all .hm-table elements. Tables with [data-no-enhance] are skipped.
+ */
+(function() {
+    function enhanceTables() {
+        var tables = document.querySelectorAll('table.hm-table');
+        tables.forEach(function(table) {
+            if (table.getAttribute('data-no-enhance') !== null) return;
+            // Skip diagnostic tables (system-status, debug)
+            var view = table.closest('[data-view]');
+            if (view) {
+                var vn = view.getAttribute('data-view');
+                if (vn === 'hearmed_system_status' || vn === 'hearmed_debug') return;
+            }
+            // Skip if already enhanced
+            if (table.getAttribute('data-enhanced')) return;
+            table.setAttribute('data-enhanced', '1');
+
+            var tbody = table.querySelector('tbody');
+            if (!tbody) return;
+            var allRows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+            if (allRows.length < 2) return; // no point for 0-1 rows
+
+            // Build filter bar
+            var filterBar = document.createElement('div');
+            filterBar.className = 'hm-table-filter-bar';
+            filterBar.innerHTML =
+                '<div class="hm-tf-left">' +
+                    '<input type="text" class="hm-tf-search" placeholder="Search…">' +
+                '</div>' +
+                '<div class="hm-tf-right">' +
+                    '<label class="hm-tf-label">Show</label>' +
+                    '<select class="hm-tf-perpage">' +
+                        '<option value="20">20</option>' +
+                        '<option value="50">50</option>' +
+                        '<option value="100">100</option>' +
+                        '<option value="300">300</option>' +
+                        '<option value="0">All</option>' +
+                    '</select>' +
+                    '<label class="hm-tf-label">entries</label>' +
+                '</div>';
+
+            // Build pagination bar
+            var paginationBar = document.createElement('div');
+            paginationBar.className = 'hm-table-pagination';
+
+            // Insert before table wrapper or table
+            var wrapper = table.closest('.hm-table-wrap') || table.parentNode;
+            wrapper.parentNode.insertBefore(filterBar, wrapper);
+            wrapper.parentNode.insertBefore(paginationBar, wrapper.nextSibling);
+
+            var searchInput = filterBar.querySelector('.hm-tf-search');
+            var perPageSel  = filterBar.querySelector('.hm-tf-perpage');
+            var currentPage = 1;
+            var filteredRows = allRows.slice();
+
+            function filterRows() {
+                var term = searchInput.value.toLowerCase().trim();
+                filteredRows = [];
+                allRows.forEach(function(row) {
+                    var text = row.textContent.toLowerCase();
+                    var match = !term || text.indexOf(term) !== -1;
+                    if (match) filteredRows.push(row);
+                });
+                currentPage = 1;
+                renderPage();
+            }
+
+            function renderPage() {
+                var perPage = parseInt(perPageSel.value, 10) || 0;
+                var total = filteredRows.length;
+                var totalPages = perPage > 0 ? Math.ceil(total / perPage) : 1;
+                if (currentPage > totalPages) currentPage = totalPages;
+                if (currentPage < 1) currentPage = 1;
+
+                // Hide all, show only current page
+                allRows.forEach(function(r) { r.style.display = 'none'; });
+                var start = perPage > 0 ? (currentPage - 1) * perPage : 0;
+                var end   = perPage > 0 ? start + perPage : total;
+                for (var i = start; i < end && i < total; i++) {
+                    filteredRows[i].style.display = '';
+                }
+
+                // Build pagination
+                var showing = Math.min(end, total);
+                var html = '<span class="hm-tp-info">Showing ' + (total > 0 ? start + 1 : 0) + '–' + showing + ' of ' + total + '</span>';
+                if (totalPages > 1) {
+                    html += '<span class="hm-tp-btns">';
+                    html += '<button class="hm-tp-btn" data-page="prev" ' + (currentPage <= 1 ? 'disabled' : '') + '>&laquo; Prev</button>';
+                    // Show max 7 page buttons
+                    var startP = Math.max(1, currentPage - 3);
+                    var endP = Math.min(totalPages, startP + 6);
+                    if (endP - startP < 6) startP = Math.max(1, endP - 6);
+                    for (var p = startP; p <= endP; p++) {
+                        html += '<button class="hm-tp-btn' + (p === currentPage ? ' active' : '') + '" data-page="' + p + '">' + p + '</button>';
+                    }
+                    html += '<button class="hm-tp-btn" data-page="next" ' + (currentPage >= totalPages ? 'disabled' : '') + '>Next &raquo;</button>';
+                    html += '</span>';
+                }
+                paginationBar.innerHTML = html;
+            }
+
+            searchInput.addEventListener('input', function() {
+                // Debounce
+                clearTimeout(searchInput._hmt);
+                searchInput._hmt = setTimeout(filterRows, 200);
+            });
+
+            perPageSel.addEventListener('change', function() {
+                currentPage = 1;
+                renderPage();
+            });
+
+            paginationBar.addEventListener('click', function(e) {
+                var btn = e.target.closest('.hm-tp-btn');
+                if (!btn || btn.disabled) return;
+                var pg = btn.getAttribute('data-page');
+                if (pg === 'prev') currentPage--;
+                else if (pg === 'next') currentPage++;
+                else currentPage = parseInt(pg, 10);
+                renderPage();
+            });
+
+            // Initial render
+            renderPage();
+        });
+    }
+
+    // Run on DOMContentLoaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', enhanceTables);
+    } else {
+        enhanceTables();
+    }
+    // Expose for manual re-init (e.g. after AJAX reload)
+    window.hmEnhanceTables = enhanceTables;
+})();

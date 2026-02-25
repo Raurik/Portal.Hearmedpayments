@@ -180,7 +180,7 @@ class HearMed_Admin_ChatLogs {
                 </div>
             <?php else : ?>
                 <div class="hm-table-wrap">
-                    <table class="hm-table">
+                    <table class="hm-table" data-no-enhance>
                         <thead>
                             <tr>
                                 <th>Date &amp; Time</th>

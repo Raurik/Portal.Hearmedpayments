@@ -136,7 +136,7 @@ function hm_render_debug_page() {
 
         <!-- ── A. Environment ─────────────────────────────────── -->
         <h3 class="hm-section-heading">A. Environment</h3>
-        <table class="hm-table">
+        <table class="hm-table" data-no-enhance>
             <thead>
                 <tr><th>Setting</th><th>Value</th></tr>
             </thead>
@@ -200,7 +200,7 @@ function hm_render_debug_page() {
 
         <details style="margin-bottom:24px;">
             <summary style="cursor:pointer;font-size:13px;color:#64748b;">Show all registered shortcodes</summary>
-            <table class="hm-table" style="margin-top:10px;">
+            <table class="hm-table" data-no-enhance style="margin-top:10px;">
                 <thead><tr><th>Shortcode</th><th>Module</th></tr></thead>
                 <tbody>
                 <?php foreach ( $shortcode_map as $shortcode => $module ) : ?>
@@ -243,7 +243,7 @@ function hm_render_debug_page() {
 
         <!-- ── D. Database / Tables ───────────────────────────── -->
         <h3 class="hm-section-heading">D. Database / Tables</h3>
-        <table class="hm-table">
+        <table class="hm-table" data-no-enhance>
             <thead>
                 <tr>
                     <th>Table</th>
