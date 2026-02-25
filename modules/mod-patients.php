@@ -122,6 +122,9 @@ add_action( 'wp_ajax_hm_toggle_note_pin',  'hm_ajax_toggle_note_pin' );
 // Manufacturers lookup
 add_action( 'wp_ajax_hm_get_manufacturers',  'hm_ajax_get_manufacturers' );
 
+// Hearing aid catalog for cascading dropdowns
+add_action( 'wp_ajax_hm_get_ha_catalog',  'hm_ajax_get_ha_catalog' );
+
 // Repair enhancements
 add_action( 'wp_ajax_hm_update_repair_status', 'hm_ajax_update_repair_status' );
 
@@ -1829,7 +1832,7 @@ function hm_ajax_toggle_note_pin() {
 function hm_ajax_get_manufacturers() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $rows = HearMed_DB::get_results(
-        "SELECT id, name, warranty_terms FROM hearmed_reference.manufacturers WHERE is_active = true ORDER BY name"
+        "SELECT id, name, warranty_terms FROM hearmed_reference.manufacturers WHERE COALESCE(is_active::text,'true') NOT IN ('false','f','0') ORDER BY name"
     );
     $out = [];
     if ( $rows ) {
@@ -1838,6 +1841,44 @@ function hm_ajax_get_manufacturers() {
                 'id'             => (int) $r->id,
                 'name'           => $r->name,
                 'warranty_terms' => $r->warranty_terms ?: '',
+            ];
+        }
+    }
+    wp_send_json_success( $out );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  22b. HEARING AID CATALOG — cascading dropdown data
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_get_ha_catalog() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $rows = HearMed_DB::get_results(
+        "SELECT p.id, p.product_name, p.style, p.tech_level, p.manufacturer_id,
+                m.name AS manufacturer_name, m.warranty_terms
+         FROM hearmed_reference.products p
+         LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+         WHERE COALESCE(p.is_active::text,'true') NOT IN ('false','f','0')
+           AND (p.item_type = 'product' OR p.category = 'Hearing Aid')
+         ORDER BY m.name, p.product_name"
+    );
+    $out = [];
+    if ( $rows ) {
+        foreach ( $rows as $r ) {
+            // Extract warranty years from warranty_terms (e.g. "4 years" → 4)
+            $wy = 4;
+            if ( ! empty( $r->warranty_terms ) && preg_match( '/(\d+)/', $r->warranty_terms, $wm ) ) {
+                $wy = (int) $wm[1];
+            }
+            $out[] = [
+                'id'                => (int) $r->id,
+                'product_name'      => $r->product_name,
+                'style'             => $r->style ?: '',
+                'tech_level'        => $r->tech_level ?: '',
+                'manufacturer_id'   => (int) $r->manufacturer_id,
+                'manufacturer_name' => $r->manufacturer_name ?: '',
+                'warranty_years'    => $wy,
             ];
         }
     }

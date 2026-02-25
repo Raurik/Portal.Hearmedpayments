@@ -265,7 +265,7 @@ function initProfile(){
     });
 
     function renderProfile(){
-        var p=patient,ini=initials(p.name),th='';
+        var p=patient,ini=initials(p.first_name+' '+p.last_name),th='';
         TABS.forEach(function(tab){
             if(tab.id==='activity'&&!p.show_audit)return;
             th+='<button class="hm-tab-btn'+(tab.id===activeTab?' active':'')+'" data-tab="'+tab.id+'">'+tab.label+'</button>';
@@ -285,16 +285,15 @@ function initProfile(){
         }
         // Active/inactive indicator light
         var statusLight='<span class="hm-status-light '+(p.is_active?'hm-status-active':'hm-status-inactive')+'"></span>';
-         var ab='<button class="hm-btn hm-btn-outline hm-btn-sm hm-btn-icon-teal" id="hm-btn-book-appt">'+HM_ICONS.calendar+'<span>Book Appt</span></button>'+
+         var ab='<button class="hm-btn hm-btn-outline hm-btn-sm hm-btn-icon-teal" id="hm-btn-book-appt">'+HM_ICONS.calendar+'<span>Book Appointment</span></button>'+
              '<button class="hm-btn hm-btn-outline hm-btn-sm hm-btn-icon-teal" id="hm-btn-add-note">'+HM_ICONS.note+'<span>Add Note</span></button>';
-         if(p.can_export)ab+='<button class="hm-btn hm-btn-outline hm-btn-sm hm-btn-icon-teal" id="hm-btn-export-data">'+HM_ICONS.export+'<span>Export Data</span></button>';
+         if(p.can_export)ab+='<button class="hm-btn hm-btn-outline hm-btn-sm hm-btn-icon-teal" id="hm-btn-export-data">'+HM_ICONS.export+'<span>Export</span></button>';
         // Format phone for display (Irish format)
         var fmtPhone=function(ph){if(!ph)return'';ph=ph.replace(/\s+/g,'');if(ph.length===10&&ph[0]==='0')return ph.substr(0,3)+' '+ph.substr(3,3)+' '+ph.substr(6);if(ph.length===11&&ph.substr(0,3)==='+353')return'+353 '+ph.substr(3,2)+' '+ph.substr(5,3)+' '+ph.substr(8);return ph;};
 
         $el.html(
             '<div class="hm-patient-page">'+
                 '<div class="hm-patient-fixed">'+
-                    '<div class="hm-profile-back"><a href="'+PG+'" class="hm-back-btn">← Back to Patients</a></div>'+
                     '<div class="hm-patient-header">'+
                         '<div class="hm-patient-header-left">'+
                             '<div class="hm-patient-avatar">'+ini+'</div>'+
@@ -382,14 +381,21 @@ function initProfile(){
         function mt(name,label,checked){return'<label class="hm-pref-item"><input type="checkbox" class="hm-pref-check" data-pref="'+name+'"'+(checked?' checked':'')+'><span>'+label+'</span></label>';}
 
         function renderView(){
+            function dce(title,body,section){
+                return '<div class="hm-detail-card" data-section="'+section+'">'+
+                    '<div class="hm-detail-card-title" style="display:flex;justify-content:space-between;align-items:center;">'+
+                    '<span>'+esc(title)+'</span>'+
+                    '<button class="hm-btn hm-btn-link hm-btn-sm hm-section-edit" data-section="'+section+'">'+HM_ICONS.edit+'Edit</button>'+
+                    '</div>'+body+'</div>';
+            }
             $c.html('<div class="hm-tab-section">'+
-                '<div class="hm-section-header"><h3>Patient Details</h3><button class="hm-btn hm-btn-link hm-btn-sm" id="hm-details-edit">'+HM_ICONS.edit+'Edit</button></div>'+
+                '<div class="hm-section-header"><h3>Patient Details</h3></div>'+
                 '<div class="hm-detail-grid">'+
-                    dc('Name & Contact',dr('Title',p.patient_title)+dr('First name',p.first_name)+dr('Last name',p.last_name)+dr('Date of birth',fmtDate(p.dob))+dr('Phone',p.phone)+dr('Mobile',p.mobile)+dr('Email',p.email))+
-                    dc('PRSI Details',dr('PPS number',p.prsi_number)+dr('PRSI eligible',p.prsi_eligible?'Yes':'No')+dr('Last claimed',p.last_prsi_claim_date?fmtDate(p.last_prsi_claim_date):'Never')+dr('Next eligible',p.next_prsi_eligible_date?fmtDate(p.next_prsi_eligible_date):'—'))+
-                    dc('Address',dr('Address line 1',p.address_line1)+dr('Address line 2',p.address_line2)+dr('City / Town',p.city)+dr('County',p.county)+dr('Eircode',p.eircode))+
-                    dc('Secondary Details',dr('GP name',p.gp_name)+dr('GP address',p.gp_address)+dr('Next of kin',p.nok_name)+dr('NOK phone',p.nok_phone))+
-                    dc('In-house Details',dr('Referral source',p.referral_source)+dr('Sub-source',p.referral_sub_source)+dr('Dispenser',p.dispenser_name)+dr('Primary clinic',p.clinic_name)+dr('Annual review date',fmtDate(p.annual_review_date))+dr('Patient active',p.is_active?'Yes':'No'))+
+                    dce('Name & Contact',dr('Title',p.patient_title)+dr('First name',p.first_name)+dr('Last name',p.last_name)+dr('Date of birth',fmtDate(p.dob))+dr('Phone',p.phone)+dr('Mobile',p.mobile)+dr('Email',p.email),'name')+
+                    dce('PRSI Details',dr('PPS number',p.prsi_number)+dr('PRSI eligible',p.prsi_eligible?'Yes':'No')+dr('Last claimed',p.last_prsi_claim_date?fmtDate(p.last_prsi_claim_date):'Never')+dr('Next eligible',p.next_prsi_eligible_date?fmtDate(p.next_prsi_eligible_date):'—'),'prsi')+
+                    dce('Address',dr('Address line 1',p.address_line1)+dr('Address line 2',p.address_line2)+dr('City / Town',p.city)+dr('County',p.county)+dr('Eircode',p.eircode),'address')+
+                    dce('Secondary Details',dr('GP name',p.gp_name)+dr('GP address',p.gp_address)+dr('Next of kin',p.nok_name)+dr('NOK phone',p.nok_phone),'secondary')+
+                    dce('In-house Details',dr('Referral source',p.referral_source)+dr('Sub-source',p.referral_sub_source)+dr('Dispenser',p.dispenser_name)+dr('Primary clinic',p.clinic_name)+dr('Annual review date',fmtDate(p.annual_review_date))+dr('Patient active',p.is_active?'Yes':'No'),'inhouse')+
                     '<div class="hm-detail-card hm-detail-card-gdpr"><div class="hm-detail-card-title">GDPR &amp; Marketing</div><div class="hm-detail-gdpr-row">'+dr('GDPR consent',p.gdpr_consent?'Consented '+fmtDate(p.gdpr_consent_date)+' (v'+(p.gdpr_consent_version||'1.0')+')':'No consent')+'</div>'+
                     '<div class="hm-pref-wrap"><strong class="hm-pref-title">Marketing preferences</strong>'+
                     '<div class="hm-pref-list">'+mt('marketing_email','Email',p.marketing_email)+mt('marketing_sms','SMS',p.marketing_sms)+mt('marketing_phone','Phone',p.marketing_phone)+'</div>'+
@@ -397,48 +403,64 @@ function initProfile(){
                 '</div>'+
                 (p.is_admin?'<div class="hm-card" style="margin-top:16px;border:1px solid #fecdd3;"><div class="hm-card-hd" style="color:#e53e3e;">'+HM_ICONS.warning+' GDPR — Right to Erasure</div><div class="hm-card-body"><p style="font-size:13px;color:#64748b;">Anonymises personal data. Clinical + financial records retained. Irreversible.</p><button class="hm-btn hm-btn-danger hm-btn-sm" id="hm-anonymise-btn">Anonymise Patient</button></div></div>':'')+
             '</div>');
-            $c.on('click','#hm-details-edit',renderEdit);
+            $c.on('click','.hm-section-edit',function(){editSection($(this).data('section'));});
             $c.on('click','#hm-save-mkt',function(){
                 $.post(_hm.ajax,{action:'hm_update_marketing_prefs',nonce:_hm.nonce,patient_id:pid,marketing_email:$('[data-pref="marketing_email"]').is(':checked')?'1':'0',marketing_sms:$('[data-pref="marketing_sms"]').is(':checked')?'1':'0',marketing_phone:$('[data-pref="marketing_phone"]').is(':checked')?'1':'0'},function(r){if(r.success)toast('Preferences updated');else toast('Error','error');});
             });
             $c.on('click','#hm-anonymise-btn',showAnonymiseModal);
         }
 
-        function renderEdit(){
-            $c.html('<div class="hm-tab-section"><div class="hm-section-header"><h3>Edit Patient Details</h3></div>'+
-                '<div class="hm-cols-2"><div>'+ef('Title','select','ep-title',p.patient_title,['','Mr','Mrs','Ms','Miss','Dr','Other'])+ef('First name','text','ep-fn',p.first_name)+ef('Last name','text','ep-ln',p.last_name)+ef('Date of birth','date','ep-dob',p.dob)+ef('Phone','text','ep-phone',p.phone)+ef('Mobile','text','ep-mobile',p.mobile)+ef('Email','email','ep-email',p.email)+
-                ef('Address line 1','text','ep-addr1',p.address_line1||'')+ef('Address line 2','text','ep-addr2',p.address_line2||'')+
-                '<div class="hm-form-row">'+ef('City / Town','text','ep-city',p.city||'')+ef('County','text','ep-county',p.county||'')+'</div>'+
-                ef('Eircode','text','ep-eircode',p.eircode)+'</div>'+
-                '<div>'+ef('GP name','text','ep-gp-name',p.gp_name)+
-                '<div class="hm-form-group"><label class="hm-label">GP address</label><textarea class="hm-textarea" id="ep-gp-addr" rows="2">'+esc(p.gp_address)+'</textarea></div>'+
-                ef('Next of kin','text','ep-nok-name',p.nok_name)+ef('NOK phone','text','ep-nok-phone',p.nok_phone)+ef('PPS number','text','ep-prsi-num',p.prsi_number)+ef('Referral source','text','ep-ref',p.referral_source)+
-                '<div class="hm-form-group"><label class="hm-label">Primary clinic</label><select class="hm-dd" id="ep-clinic"><option value="">— Select —</option></select></div>'+
-                '<div class="hm-form-group"><label class="hm-label">Assigned dispenser</label><select class="hm-dd" id="ep-dispenser"><option value="">— Select —</option></select></div>'+
-                ef('Annual review date','date','ep-review',p.annual_review_date)+
-                '<div class="hm-form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="ep-prsi"'+(p.prsi_eligible?' checked':'')+'>PRSI Eligible</label></div>'+
-                '<div class="hm-form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="ep-active"'+(p.is_active?' checked':'')+'>Patient Active</label></div>'+
-                '</div></div>'+
-                '<div style="display:flex;gap:10px;margin-top:20px;"><button class="hm-btn hm-btn-teal" id="ep-save">Save Changes</button><button class="hm-btn hm-btn-outline" id="ep-cancel">Cancel</button></div>'+
-            '</div>');
-            $.post(_hm.ajax,{action:'hm_get_clinics',nonce:_hm.nonce},function(r){
-                if(!r.success)return;
-                var $sel=$('#ep-clinic');
-                r.data.forEach(function(c){$sel.append('<option value="'+c.id+'">'+esc(c.name)+'</option>');});
-                $sel.val(p.assigned_clinic_id||'');
-            });
-            $.post(_hm.ajax,{action:'hm_get_staff_list',nonce:_hm.nonce},function(r){
-                if(!r.success)return;
-                var $sel=$('#ep-dispenser');
-                r.data.forEach(function(d){$sel.append('<option value="'+d.id+'">'+esc(d.name)+'</option>');});
-                $sel.val(p.assigned_dispenser_id||'');
-            });
-            $c.on('click','#ep-cancel',renderView);
-            $c.on('click','#ep-save',function(){
+        function editSection(section){
+            var $card=$('.hm-detail-card[data-section="'+section+'"]');
+            var formHtml='',afterRender=null;
+            if(section==='name'){
+                formHtml=ef('Title','select','es-title',p.patient_title,['','Mr','Mrs','Ms','Miss','Dr','Other'])+ef('First name','text','es-fn',p.first_name)+ef('Last name','text','es-ln',p.last_name)+ef('Date of birth','date','es-dob',p.dob)+ef('Phone','text','es-phone',p.phone)+ef('Mobile','text','es-mobile',p.mobile)+ef('Email','email','es-email',p.email);
+            }else if(section==='prsi'){
+                formHtml=ef('PPS number','text','es-prsi-num',p.prsi_number)+'<div class="hm-form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="es-prsi"'+(p.prsi_eligible?' checked':'')+'>PRSI Eligible</label></div>';
+            }else if(section==='address'){
+                formHtml=ef('Address line 1','text','es-addr1',p.address_line1||'')+ef('Address line 2','text','es-addr2',p.address_line2||'')+'<div class="hm-form-row">'+ef('City / Town','text','es-city',p.city||'')+ef('County','text','es-county',p.county||'')+'</div>'+ef('Eircode','text','es-eircode',p.eircode);
+            }else if(section==='secondary'){
+                formHtml=ef('GP name','text','es-gp-name',p.gp_name)+'<div class="hm-form-group"><label class="hm-label">GP address</label><textarea class="hm-textarea" id="es-gp-addr" rows="2">'+esc(p.gp_address)+'</textarea></div>'+ef('Next of kin','text','es-nok-name',p.nok_name)+ef('NOK phone','text','es-nok-phone',p.nok_phone);
+            }else if(section==='inhouse'){
+                formHtml=ef('Referral source','text','es-ref',p.referral_source)+'<div class="hm-form-group"><label class="hm-label">Primary clinic</label><select class="hm-dd" id="es-clinic"><option value="">— Select —</option></select></div>'+'<div class="hm-form-group"><label class="hm-label">Assigned dispenser</label><select class="hm-dd" id="es-dispenser"><option value="">— Select —</option></select></div>'+ef('Annual review date','date','es-review',p.annual_review_date)+'<div class="hm-form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="es-active"'+(p.is_active?' checked':'')+'>Patient Active</label></div>';
+                afterRender=function(){
+                    $.post(_hm.ajax,{action:'hm_get_clinics',nonce:_hm.nonce},function(r){if(!r.success)return;r.data.forEach(function(c){$('#es-clinic').append('<option value="'+c.id+'">'+esc(c.name)+'</option>');});$('#es-clinic').val(p.assigned_clinic_id||'');});
+                    $.post(_hm.ajax,{action:'hm_get_staff_list',nonce:_hm.nonce},function(r){if(!r.success)return;r.data.forEach(function(d){$('#es-dispenser').append('<option value="'+d.id+'">'+esc(d.name)+'</option>');});$('#es-dispenser').val(p.assigned_dispenser_id||'');});
+                };
+            }
+            $card.html('<div class="hm-detail-card-title" style="display:flex;justify-content:space-between;align-items:center;"><span>Editing</span></div>'+formHtml+'<div style="display:flex;gap:8px;margin-top:12px;"><button class="hm-btn hm-btn-teal hm-btn-sm hm-section-save" data-section="'+section+'">Save</button><button class="hm-btn hm-btn-outline hm-btn-sm hm-section-cancel">Cancel</button></div>');
+            if(afterRender)afterRender();
+            $card.off('click','.hm-section-cancel').on('click','.hm-section-cancel',function(){renderView();});
+            $card.off('click','.hm-section-save').on('click','.hm-section-save',function(){
+                var payload={action:'hm_update_patient',nonce:_hm.nonce,patient_id:pid};
+                // Always send all fields — backend expects them. Fill from current patient and override section.
+                payload.patient_title=$('#es-title').length?$('#es-title').val():(p.patient_title||'');
+                payload.first_name=$('#es-fn').length?$('#es-fn').val():(p.first_name||'');
+                payload.last_name=$('#es-ln').length?$('#es-ln').val():(p.last_name||'');
+                payload.dob=$('#es-dob').length?$('#es-dob').val():(p.dob||'');
+                payload.patient_phone=$('#es-phone').length?$('#es-phone').val():(p.phone||'');
+                payload.patient_mobile=$('#es-mobile').length?$('#es-mobile').val():(p.mobile||'');
+                payload.patient_email=$('#es-email').length?$('#es-email').val():(p.email||'');
+                payload.address_line1=$('#es-addr1').length?$('#es-addr1').val():(p.address_line1||'');
+                payload.address_line2=$('#es-addr2').length?$('#es-addr2').val():(p.address_line2||'');
+                payload.city=$('#es-city').length?$('#es-city').val():(p.city||'');
+                payload.county=$('#es-county').length?$('#es-county').val():(p.county||'');
+                payload.patient_eircode=$('#es-eircode').length?$('#es-eircode').val():(p.eircode||'');
+                payload.gp_name=$('#es-gp-name').length?$('#es-gp-name').val():(p.gp_name||'');
+                payload.gp_address=$('#es-gp-addr').length?$('#es-gp-addr').val():(p.gp_address||'');
+                payload.nok_name=$('#es-nok-name').length?$('#es-nok-name').val():(p.nok_name||'');
+                payload.nok_phone=$('#es-nok-phone').length?$('#es-nok-phone').val():(p.nok_phone||'');
+                payload.prsi_number=$('#es-prsi-num').length?$('#es-prsi-num').val():(p.prsi_number||'');
+                payload.referral_source=$('#es-ref').length?$('#es-ref').val():(p.referral_source||'');
+                payload.assigned_clinic_id=$('#es-clinic').length?$('#es-clinic').val():(p.assigned_clinic_id||'');
+                payload.assigned_dispenser_id=$('#es-dispenser').length?$('#es-dispenser').val():(p.assigned_dispenser_id||'');
+                payload.annual_review_date=$('#es-review').length?$('#es-review').val():(p.annual_review_date||'');
+                payload.prsi_eligible=$('#es-prsi').length?($('#es-prsi').is(':checked')?'1':'0'):(p.prsi_eligible?'1':'0');
+                payload.is_active=$('#es-active').length?($('#es-active').is(':checked')?'1':'0'):(p.is_active?'1':'0');
                 var $btn=$(this).prop('disabled',true).text('Saving…');
-                $.post(_hm.ajax,{action:'hm_update_patient',nonce:_hm.nonce,patient_id:pid,patient_title:$('#ep-title').val(),first_name:$('#ep-fn').val(),last_name:$('#ep-ln').val(),dob:$('#ep-dob').val(),patient_phone:$('#ep-phone').val(),patient_mobile:$('#ep-mobile').val(),patient_email:$('#ep-email').val(),address_line1:$('#ep-addr1').val(),address_line2:$('#ep-addr2').val(),city:$('#ep-city').val(),county:$('#ep-county').val(),patient_eircode:$('#ep-eircode').val(),gp_name:$('#ep-gp-name').val(),gp_address:$('#ep-gp-addr').val(),nok_name:$('#ep-nok-name').val(),nok_phone:$('#ep-nok-phone').val(),prsi_number:$('#ep-prsi-num').val(),referral_source:$('#ep-ref').val(),assigned_clinic_id:$('#ep-clinic').val(),assigned_dispenser_id:$('#ep-dispenser').val(),annual_review_date:$('#ep-review').val(),prsi_eligible:$('#ep-prsi').is(':checked')?'1':'0',is_active:$('#ep-active').is(':checked')?'1':'0'},function(r){
-                    if(r.success){toast('Patient updated');$.post(_hm.ajax,{action:'hm_get_patient',nonce:_hm.nonce,patient_id:pid},function(r2){if(r2.success){patient=r2.data;renderProfile();}});renderView();}
-                    else{toast(r.data||'Error','error');$btn.prop('disabled',false).text('Save Changes');}
+                $.post(_hm.ajax,payload,function(r){
+                    if(r.success){toast('Updated');$.post(_hm.ajax,{action:'hm_get_patient',nonce:_hm.nonce,patient_id:pid},function(r2){if(r2.success){patient=r2.data;renderProfile();renderView();}});}
+                    else{toast(r.data||'Error','error');$btn.prop('disabled',false).text('Save');}
                 });
             });
         }
@@ -876,12 +898,13 @@ function initProfile(){
                     '<div class="hm-form-group"><label class="hm-label">Manufacturer *</label>'+
                     '<select class="hm-dd" id="ap-mfr"><option value="">Loading…</option></select></div>'+
                     '<div class="hm-form-row">'+
-                        '<div class="hm-form-group"><label class="hm-label">Model</label><input type="text" class="hm-inp" id="ap-model" placeholder="e.g. Lumity 90"></div>'+
+                        '<div class="hm-form-group"><label class="hm-label">Model *</label>'+
+                        '<select class="hm-dd" id="ap-model"><option value="">— Select manufacturer first —</option></select></div>'+
                         '<div class="hm-form-group"><label class="hm-label">Technology Level</label>'+
-                        '<select class="hm-dd" id="ap-tech"><option value="">— Select —</option><option>Entry</option><option>Essential</option><option>Standard</option><option>Advanced</option><option>Premium</option></select></div>'+
+                        '<select class="hm-dd" id="ap-tech"><option value="">— All —</option></select></div>'+
                     '</div>'+
-                    '<div class="hm-form-group"><label class="hm-label">Style *</label>'+
-                    '<select class="hm-dd" id="ap-style"><option value="">— Select —</option><option>BTE</option><option>RIC</option><option>ITE</option><option>ITC</option><option>CIC</option><option>CROS</option><option>BiCROS</option></select></div>'+
+                    '<div class="hm-form-group"><label class="hm-label">Style</label>'+
+                    '<select class="hm-dd" id="ap-style"><option value="">— All —</option></select></div>'+
                     '<div class="hm-form-row">'+
                         '<div class="hm-form-group"><label class="hm-label">Serial (Left)</label><input type="text" class="hm-inp" id="ap-sl" placeholder="L-XXXXXXXX"></div>'+
                         '<div class="hm-form-group"><label class="hm-label">Serial (Right)</label><input type="text" class="hm-inp" id="ap-sr" placeholder="R-XXXXXXXX"></div>'+
@@ -891,17 +914,134 @@ function initProfile(){
                         '<div class="hm-form-group"><label class="hm-label">Warranty expiry</label><input type="date" class="hm-inp" id="ap-war"></div>'+
                     '</div>'+
                     '<div class="hm-form-hint" id="ap-war-hint" style="margin-top:-8px;margin-bottom:12px;font-size:12px;color:#64748b;"></div>'+
+                    '<div id="ap-match-info" style="font-size:12px;color:#64748b;margin-bottom:8px;"></div>'+
                 '</div>'+
                 '<div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="ap-save">Add Hearing Aid</button></div>'+
             '</div></div>'
         );
-        // Load manufacturers from DB
-        $.post(_hm.ajax,{action:'hm_get_manufacturers',nonce:_hm.nonce},function(r){
-            var $sel=$('#ap-mfr');$sel.empty().append('<option value="">— Select manufacturer —</option>');
-            if(r&&r.success&&r.data){r.data.forEach(function(m){$sel.append('<option value="'+m._ID+'" data-warranty="'+(m.warranty_years||4)+'">'+esc(m.name)+'</option>');});}
-            $sel.append('<option value="other">Other (manual entry)</option>');
+
+        var catalog=[], _lock=false;
+
+        // Load catalog
+        $.post(_hm.ajax,{action:'hm_get_ha_catalog',nonce:_hm.nonce},function(r){
+            if(r&&r.success) catalog=r.data||[];
+            rebuildDropdowns();
         });
-        // On manufacturer select — auto-calc warranty
+
+        /* ── Cascading logic ── */
+        function getFiltered(pinField){
+            var mfr=$('#ap-mfr').val(), mdl=$('#ap-model').val(),
+                tech=$('#ap-tech').val(), sty=$('#ap-style').val();
+            return catalog.filter(function(p){
+                if(pinField!=='mfr'   && mfr  && String(p.manufacturer_id)!==mfr) return false;
+                if(pinField!=='model' && mdl  && p.product_name!==mdl)            return false;
+                if(pinField!=='tech'  && tech && p.tech_level!==tech)             return false;
+                if(pinField!=='style' && sty  && p.style!==sty)                  return false;
+                return true;
+            });
+        }
+
+        function unique(arr,key){
+            var seen={},out=[];
+            arr.forEach(function(p){var v=p[key];if(v&&!seen[v]){seen[v]=1;out.push(v);}});
+            return out.sort();
+        }
+
+        function rebuildDropdowns(changed){
+            if(_lock) return; _lock=true;
+
+            var mfrVal=$('#ap-mfr').val(), mdlVal=$('#ap-model').val(),
+                techVal=$('#ap-tech').val(), styVal=$('#ap-style').val();
+
+            // Manufacturer options — filtered by everything except mfr
+            if(changed!=='mfr'){
+                var mfrItems = getFiltered('mfr');
+                var mfrNames = [], mfrSeen = {};
+                mfrItems.forEach(function(p){
+                    if(!mfrSeen[p.manufacturer_id]){
+                        mfrSeen[p.manufacturer_id]=1;
+                        mfrNames.push({id:p.manufacturer_id, name:p.manufacturer_name, wy:p.warranty_years});
+                    }
+                });
+                mfrNames.sort(function(a,b){return a.name.localeCompare(b.name);});
+                var $m=$('#ap-mfr');$m.empty().append('<option value="">— Select manufacturer —</option>');
+                mfrNames.forEach(function(m){$m.append('<option value="'+m.id+'" data-warranty="'+m.wy+'">'+esc(m.name)+'</option>');});
+                if(mfrVal && $m.find('option[value="'+mfrVal+'"]').length) $m.val(mfrVal);
+            }
+
+            // Model options — filtered by everything except model
+            if(changed!=='model'){
+                var mdlItems = getFiltered('model');
+                var mdlList = unique(mdlItems,'product_name');
+                var $d=$('#ap-model');$d.empty().append('<option value="">— Select model —</option>');
+                mdlList.forEach(function(n){$d.append('<option value="'+esc(n)+'">'+esc(n)+'</option>');});
+                if(mdlVal && $d.find('option[value="'+CSS.escape(mdlVal)+'"]').length) $d.val(mdlVal);
+                else if(!mdlList.length) $d.empty().append('<option value="">— Select manufacturer first —</option>');
+            }
+
+            // Tech level options — filtered by everything except tech
+            if(changed!=='tech'){
+                var techItems = getFiltered('tech');
+                var techList = unique(techItems,'tech_level');
+                var $t=$('#ap-tech');$t.empty().append('<option value="">— All —</option>');
+                techList.forEach(function(n){$t.append('<option value="'+esc(n)+'">'+esc(n)+'</option>');});
+                if(techVal && $t.find('option[value="'+CSS.escape(techVal)+'"]').length) $t.val(techVal);
+            }
+
+            // Style options — filtered by everything except style
+            if(changed!=='style'){
+                var styItems = getFiltered('style');
+                var styList = unique(styItems,'style');
+                var $s=$('#ap-style');$s.empty().append('<option value="">— All —</option>');
+                styList.forEach(function(n){$s.append('<option value="'+esc(n)+'">'+esc(n)+'</option>');});
+                if(styVal && $s.find('option[value="'+CSS.escape(styVal)+'"]').length) $s.val(styVal);
+            }
+
+            updateMatchInfo();
+            _lock=false;
+        }
+
+        function resolveProductId(){
+            var mfr=$('#ap-mfr').val(), mdl=$('#ap-model').val(),
+                tech=$('#ap-tech').val(), sty=$('#ap-style').val();
+            var matches=catalog.filter(function(p){
+                if(mfr  && String(p.manufacturer_id)!==mfr) return false;
+                if(mdl  && p.product_name!==mdl)            return false;
+                if(tech && p.tech_level!==tech)              return false;
+                if(sty  && p.style!==sty)                   return false;
+                return true;
+            });
+            return matches.length===1 ? matches[0].id : (matches.length>0 ? matches[0].id : 0);
+        }
+
+        function updateMatchInfo(){
+            var mfr=$('#ap-mfr').val(), mdl=$('#ap-model').val(),
+                tech=$('#ap-tech').val(), sty=$('#ap-style').val();
+            var matches=catalog.filter(function(p){
+                if(mfr  && String(p.manufacturer_id)!==mfr) return false;
+                if(mdl  && p.product_name!==mdl)            return false;
+                if(tech && p.tech_level!==tech)              return false;
+                if(sty  && p.style!==sty)                   return false;
+                return true;
+            });
+            if(matches.length===1){
+                $('#ap-match-info').html('<span style="color:#10b981;">✓ Matched: <strong>'+esc(matches[0].manufacturer_name)+' '+esc(matches[0].product_name)+'</strong></span>');
+            } else if(matches.length>1){
+                $('#ap-match-info').html(matches.length+' products match — refine selections to narrow down');
+            } else if(mfr||mdl||tech||sty){
+                $('#ap-match-info').html('<span style="color:#e53e3e;">No exact product match — check selections</span>');
+            } else {
+                $('#ap-match-info').html('');
+            }
+        }
+
+        // Bind change events — each dropdown triggers cascade
+        $('#ap-mfr').on('change',function(){ rebuildDropdowns('mfr'); calcWarranty(); });
+        $('#ap-model').on('change',function(){ rebuildDropdowns('model'); });
+        $('#ap-tech').on('change',function(){ rebuildDropdowns('tech'); });
+        $('#ap-style').on('change',function(){ rebuildDropdowns('style'); });
+
+        // Warranty auto-calc
         function calcWarranty(){
             var $opt=$('#ap-mfr option:selected'),warYrs=parseInt($opt.data('warranty'))||4,fitVal=$('#ap-fit').val();
             if(fitVal){
@@ -909,7 +1049,6 @@ function initProfile(){
                 $('#ap-war-hint').text('Default '+warYrs+'-year warranty applied from manufacturer');
             }
         }
-        $('#ap-mfr').on('change',calcWarranty);
         $('#ap-fit').on('change',calcWarranty);
         // Auto-calc on load (default 4 years)
         (function(){var fit=new Date($('#ap-fit').val());fit.setFullYear(fit.getFullYear()+4);$('#ap-war').val(fit.toISOString().split('T')[0]);$('#ap-war-hint').text('Default 4-year warranty');})();
@@ -919,9 +1058,10 @@ function initProfile(){
         $('#ap-save').on('click',function(){
             var fit=$('#ap-fit').val();if(!fit){toast('Fitting date required','error');return;}
             if(!$('#ap-mfr').val()){toast('Select a manufacturer','error');return;}
-            if(!$('#ap-style').val()){toast('Select a style','error');return;}
+            if(!$('#ap-model').val()){toast('Select a model','error');return;}
+            var prodId=resolveProductId();
             $(this).prop('disabled',true).text('Saving…');
-            $.post(_hm.ajax,{action:'hm_add_patient_product',nonce:_hm.nonce,patient_id:pid,product_id:0,manufacturer:$('#ap-mfr option:selected').text(),manufacturer_id:$('#ap-mfr').val(),model:$('#ap-model').val(),style:$('#ap-style').val(),technology_level:$('#ap-tech').val(),serial_number_left:$('#ap-sl').val(),serial_number_right:$('#ap-sr').val(),fitting_date:fit,warranty_expiry:$('#ap-war').val()},function(r){
+            $.post(_hm.ajax,{action:'hm_add_patient_product',nonce:_hm.nonce,patient_id:pid,product_id:prodId,manufacturer:$('#ap-mfr option:selected').text(),manufacturer_id:$('#ap-mfr').val(),model:$('#ap-model').val(),style:$('#ap-style').val(),technology_level:$('#ap-tech').val(),serial_number_left:$('#ap-sl').val(),serial_number_right:$('#ap-sr').val(),fitting_date:fit,warranty_expiry:$('#ap-war').val()},function(r){
                 closeModal();
                 if(r.success){toast('Hearing aid added');if(cb)cb();}
                 else{toast(r.data||'Error','error');}
