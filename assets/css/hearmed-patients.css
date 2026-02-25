@@ -369,6 +369,15 @@
   align-items: center;
   gap: 6px;
 }
+#hm-app.hm-patients .hm-patient-header-right .hm-icon {
+  width: 20px;
+  height: 20px;
+}
+#hm-app.hm-patients .hm-patient-header-right .hm-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: #0BB4C4;
+}
 
 #hm-app.hm-patients .hm-patient-header-right #hm-btn-book-appt:hover,
 #hm-app.hm-patients .hm-patient-header-right #hm-btn-add-note:hover,
@@ -985,6 +994,132 @@
   font-size: 10px;
   font-weight: 700;
   color: #94a3b8;
+}
+
+/* ── Hearing Aid Card — big L/R split ── */
+.hm-ha-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(21,27,51,0.05);
+}
+.hm-ha-card-active {
+  border-left: 4px solid #0BB4C4;
+}
+.hm-ha-card-header {
+  margin-bottom: 20px;
+}
+.hm-ha-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.hm-ha-card-title strong {
+  font-size: 18px;
+  color: #151B33;
+}
+.hm-ha-card-meta {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+.hm-ha-card-dates {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* L/R grid */
+.hm-ha-lr-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.hm-ha-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #edf2f7;
+}
+.hm-ha-side-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.hm-ha-side-img {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 12px;
+}
+.hm-ha-side-right {
+  transform: scaleX(-1);
+}
+.hm-ha-side-serial {
+  margin-bottom: 14px;
+}
+.hm-ha-side-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.hm-ha-side-actions .hm-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Both row */
+.hm-ha-both-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #edf2f7;
+}
+
+/* ── Extra-small button ── */
+.hm-btn-xs {
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+/* ── Danger outline ── */
+.hm-btn-danger-outline {
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+.hm-btn-danger-outline:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+
+/* ── Glowing badges ── */
+.hm-badge-glow-green {
+  background: #dcfce7;
+  color: #166534;
+  box-shadow: 0 0 8px rgba(34,197,94,0.45);
+  animation: hm-glow-green 2s ease-in-out infinite alternate;
+}
+@keyframes hm-glow-green {
+  0%   { box-shadow: 0 0 6px rgba(34,197,94,0.3); }
+  100% { box-shadow: 0 0 12px rgba(34,197,94,0.6); }
+}
+
+@media (max-width: 640px) {
+  .hm-ha-lr-grid { grid-template-columns: 1fr; }
+  .hm-ha-both-row { flex-direction: column; }
 }
 
 /* ── Repair row status colors ── */

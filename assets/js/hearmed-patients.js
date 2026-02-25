@@ -279,8 +279,8 @@ function initProfile(){
         // Warranty status indicator
         var wh='';
         if(p.warranty_status&&p.warranty_status!=='none'){
-            var wc=p.warranty_status==='expired'?'hm-badge-red':p.warranty_status==='expiring'?'hm-badge-amber':'hm-badge-green';
-            var wl=p.warranty_status==='expired'?'Warranty Expired':p.warranty_status==='expiring'?'Warranty '+p.warranty_days+'d':'In Warranty';
+            var wc=p.warranty_status==='expired'?'hm-badge-red':p.warranty_status==='expiring'?'hm-badge-amber':'hm-badge-green hm-badge-glow-green';
+            var wl=p.warranty_status==='expired'?'Warranty Expired':p.warranty_status==='expiring'?'Warranty '+p.warranty_days+'d':'● In Warranty';
             wh='<span class="hm-badge '+wc+'">'+wl+'</span>';
         }
         // Active/inactive indicator light
@@ -545,60 +545,169 @@ function initProfile(){
     }
 
     /* ── HEARING AIDS ── */
+    var HA_IMG='<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><path d="M32 6C20 6 14 16 14 26c0 6 2 10 4 14 2.5 5 3 8 3 12a4 4 0 0 0 4 4h2a2 2 0 0 0 2-2v-6c0-2 1-3 3-3s3 1 3 3v6a2 2 0 0 0 2 2h2a4 4 0 0 0 4-4c0-4 .5-7 3-12 2-4 4-8 4-14C50 16 44 6 32 6z" fill="#e0f7fa" stroke="#0BB4C4" stroke-width="2"/><path d="M26 26a6 6 0 0 1 12 0" stroke="#0BB4C4" stroke-width="2" stroke-linecap="round"/><circle cx="32" cy="20" r="2" fill="#0BB4C4"/></svg>';
+
     function loadHearingAids($c){
         $.post(_hm.ajax,{action:'hm_get_patient_products',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
             var prods=r.data,act=prods.filter(function(p){return p.status==='Active';}),inact=prods.filter(function(p){return p.status!=='Active';});
-            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Hearing Aids</h3><button class="hm-btn hm-btn-teal hm-btn-sm" id="hm-add-product-btn">+ Add Hearing Aid</button></div>';
-            if(!act.length&&!inact.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.hearing+'</div><div class="hm-empty-text">No hearing aids</div></div>';
-            if(act.length){h+='<div style="margin-bottom:24px;">';act.forEach(function(pr){h+=pcard(pr,true);});h+='</div>';}
-            if(inact.length){h+='<details style="margin-top:16px;"><summary style="font-size:14px;font-weight:500;color:#94a3b8;cursor:pointer;">Previous Hearing Aids ('+inact.length+')</summary><div style="margin-top:12px;">';inact.forEach(function(pr){h+=pcard(pr,false);});h+='</div></details>';}
+
+            var h='<div class="hm-tab-section">';
+            h+='<div class="hm-section-header"><h3>Hearing Aids</h3>';
+            h+='<div style="display:flex;gap:8px;">';
+            if(act.length) h+='<button class="hm-btn hm-btn-outline hm-btn-sm hm-btn-icon-teal" id="hm-exchange-top-btn">'+HM_ICONS.returns+' Exchange</button>';
+            h+='<button class="hm-btn hm-btn-teal hm-btn-sm" id="hm-add-product-btn">+ Add Hearing Aid</button>';
+            h+='</div></div>';
+
+            if(!act.length&&!inact.length){
+                h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.hearing+'</div><div class="hm-empty-text">No hearing aids on file</div></div>';
+            }
+
+            // Active devices — big L/R split cards
+            act.forEach(function(pr){ h+=buildDeviceCard(pr,true); });
+
+            // Inactive devices
+            if(inact.length){
+                h+='<details class="hm-inactive-devices" style="margin-top:24px;"><summary style="font-size:14px;font-weight:600;color:#94a3b8;cursor:pointer;">Inactive Devices ('+inact.length+')</summary><div style="margin-top:12px;">';
+                inact.forEach(function(pr){ h+=buildDeviceCard(pr,false); });
+                h+='</div></details>';
+            }
             $c.html(h+'</div>');
         });
-        function pcard(pr,isAct){
+
+        function buildDeviceCard(pr,isAct){
             var sc={Active:'hm-badge-green',Inactive:'hm-badge-gray',Lost:'hm-badge-red',Replaced:'hm-badge-amber'}[pr.status]||'hm-badge-gray';
-            // Warranty indicator on card
+            // Warranty badge
             var wbadge='';
             if(pr.warranty_expiry){
                 var wexp=new Date(pr.warranty_expiry),now=new Date(),wdays=Math.ceil((wexp-now)/(1000*60*60*24));
-                if(wdays<0)wbadge='<span class="hm-badge hm-badge-sm hm-badge-red">Expired</span>';
-                else if(wdays<=90)wbadge='<span class="hm-badge hm-badge-sm hm-badge-amber">'+wdays+'d left</span>';
-                else wbadge='<span class="hm-badge hm-badge-sm hm-badge-green">In Warranty</span>';
+                if(wdays<0) wbadge='<span class="hm-badge hm-badge-sm hm-badge-red">Warranty Expired</span>';
+                else if(wdays<=90) wbadge='<span class="hm-badge hm-badge-sm hm-badge-amber">Warranty '+wdays+'d</span>';
+                else wbadge='<span class="hm-badge hm-badge-sm hm-badge-green hm-badge-glow-green">In Warranty</span>';
             }
-            var imgHtml=pr.product_image?'<div class="hm-product-img"><img src="'+esc(pr.product_image)+'" alt="'+esc(pr.product_name)+'"></div>':'<div class="hm-product-img hm-product-img-lr"><div class="hm-ear-side"><span class="hm-ear-label">L</span>'+HM_ICONS.hearing+'</div><div class="hm-ear-side"><span class="hm-ear-label">R</span>'+HM_ICONS.hearing+'</div></div>';
-            var actions='';
+            var activeBadge=isAct?'<span class="hm-badge hm-badge-sm hm-badge-green hm-badge-glow-green">● Active</span>':'<span class="hm-badge hm-badge-sm '+sc+'">'+esc(pr.status)+'</span>';
+
+            var card='<div class="hm-ha-card'+(isAct?' hm-ha-card-active':'')+'" data-device-id="'+pr._ID+'">';
+
+            // Card header
+            card+='<div class="hm-ha-card-header">';
+            card+='<div class="hm-ha-card-title">';
+            card+='<strong>'+esc(pr.product_name)+'</strong> '+activeBadge+' '+wbadge;
+            card+='</div>';
+            card+='<div class="hm-ha-card-meta">'+esc(pr.manufacturer)+(pr.style?' · '+esc(pr.style):'')+'</div>';
+            card+='<div class="hm-ha-card-dates">Fitted: '+fmtDate(pr.fitting_date)+' · Warranty: '+fmtDate(pr.warranty_expiry)+'</div>';
+            if(pr.inactive_reason) card+='<div class="hm-ha-card-dates" style="color:#e53e3e;">Reason: '+esc(pr.inactive_reason)+'</div>';
+            card+='</div>';
+
+            // L/R split
+            card+='<div class="hm-ha-lr-grid">';
+
+            // Left device
+            card+='<div class="hm-ha-side">';
+            card+='<div class="hm-ha-side-label">LEFT</div>';
+            card+='<div class="hm-ha-side-img hm-ha-side-left">'+HA_IMG+'</div>';
+            card+='<div class="hm-ha-side-serial">'+(pr.serial_left?'<span class="hm-serial">'+esc(pr.serial_left)+'</span>':'<span style="color:#cbd5e1;font-size:12px;">No serial</span>')+'</div>';
             if(isAct){
-                actions='<div class="hm-product-actions">'+
-                    '<button class="hm-btn hm-btn-outline hm-btn-sm hm-log-repair" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+'" data-sl="'+esc(pr.serial_left||'')+'" data-sr="'+esc(pr.serial_right||'')+'">'+HM_ICONS.repair+'Repair</button>'+
-                    '<button class="hm-btn hm-btn-outline hm-btn-sm hm-exchange-btn" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+'">'+HM_ICONS.returns+'Exchange</button>'+
-                    '<button class="hm-btn hm-btn-outline hm-btn-sm hm-mark-inactive" data-id="'+pr._ID+'">Mark Inactive</button>'+
-                '</div>';
+                card+='<div class="hm-ha-side-actions">';
+                card+='<button class="hm-btn hm-btn-outline hm-btn-xs hm-btn-icon-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_left||'')+'">'+HM_ICONS.repair+' Repair</button>';
+                card+='<button class="hm-btn hm-btn-outline hm-btn-xs hm-btn-danger-outline hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+' (Left)">Mark Inactive</button>';
+                card+='</div>';
             }
-            return '<div class="hm-product-card'+(isAct?' hm-product-card-active':'')+'">'+imgHtml+
-                '<div style="flex:1;min-width:0;">'+
-                    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">'+
-                        '<strong style="font-size:15px;color:#151B33;">'+esc(pr.product_name)+'</strong>'+
-                        '<span class="hm-badge hm-badge-sm '+sc+'">'+esc(pr.status)+'</span>'+wbadge+
-                    '</div>'+
-                    '<div style="font-size:13px;color:#64748b;margin-bottom:4px;">'+esc(pr.manufacturer)+(pr.model?' · '+esc(pr.model):'')+(pr.style?' · '+esc(pr.style):'')+'</div>'+
-                    (pr.serial_left||pr.serial_right?'<div style="font-size:13px;color:#64748b;margin-bottom:4px;">'+(pr.serial_left?'<span class="hm-serial">L: '+esc(pr.serial_left)+'</span> ':'')+(pr.serial_right?'<span class="hm-serial">R: '+esc(pr.serial_right)+'</span>':'')+'</div>':'')+
-                    '<div style="font-size:12px;color:#94a3b8;">'+
-                        (pr.purchase_date?'Purchased: '+fmtDate(pr.purchase_date)+' · ':'')+
-                        'Fitted: '+fmtDate(pr.fitting_date)+' · Warranty: '+fmtDate(pr.warranty_expiry)+
-                    '</div>'+
-                    (pr.inactive_reason?'<div style="font-size:12px;color:#94a3b8;">Reason: '+esc(pr.inactive_reason)+'</div>':'')+
-                '</div>'+actions+'</div>';
+            card+='</div>';
+
+            // Right device
+            card+='<div class="hm-ha-side">';
+            card+='<div class="hm-ha-side-label">RIGHT</div>';
+            card+='<div class="hm-ha-side-img hm-ha-side-right">'+HA_IMG+'</div>';
+            card+='<div class="hm-ha-side-serial">'+(pr.serial_right?'<span class="hm-serial">'+esc(pr.serial_right)+'</span>':'<span style="color:#cbd5e1;font-size:12px;">No serial</span>')+'</div>';
+            if(isAct){
+                card+='<div class="hm-ha-side-actions">';
+                card+='<button class="hm-btn hm-btn-outline hm-btn-xs hm-btn-icon-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_right||'')+'">'+HM_ICONS.repair+' Repair</button>';
+                card+='<button class="hm-btn hm-btn-outline hm-btn-xs hm-btn-danger-outline hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+' (Right)">Mark Inactive</button>';
+                card+='</div>';
+            }
+            card+='</div>';
+
+            card+='</div>'; // end lr-grid
+
+            // Both devices action row (only for active)
+            if(isAct && (pr.serial_left || pr.serial_right)){
+                card+='<div class="hm-ha-both-row">';
+                card+='<button class="hm-btn hm-btn-outline hm-btn-xs hm-btn-icon-teal hm-log-repair" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+'" data-sl="'+esc(pr.serial_left||'')+'" data-sr="'+esc(pr.serial_right||'')+'">'+HM_ICONS.repair+' Repair Both</button>';
+                card+='<button class="hm-btn hm-btn-outline hm-btn-xs hm-btn-danger-outline hm-mark-inactive" data-id="'+pr._ID+'">Mark Both Inactive</button>';
+                card+='</div>';
+            }
+
+            card+='</div>';
+            return card;
         }
-        $c.off('click','.hm-mark-inactive').on('click','.hm-mark-inactive',function(){showMarkInactiveModal($(this).data('id'),function(){loadHearingAids($c);});});
-        $c.off('click','.hm-log-repair').on('click','.hm-log-repair',function(){var $b=$(this);showLogRepairModal($b.data('id'),$b.data('name'),$b.data('sl'),$b.data('sr'),function(){toast('Repair logged');loadRepairs($('#hm-tab-content'));});});
-        $c.off('click','.hm-exchange-btn').on('click','.hm-exchange-btn',function(){var $b=$(this);showExchangeModal($b.data('id'),$b.data('name'),function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));});});
+
+        // Event bindings
+        $c.off('click','.hm-mark-inactive').on('click','.hm-mark-inactive',function(){
+            showMarkInactiveModal($(this).data('id'),null,function(){loadHearingAids($c);});
+        });
+        $c.off('click','.hm-mark-inactive-side').on('click','.hm-mark-inactive-side',function(){
+            var $b=$(this);
+            showMarkInactiveModal($b.data('id'),$b.data('side'),function(){loadHearingAids($c);});
+        });
+        $c.off('click','.hm-log-repair').on('click','.hm-log-repair',function(){
+            var $b=$(this);
+            showLogRepairModal($b.data('id'),$b.data('name'),$b.data('sl'),$b.data('sr'),function(){toast('Repair logged');loadRepairs($('#hm-tab-content'));});
+        });
+        $c.off('click','.hm-log-repair-side').on('click','.hm-log-repair-side',function(){
+            var $b=$(this);
+            var sl=$b.data('side')==='left'?$b.data('serial'):'';
+            var sr=$b.data('side')==='right'?$b.data('serial'):'';
+            showLogRepairModal($b.data('id'),$b.data('name'),sl,sr,function(){toast('Repair logged');loadRepairs($('#hm-tab-content'));});
+        });
+        $c.off('click','#hm-exchange-top-btn').on('click','#hm-exchange-top-btn',function(){
+            showExchangePickerModal(function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));});
+        });
         $c.off('click','#hm-add-product-btn').on('click','#hm-add-product-btn',function(){showAddProductModal(function(){loadHearingAids($c);});});
     }
-    function showMarkInactiveModal(ppId,cb){
+
+    function showExchangePickerModal(cb){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>Mark Inactive</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Reason</label><select class="hm-dd" id="inactive-reason"><option>Lost</option><option>Bought New Aids</option><option>Returned</option><option>Other</option></select></div><div class="hm-form-group"><label class="hm-label">Notes (optional)</label><textarea class="hm-textarea" id="inactive-notes" rows="3"></textarea></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-danger" id="inactive-save">Mark Inactive</button></div></div></div>');
+        // Load active devices for this patient
+        $.post(_hm.ajax,{action:'hm_get_patient_products',nonce:_hm.nonce,patient_id:pid},function(r){
+            var act=(r&&r.success?r.data:[]).filter(function(p){return p.status==='Active';});
+            if(!act.length){toast('No active devices to exchange','error');return;}
+            var h='<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:480px;">'+
+                '<div class="hm-modal-hd"><span>Exchange — Select Devices</span><button class="hm-modal-x">&times;</button></div>'+
+                '<div class="hm-modal-body"><p style="font-size:13px;color:#64748b;margin-bottom:12px;">Select the device(s) to exchange:</p>';
+            act.forEach(function(d){
+                h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
+                    '<input type="checkbox" class="hm-exchange-check" value="'+d._ID+'" data-name="'+esc(d.product_name)+'" style="width:18px;height:18px;accent-color:#0BB4C4;">'+
+                    '<div><strong>'+esc(d.product_name)+'</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+(d.serial_left?' · L: '+esc(d.serial_left):'')+(d.serial_right?' · R: '+esc(d.serial_right):'')+'</div></div></label>';
+            });
+            h+='</div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="exchange-next">Next →</button></div></div></div>';
+            $('body').append(h);
+            $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+            $('#exchange-next').on('click',function(){
+                var sel=[];
+                $('.hm-exchange-check:checked').each(function(){sel.push({id:$(this).val(),name:$(this).data('name')});});
+                if(!sel.length){toast('Select at least one device','error');return;}
+                closeModal();
+                // Open exchange modal for first selected device
+                showExchangeModal(sel[0].id,sel[0].name,function(){
+                    // Mark remaining as exchanged too
+                    var rest=sel.slice(1);
+                    if(rest.length){
+                        var done=0;
+                        rest.forEach(function(d){
+                            $.post(_hm.ajax,{action:'hm_update_patient_product_status',nonce:_hm.nonce,_ID:d.id,status:'Replaced',reason:'Exchanged'},function(){done++;if(done>=rest.length)cb();});
+                        });
+                    } else { cb(); }
+                });
+            });
+        });
+    }
+    function showMarkInactiveModal(ppId,side,cb){
+        if($('#hm-modal-overlay').length)return;
+        var sideLabel=side?' ('+side.charAt(0).toUpperCase()+side.slice(1)+' side)':' (Both sides)';
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>Mark Inactive'+esc(sideLabel)+'</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Reason</label><select class="hm-dd" id="inactive-reason"><option>Lost</option><option>Bought New Aids</option><option>Returned</option><option>Other</option></select></div><div class="hm-form-group"><label class="hm-label">Notes (optional)</label><textarea class="hm-textarea" id="inactive-notes" rows="3"></textarea></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-danger" id="inactive-save">Mark Inactive</button></div></div></div>');
         $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
-        $('#inactive-save').on('click',function(){$(this).prop('disabled',true).text('Saving…');$.post(_hm.ajax,{action:'hm_update_patient_product_status',nonce:_hm.nonce,_ID:ppId,status:'Inactive',reason:$('#inactive-reason').val()+($.trim($('#inactive-notes').val())?': '+$.trim($('#inactive-notes').val()):'')},function(r){closeModal();if(r.success){toast('Marked inactive');cb();}else toast('Error','error');});});
+        $('#inactive-save').on('click',function(){$(this).prop('disabled',true).text('Saving…');$.post(_hm.ajax,{action:'hm_update_patient_product_status',nonce:_hm.nonce,_ID:ppId,status:'Inactive',reason:$('#inactive-reason').val()+($.trim($('#inactive-notes').val())?': '+$.trim($('#inactive-notes').val()):'')+(side?' ['+side+' only]':'')},function(r){closeModal();if(r.success){toast('Marked inactive');cb();}else toast('Error','error');});});
     }
     function showLogRepairModal(ppId,name,sl,sr,cb){
         if($('#hm-modal-overlay').length)return;
