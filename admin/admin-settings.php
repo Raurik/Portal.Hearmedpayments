@@ -117,6 +117,8 @@ class HearMed_Admin_Settings {
             add_shortcode($sc, [$this, 'render']);
         }
         add_action('wp_ajax_hm_admin_save_settings_page', [$this, 'ajax_save']);
+        add_action('wp_ajax_hm_admin_upload_gdpr_doc', [$this, 'ajax_upload_gdpr_doc']);
+        add_action('wp_ajax_hm_admin_delete_gdpr_doc', [$this, 'ajax_delete_gdpr_doc']);
     }
 
     public function render($atts, $content, $tag) {
@@ -167,6 +169,91 @@ class HearMed_Admin_Settings {
                 </div>
                 <?php endforeach; ?>
             </div>
+            <?php endif; ?>
+
+            <?php if ($tag === 'hearmed_gdpr_settings'): ?>
+            <!-- GDPR Policies & Forms Upload -->
+            <div class="hm-settings-panel" style="margin-top:20px;">
+                <h3 style="font-size:15px;margin-bottom:16px;">GDPR Policies & Forms</h3>
+                <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:16px;">Upload policy documents and consent forms (PDF). These are stored locally and can be referenced by staff.</p>
+
+                <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;">
+                    <select id="hm-gdpr-doc-type" class="hm-filter-select">
+                        <option value="policy">Policy Document</option>
+                        <option value="consent_form">Consent Form</option>
+                        <option value="data_processing">Data Processing Agreement</option>
+                        <option value="privacy_notice">Privacy Notice</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <input type="text" id="hm-gdpr-doc-name" placeholder="Document name..." style="flex:1;">
+                    <label class="hm-btn hm-btn-teal" style="cursor:pointer;margin:0;">
+                        Upload PDF
+                        <input type="file" id="hm-gdpr-doc-file" accept=".pdf" style="display:none;" onchange="hmGdpr.upload()">
+                    </label>
+                </div>
+
+                <?php
+                $docs = HearMed_DB::get_results(
+                    "SELECT * FROM hearmed_admin.gdpr_documents WHERE is_active = true ORDER BY doc_type, created_at DESC"
+                ) ?: [];
+                $type_labels = ['policy' => 'Policy', 'consent_form' => 'Consent Form', 'data_processing' => 'DPA', 'privacy_notice' => 'Privacy Notice', 'other' => 'Other'];
+                ?>
+                <?php if (empty($docs)): ?>
+                    <p style="color:var(--hm-text-light);font-size:13px;">No documents uploaded yet.</p>
+                <?php else: ?>
+                <table class="hm-table" id="hm-gdpr-docs-table">
+                    <thead><tr><th>Document</th><th>Type</th><th>Uploaded</th><th style="width:120px;"></th></tr></thead>
+                    <tbody>
+                    <?php foreach ($docs as $doc): ?>
+                    <tr data-id="<?php echo (int) $doc->id; ?>">
+                        <td><strong><?php echo esc_html($doc->doc_name); ?></strong></td>
+                        <td><span class="hm-badge hm-badge-blue"><?php echo esc_html($type_labels[$doc->doc_type] ?? $doc->doc_type); ?></span></td>
+                        <td style="font-size:12px;color:var(--hm-text-light);"><?php echo esc_html(date('d M Y', strtotime($doc->created_at))); ?></td>
+                        <td class="hm-table-acts">
+                            <a href="<?php echo esc_url($doc->file_url); ?>" target="_blank" class="hm-btn hm-btn-sm">View</a>
+                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmGdpr.del(<?php echo (int) $doc->id; ?>,'<?php echo esc_js($doc->doc_name); ?>')">Delete</button>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <?php endif; ?>
+            </div>
+
+            <script>
+            var hmGdpr = {
+                upload: function() {
+                    var fileInput = document.getElementById('hm-gdpr-doc-file');
+                    var file = fileInput.files[0];
+                    if (!file) return;
+                    var name = document.getElementById('hm-gdpr-doc-name').value.trim();
+                    if (!name) name = file.name.replace(/\.pdf$/i, '');
+                    var docType = document.getElementById('hm-gdpr-doc-type').value;
+                    var fd = new FormData();
+                    fd.append('action', 'hm_admin_upload_gdpr_doc');
+                    fd.append('nonce', HM.nonce);
+                    fd.append('doc_name', name);
+                    fd.append('doc_type', docType);
+                    fd.append('file', file);
+                    jQuery.ajax({
+                        url: HM.ajax_url, type: 'POST', data: fd,
+                        processData: false, contentType: false,
+                        success: function(r) {
+                            if (r.success) location.reload();
+                            else alert(r.data || 'Upload failed');
+                        }
+                    });
+                    fileInput.value = '';
+                },
+                del: function(id, name) {
+                    if (!confirm('Delete "' + name + '"?')) return;
+                    jQuery.post(HM.ajax_url, { action:'hm_admin_delete_gdpr_doc', nonce:HM.nonce, doc_id:id }, function(r) {
+                        if (r.success) location.reload();
+                        else alert(r.data || 'Error');
+                    });
+                }
+            };
+            </script>
             <?php endif; ?>
         </div>
 
@@ -252,6 +339,66 @@ class HearMed_Admin_Settings {
         } else {
             $data['created_at'] = current_time('mysql');
             HearMed_DB::insert('hearmed_admin.gdpr_settings', $data);
+        }
+    }
+
+    public function ajax_upload_gdpr_doc() {
+        check_ajax_referer('hm_nonce', 'nonce');
+        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+
+        if (empty($_FILES['file'])) { wp_send_json_error('No file uploaded'); return; }
+        $file = $_FILES['file'];
+        if ($file['type'] !== 'application/pdf' && strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) !== 'pdf') {
+            wp_send_json_error('Only PDF files are allowed');
+            return;
+        }
+
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+        $upload_overrides = ['test_form' => false, 'mimes' => ['pdf' => 'application/pdf']];
+        $movefile = wp_handle_upload($file, $upload_overrides);
+
+        if (!$movefile || isset($movefile['error'])) {
+            wp_send_json_error($movefile['error'] ?? 'Upload failed');
+            return;
+        }
+
+        $doc_name = sanitize_text_field($_POST['doc_name'] ?? $file['name']);
+        $doc_type = sanitize_text_field($_POST['doc_type'] ?? 'policy');
+
+        $id = HearMed_DB::insert('hearmed_admin.gdpr_documents', [
+            'doc_name'   => $doc_name,
+            'doc_type'   => $doc_type,
+            'file_url'   => $movefile['url'],
+            'file_path'  => $movefile['file'],
+            'uploaded_by' => get_current_user_id(),
+            'is_active'  => true,
+            'created_at' => current_time('mysql'),
+        ]);
+
+        if ($id) {
+            wp_send_json_success(['id' => $id]);
+        } else {
+            wp_send_json_error(HearMed_DB::last_error() ?: 'Database error');
+        }
+    }
+
+    public function ajax_delete_gdpr_doc() {
+        check_ajax_referer('hm_nonce', 'nonce');
+        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+
+        $doc_id = intval($_POST['doc_id'] ?? 0);
+        if (!$doc_id) { wp_send_json_error('Invalid document'); return; }
+
+        // Soft delete
+        $result = HearMed_DB::update('hearmed_admin.gdpr_documents', [
+            'is_active' => false,
+            'updated_at' => current_time('mysql'),
+        ], ['id' => $doc_id]);
+
+        if ($result === false) {
+            wp_send_json_error(HearMed_DB::last_error() ?: 'Database error');
+        } else {
+            wp_send_json_success();
         }
     }
 }

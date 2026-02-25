@@ -27,6 +27,7 @@ class HearMed_Admin_AuditLog {
         add_shortcode('hearmed_data_export', [$this, 'render_export']);
         add_action('wp_ajax_hm_admin_get_audit_log', [$this, 'ajax_get_log']);
         add_action('wp_ajax_hm_admin_export_patient', [$this, 'ajax_export_patient']);
+        add_action('wp_ajax_hm_admin_export_all_patients', [$this, 'ajax_export_all_patients']);
     }
 
     public function render_audit() {
@@ -147,8 +148,10 @@ class HearMed_Admin_AuditLog {
         <div class="hm-admin">
             <div class="hm-admin-hd"><h2>Data Export</h2></div>
 
+            <!-- ===== SECTION 1: Single Patient Export ===== -->
             <div class="hm-settings-panel">
-                <p style="color:var(--hm-text-light);margin-bottom:20px;">Export all data for a specific patient (GDPR Right of Access / Right to Portability). Search for a patient and click Export to generate a full data package.</p>
+                <h3 style="font-size:15px;margin-bottom:8px;">Single Patient Export</h3>
+                <p style="color:var(--hm-text-light);margin-bottom:20px;">Export all data for a specific patient (GDPR Right of Access / Right to Portability).</p>
 
                 <div class="hm-form-group">
                     <label>Patient Search</label>
@@ -181,9 +184,43 @@ class HearMed_Admin_AuditLog {
                         <button class="hm-btn" onclick="hmExport.exportData('csv')">Export as CSV</button>
                     </div>
                 </div>
+            </div>
 
-                <hr style="margin:30px 0;border:none;border-top:1px solid var(--hm-border-light);">
+            <!-- ===== SECTION 2: All Patients Bulk Export ===== -->
+            <div class="hm-settings-panel" style="margin-top:20px;">
+                <h3 style="font-size:15px;margin-bottom:8px;">All Patients Export</h3>
+                <p style="color:var(--hm-text-light);margin-bottom:20px;">Bulk export data for ALL patients. Select which modules to include. Large exports may take a moment.</p>
 
+                <div class="hm-form-group">
+                    <label style="font-weight:600;margin-bottom:8px;display:block;">Modules to Include</label>
+                    <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                        <label class="hm-day-check"><input type="checkbox" class="hmde-bulk-section" value="patient" checked> <span class="hm-check"></span> Patient Details</label>
+                        <label class="hm-day-check"><input type="checkbox" class="hmde-bulk-section" value="appointments"> <span class="hm-check"></span> Appointments</label>
+                        <label class="hm-day-check"><input type="checkbox" class="hmde-bulk-section" value="orders"> <span class="hm-check"></span> Orders</label>
+                        <label class="hm-day-check"><input type="checkbox" class="hmde-bulk-section" value="invoices"> <span class="hm-check"></span> Invoices</label>
+                        <label class="hm-day-check"><input type="checkbox" class="hmde-bulk-section" value="payments"> <span class="hm-check"></span> Payments</label>
+                        <label class="hm-day-check"><input type="checkbox" class="hmde-bulk-section" value="notes"> <span class="hm-check"></span> Notes</label>
+                        <label class="hm-day-check"><input type="checkbox" class="hmde-bulk-section" value="forms"> <span class="hm-check"></span> Forms</label>
+                        <label class="hm-day-check"><input type="checkbox" class="hmde-bulk-section" value="devices"> <span class="hm-check"></span> Devices</label>
+                    </div>
+                </div>
+
+                <div class="hm-form-group" style="margin-top:8px;">
+                    <label style="font-weight:600;margin-bottom:8px;display:block;">Export Format</label>
+                    <div style="display:flex;gap:12px;">
+                        <label class="hm-day-check"><input type="radio" name="hmde-bulk-fmt" value="csv" checked> <span class="hm-check"></span> CSV (one file per module)</label>
+                        <label class="hm-day-check"><input type="radio" name="hmde-bulk-fmt" value="json"> <span class="hm-check"></span> JSON</label>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:8px;margin-top:16px;align-items:center;">
+                    <button class="hm-btn hm-btn-teal" onclick="hmExport.bulkExport()" id="hmde-bulk-btn">Export All Patients</button>
+                    <span id="hmde-bulk-status" style="font-size:13px;color:var(--hm-text-light);"></span>
+                </div>
+            </div>
+
+            <!-- ===== SECTION 3: Anonymisation ===== -->
+            <div class="hm-settings-panel" style="margin-top:20px;">
                 <h3 style="font-size:15px;margin-bottom:12px;">Patient Anonymisation (Right to Erasure)</h3>
                 <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:12px;">Anonymises personal data while preserving financial and appointment records for Revenue/HSE compliance. This action cannot be undone.</p>
                 <button class="hm-btn hm-btn-red" disabled>Anonymise Patient (Select patient first)</button>
@@ -231,18 +268,32 @@ class HearMed_Admin_AuditLog {
                 if (!sections.length) { alert('Select at least one data section.'); return; }
                 jQuery.post(HM.ajax_url, { action:'hm_admin_export_patient', nonce:HM.nonce, patient_id:pid, format:format, sections:JSON.stringify(sections) }, function(r) {
                     if (!r.success) { alert(r.data || 'Export failed'); return; }
-                    var filename = r.data.filename || ('patient-export.' + format);
-                    var mime = r.data.mime || 'application/octet-stream';
-                    var blob = new Blob([r.data.payload || ''], { type: mime });
-                    var url = window.URL.createObjectURL(blob);
-                    var a = document.createElement('a');
-                    a.href = url;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    window.URL.revokeObjectURL(url);
+                    hmExport.download(r.data.payload, r.data.filename, r.data.mime);
                 });
+            },
+            bulkExport: function() {
+                var sections = [];
+                document.querySelectorAll('.hmde-bulk-section:checked').forEach(function(cb) { sections.push(cb.value); });
+                if (!sections.length) { alert('Select at least one module.'); return; }
+                var format = document.querySelector('input[name="hmde-bulk-fmt"]:checked').value;
+                var btn = document.getElementById('hmde-bulk-btn');
+                var status = document.getElementById('hmde-bulk-status');
+                btn.disabled = true; btn.textContent = 'Exporting...';
+                status.textContent = 'This may take a moment for large datasets...';
+                jQuery.post(HM.ajax_url, { action:'hm_admin_export_all_patients', nonce:HM.nonce, format:format, sections:JSON.stringify(sections) }, function(r) {
+                    btn.disabled = false; btn.textContent = 'Export All Patients';
+                    if (!r.success) { status.textContent = r.data || 'Export failed'; return; }
+                    status.textContent = 'Export complete — ' + (r.data.count || 0) + ' patients exported.';
+                    hmExport.download(r.data.payload, r.data.filename, r.data.mime);
+                }).fail(function(){ btn.disabled = false; btn.textContent = 'Export All Patients'; status.textContent = 'Request failed.'; });
+            },
+            download: function(payload, filename, mime) {
+                var blob = new Blob([payload || ''], { type: mime || 'application/octet-stream' });
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url; a.download = filename || 'export';
+                document.body.appendChild(a); a.click(); a.remove();
+                window.URL.revokeObjectURL(url);
             }
         };
         </script>
@@ -267,15 +318,7 @@ class HearMed_Admin_AuditLog {
             $sections = ['patient','appointments','orders','invoices','payments','notes','forms','devices'];
         }
 
-        $data = [];
-        if (in_array('patient', $sections))      $data['patient']      = (array) $patient;
-        if (in_array('appointments', $sections))  $data['appointments'] = HearMed_DB::get_results("SELECT * FROM hearmed_core.appointments WHERE patient_id = $1 ORDER BY appointment_date DESC", [$patient_id]) ?: [];
-        if (in_array('orders', $sections))        $data['orders']       = HearMed_DB::get_results("SELECT * FROM hearmed_core.orders WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
-        if (in_array('invoices', $sections))      $data['invoices']     = HearMed_DB::get_results("SELECT * FROM hearmed_core.invoices WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
-        if (in_array('payments', $sections))      $data['payments']     = HearMed_DB::get_results("SELECT * FROM hearmed_core.payments WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
-        if (in_array('notes', $sections))         $data['notes']        = HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_notes WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
-        if (in_array('forms', $sections))         $data['forms']        = HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_forms WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
-        if (in_array('devices', $sections))       $data['devices']      = HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_devices WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
+        $data = $this->gather_patient_data($patient_id, $patient, $sections);
 
         $exported_by = get_current_user_id();
         HearMed_DB::insert('hearmed_admin.gdpr_exports', [
@@ -287,7 +330,7 @@ class HearMed_Admin_AuditLog {
         ]);
 
         if ($format === 'csv') {
-            $csv = $this->patient_to_csv((array) $patient);
+            $csv = $this->data_to_csv($data);
             wp_send_json_success([
                 'payload' => $csv,
                 'mime' => 'text/csv',
@@ -302,17 +345,123 @@ class HearMed_Admin_AuditLog {
         ]);
     }
 
-    private function patient_to_csv($patient) {
-        $headers = array_keys($patient);
-        $values = array_map(function($v) {
-            if (is_bool($v)) return $v ? 'true' : 'false';
-            if ($v === null) return '';
-            return (string) $v;
-        }, array_values($patient));
+    public function ajax_export_all_patients() {
+        check_ajax_referer('hm_nonce', 'nonce');
+        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
 
+        $format = sanitize_text_field($_POST['format'] ?? 'csv');
+        $sections = json_decode(stripslashes($_POST['sections'] ?? '[]'), true);
+        if (!is_array($sections) || empty($sections)) {
+            $sections = ['patient'];
+        }
+
+        $patients = HearMed_DB::get_results(
+            "SELECT * FROM hearmed_core.patients ORDER BY id"
+        ) ?: [];
+
+        if (empty($patients)) { wp_send_json_error('No patients found'); return; }
+
+        $all_data = [];
+        foreach ($patients as $p) {
+            $all_data[] = $this->gather_patient_data((int) $p->id, $p, $sections);
+        }
+
+        if ($format === 'csv') {
+            $csv = $this->bulk_data_to_csv($all_data, $sections);
+            wp_send_json_success([
+                'payload' => $csv,
+                'mime' => 'text/csv',
+                'filename' => 'all-patients-export-' . date('Y-m-d') . '.csv',
+                'count' => count($patients),
+            ]);
+        }
+
+        wp_send_json_success([
+            'payload' => wp_json_encode($all_data, JSON_PRETTY_PRINT),
+            'mime' => 'application/json',
+            'filename' => 'all-patients-export-' . date('Y-m-d') . '.json',
+            'count' => count($patients),
+        ]);
+    }
+
+    private function gather_patient_data($patient_id, $patient, $sections) {
+        $data = [];
+        if (in_array('patient', $sections))      $data['patient']      = (array) $patient;
+        if (in_array('appointments', $sections))  $data['appointments'] = HearMed_DB::get_results("SELECT * FROM hearmed_core.appointments WHERE patient_id = $1 ORDER BY appointment_date DESC", [$patient_id]) ?: [];
+        if (in_array('orders', $sections))        $data['orders']       = HearMed_DB::get_results("SELECT * FROM hearmed_core.orders WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
+        if (in_array('invoices', $sections))      $data['invoices']     = HearMed_DB::get_results("SELECT * FROM hearmed_core.invoices WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
+        if (in_array('payments', $sections))      $data['payments']     = HearMed_DB::get_results("SELECT * FROM hearmed_core.payments WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
+        if (in_array('notes', $sections))         $data['notes']        = HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_notes WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
+        if (in_array('forms', $sections))         $data['forms']        = HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_forms WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
+        if (in_array('devices', $sections))       $data['devices']      = HearMed_DB::get_results("SELECT * FROM hearmed_core.patient_devices WHERE patient_id = $1 ORDER BY created_at DESC", [$patient_id]) ?: [];
+        return $data;
+    }
+
+    private function data_to_csv($data) {
         $out = fopen('php://temp', 'r+');
-        fputcsv($out, $headers);
-        fputcsv($out, $values);
+        foreach ($data as $section => $rows) {
+            fputcsv($out, ["=== {$section} ==="]);
+            if ($section === 'patient') {
+                $row = (array) $rows;
+                fputcsv($out, array_keys($row));
+                fputcsv($out, array_map(function($v) {
+                    if (is_bool($v)) return $v ? 'true' : 'false';
+                    if ($v === null) return '';
+                    return (string) $v;
+                }, array_values($row)));
+            } else {
+                $arr = array_map(function($r) { return (array) $r; }, (array) $rows);
+                if (!empty($arr)) {
+                    fputcsv($out, array_keys($arr[0]));
+                    foreach ($arr as $row) {
+                        fputcsv($out, array_map(function($v) {
+                            if (is_bool($v)) return $v ? 'true' : 'false';
+                            if ($v === null) return '';
+                            return (string) $v;
+                        }, array_values($row)));
+                    }
+                } else {
+                    fputcsv($out, ['(no data)']);
+                }
+            }
+            fputcsv($out, []);
+        }
+        rewind($out);
+        $csv = stream_get_contents($out);
+        fclose($out);
+        return $csv;
+    }
+
+    private function bulk_data_to_csv($all_data, $sections) {
+        $out = fopen('php://temp', 'r+');
+        // For bulk CSV, write each section as a flat table
+        foreach ($sections as $section) {
+            fputcsv($out, ["=== {$section} ==="]);
+            $all_rows = [];
+            foreach ($all_data as $pdata) {
+                if (!isset($pdata[$section])) continue;
+                if ($section === 'patient') {
+                    $all_rows[] = (array) $pdata[$section];
+                } else {
+                    foreach ((array) $pdata[$section] as $r) {
+                        $all_rows[] = (array) $r;
+                    }
+                }
+            }
+            if (!empty($all_rows)) {
+                fputcsv($out, array_keys($all_rows[0]));
+                foreach ($all_rows as $row) {
+                    fputcsv($out, array_map(function($v) {
+                        if (is_bool($v)) return $v ? 'true' : 'false';
+                        if ($v === null) return '';
+                        return (string) $v;
+                    }, array_values($row)));
+                }
+            } else {
+                fputcsv($out, ['(no data)']);
+            }
+            fputcsv($out, []);
+        }
         rewind($out);
         $csv = stream_get_contents($out);
         fclose($out);

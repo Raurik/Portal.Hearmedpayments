@@ -89,8 +89,71 @@ ALTER TABLE hearmed_core.staff_absences
     ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'approved',
     ADD COLUMN IF NOT EXISTS notes TEXT;
 
+-- 8. Create hearmed_range table if missing (used by Products / Range Settings)
+CREATE TABLE IF NOT EXISTS hearmed_reference.hearmed_range (
+    id             BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    range_name     VARCHAR(150) NOT NULL,
+    price_total    NUMERIC(10,2),
+    price_ex_prsi  NUMERIC(10,2),
+    is_active      BOOLEAN DEFAULT TRUE NOT NULL,
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. Create appointment_types table if missing (used by Blockouts, Calendar)
+CREATE TABLE IF NOT EXISTS hearmed_reference.appointment_types (
+    id                 BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    type_name          VARCHAR(100) NOT NULL,
+    default_service_id BIGINT,
+    default_duration   INTEGER DEFAULT 30,
+    requires_referral  BOOLEAN DEFAULT FALSE,
+    is_active          BOOLEAN DEFAULT TRUE,
+    description        TEXT,
+    created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 10. Create GDPR documents table (for policy/form PDF uploads)
+CREATE TABLE IF NOT EXISTS hearmed_admin.gdpr_documents (
+    id           BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    doc_name     VARCHAR(200) NOT NULL,
+    doc_type     VARCHAR(50) DEFAULT 'policy',
+    file_url     TEXT,
+    file_path    TEXT,
+    uploaded_by  INTEGER,
+    is_active    BOOLEAN DEFAULT TRUE,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 11. Create referral_sources table if missing (used by Lead Types taxonomy)
+CREATE TABLE IF NOT EXISTS hearmed_reference.referral_sources (
+    id           BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    source_name  VARCHAR(150) NOT NULL,
+    parent_id    BIGINT,
+    sort_order   INTEGER DEFAULT 0,
+    is_active    BOOLEAN DEFAULT TRUE NOT NULL,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 12. Create manufacturers table if missing (used by Brands taxonomy)
+CREATE TABLE IF NOT EXISTS hearmed_reference.manufacturers (
+    id             BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    name           VARCHAR(200) NOT NULL,
+    country        VARCHAR(100),
+    website        VARCHAR(500),
+    support_email  VARCHAR(200),
+    support_phone  VARCHAR(50),
+    is_active      BOOLEAN DEFAULT TRUE NOT NULL,
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ============================================================
 -- DONE — Verify with:
 -- SELECT table_name FROM information_schema.tables 
 -- WHERE table_schema = 'hearmed_reference' ORDER BY table_name;
+-- SELECT table_name FROM information_schema.tables 
+-- WHERE table_schema = 'hearmed_admin' ORDER BY table_name;
 -- ============================================================
