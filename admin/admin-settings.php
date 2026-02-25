@@ -56,6 +56,7 @@ class HearMed_Admin_Settings {
         ],
         'hearmed_cash_settings' => [
             'title' => 'Cash Management Settings',
+            'max_width' => '480px',
             'fields' => [
                 ['key' => 'hm_cash_morning_prompt', 'label' => 'Morning Till Prompt Enabled', 'type' => 'toggle', 'default' => '1'],
                 ['key' => 'hm_cash_evening_prompt', 'label' => 'Evening Till Prompt Enabled', 'type' => 'toggle', 'default' => '1'],
@@ -169,7 +170,7 @@ class HearMed_Admin_Settings {
             <?php endif; ?>
 
             <?php if (!empty($page['fields'])): ?>
-            <div class="hm-settings-panel">
+            <div class="hm-settings-panel"<?php if (!empty($page['max_width'])): ?> style="max-width:<?php echo esc_attr($page['max_width']); ?>"<?php endif; ?>>
                 <?php foreach ($page['fields'] as $f):
                     $val = $this->get_setting_value($tag, $f['key'], $f['default']);
                 ?>
@@ -351,14 +352,17 @@ class HearMed_Admin_Settings {
         ob_start(); ?>
         <style>
         .hm-secret-wrap{display:flex;gap:8px;align-items:center;}.hm-secret-wrap input{flex:1;}
-        .hm-pm-blocks{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
-        .hm-pm-block{display:inline-flex;align-items:center;gap:6px;background:var(--hm-primary,#3b82f6);color:#fff;padding:6px 12px;border-radius:6px;font-size:13px;font-weight:500;}
-        .hm-pm-block .hm-pm-x{cursor:pointer;opacity:.7;font-size:15px;line-height:1;}
+        .hm-finance-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:start;}
+        @media(max-width:900px){.hm-finance-grid{grid-template-columns:1fr;}}
+        .hm-pm-blocks{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+        .hm-pm-block{display:inline-flex;align-items:center;gap:5px;background:var(--hm-primary,#3b82f6);color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;}
+        .hm-pm-block .hm-pm-x{cursor:pointer;opacity:.7;font-size:14px;line-height:1;}
         .hm-pm-block .hm-pm-x:hover{opacity:1;}
-        .hm-pm-add-wrap{display:flex;gap:8px;align-items:center;}
-        .hm-pm-add-wrap input{flex:1;max-width:220px;}
-        .hm-vat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;}
-        @media(max-width:600px){.hm-vat-grid{grid-template-columns:1fr;}}
+        .hm-pm-add-wrap{display:flex;gap:6px;align-items:center;}
+        .hm-pm-add-wrap input{flex:1;}
+        .hm-inv-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+        .hm-inv-row .hm-form-group{flex:1;margin-bottom:0;}
+        .hm-inv-last{font-size:11px;color:var(--hm-text-light,#94a3b8);white-space:nowrap;min-width:100px;}
         </style>
         <div class="hm-admin">
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
@@ -367,33 +371,32 @@ class HearMed_Admin_Settings {
                 <button class="hm-btn hm-btn-teal" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
             </div>
 
+            <div class="hm-finance-grid">
             <!-- VAT Settings -->
-            <div class="hm-settings-panel" style="margin-bottom:20px;">
-                <h3 style="font-size:15px;margin-bottom:16px;">VAT Settings</h3>
-                <div class="hm-vat-grid">
-                    <?php
-                    $vat_fields = [
-                        ['key' => 'hm_vat_hearing_aids', 'label' => 'Hearing Aids (%)', 'default' => '0'],
-                        ['key' => 'hm_vat_accessories',  'label' => 'Accessories (%)',  'default' => '0'],
-                        ['key' => 'hm_vat_services',     'label' => 'Services (%)',     'default' => '13.5'],
-                        ['key' => 'hm_vat_consumables',  'label' => 'Consumables (%)',  'default' => '23'],
-                        ['key' => 'hm_vat_bundled',      'label' => 'Bundled Items (%)', 'default' => '0'],
-                        ['key' => 'hm_vat_other_aud',    'label' => 'Other Audiological (%)', 'default' => '13.5'],
-                    ];
-                    foreach ($vat_fields as $f): ?>
-                    <div class="hm-form-group" style="margin-bottom:0;">
-                        <label><?php echo esc_html($f['label']); ?></label>
-                        <input type="number" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($v($f['key'], $f['default'])); ?>" step="0.1" min="0">
-                    </div>
-                    <?php endforeach; ?>
+            <div class="hm-settings-panel">
+                <h3 style="font-size:14px;margin-bottom:12px;">VAT Settings</h3>
+                <?php
+                $vat_fields = [
+                    ['key' => 'hm_vat_hearing_aids', 'label' => 'Hearing Aids (%)', 'default' => '0'],
+                    ['key' => 'hm_vat_accessories',  'label' => 'Accessories (%)',  'default' => '0'],
+                    ['key' => 'hm_vat_services',     'label' => 'Services (%)',     'default' => '13.5'],
+                    ['key' => 'hm_vat_consumables',  'label' => 'Consumables (%)',  'default' => '23'],
+                    ['key' => 'hm_vat_bundled',      'label' => 'Bundled Items (%)', 'default' => '0'],
+                    ['key' => 'hm_vat_other_aud',    'label' => 'Other Audiological (%)', 'default' => '13.5'],
+                ];
+                foreach ($vat_fields as $f): ?>
+                <div class="hm-form-group">
+                    <label><?php echo esc_html($f['label']); ?></label>
+                    <input type="number" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($v($f['key'], $f['default'])); ?>" step="1" min="0">
                 </div>
+                <?php endforeach; ?>
             </div>
 
             <!-- Payment & DSP -->
-            <div class="hm-settings-panel" style="margin-bottom:20px;">
-                <h3 style="font-size:15px;margin-bottom:16px;">Payment &amp; DSP</h3>
+            <div class="hm-settings-panel">
+                <h3 style="font-size:14px;margin-bottom:12px;">Payment &amp; DSP</h3>
 
-                <label style="font-weight:500;margin-bottom:8px;display:block;">Payment Methods</label>
+                <label style="font-weight:500;margin-bottom:6px;display:block;font-size:11px;color:#475569;">Payment Methods</label>
                 <?php
                 $methods_raw = $v('hm_payment_methods', 'Card,Cash,Cheque,Bank Transfer,Finance,PRSI');
                 $methods     = array_filter(array_map('trim', explode(',', $methods_raw)));
@@ -407,13 +410,12 @@ class HearMed_Admin_Settings {
                     <?php endforeach; ?>
                 </div>
                 <div class="hm-pm-add-wrap">
-                    <input type="text" id="hm-pm-new" placeholder="New method name..." class="hm-search-input">
-                    <button type="button" class="hm-btn hm-btn-teal" onclick="hmFinance.addMethod()">+ Add Method</button>
+                    <input type="text" id="hm-pm-new" placeholder="New method..." class="hm-search-input" style="font-size:12px;padding:5px 8px;">
+                    <button type="button" class="hm-btn hm-btn-teal hm-btn-sm" onclick="hmFinance.addMethod()">+ Add</button>
                 </div>
-                <!-- Hidden field that stores comma-separated value for save -->
                 <input type="hidden" class="hm-stg-field" data-key="hm_payment_methods" id="hm-pm-hidden" value="<?php echo esc_attr($methods_raw); ?>">
 
-                <div class="hm-form-group" style="margin-top:20px;">
+                <div class="hm-form-group" style="margin-top:14px;">
                     <label>PRSI Amount Per Ear (€)</label>
                     <input type="number" class="hm-stg-field" data-key="hm_prsi_amount_per_ear" value="<?php echo esc_attr($v('hm_prsi_amount_per_ear', '500')); ?>" step="1" min="0">
                 </div>
@@ -421,20 +423,36 @@ class HearMed_Admin_Settings {
 
             <!-- Invoice Settings -->
             <div class="hm-settings-panel">
-                <h3 style="font-size:15px;margin-bottom:16px;">Invoice Settings</h3>
+                <h3 style="font-size:14px;margin-bottom:12px;">Invoice Settings</h3>
+                <p style="color:var(--hm-text-light);font-size:11px;margin-bottom:12px;">Numbers auto-increment from the last used value.</p>
                 <?php
                 $inv_fields = [
-                    ['key' => 'hm_invoice_prefix',     'label' => 'Invoice Number Prefix',  'default' => 'INV-'],
-                    ['key' => 'hm_order_prefix',       'label' => 'Order Number Prefix',    'default' => 'ORD-'],
-                    ['key' => 'hm_credit_note_prefix',  'label' => 'Credit Note Prefix',    'default' => 'CN-'],
+                    ['key' => 'hm_invoice_prefix',    'label' => 'Invoice Prefix',     'default' => 'INV-', 'counter' => 'hm_invoice_last_number'],
+                    ['key' => 'hm_order_prefix',      'label' => 'Order Prefix',       'default' => 'ORD-', 'counter' => 'hm_order_last_number'],
+                    ['key' => 'hm_credit_note_prefix', 'label' => 'Credit Note Prefix', 'default' => 'CN-',  'counter' => 'hm_credit_note_last_number'],
                 ];
-                foreach ($inv_fields as $f): ?>
-                <div class="hm-form-group">
-                    <label><?php echo esc_html($f['label']); ?></label>
-                    <input type="text" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($v($f['key'], $f['default'])); ?>">
+                foreach ($inv_fields as $f):
+                    $last_num = intval($v($f['counter'], '0'));
+                    $prefix   = $v($f['key'], $f['default']);
+                    $next_num = $last_num + 1;
+                ?>
+                <div class="hm-inv-row">
+                    <div class="hm-form-group">
+                        <label><?php echo esc_html($f['label']); ?></label>
+                        <input type="text" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($prefix); ?>">
+                    </div>
+                    <div class="hm-inv-last">
+                        <?php if ($last_num > 0): ?>
+                            Last: <strong><?php echo esc_html($prefix . $last_num); ?></strong><br>
+                            Next: <?php echo esc_html($prefix . $next_num); ?>
+                        <?php else: ?>
+                            Next: <?php echo esc_html($prefix . '1'); ?>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <?php endforeach; ?>
             </div>
+            </div><!-- /hm-finance-grid -->
         </div>
 
         <script>

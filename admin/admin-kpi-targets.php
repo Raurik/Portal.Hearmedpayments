@@ -122,7 +122,7 @@ class HearMed_Admin_KPI_Targets {
                     <tr>
                         <td><strong><?php echo esc_html($meta['label']); ?></strong></td>
                         <td>
-                            <input type="number" class="hmk-val" data-key="<?php echo esc_attr($key); ?>" value="<?php echo esc_attr($value); ?>" step="0.1" min="0" style="width:120px;padding:6px 10px;border:1px solid var(--hm-border);border-radius:6px;font-size:14px;font-weight:600;">
+                            <input type="number" class="hmk-val" data-key="<?php echo esc_attr($key); ?>" value="<?php echo esc_attr($value); ?>" step="1" min="0" style="width:120px;padding:6px 10px;border:1px solid var(--hm-border);border-radius:6px;font-size:13px;font-weight:400;">
                         </td>
                         <td><span class="hm-badge hm-badge-blue"><?php echo esc_html($meta['unit']); ?></span></td>
                         <td>
