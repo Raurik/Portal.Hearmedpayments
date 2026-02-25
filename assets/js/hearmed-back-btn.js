@@ -1,6 +1,6 @@
 /* HearMed Auto Back Button
-   Adds a small top-left back link on subsection pages.
-   Parent routes are preferred over browser history. */
+   Adds a small top-left teal back link on subsection pages.
+   Routes to the correct parent section. */
 (function() {
   var attempts = 0;
 
@@ -10,69 +10,76 @@
     return path === '' ? '/' : path;
   }
 
-  function hasExistingBackAnchor(app) {
-    var links = app.querySelectorAll('a');
+  /* Find the portal container — could be #hm-app, .hm-admin, .hm-page, or .hm-sc */
+  function findContainer() {
+    return document.getElementById('hm-app')
+      || document.querySelector('.hm-admin')
+      || document.querySelector('.hm-page')
+      || document.querySelector('.hm-sc');
+  }
+
+  function hasExistingBack(container) {
+    if (container.querySelector('.hm-back-btn')) return true;
+    var links = container.querySelectorAll('a');
     for (var i = 0; i < links.length; i++) {
-      var text = (links[i].textContent || '').trim().toLowerCase();
-      if (text.indexOf('back') !== -1) return true;
+      var t = (links[i].textContent || '').trim();
+      if (/^←\s*back/i.test(t)) return true;
     }
     return false;
   }
 
   function getParentUrl() {
-    var url = new URL(window.location.href);
+    var url  = new URL(window.location.href);
     var path = normalizePath(url.pathname);
-    var query = url.searchParams;
-    var origin = url.origin;
+    var qs   = url.searchParams;
+    var o    = url.origin;
 
+    /* Admin console sub-pages → back to /admin-console/ */
     if (path.indexOf('/admin-console') === 0) {
-      return path === '/admin-console' ? null : origin + '/admin-console/';
+      return path === '/admin-console' ? null : o + '/admin-console/';
     }
 
-    var sectionRoots = ['patients', 'reports', 'orders', 'accounting', 'calendar', 'repairs', 'kpi', 'cash', 'approvals', 'notifications', 'team-chat'];
-    for (var i = 0; i < sectionRoots.length; i++) {
-      var root = sectionRoots[i];
-      var rootPath = '/' + root;
-      if (path === rootPath) {
-        if (query.toString()) return origin + rootPath + '/';
-        return null;
+    /* Portal section roots */
+    var roots = ['patients','reports','orders','accounting','calendar',
+                 'repairs','kpi','cash','approvals','notifications','team-chat',
+                 'commissions'];
+    for (var i = 0; i < roots.length; i++) {
+      var rp = '/' + roots[i];
+      if (path === rp) {
+        return qs.toString() ? o + rp + '/' : null;
       }
-      if (path.indexOf(rootPath + '/') === 0) {
-        return origin + rootPath + '/';
-      }
+      if (path.indexOf(rp + '/') === 0) return o + rp + '/';
     }
 
-    if (query.has('hm_action') || query.has('action') || query.has('view') || query.has('id') || query.has('patient_id') || query.has('order_id') || query.has('report')) {
-      return origin + path + '/';
+    /* Query-string driven sub-views */
+    if (qs.has('hm_action') || qs.has('action') || qs.has('view') ||
+        qs.has('id') || qs.has('patient_id') || qs.has('order_id') ||
+        qs.has('report') || qs.has('staff')) {
+      return o + path + '/';
     }
 
     return null;
   }
 
   function tryInsert() {
-    var app = document.getElementById('hm-app');
-    if (!app) return;
+    var container = findContainer();
+    if (!container) {
+      if (attempts < 25) { attempts++; setTimeout(tryInsert, 200); }
+      return;
+    }
 
-    if (app.querySelector('.hm-back-btn') || hasExistingBackAnchor(app)) return;
+    if (hasExistingBack(container)) return;
 
     var parentUrl = getParentUrl();
     if (!parentUrl) return;
 
-    var header = app.querySelector('.hm-admin-hd')
-      || app.querySelector('.hm-page-header')
-      || app.querySelector('.hm-page-hd')
-      || app.querySelector('.hm-sc');
+    var header = container.querySelector('.hm-admin-hd')
+      || container.querySelector('.hm-page-header')
+      || container.querySelector('.hm-page-hd')
+      || container.querySelector('.hm-sc-title');
 
-    var h2 = app.querySelector('h2, h1');
-    var target = header || (h2 ? h2.parentNode : null);
-
-    if (!target && attempts < 20) {
-      attempts++;
-      setTimeout(tryInsert, 200);
-      return;
-    }
-
-    if (!target) return;
+    var h = container.querySelector('h2, h1');
+    var target = header || (h ? h.parentNode : null) || container;
 
     var btn = document.createElement('a');
     btn.href = parentUrl;
@@ -84,9 +91,7 @@
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(tryInsert, 250);
-    });
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(tryInsert, 250); });
   } else {
     setTimeout(tryInsert, 250);
   }
