@@ -215,7 +215,9 @@ function hm_ajax_get_dispensers() {
             }
         }
     }
-    $sql = "SELECT s.id, s.full_name, s.initials, s.role_type, s.is_active, s.user_account,
+    $sql = "SELECT s.id, s.first_name, s.last_name,
+                   (s.first_name || ' ' || s.last_name) AS full_name,
+                   s.role, s.is_active,
                    ARRAY_AGG(sc.clinic_id) as clinic_ids
             FROM hearmed_reference.staff s
             LEFT JOIN hearmed_reference.staff_clinics sc ON s.id = sc.staff_id
@@ -226,19 +228,20 @@ function hm_ajax_get_dispensers() {
     if ( ! empty( $scheduled_ids ) ) {
         $sql .= " AND s.id IN (" . implode( ',', array_map( 'intval', $scheduled_ids ) ) . ")";
     }
-    $sql .= " GROUP BY s.id, s.full_name, s.initials, s.role_type, s.is_active, s.user_account ORDER BY s.full_name";
+    $sql .= " GROUP BY s.id, s.first_name, s.last_name, s.role, s.is_active ORDER BY s.first_name, s.last_name";
     $ps = HearMed_DB::get_results( $sql );
     $d = [];
     foreach ( $ps as $p ) {
         if ( !$p->is_active ) continue;
+        $fname = $p->full_name ?: trim( $p->first_name . ' ' . $p->last_name );
+        $initials = strtoupper( substr( $p->first_name, 0, 1 ) . substr( $p->last_name, 0, 1 ) );
         $d[] = [
             'id'             => (int) $p->id,
-            'name'           => $p->full_name,
-            'initials'       => $p->initials ?: strtoupper( substr( $p->full_name, 0, 2 ) ),
+            'name'           => $fname,
+            'initials'       => $initials,
             'clinic_id'      => $clinic_id ?: ( $p->clinic_ids ? $p->clinic_ids[0] : null ),
             'calendar_order' => 99,
-            'user_account'   => $p->user_account,
-            'role_type'      => $p->role_type,
+            'role_type'      => $p->role,
         ];
     }
     wp_send_json_success( $d );
