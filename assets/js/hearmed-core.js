@@ -256,12 +256,6 @@
 (function() {
     // Define the fields needed for each entity quick-add
     var entitySchemas = {
-        manufacturer: {
-            title: 'Add Manufacturer',
-            fields: [
-                {key:'name', label:'Manufacturer Name *', type:'text', required:true, placeholder:'e.g. Oticon'}
-            ]
-        },
         clinic: {
             title: 'Add Clinic',
             fields: [

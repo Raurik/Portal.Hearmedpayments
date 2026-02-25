@@ -29,15 +29,6 @@ function hm_quick_add_handler() {
     $id  = null;
 
     switch ($entity) {
-        case 'manufacturer':
-            $id = HearMed_DB::insert('hearmed_reference.manufacturers', [
-                'name'       => $name,
-                'is_active'  => true,
-                'created_at' => $now,
-            ]);
-            if ($id) wp_send_json_success(['id' => $id, 'name' => $name]);
-            break;
-
         case 'clinic':
             $clinic_data = [
                 'clinic_name' => $name,

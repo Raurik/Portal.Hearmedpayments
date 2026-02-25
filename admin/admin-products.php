@@ -317,12 +317,11 @@ class HearMed_Admin_Products {
                             <div class="hm-form-row">
                                 <div class="hm-form-group">
                                     <label>Manufacturer *</label>
-                                    <select id="hmp-manufacturer" data-entity="manufacturer" data-label="Manufacturer" data-name-attr="1" onchange="hmProd.genCode();hmProd.genName()">
+                                    <select id="hmp-manufacturer" data-name-attr="1" onchange="hmProd.genCode();hmProd.genName()">
                                         <option value="">Select brand</option>
                                         <?php foreach ($manufacturers as $m): ?>
                                             <option value="<?php echo (int) $m->id; ?>" data-name="<?php echo esc_attr($m->name); ?>"><?php echo esc_html($m->name); ?></option>
                                         <?php endforeach; ?>
-                                        <option value="__add_new__">+ Add New…</option>
                                     </select>
                                 </div>
                                 <div class="hm-form-group">
@@ -444,12 +443,11 @@ class HearMed_Admin_Products {
                             <div class="hm-form-row">
                                 <div class="hm-form-group">
                                     <label>Manufacturer</label>
-                                    <select id="hmp-bnd-mfr" data-entity="manufacturer" data-label="Brand" data-name-attr="1" onchange="hmProd.genBndName()">
+                                    <select id="hmp-bnd-mfr" data-name-attr="1" onchange="hmProd.genBndName()">
                                         <option value="">Select brand</option>
                                         <?php foreach ($manufacturers as $m): ?>
                                             <option value="<?php echo (int) $m->id; ?>" data-name="<?php echo esc_attr($m->name); ?>"><?php echo esc_html($m->name); ?></option>
                                         <?php endforeach; ?>
-                                        <option value="__add_new__">+ Add New…</option>
                                     </select>
                                 </div>
                                 <div class="hm-form-group">
@@ -567,12 +565,11 @@ class HearMed_Admin_Products {
                             <div class="hm-form-row">
                                 <div class="hm-form-group">
                                     <label>Manufacturer</label>
-                                    <select id="hmp-acc-mfr" data-entity="manufacturer" data-label="Brand">
+                                    <select id="hmp-acc-mfr">
                                         <option value="">Select brand</option>
                                         <?php foreach ($manufacturers as $m): ?>
                                             <option value="<?php echo (int) $m->id; ?>"><?php echo esc_html($m->name); ?></option>
                                         <?php endforeach; ?>
-                                        <option value="__add_new__">+ Add New…</option>
                                     </select>
                                 </div>
                             </div>
