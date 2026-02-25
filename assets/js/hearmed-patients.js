@@ -675,37 +675,46 @@ function initProfile(){
 
     function showExchangePickerModal(cb){
         if($('#hm-modal-overlay').length)return;
-        // Load active devices for this patient
         $.post(_hm.ajax,{action:'hm_get_patient_products',nonce:_hm.nonce,patient_id:pid},function(r){
             var act=(r&&r.success?r.data:[]).filter(function(p){return p.status==='Active';});
             if(!act.length){toast('No active devices to exchange','error');return;}
-            var h='<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:480px;">'+
-                '<div class="hm-modal-hd"><span>Exchange — Select Devices</span><button class="hm-modal-x">&times;</button></div>'+
-                '<div class="hm-modal-body"><p style="font-size:13px;color:#64748b;margin-bottom:12px;">Select the device(s) to exchange:</p>';
+            var h='<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:520px;">'+
+                '<div class="hm-modal-hd"><span>Exchange — Select Device</span><button class="hm-modal-x">&times;</button></div>'+
+                '<div class="hm-modal-body"><p style="font-size:13px;color:#64748b;margin-bottom:12px;">Choose which device to exchange:</p>';
             act.forEach(function(d){
-                h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
-                    '<input type="checkbox" class="hm-exchange-check" value="'+d._ID+'" data-name="'+esc(d.product_name)+'" style="width:18px;height:18px;accent-color:#0BB4C4;">'+
-                    '<div><strong>'+esc(d.product_name)+'</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+(d.serial_left?' · L: '+esc(d.serial_left):'')+(d.serial_right?' · R: '+esc(d.serial_right):'')+'</div></div></label>';
+                // Show each side as its own selectable option
+                if(d.serial_left){
+                    h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
+                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="left" data-name="'+esc(d.product_name)+' (Left)" style="width:18px;height:18px;accent-color:#0BB4C4;">'+
+                        '<div><strong>'+esc(d.product_name)+' — LEFT</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · Serial: '+esc(d.serial_left)+'</div></div></label>';
+                }
+                if(d.serial_right){
+                    h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
+                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="right" data-name="'+esc(d.product_name)+' (Right)" style="width:18px;height:18px;accent-color:#0BB4C4;">'+
+                        '<div><strong>'+esc(d.product_name)+' — RIGHT</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · Serial: '+esc(d.serial_right)+'</div></div></label>';
+                }
+                // Also offer both as an option
+                if(d.serial_left && d.serial_right){
+                    h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;background:#f0fdfa;">'+
+                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(d.product_name)+' (Both)" style="width:18px;height:18px;accent-color:#0BB4C4;">'+
+                        '<div><strong>'+esc(d.product_name)+' — BOTH SIDES</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · L: '+esc(d.serial_left)+' · R: '+esc(d.serial_right)+'</div></div></label>';
+                }
+                // If only one serial, no need for "both" option — the single side IS the device
+                if(!d.serial_left && !d.serial_right){
+                    h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
+                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(d.product_name)+'" style="width:18px;height:18px;accent-color:#0BB4C4;">'+
+                        '<div><strong>'+esc(d.product_name)+'</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · No serial on file</div></div></label>';
+                }
             });
             h+='</div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="exchange-next">Next →</button></div></div></div>';
             $('body').append(h);
             $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
             $('#exchange-next').on('click',function(){
-                var sel=[];
-                $('.hm-exchange-check:checked').each(function(){sel.push({id:$(this).val(),name:$(this).data('name')});});
-                if(!sel.length){toast('Select at least one device','error');return;}
+                var $sel=$('.hm-exchange-radio:checked');
+                if(!$sel.length){toast('Select a device to exchange','error');return;}
+                var devId=$sel.val(), devName=$sel.data('name'), side=$sel.data('side');
                 closeModal();
-                // Open exchange modal for first selected device
-                showExchangeModal(sel[0].id,sel[0].name,function(){
-                    // Mark remaining as exchanged too
-                    var rest=sel.slice(1);
-                    if(rest.length){
-                        var done=0;
-                        rest.forEach(function(d){
-                            $.post(_hm.ajax,{action:'hm_update_patient_product_status',nonce:_hm.nonce,_ID:d.id,status:'Replaced',reason:'Exchanged'},function(){done++;if(done>=rest.length)cb();});
-                        });
-                    } else { cb(); }
-                });
+                showExchangeModal(devId,devName,function(){cb();},side);
             });
         });
     }
@@ -753,13 +762,51 @@ function initProfile(){
             var reason=$('#repair-reason').val();
             if(!reason){toast('Please select a reason for repair','error');return;}
             $(this).prop('disabled',true).text('Saving…');
-            $.post(_hm.ajax,{action:'hm_create_patient_repair',nonce:_hm.nonce,patient_id:pid,patient_product_id:ppId||0,serial_number:$('#repair-serial').val(),warranty_status:$('#repair-warranty').val(),under_warranty:$('#repair-warranty').val()==='In Warranty'?1:0,repair_reason:reason,manufacturer_id:$('#repair-mfr').val()||0,repair_notes:$('#repair-notes').val()},function(r){closeModal();if(r.success&&cb)cb();else if(!r.success)toast('Error','error');});
+            $.post(_hm.ajax,{action:'hm_create_patient_repair',nonce:_hm.nonce,patient_id:pid,patient_product_id:ppId||0,serial_number:$('#repair-serial').val(),warranty_status:$('#repair-warranty').val(),under_warranty:$('#repair-warranty').val()==='In Warranty'?1:0,repair_reason:reason,manufacturer_id:$('#repair-mfr').val()||0,repair_notes:$('#repair-notes').val()},function(r){
+                closeModal();
+                if(r.success){
+                    if(cb)cb();
+                    showRepairDocketPrompt(r.data.id, r.data.repair_number);
+                } else { toast('Error','error'); }
+            });
         });
     }
-    function showExchangeModal(ppId,productName,cb){
+
+    function showRepairDocketPrompt(repairId, repairNum){
         if($('#hm-modal-overlay').length)return;
+        $('body').append(
+            '<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:400px;">'+
+            '<div class="hm-modal-hd"><span>Repair Logged</span><button class="hm-modal-x">&times;</button></div>'+
+            '<div class="hm-modal-body" style="text-align:center;padding:24px 20px;">'+
+                '<div style="font-size:40px;margin-bottom:12px;">🔧</div>'+
+                '<p style="font-size:14px;color:#334155;margin-bottom:4px;">Repair <strong>'+esc(repairNum||'')+'</strong> created successfully.</p>'+
+                '<p style="font-size:13px;color:#64748b;margin-bottom:20px;">Print a repair docket to send with the device to the manufacturer.</p>'+
+                '<div style="display:flex;gap:10px;justify-content:center;">'+
+                    '<button class="hm-btn hm-btn-outline hm-modal-x" style="min-width:80px;">Close</button>'+
+                    '<button class="hm-btn hm-btn-teal" id="hm-print-docket" style="min-width:140px;">🖨 Print Docket</button>'+
+                '</div>'+
+            '</div></div></div>'
+        );
+        $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+        $('#hm-print-docket').on('click',function(){
+            printRepairDocket(repairId);
+        });
+    }
+
+    function printRepairDocket(repairId){
+        $.post(_hm.ajax,{action:'hm_get_repair_docket',nonce:_hm.nonce,repair_id:repairId},function(r){
+            if(r.success&&r.data&&r.data.html){
+                var w=window.open('','_blank','width=900,height=700');
+                w.document.write(r.data.html);
+                w.document.close();
+            } else { toast('Error generating docket','error'); }
+        });
+    }
+    function showExchangeModal(ppId,productName,cb,side){
+        if($('#hm-modal-overlay').length)return;
+        var sideNote=side&&side!=='both'?' ('+side.charAt(0).toUpperCase()+side.slice(1)+' side only)':'';
         $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:480px;"><div class="hm-modal-hd"><span>Exchange Hearing Aid</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body">'+
-            '<p style="font-size:13px;color:#64748b;margin-bottom:16px;">This will mark <strong>'+esc(productName)+'</strong> as "Replaced" and create a credit note.</p>'+
+            '<p style="font-size:13px;color:#64748b;margin-bottom:16px;">This will mark <strong>'+esc(productName)+'</strong>'+esc(sideNote)+' as "Replaced" and create a credit note.</p>'+
             '<div class="hm-form-group"><label class="hm-label">Reason for exchange *</label><select class="hm-dd" id="exch-reason"><option value="">— Select —</option><option>Upgrade</option><option>Downgrade</option><option>Manufacturer recall</option><option>Repeated faults</option><option>Patient dissatisfaction</option><option>Style change</option><option>Other</option></select></div>'+
             '<div class="hm-form-group"><label class="hm-label">Credit amount (€)</label><input type="number" class="hm-inp" id="exch-amount" step="0.01" min="0" placeholder="0.00"></div>'+
             '<div class="hm-form-group"><label class="hm-label">Refund type</label><select class="hm-dd" id="exch-refund-type"><option value="credit">Credit towards new device</option><option value="cheque">Cheque refund</option></select></div>'+
@@ -770,7 +817,7 @@ function initProfile(){
             var reason=$('#exch-reason').val();if(!reason){toast('Select a reason','error');return;}
             var amt=parseFloat($('#exch-amount').val())||0;
             $(this).prop('disabled',true).text('Processing…');
-            $.post(_hm.ajax,{action:'hm_create_exchange',nonce:_hm.nonce,patient_id:pid,device_id:ppId,reason:reason,credit_amount:amt,refund_type:$('#exch-refund-type').val(),notes:$('#exch-notes').val()},function(r){
+            $.post(_hm.ajax,{action:'hm_create_exchange',nonce:_hm.nonce,patient_id:pid,device_id:ppId,reason:reason,credit_amount:amt,refund_type:$('#exch-refund-type').val(),notes:$('#exch-notes').val(),side:side||'both'},function(r){
                 closeModal();
                 if(r.success){toast('Exchange processed — Credit Note '+r.data.credit_note_number);if(cb)cb();}
                 else toast(r.data||'Error','error');
@@ -792,15 +839,18 @@ function initProfile(){
                     if(x.days_open>14)rowClass=' class="hm-repair-overdue"';
                     else if(x.days_open>10)rowClass=' class="hm-repair-warning"';
                 }
-                var actions='';
-                if(x.status==='Booked')actions='<button class="hm-btn hm-btn-outline hm-btn-sm hm-repair-send" data-id="'+x._ID+'">Mark Sent</button>';
-                else if(x.status==='Sent')actions='<button class="hm-btn hm-btn-outline hm-btn-sm hm-repair-receive" data-id="'+x._ID+'">Received Back</button>';
+                var actions='<button class="hm-btn hm-btn-outline hm-btn-sm hm-repair-print" data-id="'+x._ID+'" title="Print Docket">🖨</button> ';
+                if(x.status==='Booked')actions+='<button class="hm-btn hm-btn-outline hm-btn-sm hm-repair-send" data-id="'+x._ID+'">Mark Sent</button>';
+                else if(x.status==='Sent')actions+='<button class="hm-btn hm-btn-outline hm-btn-sm hm-repair-receive" data-id="'+x._ID+'">Received Back</button>';
                 h+='<tr'+rowClass+'><td><code class="hm-pt-hnum">'+esc(x.repair_number||'—')+'</code></td><td>'+esc(x.product_name)+(x.manufacturer_name?' <span style="color:#94a3b8;font-size:12px;">('+esc(x.manufacturer_name)+')</span>':'')+'</td><td style="font-size:13px;">'+esc(x.repair_reason||'—')+'</td><td>'+fmtDate(x.date_booked)+'</td><td><span class="hm-badge hm-badge-sm '+sc+'">'+esc(x.status)+'</span></td><td style="text-align:center;">'+(x.days_open||'—')+'</td><td>'+(x.under_warranty?'<span class="hm-badge hm-badge-sm hm-badge-green"><span class="hm-dot-green"></span> Yes</span>':'<span class="hm-badge hm-badge-sm hm-badge-red"><span class="hm-dot-red"></span> '+(x.warranty_status||'No')+'</span>')+'</td><td>'+actions+'</td></tr>'+
                 (x.repair_notes?'<tr'+rowClass+'><td colspan="8"><div class="hm-appt-note">'+esc(x.repair_notes)+'</div></td></tr>':'');
             });h+='</tbody></table>';}
             $c.html(h+'</div>');
         });
         $c.off('click','#hm-log-repair-btn').on('click','#hm-log-repair-btn',function(){showLogRepairModal(0,'','','',function(){toast('Repair logged');loadRepairs($c);});});
+        $c.off('click','.hm-repair-print').on('click','.hm-repair-print',function(){
+            printRepairDocket($(this).data('id'));
+        });
         $c.off('click','.hm-repair-send').on('click','.hm-repair-send',function(){
             var rid=$(this).data('id');$(this).prop('disabled',true).text('Sending…');
             $.post(_hm.ajax,{action:'hm_update_repair_status',nonce:_hm.nonce,_ID:rid,status:'Sent'},function(r){if(r.success){toast('Marked as Sent');loadRepairs($c);}else toast('Error','error');});
@@ -1176,13 +1226,43 @@ function initProfile(){
             if(!$('#ap-mfr').val()){toast('Select a manufacturer','error');return;}
             if(!$('#ap-model').val()){toast('Select a model','error');return;}
             var prodId=resolveProductId();
+            var prodName=$('#ap-mfr option:selected').text()+' '+$('#ap-model').val();
+            var serialL=$('#ap-sl').val(), serialR=$('#ap-sr').val();
             $(this).prop('disabled',true).text('Saving…');
-            $.post(_hm.ajax,{action:'hm_add_patient_product',nonce:_hm.nonce,patient_id:pid,product_id:prodId,manufacturer:$('#ap-mfr option:selected').text(),manufacturer_id:$('#ap-mfr').val(),model:$('#ap-model').val(),style:$('#ap-style').val(),technology_level:$('#ap-tech').val(),serial_number_left:$('#ap-sl').val(),serial_number_right:$('#ap-sr').val(),fitting_date:fit,warranty_expiry:$('#ap-war').val()},function(r){
+            $.post(_hm.ajax,{action:'hm_add_patient_product',nonce:_hm.nonce,patient_id:pid,product_id:prodId,manufacturer:$('#ap-mfr option:selected').text(),manufacturer_id:$('#ap-mfr').val(),model:$('#ap-model').val(),style:$('#ap-style').val(),technology_level:$('#ap-tech').val(),serial_number_left:serialL,serial_number_right:serialR,fitting_date:fit,warranty_expiry:$('#ap-war').val()},function(r){
                 closeModal();
-                if(r.success){toast('Hearing aid added');if(cb)cb();}
+                if(r.success){
+                    toast('Hearing aid added');
+                    if(cb)cb();
+                    // Prompt: Create order for this device?
+                    showOrderPrompt(prodName,prodId,serialL,serialR);
+                }
                 else{toast(r.data||'Error','error');}
             });
         });
+    }
+
+    /* ── Order Prompt after adding HA ── */
+    function showOrderPrompt(prodName,prodId,serialL,serialR){
+        if($('#hm-modal-overlay').length)return;
+        var earDesc=[];
+        if(serialL)earDesc.push('Left');if(serialR)earDesc.push('Right');
+        var earLabel=earDesc.length===2?'Binaural':earDesc[0]||'';
+        $('body').append(
+            '<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:420px;">'+
+            '<div class="hm-modal-hd"><span>Create Order?</span><button class="hm-modal-x">&times;</button></div>'+
+            '<div class="hm-modal-body" style="text-align:center;padding:24px 20px;">'+
+                '<div style="font-size:40px;margin-bottom:12px;">📋</div>'+
+                '<p style="font-size:14px;color:#334155;margin-bottom:4px;">Hearing aid <strong>'+esc(prodName)+'</strong> added successfully.</p>'+
+                '<p style="font-size:13px;color:#64748b;margin-bottom:20px;">Would you like to create an order for this device?</p>'+
+                '<div style="display:flex;gap:10px;justify-content:center;">'+
+                    '<button class="hm-btn hm-btn-outline hm-modal-x" style="min-width:100px;">Not Now</button>'+
+                    '<a href="/orders/?hm_action=create&patient_id='+pid+'&product_id='+(prodId||'')+'" class="hm-btn hm-btn-teal" style="min-width:140px;text-decoration:none;">Create Order →</a>'+
+                '</div>'+
+            '</div></div></div>'
+        );
+        $('.hm-modal-x').on('click',closeModal);
+        $('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
     }
 
     /* ── FORMS (Full: list + submit) ── */

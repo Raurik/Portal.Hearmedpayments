@@ -387,6 +387,7 @@ class HearMed_Orders {
             </form>
         </div>
         <?php echo self::create_form_js(); ?>
+        <?php echo self::maybe_prefill_patient_js(); ?>
         <?php return ob_get_clean();
     }
 
@@ -1664,5 +1665,48 @@ class HearMed_Orders {
         })();
         </script>
         <?php return ob_get_clean();
+    }
+
+    /**
+     * Auto-fill patient on the create form when patient_id is in URL
+     */
+    public static function maybe_prefill_patient_js() {
+        $pid = intval( $_GET['patient_id'] ?? 0 );
+        if ( ! $pid ) return '';
+
+        $db = HearMed_DB::instance();
+        $p  = $db->get_row(
+            "SELECT id, first_name, last_name, patient_number
+             FROM hearmed_core.patients WHERE id = \$1",
+            [ $pid ]
+        );
+        if ( ! $p ) return '';
+
+        $data = json_encode([
+            'id'    => (int) $p->id,
+            'label' => trim( $p->first_name . ' ' . $p->last_name )
+                       . ( $p->patient_number ? ' (' . $p->patient_number . ')' : '' ),
+        ]);
+
+        return '<script>
+        (function(){
+            var pp = ' . $data . ';
+            var pInput = document.getElementById("hm-patient-id");
+            var pSearch = document.getElementById("hm-patient-search");
+            var pChip = document.getElementById("hm-patient-selected");
+            if (pInput && pp.id) {
+                pInput.value = pp.id;
+                if (pSearch) pSearch.style.display = "none";
+                if (pChip) {
+                    pChip.style.display = "block";
+                    pChip.innerHTML = pp.label + \' <button type="button" class="hm-chip__remove" id="hm-clear-patient">×</button>\';
+                    document.getElementById("hm-clear-patient").addEventListener("click", function(){
+                        pInput.value = ""; pChip.style.display = "none";
+                        if (pSearch) { pSearch.style.display = ""; pSearch.value = ""; }
+                    });
+                }
+            }
+        })();
+        </script>';
     }
 }
