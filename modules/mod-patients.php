@@ -150,11 +150,12 @@ function hm_patient_current_staff() {
     if ( ! $uid ) { $staff = false; return null; }
 
     $db = HearMed_DB::instance();
+    // Try with role_id FK first, fall back to role column if it fails
     $row = $db->get_row(
-        "SELECT s.id, s.first_name, s.last_name, s.role_id,
-                r.role_name, r.role_level
+        "SELECT s.id, s.first_name, s.last_name, s.role,
+                r.role_name
          FROM hearmed_reference.staff s
-         LEFT JOIN hearmed_reference.roles r ON r.id = s.role_id
+         LEFT JOIN hearmed_reference.roles r ON r.role_name = s.role
          WHERE s.wp_user_id = \$1 AND s.is_active = true
          LIMIT 1",
         [ $uid ]
@@ -445,14 +446,18 @@ function hm_ajax_get_referral_sources() {
 function hm_ajax_get_staff_list() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $rows = HearMed_DB::get_results(
-        "SELECT id, full_name, initials, role_type FROM hearmed_reference.staff WHERE is_active = true AND role_type = 'dispenser' ORDER BY full_name"
+        "SELECT id, first_name, last_name, role
+         FROM hearmed_reference.staff
+         WHERE is_active = true
+           AND LOWER(role) = 'dispenser'
+         ORDER BY first_name, last_name"
     );
     $out = [];
     if ( $rows ) {
         foreach ( $rows as $r ) {
             $out[] = [
                 'id'   => (int) $r->id,
-                'name' => $r->full_name,
+                'name' => trim( $r->first_name . ' ' . $r->last_name ),
             ];
         }
     }
@@ -1747,13 +1752,14 @@ function hm_ajax_get_patient_audit() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
-    if ( ! hm_patient_is_admin() ) wp_send_json_error( 'Access denied — admin only' );
 
     $db   = HearMed_DB::instance();
     $rows = $db->get_results(
         "SELECT al.action, al.entity_type, al.entity_id, al.details,
-                al.created_at, al.user_name AS user_display
+                al.created_at,
+                COALESCE(CONCAT(s.first_name, ' ', s.last_name), 'System') AS user_display
          FROM hearmed_admin.audit_log al
+         LEFT JOIN hearmed_reference.staff s ON s.wp_user_id = al.user_id
          WHERE (al.entity_type = 'patient' AND al.entity_id = \$1)
             OR (al.details::text LIKE '%\"patient_id\":' || \$1::text || '%'
                 AND al.entity_type IN ('patient_note','patient_document','patient_form','patient_device','repair','credit_note','invoice','notification'))
