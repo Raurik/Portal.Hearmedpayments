@@ -34,9 +34,12 @@ class HearMed_Router {
         
         // Orders & Finance
         'hearmed_orders' => [ 'module' => 'orders', 'view' => 'list' ],
-        'hearmed_order_status' => [ 'module' => 'orders', 'view' => 'status' ],
-        'hearmed_approvals' => [ 'module' => 'orders', 'view' => 'approvals' ],
-        'hearmed_awaiting_fitting' => [ 'module' => 'orders', 'view' => 'awaiting-fitting' ],
+        // 'hearmed_order_status' is provided by modules/mod-order-status.php
+        // and registers its own shortcode; exclude it here to avoid overriding.
+        // 'hearmed_approvals' is provided by modules/mod-approvals.php
+        // and registers its own shortcode; exclude it here to avoid overriding.
+        // 'hearmed_awaiting_fitting' is provided by modules/mod-fitting.php
+        // and registers its own shortcode; exclude it here to avoid overriding.
         
         // Accounting
         'hearmed_accounting' => [ 'module' => 'accounting', 'view' => 'dashboard' ],

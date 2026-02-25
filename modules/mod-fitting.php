@@ -21,6 +21,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 add_shortcode( 'hearmed_fitting', 'hm_render_fitting_page' );
+add_shortcode( 'hearmed_awaiting_fitting', 'hm_render_fitting_page' ); // alias
 
 // ═══════════════════════════════════════════════════════════════
 // RENDER
