@@ -91,8 +91,8 @@ class HearMed_Admin_Taxonomies {
                     <?php elseif ($tag === 'hearmed_range_settings'): ?>
                     <tr>
                         <th>Range</th>
-                        <th class="hm-num">Price Total</th>
-                        <th class="hm-num">Price ex PRSI</th>
+                        <th class="hm-num">Price Total (€)</th>
+                        <th class="hm-num">Price ex PRSI (€)</th>
                         <th>Status</th>
                         <th style="width:100px"></th>
                     </tr>
@@ -123,8 +123,8 @@ class HearMed_Admin_Taxonomies {
                             <td><?php echo $r->is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
                         <?php elseif ($tag === 'hearmed_range_settings'): ?>
                             <td><strong><?php echo esc_html($r->range_name); ?></strong></td>
-                            <td class="hm-num"><?php echo $r->price_total !== null ? esc_html(number_format((float) $r->price_total, 2)) : '—'; ?></td>
-                            <td class="hm-num"><?php echo $r->price_ex_prsi !== null ? esc_html(number_format((float) $r->price_ex_prsi, 2)) : '—'; ?></td>
+                            <td class="hm-num"><?php echo $r->price_total !== null ? '€' . esc_html(number_format((float) $r->price_total, 2)) : '—'; ?></td>
+                            <td class="hm-num"><?php echo $r->price_ex_prsi !== null ? '€' . esc_html(number_format((float) $r->price_ex_prsi, 2)) : '—'; ?></td>
                             <td><?php echo $r->is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
                         <?php else: ?>
                             <td><strong><?php echo esc_html($r->source_name); ?></strong></td>
@@ -184,11 +184,11 @@ class HearMed_Admin_Taxonomies {
                         <div class="hm-tax-fields" data-tag="hearmed_range_settings">
                             <div class="hm-form-row">
                                 <div class="hm-form-group">
-                                    <label>Price Total</label>
+                                    <label>Price Total (€)</label>
                                     <input type="number" id="hmt-price-total" step="0.01" placeholder="0.00">
                                 </div>
                                 <div class="hm-form-group">
-                                    <label>Price ex PRSI</label>
+                                    <label>Price ex PRSI (€)</label>
                                     <input type="number" id="hmt-price-ex-prsi" step="0.01" placeholder="0.00">
                                 </div>
                             </div>

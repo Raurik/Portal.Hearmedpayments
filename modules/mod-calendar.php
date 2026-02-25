@@ -77,65 +77,66 @@ function hm_ajax_get_settings() {
 function hm_ajax_save_settings() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     if ( ! current_user_can( 'edit_posts' ) ) { 
-        error_log('🔴 DEBUG hm_ajax_save_settings: Permission denied');
         wp_send_json_error( 'Denied' ); 
         return; 
     }
     
-    error_log('✅ DEBUG hm_ajax_save_settings: Called by user ' . get_current_user_id());
-    error_log('🔍 DEBUG hm_ajax_save_settings: $_POST data: ' . print_r($_POST, true));
-    
     try {
         $t      = HearMed_Portal::table( 'calendar_settings' );
-        error_log('✅ DEBUG: Table name: ' . $t);
         
-        $fields = [
-            'start_time', 'end_time', 'time_interval', 'slot_height', 'default_view', 'default_mode',
-            'show_time_inline', 'hide_end_time', 'outcome_style', 'require_cancel_reason',
-            'hide_cancelled', 'require_reschedule_note', 'apply_clinic_colour', 'display_full_name',
-            'prevent_location_mismatch', 'enabled_days', 'calendar_order', 'appointment_statuses',
-            'double_booking_warning', 'show_patient', 'show_service', 'show_initials', 'show_status',
+        // Regular fields
+        $text_fields = [
+            'start_time', 'end_time', 'slot_height', 'default_view', 'default_mode',
+            'outcome_style', 'enabled_days', 'calendar_order', 'appointment_statuses',
             'appt_bg_color', 'appt_font_color', 'appt_badge_color', 'appt_badge_font_color', 'appt_meta_color',
         ];
         
+        // Checkbox fields (need explicit false when not in POST)
+        $checkbox_fields = [
+            'show_time_inline', 'hide_end_time', 'require_cancel_reason',
+            'hide_cancelled', 'require_reschedule_note', 'apply_clinic_colour', 'display_full_name',
+            'prevent_location_mismatch', 'double_booking_warning', 'show_patient',
+            'show_service', 'show_initials', 'show_status',
+        ];
+        
         $data = [];
-        foreach ( $fields as $f ) {
+        
+        // Map form field name → DB column name where they differ
+        if ( isset( $_POST['time_interval'] ) ) {
+            $data['time_interval_minutes'] = intval( $_POST['time_interval'] );
+        }
+        
+        foreach ( $text_fields as $f ) {
             if ( isset( $_POST[ $f ] ) ) {
                 $data[ $f ] = sanitize_text_field( $_POST[ $f ] );
             }
         }
         
-        error_log('✅ DEBUG: Sanitized data to save: ' . print_r($data, true));
-        
-        // Check if table exists
-        $table_check = HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) );
-        error_log('✅ DEBUG: Table exists check: ' . ($table_check ? 'YES' : 'NO'));
+        foreach ( $checkbox_fields as $f ) {
+            $data[ $f ] = isset( $_POST[ $f ] ) ? true : false;
+        }
         
         // Check if record exists
         $ex = HearMed_DB::get_var( "SELECT id FROM {$t} LIMIT 1" );
-        error_log('✅ DEBUG: Existing record id: ' . ($ex ? $ex : 'NONE - will insert'));
         
         if ( $ex ) {
-            error_log('📝 DEBUG: Updating record id=' . $ex);
             $result = HearMed_DB::update( $t, $data, [ 'id' => $ex ] );
-            error_log('✅ DEBUG: Update result: ' . print_r($result, true));
         } else {
-            error_log('📝 DEBUG: Inserting new record');
             $result = HearMed_DB::insert( $t, $data );
-            error_log('✅ DEBUG: Insert result: ' . print_r($result, true));
         }
         
-        error_log('✅ DEBUG: Save complete - sending success');
+        if ( $result === false ) {
+            $err = HearMed_DB::last_error();
+            error_log( '[HearMed] Calendar settings save error: ' . $err );
+            wp_send_json_error( [ 'message' => 'Database error: ' . $err ] );
+            return;
+        }
+        
         wp_send_json_success();
         
     } catch ( Throwable $e ) {
-        error_log('🔴 DEBUG hm_ajax_save_settings: Exception - ' . $e->getMessage());
-        error_log('🔴 DEBUG hm_ajax_save_settings: Trace - ' . $e->getTraceAsString());
-        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-            wp_send_json_error( [ 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString() ] );
-        } else {
-            wp_send_json_error( 'Server error during save' );
-        }
+        error_log( '[HearMed] Calendar settings save exception: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => 'Server error during save' ] );
     }
 }
 

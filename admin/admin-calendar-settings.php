@@ -21,8 +21,19 @@ class HearMed_Admin_Calendar_Settings {
         if (!is_user_logged_in()) return '<p>Please log in.</p>';
 
         $saved = $this->get_saved_settings();
+        // Map DB column name to form field name where they differ
+        if (isset($saved['time_interval_minutes'])) {
+            $saved['time_interval'] = $saved['time_interval_minutes'];
+        }
         $s = function($key, $default) use ($saved) {
-            return isset($saved[$key]) && $saved[$key] !== '' ? $saved[$key] : $default;
+            if (!isset($saved[$key]) || $saved[$key] === '' || $saved[$key] === null) return $default;
+            return $saved[$key];
+        };
+        // Helper for checkboxes: DB stores boolean (t/f) or 'on'/''
+        $cb = function($key, $default = false) use ($saved) {
+            if (!isset($saved[$key])) return $default;
+            $v = $saved[$key];
+            return ($v === true || $v === 't' || $v === '1' || $v === 'on' || $v === 'true');
         };
 
         ob_start();
@@ -52,14 +63,14 @@ class HearMed_Admin_Calendar_Settings {
                         <div class="hm-card-body">
                             <div class="hm-srow">
                                 <label class="hm-day-check">
-                                    <input id="hs-timeInline" name="show_time_inline" type="checkbox" <?php checked($s('show_time_inline', ''), 'on'); ?>>
+                                    <input id="hs-timeInline" name="show_time_inline" type="checkbox" <?php if ($cb('show_time_inline')) echo 'checked'; ?>>
                                     <span class="hm-check"></span>
                                     Display time inline with patient name
                                 </label>
                             </div>
                             <div class="hm-srow">
                                 <label class="hm-day-check">
-                                    <input id="hs-hideEnd" name="hide_end_time" type="checkbox" <?php checked($s('hide_end_time', 'on'), 'on'); ?>>
+                                    <input id="hs-hideEnd" name="hide_end_time" type="checkbox" <?php if ($cb('hide_end_time', true)) echo 'checked'; ?>>
                                     <span class="hm-check"></span>
                                     Hide appointment end time
                                 </label>
@@ -81,7 +92,7 @@ class HearMed_Admin_Calendar_Settings {
                             </div>
                             <div class="hm-srow">
                                 <label class="hm-day-check">
-                                    <input id="hs-fullName" name="display_full_name" type="checkbox" <?php checked($s('display_full_name', ''), 'on'); ?>>
+                                    <input id="hs-fullName" name="display_full_name" type="checkbox" <?php if ($cb('display_full_name')) echo 'checked'; ?>>
                                     <span class="hm-check"></span>
                                     Display full resource name
                                 </label>

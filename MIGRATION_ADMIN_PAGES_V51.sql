@@ -89,6 +89,24 @@ ALTER TABLE hearmed_core.staff_absences
     ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'approved',
     ADD COLUMN IF NOT EXISTS notes TEXT;
 
+-- 7b. Add missing columns to calendar_settings table
+ALTER TABLE hearmed_core.calendar_settings
+    ADD COLUMN IF NOT EXISTS display_full_name BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS prevent_location_mismatch BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS enabled_days VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS calendar_order VARCHAR(200),
+    ADD COLUMN IF NOT EXISTS appointment_statuses TEXT,
+    ADD COLUMN IF NOT EXISTS double_booking_warning BOOLEAN DEFAULT TRUE,
+    ADD COLUMN IF NOT EXISTS show_patient BOOLEAN DEFAULT TRUE,
+    ADD COLUMN IF NOT EXISTS show_service BOOLEAN DEFAULT TRUE,
+    ADD COLUMN IF NOT EXISTS show_initials BOOLEAN DEFAULT TRUE,
+    ADD COLUMN IF NOT EXISTS show_status BOOLEAN DEFAULT TRUE,
+    ADD COLUMN IF NOT EXISTS appt_bg_color VARCHAR(10) DEFAULT '#0BB4C4',
+    ADD COLUMN IF NOT EXISTS appt_font_color VARCHAR(10) DEFAULT '#ffffff',
+    ADD COLUMN IF NOT EXISTS appt_badge_color VARCHAR(10) DEFAULT '#3b82f6',
+    ADD COLUMN IF NOT EXISTS appt_badge_font_color VARCHAR(10) DEFAULT '#ffffff',
+    ADD COLUMN IF NOT EXISTS appt_meta_color VARCHAR(10) DEFAULT '#38bdf8';
+
 -- 8. Create hearmed_range table if missing (used by Products / Range Settings)
 CREATE TABLE IF NOT EXISTS hearmed_reference.hearmed_range (
     id             BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
