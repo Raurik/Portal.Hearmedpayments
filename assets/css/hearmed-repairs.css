@@ -26,23 +26,23 @@
 .hm-repair-stat {
     background: #fff;
     border: 1px solid #e2e8f0;
-    border-radius: 5px;
-    padding: 5px 10px;
-    min-width: 58px;
+    border-radius: 6px;
+    padding: 8px 14px;
+    min-width: 70px;
     text-align: center;
 }
 .hm-repair-stat-val {
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 700;
     color: #151B33;
     line-height: 1.2;
 }
 .hm-repair-stat-lbl {
-    font-size: 8.5px;
+    font-size: 10px;
     color: #94a3b8;
-    margin-top: 1px;
+    margin-top: 2px;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.35px;
 }
 .hm-repair-overdue td {
     background: #fef2f2 !important;

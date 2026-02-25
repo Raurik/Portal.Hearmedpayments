@@ -147,7 +147,7 @@
                 '<td style="font-size:13px;">' + esc(x.repair_reason || '—') + '</td>' +
                 '<td>' + fmtDate(x.date_booked) + '</td>' +
                 '<td><span class="hm-badge hm-badge-sm ' + sc + '">' + esc(x.status) + '</span></td>' +
-                '<td style="text-align:center;">' + (x.days_open || '—') + '</td>' +
+                '<td style="text-align:center;">' + (x.days_open != null ? x.days_open : '—') + '</td>' +
                 '<td>' + (x.under_warranty ? '<span class="hm-badge hm-badge-sm hm-badge-green">Yes</span>' : '<span class="hm-badge hm-badge-sm hm-badge-gray">' + (x.warranty_status || 'No') + '</span>') + '</td>' +
                 '<td style="font-size:12px;">' + esc(x.sent_to || '—') + '</td>' +
                 '<td style="font-size:12px;">' + esc(x.dispenser_name || '—') + '</td>' +
