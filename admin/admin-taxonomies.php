@@ -55,7 +55,7 @@ class HearMed_Admin_Taxonomies {
             ) ?: [];
         } elseif ($tag === 'hearmed_range_settings') {
             $rows = HearMed_DB::get_results(
-                "SELECT id, range_name, price_total, price_ex_prsi, is_active
+                "SELECT id, range_name, price_total::numeric AS price_total, price_ex_prsi::numeric AS price_ex_prsi, is_active
                  FROM hearmed_reference.hearmed_range
                  WHERE COALESCE(is_active::text,'true') NOT IN ('false','f','0')
                  ORDER BY range_name"
@@ -142,8 +142,15 @@ class HearMed_Admin_Taxonomies {
                             <td><?php echo $r->is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
                         <?php elseif ($tag === 'hearmed_range_settings'): ?>
                             <td><strong><?php echo esc_html($r->range_name); ?></strong></td>
-                            <td class="hm-num"><?php $pt = floatval($r->price_total ?? 0); echo $pt > 0 ? '€' . esc_html(number_format($pt, 2)) : '—'; ?></td>
-                            <td class="hm-num"><?php $pe = floatval($r->price_ex_prsi ?? 0); echo $pe > 0 ? '€' . esc_html(number_format($pe, 2)) : '—'; ?></td>
+                            <?php
+                                $raw_pt = $r->price_total ?? null;
+                                $raw_pe = $r->price_ex_prsi ?? null;
+                                error_log('[HearMed Range Debug] range=' . ($r->range_name ?? '?') . ' raw_pt=' . var_export($raw_pt, true) . ' raw_pe=' . var_export($raw_pe, true));
+                                $clean_pt = ($raw_pt !== null && $raw_pt !== '') ? (float) preg_replace('/[^0-9.\-]/', '', $raw_pt) : null;
+                                $clean_pe = ($raw_pe !== null && $raw_pe !== '') ? (float) preg_replace('/[^0-9.\-]/', '', $raw_pe) : null;
+                            ?>
+                            <td class="hm-num"><?php echo $clean_pt !== null && $clean_pt > 0 ? '€' . esc_html(number_format($clean_pt, 2)) : '—'; ?></td>
+                            <td class="hm-num"><?php echo $clean_pe !== null && $clean_pe > 0 ? '€' . esc_html(number_format($clean_pe, 2)) : '—'; ?></td>
                             <td><?php echo $r->is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
                         <?php else: ?>
                             <td><strong><?php echo esc_html($r->source_name); ?></strong></td>
