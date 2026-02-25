@@ -15,27 +15,27 @@ function initials(n){if(!n)return '?';var p=n.trim().split(' ');return(p[0][0]+(
 function toast(msg,type){var t=$('<div class="hm-toast hm-toast-'+(type||'success')+'">'+esc(msg)+'</div>');$('body').append(t);setTimeout(function(){t.fadeOut(300,function(){t.remove();});},3000);}
 function closeModal(){$('#hm-modal-overlay').remove();}
 var HM_ICONS={
-    calendar:'<span class="hm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="16" rx="2"></rect><path d="M8 2.8v3.4M16 2.8v3.4M3.5 9.2h17"></path></svg></span>',
-    note:'<span class="hm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h10l3 3v14H7z"></path><path d="M17 3.5v3h3M10 11h7M10 15h7"></path></svg></span>',
-    export:'<span class="hm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11"></path><path d="m7.8 10.5 4.2 4.2 4.2-4.2"></path><path d="M4 19.5h16"></path></svg></span>',
-    phone:'<span class="hm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 4.5h4l1.2 4.1-2.1 1.7a14 14 0 0 0 5.1 5.1l1.7-2.1 4.1 1.2v4a1.8 1.8 0 0 1-1.8 1.8A14.2 14.2 0 0 1 3.7 6.3 1.8 1.8 0 0 1 5.5 4.5z"></path></svg></span>',
-    email:'<span class="hm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6" width="17" height="12" rx="2"></rect><path d="m4.5 7.2 7.5 5.6 7.5-5.6"></path></svg></span>',
-    clinic:'<span class="hm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V7.5h6V20"></path><path d="M11 20V4h8v16"></path><path d="M3.5 20.5h17"></path></svg></span>',
-    person:'<span class="hm-icon hm-icon-teal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5.5 20c.6-3.1 3-5.1 6.5-5.1s5.9 2 6.5 5.1"></path></svg></span>',
-    check:'<span class="hm-icon hm-icon-success" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5.8 12.4 4.2 4.2 8.2-8.2"></path></svg></span>',
-    x:'<span class="hm-icon hm-icon-danger" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"></path></svg></span>',
-    warning:'<span class="hm-icon hm-icon-danger" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 2.8 20.5h18.4L12 3.5z"></path><path d="M12 9v5.2M12 17.5h.01"></path></svg></span>',
-    search:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.2 4.2"></path></svg></span>',
-    hearing:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 9.2a3.6 3.6 0 0 0-7.2 0"></path><path d="M8.3 9.2c0 2 1.3 2.8 2.3 3.5.9.6 1.4 1 1.4 1.9v1.2"></path><path d="M7.2 5.6A6.7 6.7 0 0 0 5 10.6"></path><path d="M6.8 18a4.2 4.2 0 0 0 5.2 1.8"></path></svg></span>',
-    repair:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6.2 3.3 3.3-7.8 7.8H6.7v-3.3l7.8-7.8z"></path><path d="M13.2 7.5 16.5 10.8"></path></svg></span>',
-    returns:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7H4v5"></path><path d="M4.3 12A7.5 7.5 0 1 0 7 6.7"></path></svg></span>',
-    form:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="2"></rect><path d="M9 8h6M9 12h6M9 16h4"></path></svg></span>',
-    audit:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 18.5h15"></path><path d="M7 16V9M12 16V6M17 16v-4"></path></svg></span>',
-    order:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5h16v10H4z"></path><path d="M8 7.5V6a4 4 0 0 1 8 0v1.5"></path></svg></span>',
-    invoice:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h10l3 3v14l-3-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5z"></path><path d="M9.5 10h5M9.5 14h5"></path></svg></span>',
-    edit:'<span class="hm-icon hm-icon-teal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m14.8 5.7 3.5 3.5"></path><path d="M5 19h3.6l9.8-9.8a1.9 1.9 0 0 0 0-2.7l-.9-.9a1.9 1.9 0 0 0-2.7 0L5 15.4V19z"></path></svg></span>',
-    mic:'<span class="hm-icon hm-icon-teal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3.8" width="6" height="11" rx="3"></rect><path d="M6 11.8a6 6 0 1 0 12 0M12 17.8v2.7M9.5 20.5h5"></path></svg></span>',
-    status:'<span class="hm-icon hm-icon-teal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"></circle><path d="m8.7 12.1 2.1 2.1 4.5-4.5"></path></svg></span>'
+    calendar:'<span class="hm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="16" rx="2"></rect><path d="M8 2.8v3.4M16 2.8v3.4M3.5 9.2h17"></path></svg></span>',
+    note:'<span class="hm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h10l3 3v14H7z"></path><path d="M17 3.5v3h3M10 11h7M10 15h7"></path></svg></span>',
+    export:'<span class="hm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11"></path><path d="m7.8 10.5 4.2 4.2 4.2-4.2"></path><path d="M4 19.5h16"></path></svg></span>',
+    phone:'<span class="hm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 4.5h4l1.2 4.1-2.1 1.7a14 14 0 0 0 5.1 5.1l1.7-2.1 4.1 1.2v4a1.8 1.8 0 0 1-1.8 1.8A14.2 14.2 0 0 1 3.7 6.3 1.8 1.8 0 0 1 5.5 4.5z"></path></svg></span>',
+    email:'<span class="hm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6" width="17" height="12" rx="2"></rect><path d="m4.5 7.2 7.5 5.6 7.5-5.6"></path></svg></span>',
+    clinic:'<span class="hm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V7.5h6V20"></path><path d="M11 20V4h8v16"></path><path d="M3.5 20.5h17"></path></svg></span>',
+    person:'<span class="hm-icon hm-icon-teal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"></circle><path d="M5.5 20c.6-3.1 3-5.1 6.5-5.1s5.9 2 6.5 5.1"></path></svg></span>',
+    check:'<span class="hm-icon hm-icon-success" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5.8 12.4 4.2 4.2 8.2-8.2"></path></svg></span>',
+    x:'<span class="hm-icon hm-icon-danger" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"></path></svg></span>',
+    warning:'<span class="hm-icon hm-icon-danger" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 2.8 20.5h18.4L12 3.5z"></path><path d="M12 9v5.2M12 17.5h.01"></path></svg></span>',
+    search:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.2 4.2"></path></svg></span>',
+    hearing:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 9.2a3.6 3.6 0 0 0-7.2 0"></path><path d="M8.3 9.2c0 2 1.3 2.8 2.3 3.5.9.6 1.4 1 1.4 1.9v1.2"></path><path d="M7.2 5.6A6.7 6.7 0 0 0 5 10.6"></path><path d="M6.8 18a4.2 4.2 0 0 0 5.2 1.8"></path></svg></span>',
+    repair:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6.2 3.3 3.3-7.8 7.8H6.7v-3.3l7.8-7.8z"></path><path d="M13.2 7.5 16.5 10.8"></path></svg></span>',
+    returns:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7H4v5"></path><path d="M4.3 12A7.5 7.5 0 1 0 7 6.7"></path></svg></span>',
+    form:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="2"></rect><path d="M9 8h6M9 12h6M9 16h4"></path></svg></span>',
+    audit:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 18.5h15"></path><path d="M7 16V9M12 16V6M17 16v-4"></path></svg></span>',
+    order:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5h16v10H4z"></path><path d="M8 7.5V6a4 4 0 0 1 8 0v1.5"></path></svg></span>',
+    invoice:'<span class="hm-icon hm-icon-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h10l3 3v14l-3-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5z"></path><path d="M9.5 10h5M9.5 14h5"></path></svg></span>',
+    edit:'<span class="hm-icon hm-icon-teal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m14.8 5.7 3.5 3.5"></path><path d="M5 19h3.6l9.8-9.8a1.9 1.9 0 0 0 0-2.7l-.9-.9a1.9 1.9 0 0 0-2.7 0L5 15.4V19z"></path></svg></span>',
+    mic:'<span class="hm-icon hm-icon-teal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3.8" width="6" height="11" rx="3"></rect><path d="M6 11.8a6 6 0 1 0 12 0M12 17.8v2.7M9.5 20.5h5"></path></svg></span>',
+    status:'<span class="hm-icon hm-icon-teal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"></circle><path d="m8.7 12.1 2.1 2.1 4.5-4.5"></path></svg></span>'
 };
 
 var _hmFieldAutoSeq=0,_hmFieldObserver=null;
@@ -279,8 +279,8 @@ function initProfile(){
         // Warranty status indicator
         var wh='';
         if(p.warranty_status&&p.warranty_status!=='none'){
-            var wc=p.warranty_status==='expired'?'hm-badge-red':p.warranty_status==='expiring'?'hm-badge-amber':'hm-badge-green hm-badge-glow-green';
-            var wl=p.warranty_status==='expired'?'Warranty Expired':p.warranty_status==='expiring'?'Warranty '+p.warranty_days+'d':'● In Warranty';
+            var wc=p.warranty_status==='expired'?'hm-badge-red':p.warranty_status==='expiring'?'hm-badge-amber':'hm-badge-green';
+            var wl=p.warranty_status==='expired'?'Warranty Expired':p.warranty_status==='expiring'?'Warranty '+p.warranty_days+'d':'<span class="hm-dot-green"></span> In Warranty';
             wh='<span class="hm-badge '+wc+'">'+wl+'</span>';
         }
         // Active/inactive indicator light
@@ -545,7 +545,10 @@ function initProfile(){
     }
 
     /* ── HEARING AIDS ── */
-    var HA_IMG='<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><path d="M32 6C20 6 14 16 14 26c0 6 2 10 4 14 2.5 5 3 8 3 12a4 4 0 0 0 4 4h2a2 2 0 0 0 2-2v-6c0-2 1-3 3-3s3 1 3 3v6a2 2 0 0 0 2 2h2a4 4 0 0 0 4-4c0-4 .5-7 3-12 2-4 4-8 4-14C50 16 44 6 32 6z" fill="#e0f7fa" stroke="#0BB4C4" stroke-width="2"/><path d="M26 26a6 6 0 0 1 12 0" stroke="#0BB4C4" stroke-width="2" stroke-linecap="round"/><circle cx="32" cy="20" r="2" fill="#0BB4C4"/></svg>';
+    var _haBase=(_hm.plugin_url||'/wp-content/plugins/hearmed-calendar/');
+    if(_haBase.slice(-1)!=='/')_haBase+='/';
+    var HA_IMG_L='<img src="'+_haBase+'assets/img/ha-left.svg" alt="Left hearing aid" style="width:100%;height:100%;">';
+    var HA_IMG_R='<img src="'+_haBase+'assets/img/ha-right.svg" alt="Right hearing aid" style="width:100%;height:100%;">';
 
     function loadHearingAids($c){
         $.post(_hm.ajax,{action:'hm_get_patient_products',nonce:_hm.nonce,patient_id:pid},function(r){
@@ -553,11 +556,10 @@ function initProfile(){
             var prods=r.data,act=prods.filter(function(p){return p.status==='Active';}),inact=prods.filter(function(p){return p.status!=='Active';});
 
             var h='<div class="hm-tab-section">';
-            h+='<div class="hm-section-header"><h3>Hearing Aids</h3>';
-            h+='<div style="display:flex;gap:8px;">';
+            h+='<div class="hm-section-header" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><h3 style="margin:0;">Hearing Aids</h3>';
             if(act.length) h+='<button class="hm-btn hm-btn-outline hm-btn-sm hm-btn-icon-teal" id="hm-exchange-top-btn">'+HM_ICONS.returns+' Exchange</button>';
             h+='<button class="hm-btn hm-btn-teal hm-btn-sm" id="hm-add-product-btn">+ Add Hearing Aid</button>';
-            h+='</div></div>';
+            h+='</div>';
 
             if(!act.length&&!inact.length){
                 h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.hearing+'</div><div class="hm-empty-text">No hearing aids on file</div></div>';
@@ -583,9 +585,9 @@ function initProfile(){
                 var wexp=new Date(pr.warranty_expiry),now=new Date(),wdays=Math.ceil((wexp-now)/(1000*60*60*24));
                 if(wdays<0) wbadge='<span class="hm-badge hm-badge-sm hm-badge-red">Warranty Expired</span>';
                 else if(wdays<=90) wbadge='<span class="hm-badge hm-badge-sm hm-badge-amber">Warranty '+wdays+'d</span>';
-                else wbadge='<span class="hm-badge hm-badge-sm hm-badge-green hm-badge-glow-green">In Warranty</span>';
+                else wbadge='<span class="hm-badge hm-badge-sm hm-badge-green"><span class="hm-dot-green"></span> In Warranty</span>';
             }
-            var activeBadge=isAct?'<span class="hm-badge hm-badge-sm hm-badge-green hm-badge-glow-green">● Active</span>':'<span class="hm-badge hm-badge-sm '+sc+'">'+esc(pr.status)+'</span>';
+            var activeBadge=isAct?'<span class="hm-badge hm-badge-sm hm-badge-green"><span class="hm-dot-green"></span> Active</span>':'<span class="hm-badge hm-badge-sm '+sc+'">'+esc(pr.status)+'</span>';
 
             var card='<div class="hm-ha-card'+(isAct?' hm-ha-card-active':'')+'" data-device-id="'+pr._ID+'">';
 
@@ -605,7 +607,7 @@ function initProfile(){
             // Left device
             card+='<div class="hm-ha-side">';
             card+='<div class="hm-ha-side-label">LEFT</div>';
-            card+='<div class="hm-ha-side-img hm-ha-side-left">'+HA_IMG+'</div>';
+            card+='<div class="hm-ha-side-img">'+HA_IMG_L+'</div>';
             card+='<div class="hm-ha-side-serial">'+(pr.serial_left?'<span class="hm-serial">'+esc(pr.serial_left)+'</span>':'<span style="color:#cbd5e1;font-size:12px;">No serial</span>')+'</div>';
             if(isAct){
                 card+='<div class="hm-ha-side-actions">';
@@ -618,7 +620,7 @@ function initProfile(){
             // Right device
             card+='<div class="hm-ha-side">';
             card+='<div class="hm-ha-side-label">RIGHT</div>';
-            card+='<div class="hm-ha-side-img hm-ha-side-right">'+HA_IMG+'</div>';
+            card+='<div class="hm-ha-side-img">'+HA_IMG_R+'</div>';
             card+='<div class="hm-ha-side-serial">'+(pr.serial_right?'<span class="hm-serial">'+esc(pr.serial_right)+'</span>':'<span style="color:#cbd5e1;font-size:12px;">No serial</span>')+'</div>';
             if(isAct){
                 card+='<div class="hm-ha-side-actions">';

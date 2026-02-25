@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" fill="none" stroke="#4DD0E1" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- BTE hearing aid – RIGHT ear (mirror of left, wire exits right) -->
+  <!-- Main body / shell -->
+  <path d="M230 60 C170 60, 130 100, 130 170 L130 310 C130 360, 160 400, 210 410 C240 416, 260 400, 260 370 L260 200 C260 140, 250 100, 230 60z"/>
+  <!-- Inner shell detail -->
+  <path d="M220 80 C175 80, 145 115, 145 172 L145 305 C145 345, 168 380, 208 388 C230 392, 244 380, 244 358 L244 200 C244 148, 236 112, 220 80z"/>
+  <!-- Hook / ear hook -->
+  <path d="M230 60 C240 40, 270 25, 300 30 C330 35, 350 55, 355 85 C360 110, 358 130, 355 155"/>
+  <!-- Tubing down from hook -->
+  <path d="M355 155 C358 200, 370 260, 380 310 C388 350, 395 380, 400 400"/>
+  <!-- Ear dome / tip -->
+  <ellipse cx="412" cy="418" rx="22" ry="18"/>
+  <ellipse cx="430" cy="430" rx="15" ry="12"/>
+  <!-- Small connector nub -->
+  <circle cx="400" cy="403" r="6"/>
+  <!-- Button on shell -->
+  <rect x="121" y="180" width="14" height="30" rx="5"/>
+  <!-- Volume rocker -->
+  <rect x="121" y="250" width="14" height="45" rx="5"/>
+  <!-- Battery door line -->
+  <path d="M130 280 L260 280" stroke-dasharray="4 6"/>
+</svg>
