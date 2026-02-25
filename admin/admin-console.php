@@ -53,6 +53,7 @@ class HearMed_Admin_Console {
             ['Documents & Forms', [
                 ['Document Types', 'document-types'],
                 ['Form Settings', 'form-settings'],
+                ['Form Templates',  'form-templates'],
                 ['Patient Overview', 'patient-overview'],
             ]],
             ['Data & Privacy', [
