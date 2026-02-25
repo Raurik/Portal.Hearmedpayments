@@ -13,7 +13,72 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class HearMed_Utils {
-    
+
+    /**
+     * Cache of module → page URL lookups.
+     * @var array
+     */
+    private static $page_url_cache = [];
+
+    /**
+     * Get the front-end page URL for a given portal module.
+     *
+     * Searches for a published WP page whose content contains the
+     * corresponding [hearmed_*] shortcode.  Results are cached per-request.
+     *
+     * Usage: HearMed_Utils::page_url('orders')   → https://…/orders/
+     *        HearMed_Utils::page_url('accounting') → https://…/accounting/
+     *
+     * @param string $module Module slug (orders, accounting, patients, calendar, etc.)
+     * @return string Page URL (with trailing slash). Falls back to home_url('/module/').
+     */
+    public static function page_url( $module ) {
+        $module = sanitize_key( $module );
+
+        if ( isset( self::$page_url_cache[ $module ] ) ) {
+            return self::$page_url_cache[ $module ];
+        }
+
+        // Map module slug → shortcode tag(s) to search for
+        $shortcode_map = [
+            'orders'     => 'hearmed_orders',
+            'accounting' => 'hearmed_accounting',
+            'patients'   => 'hearmed_patients',
+            'calendar'   => 'hearmed_calendar',
+            'repairs'    => 'hearmed_repairs',
+            'kpi'        => 'hearmed_kpi',
+            'reports'    => 'hearmed_reporting',
+            'team-chat'  => 'hearmed_team_chat',
+        ];
+
+        $shortcode = $shortcode_map[ $module ] ?? 'hearmed_' . $module;
+
+        global $wpdb;
+
+        $page_id = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT ID FROM {$wpdb->posts}
+                 WHERE post_type = 'page'
+                   AND post_status = 'publish'
+                   AND post_content LIKE %s
+                 ORDER BY ID ASC
+                 LIMIT 1",
+                '%[' . $shortcode . '%'
+            )
+        );
+
+        if ( $page_id ) {
+            $url = get_permalink( $page_id );
+        } else {
+            // Fallback: assume page slug matches the module name
+            $url = home_url( '/' . $module . '/' );
+        }
+
+        self::$page_url_cache[ $module ] = $url;
+
+        return $url;
+    }
+
     /**
      * Format money amount
      * 

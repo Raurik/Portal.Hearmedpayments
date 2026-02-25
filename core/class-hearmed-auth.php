@@ -256,6 +256,75 @@ class HearMed_Auth {
         return in_array( intval( $clinic_id ), $this->get_user_clinics( $user_id ), true );
     }
 
+    // =========================================================================
+    // CONVENIENCE STATICS — current_role / current_clinic
+    // =========================================================================
+
+    /**
+     * Map from WordPress role slug to portal role name used in modules.
+     */
+    private static $role_map = [
+        'administrator' => 'admin',
+        'hm_clevel'     => 'c_level',
+        'hm_admin'      => 'admin',
+        'hm_finance'    => 'finance',
+        'hm_dispenser'  => 'dispenser',
+        'hm_reception'  => 'reception',
+        'hm_ca'         => 'ca',
+        'hm_scheme'     => 'scheme',
+    ];
+
+    /**
+     * Get the current user's portal role name.
+     *
+     * Returns a simplified string such as 'c_level', 'admin', 'dispenser', etc.
+     * Returns null when no user is logged in or role is unrecognised.
+     *
+     * @return string|null
+     */
+    public static function current_role() {
+        $user = wp_get_current_user();
+
+        if ( ! $user || ! $user->ID ) {
+            return null;
+        }
+
+        foreach ( self::$role_map as $wp_role => $portal_role ) {
+            if ( in_array( $wp_role, (array) $user->roles, true ) ) {
+                return $portal_role;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the current user's primary clinic ID.
+     *
+     * Admins / C-Level / Finance see all clinics so this returns null (no filter).
+     * Clinic-scoped roles return the first clinic they are assigned to.
+     *
+     * @return int|null  Clinic ID, or null when user should see all clinics.
+     */
+    public static function current_clinic() {
+        $user = wp_get_current_user();
+
+        if ( ! $user || ! $user->ID ) {
+            return null;
+        }
+
+        // Roles that should see everything — no clinic filter
+        $global_roles = [ 'administrator', 'hm_clevel', 'hm_admin', 'hm_finance' ];
+        if ( ! empty( array_intersect( $global_roles, (array) $user->roles ) ) ) {
+            return null;
+        }
+
+        $instance   = new self();
+        $clinic_ids = $instance->get_user_clinics( $user->ID );
+
+        return ! empty( $clinic_ids ) ? $clinic_ids[0] : null;
+    }
+
     /**
      * Get SQL WHERE clause for clinic filtering
      *

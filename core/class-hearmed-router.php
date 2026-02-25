@@ -32,6 +32,7 @@ class HearMed_Router {
         'hearmed_patients' => [ 'module' => 'patients', 'view' => 'list' ],
         
         // Orders & Finance
+        'hearmed_orders' => [ 'module' => 'orders', 'view' => 'list' ],
         'hearmed_order_status' => [ 'module' => 'orders', 'view' => 'status' ],
         'hearmed_approvals' => [ 'module' => 'orders', 'view' => 'approvals' ],
         'hearmed_awaiting_fitting' => [ 'module' => 'orders', 'view' => 'awaiting-fitting' ],
