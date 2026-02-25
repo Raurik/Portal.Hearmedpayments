@@ -23,7 +23,8 @@ class HearMed_Router {
         'hearmed_calendar' => [ 'module' => 'calendar', 'view' => 'calendar' ],
         // 'hearmed_calendar_settings' is provided by admin/admin-calendar-settings.php
         // and registers its own shortcode; exclude it here to avoid overriding.
-        'hearmed_appointment_types' => [ 'module' => 'calendar', 'view' => 'appointment-types' ],
+        // 'hearmed_appointment_types' is provided by admin/admin-appointment-types.php
+        // and registers its own shortcode; exclude it here to avoid overriding.
         'hearmed_blockouts' => [ 'module' => 'calendar', 'view' => 'blockouts' ],
         'hearmed_holidays' => [ 'module' => 'calendar', 'view' => 'holidays' ],
         'hearmed_exclusions' => [ 'module' => 'calendar', 'view' => 'exclusions' ],

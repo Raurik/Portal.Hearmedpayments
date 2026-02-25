@@ -34,7 +34,6 @@ var App={
         var v=$el.data('view')||'';
         if(v==='calendar')Cal.init($el);
         else if(v==='settings')Settings.init($el);
-        else if(v==='appointment-types')ApptTypes.init($el);
         else if(v==='blockouts')Blockouts.init($el);
         else if(v==='holidays')Holidays.init($el);
     }
@@ -710,54 +709,6 @@ var Settings={
         h+='</span><label class="hm-tog"><input type="checkbox" id="'+id+'"'+(on?' checked':'')+'><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>';
         return h;
     },
-};
-
-// ═══════════════════════════════════════
-// APPOINTMENT TYPES VIEW
-// ═══════════════════════════════════════
-var ApptTypes={
-    $el:null,data:[],
-    init:function($el){this.$el=$el;this.load();},
-    load:function(){var self=this;post('get_services').then(function(r){self.data=r.success?r.data:[];self.render();});},
-    render:function(){
-        var h='<div class="hm-admin"><div class="hm-admin-hd"><h2>Appointment Types</h2><button class="hm-btn hm-btn-teal" id="hat-add">+ Add Type</button></div>';
-        h+='<div class="hm-filter-bar"><div class="hm-filter-row"><input class="hm-inp" id="hat-search" placeholder="Filter by name..." style="max-width:260px"></div></div>';
-        h+='<table class="hm-table"><thead><tr><th>Name</th><th>Colour</th><th>Duration</th><th>Sales Opp.</th><th>Reminders</th><th>Confirmation</th><th style="width:60px"></th></tr></thead><tbody id="hat-body">';
-        if(!this.data.length)h+='<tr><td colspan="7" class="hm-no-data">No appointment types found</td></tr>';
-        else this.data.forEach(function(s){
-            h+='<tr><td><strong>'+esc(s.name)+'</strong></td><td><span class="hm-colour-dot" style="background:'+s.colour+'"></span> <span style="color:var(--hm-text-light)">'+s.colour+'</span></td><td>'+s.duration+' min</td><td>'+(s.sales_opportunity==='yes'?'<span style="color:var(--hm-teal);font-weight:600">Yes</span>':'No')+'</td><td>'+s.reminders+'</td><td>'+(s.confirmation==='yes'?'<span style="color:var(--hm-teal);font-weight:600">Yes</span>':'No')+'</td><td><button class="hm-act-btn hm-act-edit hat-edit" data-id="'+s.id+'">✏️</button></td></tr>';
-        });
-        h+='</tbody></table></div>';
-        this.$el.html(h);this.bind();
-    },
-    bind:function(){
-        var self=this;
-        $(document).on('click','#hat-add',function(){self.openForm(null);});
-        $(document).on('click','.hat-edit',function(){var id=$(this).data('id');var s=self.data.find(function(x){return x.id==id;});if(s)self.openForm(s);});
-        $(document).on('input','#hat-search',function(){var q=$(this).val().toLowerCase();$('#hat-body tr').each(function(){$(this).toggle($(this).text().toLowerCase().includes(q));});});
-    },
-    openForm:function(svc){
-        var isEdit=!!svc,self=this;
-        var h='<div class="hm-modal-bg open"><div class="hm-modal"><div class="hm-modal-hd"><h3>'+(isEdit?'Edit':'New')+' Appointment Type</h3><button class="hm-modal-x hat-close">'+IC.x+'</button></div><div class="hm-modal-body">';
-        h+='<div class="hm-fld"><label>Name</label><input class="hm-inp" id="hatf-name" value="'+esc(svc?svc.name:'')+'" placeholder="e.g. Hearing Test"></div>';
-        h+='<div class="hm-row"><div class="hm-fld"><label>Colour</label><div style="display:flex;align-items:center;gap:10px"><input type="color" id="hatf-colour" value="'+(svc?svc.colour:'#3B82F6')+'" style="width:48px;height:40px;border:1px solid var(--hm-border);border-radius:var(--hm-radius-sm);cursor:pointer;padding:2px"><span id="hatf-colval" style="color:var(--hm-text-light);font-size:13px">'+(svc?svc.colour:'#3B82F6')+'</span></div></div>';
-        h+='<div class="hm-fld"><label>Duration (minutes)</label><input type="number" class="hm-inp" id="hatf-dur" value="'+(svc?svc.duration:30)+'" min="5" step="5"></div></div>';
-        h+='<div class="hm-row"><div class="hm-fld"><label>Sales opportunity</label><select class="hm-inp" id="hatf-sales"><option value="no"'+(svc&&svc.sales_opportunity==='yes'?'':' selected')+'>No</option><option value="yes"'+(svc&&svc.sales_opportunity==='yes'?' selected':'')+'>Yes</option></select></div>';
-        h+='<div class="hm-fld"><label>Reminders</label><input type="number" class="hm-inp" id="hatf-remind" value="'+(svc?svc.reminders:0)+'" min="0"></div></div>';
-        h+='<div class="hm-fld"><label>Send confirmation</label><select class="hm-inp" id="hatf-confirm"><option value="no"'+(svc&&svc.confirmation==='yes'?'':' selected')+'>No</option><option value="yes"'+(svc&&svc.confirmation==='yes'?' selected':'')+'>Yes</option></select></div>';
-        h+='</div><div class="hm-modal-ft">'+(isEdit?'<button class="hm-btn hm-btn-red hat-del" data-id="'+svc.id+'">Delete</button>':'<span></span>')+'<div class="hm-modal-acts"><button class="hm-btn hat-close">Cancel</button><button class="hm-btn hm-btn-teal hat-save" data-id="'+(svc?svc.id:0)+'">Save</button></div></div></div></div>';
-        $('body').append(h);
-        $('#hatf-colour').on('input',function(){$('#hatf-colval').text($(this).val());});
-        $(document).on('click','.hat-close',function(){$('.hm-modal-bg').remove();});
-        $(document).on('click','.hat-save',function(){
-            post('save_service',{id:$(this).data('id'),name:$('#hatf-name').val(),colour:$('#hatf-colour').val(),duration:$('#hatf-dur').val(),sales_opportunity:$('#hatf-sales').val(),reminders:$('#hatf-remind').val(),confirmation:$('#hatf-confirm').val()})
-            .then(function(r){if(r.success){$('.hm-modal-bg').remove();self.load();}else alert('Error');});
-        });
-        $(document).on('click','.hat-del',function(){
-            if(!confirm('Delete this appointment type?'))return;
-            post('delete_service',{id:$(this).data('id')}).then(function(r){if(r.success){$('.hm-modal-bg').remove();self.load();}});
-        });
-    }
 };
 
 // ═══════════════════════════════════════

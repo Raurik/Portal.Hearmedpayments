@@ -92,6 +92,7 @@ class HearMed_Core {
             HEARMED_PATH . 'admin/admin-resources.php',
             HEARMED_PATH . 'admin/admin-dispenser-schedules.php',
             HEARMED_PATH . 'admin/admin-staff-login.php',
+            HEARMED_PATH . 'admin/admin-appointment-types.php',
             HEARMED_PATH . 'admin/admin-blockouts.php',
             HEARMED_PATH . 'admin/admin-holidays.php',
             HEARMED_PATH . 'admin/admin-exclusions.php',

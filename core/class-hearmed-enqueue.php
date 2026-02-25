@@ -187,8 +187,9 @@ class HearMed_Enqueue {
         }
 
         $portal_shortcodes = [
-            'hearmed_calendar', 'hearmed_calendar_settings', 'hearmed_appointment_types',
+            'hearmed_calendar', 'hearmed_calendar_settings',
             'hearmed_blockouts', 'hearmed_holidays',
+            'hearmed_appointment_types',
             'hearmed_patients',
             'hearmed_order_status', 'hearmed_approvals', 'hearmed_awaiting_fitting', 'hearmed_orders',
             'hearmed_accounting', 'hearmed_invoices', 'hearmed_payments',
@@ -243,7 +244,7 @@ class HearMed_Enqueue {
         $this->detect_and_load( 'calendar', $content, [
             'hearmed_calendar',
             'hearmed_calendar_settings',
-            'hearmed_appointment_types',
+            // 'hearmed_appointment_types' now has its own admin page
             'hearmed_blockouts',
             'hearmed_holidays',
         ]);
