@@ -1277,9 +1277,9 @@ function hm_ajax_create_patient_repair() {
 
     // Get clinic_id from the patient record
     $clinic_id = null;
-    $patient = $db->get_row( "SELECT clinic_id FROM hearmed_core.patients WHERE id = \$1", [ $pid ] );
-    if ( $patient && $patient->clinic_id ) {
-        $clinic_id = (int) $patient->clinic_id;
+    $patient = $db->get_row( "SELECT assigned_clinic_id FROM hearmed_core.patients WHERE id = \$1", [ $pid ] );
+    if ( $patient && $patient->assigned_clinic_id ) {
+        $clinic_id = (int) $patient->assigned_clinic_id;
     }
 
     // Resolve manufacturer_id — from form, or from product record

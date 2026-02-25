@@ -84,7 +84,7 @@ class HearMed_Repairs {
                     COALESCE(m.name, '') AS manufacturer_name,
                     CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
                     p.patient_number,
-                    p.clinic_id AS patient_clinic_id,
+                    p.assigned_clinic_id AS patient_clinic_id,
                     COALESCE(c.clinic_name, '') AS clinic_name,
                     COALESCE(CONCAT(s.first_name, ' ', s.last_name), '') AS dispenser_name
              FROM hearmed_core.repairs r
@@ -92,8 +92,8 @@ class HearMed_Repairs {
              LEFT JOIN hearmed_reference.products pr ON pr.id = COALESCE(r.product_id, pd.product_id)
              LEFT JOIN hearmed_reference.manufacturers m ON m.id = COALESCE(r.manufacturer_id, pr.manufacturer_id)
              LEFT JOIN hearmed_core.patients p ON p.id = r.patient_id
-             LEFT JOIN hearmed_reference.clinics c ON c.id = COALESCE(r.clinic_id, p.clinic_id)
-             LEFT JOIN hearmed_reference.staff s ON s.id = r.staff_id
+             LEFT JOIN hearmed_reference.clinics c ON c.id = COALESCE(r.clinic_id, p.assigned_clinic_id)
+             LEFT JOIN hearmed_reference.staff s ON s.id = COALESCE(r.staff_id, p.assigned_dispenser_id)
              ORDER BY
                 CASE r.repair_status
                     WHEN 'Booked' THEN 1
@@ -117,14 +117,14 @@ class HearMed_Repairs {
                         COALESCE(m.name, '') AS manufacturer_name,
                         CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
                         p.patient_number,
-                        p.clinic_id AS patient_clinic_id,
+                        p.assigned_clinic_id AS patient_clinic_id,
                         COALESCE(c.clinic_name, '') AS clinic_name
                  FROM hearmed_core.repairs r
                  LEFT JOIN hearmed_core.patient_devices pd ON pd.id = r.patient_device_id
                  LEFT JOIN hearmed_reference.products pr ON pr.id = COALESCE(r.product_id, pd.product_id)
                  LEFT JOIN hearmed_reference.manufacturers m ON m.id = COALESCE(r.manufacturer_id, pr.manufacturer_id)
                  LEFT JOIN hearmed_core.patients p ON p.id = r.patient_id
-                 LEFT JOIN hearmed_reference.clinics c ON c.id = p.clinic_id
+                 LEFT JOIN hearmed_reference.clinics c ON c.id = p.assigned_clinic_id
                  ORDER BY
                     CASE r.repair_status
                         WHEN 'Booked' THEN 1
@@ -202,8 +202,8 @@ class HearMed_Repairs {
              LEFT JOIN hearmed_reference.products pr ON pr.id = COALESCE(r.product_id, pd.product_id)
              LEFT JOIN hearmed_reference.manufacturers m ON m.id = COALESCE(r.manufacturer_id, pr.manufacturer_id)
              LEFT JOIN hearmed_core.patients p ON p.id = r.patient_id
-             LEFT JOIN hearmed_reference.clinics c ON c.id = p.clinic_id
-             LEFT JOIN hearmed_reference.staff s ON s.id = r.staff_id
+             LEFT JOIN hearmed_reference.clinics c ON c.id = p.assigned_clinic_id
+             LEFT JOIN hearmed_reference.staff s ON s.id = COALESCE(r.staff_id, p.assigned_dispenser_id)
              WHERE r.id = \$1",
             [$rid]
         );
