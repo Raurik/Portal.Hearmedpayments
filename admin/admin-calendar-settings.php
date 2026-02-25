@@ -111,8 +111,10 @@ class HearMed_Admin_Calendar_Settings {
                             </div>
                         </div>
                     </div>
-                    <!-- Block 3: Appointment Preview Only -->
-                    <div class="hm-card hm-appt-preview-wrap">
+                    <!-- Block 3: Appointment Preview -->
+                    <div class="hm-card">
+                        <div class="hm-card-hd">Display Preview</div>
+                        <div class="hm-appt-preview-wrap">
                         <div class="hm-appt-preview-card" id="hs-preview-card">
                             <div class="hm-appt-body">
                                 <div class="hm-appt-name" id="hs-preview-name">Joe</div>
@@ -120,6 +122,7 @@ class HearMed_Admin_Calendar_Settings {
                                 <div class="hm-appt-time" id="hs-preview-time">09:00</div>
                                 <div class="hm-appt-meta" id="hs-preview-meta">Follow up · Cosgrove's Pharmacy</div>
                             </div>
+                        </div>
                         </div>
                     </div>
                 </div>
