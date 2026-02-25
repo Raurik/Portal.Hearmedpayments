@@ -107,9 +107,10 @@ class HearMed_Admin_Appointment_Type_Detail {
         #hm-app .hm-day-check       { display:inline-flex; align-items:center; gap:8px; font-size:13px; color:#334155; cursor:pointer; }
         #hm-app .hm-day-check input  { display:none !important; }
         #hm-app .hm-check            { width:16px; height:16px; border-radius:4px; border:1.5px solid #cbd5e1; background:#fff; position:relative; flex-shrink:0; transition:all .15s ease; }
+        #hm-app .hm-check::after     { content:none !important; display:none !important; }
         #hm-app .hm-day-check input:checked + .hm-check { background:#0BB4C4; border-color:#0BB4C4; }
         #hm-app .hm-day-check input:checked + .hm-check::after {
-            content:""; position:absolute; left:4px; top:1px; width:5px; height:9px;
+            content:"" !important; display:block !important; position:absolute; left:4px; top:1px; width:5px; height:9px;
             border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
         }
 
