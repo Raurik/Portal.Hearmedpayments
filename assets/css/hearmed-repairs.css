@@ -1,26 +1,48 @@
 /**
  * HearMed Repairs — page styles
  */
+/* Toolbar: stats + filters on one line */
+.hm-repairs-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+.hm-repairs-stats-row {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.hm-repairs-filters {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-left: auto;
+}
+.hm-repairs-filters .hm-tf-search {
+    min-width: 180px;
+}
 .hm-repair-stat {
     background: #fff;
     border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 8px 16px;
-    min-width: 80px;
+    border-radius: 5px;
+    padding: 5px 10px;
+    min-width: 58px;
     text-align: center;
 }
 .hm-repair-stat-val {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 700;
     color: #151B33;
     line-height: 1.2;
 }
 .hm-repair-stat-lbl {
-    font-size: 10px;
+    font-size: 8.5px;
     color: #94a3b8;
-    margin-top: 2px;
+    margin-top: 1px;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.3px;
 }
 .hm-repair-overdue td {
     background: #fef2f2 !important;

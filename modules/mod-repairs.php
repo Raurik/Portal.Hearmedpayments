@@ -16,13 +16,10 @@ function hm_repairs_render() {
             <h1 class="hm-page-title">Repairs</h1>
         </div>
 
-        <div id="hm-repairs-stats" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;"></div>
-
-        <div class="hm-table-filter-bar">
-            <div class="hm-tf-left">
+        <div class="hm-repairs-toolbar">
+            <div id="hm-repairs-stats" class="hm-repairs-stats-row"></div>
+            <div class="hm-repairs-filters">
                 <input type="text" id="hm-repair-search" class="hm-tf-search" placeholder="Search patient or HMREP…">
-            </div>
-            <div class="hm-tf-right">
                 <select id="hm-repair-filter-status" class="hm-tf-perpage">
                     <option value="">All statuses</option>
                     <option value="Booked">Booked</option>
