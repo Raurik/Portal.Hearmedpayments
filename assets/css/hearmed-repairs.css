@@ -1,0 +1,30 @@
+/**
+ * HearMed Repairs — page styles
+ */
+.hm-stat-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 16px 24px;
+    min-width: 120px;
+    text-align: center;
+}
+.hm-stat-val {
+    font-size: 28px;
+    font-weight: 700;
+    color: #151B33;
+    line-height: 1.2;
+}
+.hm-stat-label {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.hm-repair-overdue td {
+    background: #fef2f2 !important;
+}
+.hm-repair-warning td {
+    background: #fffbeb !important;
+}
