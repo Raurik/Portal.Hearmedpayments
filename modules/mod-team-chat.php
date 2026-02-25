@@ -61,7 +61,18 @@ class HearMed_TeamChat {
 
         $user    = wp_get_current_user();
         $user_id = $user->ID;
-        $pusher_key = get_option( 'hm_pusher_app_key', '' );
+
+        // Get display name from PostgreSQL staff table
+        $staff = HearMed_DB::get_row(
+            "SELECT first_name, last_name FROM hearmed_reference.staff
+              WHERE wp_user_id = $1 AND is_active = true LIMIT 1",
+            [ $user_id ]
+        );
+        $display_name = $staff
+            ? trim( $staff->first_name . ' ' . $staff->last_name )
+            : $user->display_name; // fallback to WP if no staff record
+
+        $pusher_key     = get_option( 'hm_pusher_app_key', '' );
         $pusher_cluster = get_option( 'hm_pusher_cluster', 'eu' );
 
         // Ensure the company-wide channel exists
@@ -71,7 +82,7 @@ class HearMed_TeamChat {
         ?>
         <div id="hm-chat-app"
              data-user-id="<?php echo esc_attr( $user_id ); ?>"
-             data-user-name="<?php echo esc_attr( $user->display_name ); ?>"
+             data-user-name="<?php echo esc_attr( $display_name ); ?>"
              data-pusher-key="<?php echo esc_attr( $pusher_key ); ?>"
              data-pusher-cluster="<?php echo esc_attr( $pusher_cluster ); ?>"
              data-ajax-url="<?php echo esc_attr( admin_url( 'admin-ajax.php' ) ); ?>"
@@ -174,12 +185,16 @@ class HearMed_TeamChat {
 
         if ( ! $channel_id ) return;
 
-        // Add all existing WP users as members
-        $users = get_users( [ 'fields' => 'ID', 'number' => 500 ] );
-        foreach ( $users as $uid ) {
+        // Add all active staff (who have a linked WP user account) as members
+        $staff = HearMed_DB::get_results(
+            "SELECT wp_user_id FROM hearmed_reference.staff
+              WHERE is_active = true AND wp_user_id IS NOT NULL"
+        );
+
+        foreach ( $staff as $s ) {
             HearMed_DB::insert( 'chat_channel_members', [
                 'channel_id' => $channel_id,
-                'wp_user_id' => $uid,
+                'wp_user_id' => (int) $s->wp_user_id,
             ] );
         }
     }
@@ -304,8 +319,14 @@ class HearMed_TeamChat {
                     [ $row->id, $user_id ]
                 );
                 if ( $other ) {
-                    $other_user  = get_user_by( 'id', $other->wp_user_id );
-                    $item['name'] = $other_user ? $other_user->display_name : 'Unknown';
+                    $staff = HearMed_DB::get_row(
+                        "SELECT first_name, last_name FROM hearmed_reference.staff
+                          WHERE wp_user_id = $1 LIMIT 1",
+                        [ $other->wp_user_id ]
+                    );
+                    $item['name'] = $staff
+                        ? trim( $staff->first_name . ' ' . $staff->last_name )
+                        : 'Unknown';
                     $item['other_user_id'] = (int) $other->wp_user_id;
                 }
             }
@@ -349,11 +370,20 @@ class HearMed_TeamChat {
         );
 
         // Attach sender display names (batch)
-        $user_ids = array_unique( array_column( $rows, 'sender_id' ) );
-        $user_map = [];
-        foreach ( $user_ids as $uid ) {
-            $u = get_user_by( 'id', $uid );
-            $user_map[ $uid ] = $u ? $u->display_name : 'Unknown';
+        $sender_ids = array_unique( array_column( $rows, 'sender_id' ) );
+        $user_map   = [];
+
+        if ( ! empty( $sender_ids ) ) {
+            $placeholders = implode( ',', array_map( fn( $i ) => '$' . ( $i + 1 ), array_keys( $sender_ids ) ) );
+            $staff_rows   = HearMed_DB::get_results(
+                "SELECT wp_user_id, first_name, last_name
+                   FROM hearmed_reference.staff
+                  WHERE wp_user_id IN ({$placeholders})",
+                array_values( $sender_ids )
+            );
+            foreach ( $staff_rows as $s ) {
+                $user_map[ (int) $s->wp_user_id ] = trim( $s->first_name . ' ' . $s->last_name );
+            }
         }
 
         $messages = [];
@@ -468,8 +498,15 @@ class HearMed_TeamChat {
         if ( ! $other_user_id || $other_user_id === $user_id ) {
             wp_send_json_error( 'Invalid user' );
         }
-        if ( ! get_user_by( 'id', $other_user_id ) ) {
-            wp_send_json_error( 'User not found' );
+
+        // Validate against PostgreSQL staff table
+        $staff = HearMed_DB::get_row(
+            "SELECT id FROM hearmed_reference.staff
+              WHERE wp_user_id = $1 AND is_active = true LIMIT 1",
+            [ $other_user_id ]
+        );
+        if ( ! $staff ) {
+            wp_send_json_error( 'Staff member not found' );
         }
 
         // Check if DM already exists

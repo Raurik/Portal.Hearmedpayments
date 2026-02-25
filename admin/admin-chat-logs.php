@@ -108,120 +108,126 @@ class HearMed_Admin_ChatLogs {
 
         ob_start();
         ?>
-        <div class="hm-admin" id="hm-chat-logs-admin">
-            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
-            <div class="hm-admin-hd">
-                <h2>Chat Logs</h2>
+        <div id="hm-app" data-view="hearmed_chat_logs">
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Chat Logs</h1>
+                <p class="hm-page-subtitle">Full audit trail of all team chat messages. Access to these logs is restricted to administrators and logged for GDPR compliance.</p>
             </div>
-
-            <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">
-                Full audit trail of all team chat messages. Access is restricted to administrators and logged for GDPR compliance.
-            </p>
 
             <!-- FILTERS -->
-            <div class="hm-settings-panel" style="margin-bottom:20px;">
-                <form method="GET" action="<?php echo esc_attr( $current_url ); ?>">
-                    <input type="hidden" name="log_page" value="1">
-                    <div class="hm-filter-row">
-                        <div class="hm-form-group" style="margin-bottom:0;">
-                            <label>Channel</label>
-                            <select name="channel_id" style="max-width:200px;">
-                                <option value="">All channels</option>
-                                <?php foreach ( $channels as $ch ) : ?>
-                                    <option value="<?php echo esc_attr( $ch->id ); ?>"
-                                        <?php selected( $channel_filter, $ch->id ); ?>>
-                                        <?php
-                                        $label = $ch->channel_type === 'company'
-                                            ? '# ' . ( $ch->channel_name ?: 'Company' )
-                                            : 'DM ' . $ch->id;
-                                        echo esc_html( $label );
-                                        ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
+            <form method="GET" action="<?php echo esc_attr( $current_url ); ?>" class="hm-chat-log-filters">
+                <input type="hidden" name="log_page" value="1">
 
-                        <div class="hm-form-group" style="margin-bottom:0;">
-                            <label>Search message text</label>
-                            <input type="text" name="search" placeholder="Keyword…" value="<?php echo esc_attr( $search_query ); ?>" style="max-width:200px;">
-                        </div>
-
-                        <div class="hm-form-group" style="margin-bottom:0;">
-                            <label>From date</label>
-                            <input type="date" name="date_from" value="<?php echo esc_attr( $date_from ); ?>" style="max-width:160px;">
-                        </div>
-
-                        <div class="hm-form-group" style="margin-bottom:0;">
-                            <label>To date</label>
-                            <input type="date" name="date_to" value="<?php echo esc_attr( $date_to ); ?>" style="max-width:160px;">
-                        </div>
-
-                        <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:1px;">
-                            <button type="submit" class="hm-btn hm-btn-teal">Filter</button>
-                            <a href="<?php echo esc_url( $current_url ); ?>" class="hm-btn hm-btn-sm">Clear</a>
-                        </div>
+                <div class="hm-filter-row">
+                    <div class="hm-filter-group">
+                        <label class="hm-label">Channel</label>
+                        <select name="channel_id" class="hm-select">
+                            <option value="">All channels</option>
+                            <?php foreach ( $channels as $ch ) : ?>
+                                <option value="<?php echo esc_attr( $ch->id ); ?>"
+                                    <?php selected( $channel_filter, $ch->id ); ?>>
+                                    <?php
+                                    $label = $ch->channel_type === 'company'
+                                        ? '# ' . ( $ch->channel_name ?: 'Company' )
+                                        : '👤 DM ' . $ch->id;
+                                    echo esc_html( $label );
+                                    ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                </form>
-            </div>
+
+                    <div class="hm-filter-group">
+                        <label class="hm-label">Search message text</label>
+                        <input type="text"
+                               name="search"
+                               class="hm-input"
+                               placeholder="Keyword…"
+                               value="<?php echo esc_attr( $search_query ); ?>">
+                    </div>
+
+                    <div class="hm-filter-group">
+                        <label class="hm-label">From date</label>
+                        <input type="date" name="date_from" class="hm-input"
+                               value="<?php echo esc_attr( $date_from ); ?>">
+                    </div>
+
+                    <div class="hm-filter-group">
+                        <label class="hm-label">To date</label>
+                        <input type="date" name="date_to" class="hm-input"
+                               value="<?php echo esc_attr( $date_to ); ?>">
+                    </div>
+
+                    <div class="hm-filter-group hm-filter-actions">
+                        <button type="submit" class="hm-btn hm-btn-primary">Filter</button>
+                        <a href="<?php echo esc_url( $current_url ); ?>" class="hm-btn hm-btn-outline">Clear</a>
+                    </div>
+                </div>
+            </form>
 
             <!-- RESULTS SUMMARY -->
-            <div class="hm-table-count">
-                <?php echo number_format( $total ); ?> message<?php echo $total !== 1 ? 's' : ''; ?> found
+            <div class="hm-chat-log-summary">
+                <span><?php echo number_format( $total ); ?> message<?php echo $total !== 1 ? 's' : ''; ?> found</span>
                 <?php if ( $total > 0 ) : ?>
-                    &middot; Page <?php echo $page; ?> of <?php echo $total_pages; ?>
+                    <span>· Page <?php echo $page; ?> of <?php echo $total_pages; ?></span>
                 <?php endif; ?>
             </div>
 
             <!-- MESSAGE TABLE -->
             <?php if ( empty( $messages ) ) : ?>
-                <div class="hm-empty-state"><p>No messages found matching your filters.</p></div>
+                <div class="hm-empty-state">
+                    <p>No messages found matching your filters.</p>
+                </div>
             <?php else : ?>
-                <table class="hm-table">
-                    <thead>
-                        <tr>
-                            <th style="width:150px">Date &amp; Time</th>
-                            <th style="width:130px">Channel</th>
-                            <th style="width:140px">Sender</th>
-                            <th>Message</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ( $messages as $msg ) :
-                            $sender  = get_user_by( 'id', $msg->sender_id );
-                            $sender_name = $sender ? $sender->display_name : 'User #' . $msg->sender_id;
-
-                            $ch_label = $msg->channel_type === 'company'
-                                ? '# ' . ( $msg->channel_name ?: 'Company' )
-                                : 'DM';
-                        ?>
+                <div class="hm-table-wrap">
+                    <table class="hm-table">
+                        <thead>
                             <tr>
-                                <td style="white-space:nowrap;color:#64748b;font-size:12px;">
-                                    <?php echo esc_html( date( 'd M Y H:i', strtotime( $msg->created_at ) ) ); ?>
-                                </td>
-                                <td>
-                                    <span class="hm-badge hm-badge-blue"><?php echo esc_html( $ch_label ); ?></span>
-                                </td>
-                                <td><strong><?php echo esc_html( $sender_name ); ?></strong></td>
-                                <td style="max-width:480px;word-break:break-word;">
-                                    <?php echo esc_html( $msg->message ); ?>
-                                    <?php if ( $msg->is_edited ) : ?>
-                                        <em style="color:#94a3b8;font-size:11px;margin-left:4px;">(edited)</em>
-                                    <?php endif; ?>
-                                </td>
+                                <th>Date &amp; Time</th>
+                                <th>Channel</th>
+                                <th>Sender</th>
+                                <th>Message</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ( $messages as $msg ) :
+                                $sender  = get_user_by( 'id', $msg->sender_id );
+                                $sender_name = $sender ? $sender->display_name : 'User #' . $msg->sender_id;
+
+                                $ch_label = $msg->channel_type === 'company'
+                                    ? '# ' . ( $msg->channel_name ?: 'Company' )
+                                    : '👤 DM';
+                            ?>
+                                <tr>
+                                    <td class="hm-chat-log-time">
+                                        <?php echo esc_html( date( 'd M Y H:i', strtotime( $msg->created_at ) ) ); ?>
+                                    </td>
+                                    <td>
+                                        <span class="hm-badge hm-badge-navy"><?php echo esc_html( $ch_label ); ?></span>
+                                    </td>
+                                    <td class="hm-chat-log-sender">
+                                        <?php echo esc_html( $sender_name ); ?>
+                                    </td>
+                                    <td class="hm-chat-log-message">
+                                        <?php echo esc_html( $msg->message ); ?>
+                                        <?php if ( $msg->is_edited ) : ?>
+                                            <em class="hm-chat-log-edited">(edited)</em>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
 
                 <!-- PAGINATION -->
                 <?php if ( $total_pages > 1 ) : ?>
-                    <div style="display:flex;gap:4px;margin-top:16px;flex-wrap:wrap;">
+                    <div class="hm-pagination">
                         <?php for ( $p = 1; $p <= $total_pages; $p++ ) :
                             $url = add_query_arg( array_merge( $_GET, [ 'log_page' => $p ] ), $current_url );
-                            $is_active = ( $p === $page );
                         ?>
                             <a href="<?php echo esc_url( $url ); ?>"
-                               style="padding:6px 12px;font-size:12px;font-weight:<?php echo $is_active ? '700' : '500'; ?>;color:<?php echo $is_active ? '#fff' : '#64748b'; ?>;background:<?php echo $is_active ? '#0BB4C4' : '#f8fafc'; ?>;border:1px solid <?php echo $is_active ? '#0BB4C4' : '#e2e8f0'; ?>;border-radius:6px;text-decoration:none;">
+                               class="hm-page-btn <?php echo $p === $page ? 'active' : ''; ?>">
                                 <?php echo $p; ?>
                             </a>
                         <?php endfor; ?>
@@ -229,12 +235,33 @@ class HearMed_Admin_ChatLogs {
                 <?php endif; ?>
             <?php endif; ?>
 
-            <div class="hm-alert hm-alert-warning" style="margin-top:24px;">
+            <div class="hm-gdpr-notice">
                 <strong>GDPR Notice:</strong> Access to employee communications is restricted to authorised administrators
                 and should only be reviewed when operationally necessary. All admin access to these logs is recorded in the
                 audit trail under <strong>Chat Log Access</strong>.
             </div>
         </div>
+
+        <style>
+        .hm-chat-log-filters { margin-bottom: 20px; }
+        .hm-filter-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+        .hm-filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .hm-filter-actions { flex-direction: row; gap: 8px; }
+        .hm-chat-log-summary { color: #64748b; font-size: 14px; margin-bottom: 14px; }
+        .hm-chat-log-time { white-space: nowrap; color: #64748b; font-size: 13px; }
+        .hm-chat-log-sender { font-weight: 600; color: #151B33; }
+        .hm-chat-log-message { max-width: 480px; word-break: break-word; }
+        .hm-chat-log-edited { color: #94a3b8; font-size: 12px; margin-left: 6px; }
+        .hm-gdpr-notice {
+            margin-top: 24px;
+            padding: 14px 18px;
+            background: #fff8e1;
+            border-left: 4px solid #f59e0b;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #78350f;
+        }
+        </style>
         <?php
         return ob_get_clean();
     }
@@ -249,20 +276,28 @@ class HearMed_Admin_ChatLogs {
         $query   = sanitize_text_field( $_GET['q'] ?? '' );
         $current = get_current_user_id();
 
-        $users = get_users( [
-            'search'         => '*' . $query . '*',
-            'search_columns' => [ 'display_name', 'user_login', 'user_email' ],
-            'number'         => 15,
-            'exclude'        => [ $current ],
-        ] );
+        $rows = HearMed_DB::get_results(
+            "SELECT wp_user_id, first_name, last_name, role
+             FROM hearmed_reference.staff
+             WHERE is_active = true
+               AND wp_user_id IS NOT NULL
+               AND wp_user_id != $1
+               AND (
+                   first_name ILIKE $2
+                   OR last_name ILIKE $2
+                   OR (first_name || ' ' || last_name) ILIKE $2
+               )
+             ORDER BY first_name, last_name
+             LIMIT 15",
+            [ $current, '%' . $query . '%' ]
+        );
 
         $result = [];
-        foreach ( $users as $u ) {
-            $roles = (array) $u->roles;
+        foreach ( $rows as $row ) {
             $result[] = [
-                'id'   => $u->ID,
-                'name' => $u->display_name,
-                'role' => self::format_role( $roles[0] ?? '' ),
+                'id'   => (int) $row->wp_user_id,
+                'name' => trim( $row->first_name . ' ' . $row->last_name ),
+                'role' => self::format_role( $row->role ?? '' ),
             ];
         }
 

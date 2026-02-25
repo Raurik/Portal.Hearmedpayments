@@ -250,11 +250,19 @@
 
 /**
  * Global inline "Add New" handler for <select data-entity="xxx">.
- * When a user picks the "+ Add New…" option (value="__add_new__"),
- * this prompts for a name, saves via AJAX, inserts the new <option>
- * into ALL selects sharing the same data-entity, and selects it.
+ * Entities with dedicated admin pages navigate there.
+ * Others prompt for a name, save via AJAX, and insert the new <option>.
  */
 (function() {
+    // Map entity types to their admin settings pages
+    var entityPages = {
+        manufacturer:    '/admin-console/brands/',
+        clinic:          '/admin-console/manage-clinics/',
+        role:            '/admin-console/roles/',
+        appointment_type:'/admin-console/appointment-types/',
+        resource_type:   '/admin-console/resources/'
+    };
+
     document.addEventListener('change', function(e) {
         var sel = e.target;
         if (sel.tagName !== 'SELECT' || sel.value !== '__add_new__') return;
@@ -262,7 +270,14 @@
         var entity = sel.getAttribute('data-entity');
         if (!entity) { sel.value = ''; return; }
 
-        // Prompt label from data-label or entity name
+        // If entity has a dedicated admin page, navigate there
+        if (entityPages[entity]) {
+            sel.value = ''; // reset before navigating
+            window.open(entityPages[entity], '_blank');
+            return;
+        }
+
+        // Otherwise prompt inline for static/custom entities
         var label = sel.getAttribute('data-label') || entity.replace(/_/g, ' ');
         var name = prompt('Enter new ' + label + ':');
 
@@ -291,20 +306,17 @@
             // Insert new option into ALL selects with same data-entity
             var siblings = document.querySelectorAll('select[data-entity="' + entity + '"]');
             siblings.forEach(function(s) {
-                // Check it doesn't already exist
                 var exists = false;
                 for (var i = 0; i < s.options.length; i++) {
                     if (s.options[i].value == newId) { exists = true; break; }
                 }
                 if (!exists) {
                     var opt = document.createElement('option');
-                    // For role dropdowns that use role_name as value
                     opt.value = roleKey || newId;
                     opt.textContent = newName;
                     if (s.getAttribute('data-name-attr')) {
                         opt.setAttribute('data-name', newName);
                     }
-                    // Insert before the "+ Add New…" option
                     var addNewOpt = s.querySelector('option[value="__add_new__"]');
                     if (addNewOpt) {
                         s.insertBefore(opt, addNewOpt);
@@ -314,10 +326,7 @@
                 }
             });
 
-            // Select the new value in the dropdown that triggered it
             sel.value = roleKey || newId;
-
-            // Fire change event so any onchange handlers run
             sel.dispatchEvent(new Event('change', {bubbles: true}));
 
             if (typeof HM.toast === 'function') {
