@@ -7,6 +7,8 @@
 (function($){
     'use strict';
 
+    console.log('[HM Repairs] JS file loaded');
+
     if (typeof HM === 'undefined') {
         console.error('[HM Repairs] HM global not found — hearmed-core.js may not be loaded');
         return;
@@ -15,6 +17,8 @@
     var ajaxUrl = HM.ajax_url || HM.ajax;
     var nonce   = HM.nonce;
     var allRepairs = [];
+
+    console.log('[HM Repairs] Using ajaxUrl:', ajaxUrl, 'nonce:', nonce ? 'present' : 'MISSING');
 
     function esc(s) { return $('<span>').text(s || '').html(); }
     function fmtDate(d) {
@@ -43,12 +47,24 @@
             dataType: 'json',
             timeout: 15000,
             success: function(r) {
+                console.log('[HM Repairs] AJAX response:', r);
                 if (!r || !r.success) {
                     var msg = (r && r.data) ? (typeof r.data === 'string' ? r.data : JSON.stringify(r.data)) : 'Unknown error';
                     $('#hm-repairs-table').html('<div class="hm-empty"><div class="hm-empty-text" style="color:#dc2626;">Error: ' + esc(String(msg)) + '</div></div>');
                     return;
                 }
-                allRepairs = r.data || [];
+                // Handle both response formats: direct array or {repairs:[], _diag:{}}
+                var data = r.data;
+                if (data && data.repairs) {
+                    if (data._diag) console.log('[HM Repairs] Server diagnostics:', data._diag);
+                    allRepairs = data.repairs;
+                } else if (Array.isArray(data)) {
+                    allRepairs = data;
+                } else {
+                    console.warn('[HM Repairs] Unexpected response format:', data);
+                    allRepairs = [];
+                }
+                console.log('[HM Repairs] Loaded ' + allRepairs.length + ' repairs');
                 renderStats();
                 renderTable();
             },
@@ -180,9 +196,12 @@
 
     // Boot
     $(function() {
+        console.log('[HM Repairs] DOM ready, #hm-repairs-app exists:', $('#hm-repairs-app').length > 0);
         if ($('#hm-repairs-app').length) {
             loadClinics();
             loadRepairs();
+        } else {
+            console.warn('[HM Repairs] #hm-repairs-app not found in DOM — repairs page not active');
         }
     });
 

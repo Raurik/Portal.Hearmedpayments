@@ -59,6 +59,21 @@ class HearMed_Repairs {
         
         $db = HearMed_DB::instance();
 
+        // Diagnostic: verify DB connection and table existence
+        $diag = [];
+        $conn_test = HearMed_DB::get_var("SELECT 1");
+        $diag['db_connected'] = $conn_test ? true : false;
+        
+        $count = HearMed_DB::get_var("SELECT COUNT(*) FROM hearmed_core.repairs");
+        $diag['total_repairs_in_table'] = $count;
+        $diag['count_error'] = HearMed_DB::last_error() ?: null;
+
+        // If DB is not connected or table is empty, return early with diagnostics
+        if (!$conn_test) {
+            wp_send_json_success(['_diag' => $diag, '_error' => 'Database connection failed']);
+            return;
+        }
+
         // Full query with JOINs for patient, clinic, dispenser, device, manufacturer
         $rows = $db->get_results(
             "SELECT r.id, r.repair_number, r.serial_number, r.date_booked, r.date_sent,
@@ -90,6 +105,8 @@ class HearMed_Repairs {
 
         // If failed (likely missing columns), try minimal query
         $last_err = HearMed_DB::last_error();
+        $diag['full_query_error'] = $last_err ?: null;
+        $diag['full_query_row_count'] = is_array($rows) ? count($rows) : 'not_array';
         if (empty($rows) && $last_err) {
             error_log('[HM Repairs] Full query failed: ' . $last_err . ' — trying minimal');
             $rows = $db->get_results(
@@ -153,7 +170,11 @@ class HearMed_Repairs {
             }
         }
 
-        wp_send_json_success($out);
+        $diag['output_count'] = count($out);
+        error_log('[HM Repairs] ajax_get_all diagnostic: ' . json_encode($diag));
+
+        // Include diagnostics in response for debugging (temporary)
+        wp_send_json_success(['repairs' => $out, '_diag' => $diag]);
     }
 
     /**
