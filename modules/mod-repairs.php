@@ -11,25 +11,34 @@ if (!defined("ABSPATH")) exit;
 function hm_repairs_render() {
     if (!is_user_logged_in()) return;
     ?>
-    <div id="hm-repairs-app" class="hm-content">
-        <div class="hm-page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div id="hm-repairs-app" class="hm-page">
+        <div class="hm-page-hd">
             <h1 class="hm-page-title">Repairs</h1>
-            <div style="display:flex;gap:10px;align-items:center;">
-                <select id="hm-repair-filter-status" class="hm-dd" style="width:auto;min-width:140px;">
+        </div>
+
+        <div class="hm-table-filter-bar">
+            <div class="hm-tf-left">
+                <input type="text" id="hm-repair-search" class="hm-tf-search" placeholder="Search patient or HMREP…">
+            </div>
+            <div class="hm-tf-right">
+                <select id="hm-repair-filter-status" class="hm-tf-perpage">
                     <option value="">All statuses</option>
                     <option value="Booked">Booked</option>
                     <option value="Sent">Sent</option>
                     <option value="Received">Received</option>
                 </select>
-                <select id="hm-repair-filter-clinic" class="hm-dd" style="width:auto;min-width:160px;">
+                <select id="hm-repair-filter-clinic" class="hm-tf-perpage">
                     <option value="">All clinics</option>
                 </select>
-                <input type="text" id="hm-repair-search" class="hm-inp" style="width:220px;" placeholder="Search patient or HMREP…">
             </div>
         </div>
-        <div id="hm-repairs-stats" style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;"></div>
-        <div id="hm-repairs-table" style="margin-top:12px;">
-            <div class="hm-empty"><div class="hm-empty-text">Loading repairs…</div></div>
+
+        <div id="hm-repairs-stats" class="hm-tp-info" style="margin-bottom:8px;"></div>
+
+        <div class="hm-card">
+            <div id="hm-repairs-table">
+                <div class="hm-empty"><div class="hm-empty-text">Loading repairs…</div></div>
+            </div>
         </div>
     </div>
     <?php

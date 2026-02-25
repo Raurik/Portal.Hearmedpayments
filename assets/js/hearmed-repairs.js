@@ -90,12 +90,13 @@
             else if (x.status === 'Received') received++;
             if (x.status !== 'Received' && x.days_open && x.days_open > 14) overdue++;
         });
-        $('#hm-repairs-stats').html(
-            '<div class="hm-stat-card"><div class="hm-stat-val">' + booked + '</div><div class="hm-stat-label">Booked</div></div>' +
-            '<div class="hm-stat-card"><div class="hm-stat-val" style="color:#2563eb;">' + sent + '</div><div class="hm-stat-label">Sent</div></div>' +
-            '<div class="hm-stat-card"><div class="hm-stat-val" style="color:#16a34a;">' + received + '</div><div class="hm-stat-label">Received</div></div>' +
-            '<div class="hm-stat-card"><div class="hm-stat-val" style="color:#dc2626;">' + overdue + '</div><div class="hm-stat-label">Overdue (14d+)</div></div>'
-        );
+        var parts = [];
+        parts.push('Showing ' + allRepairs.length + ' repair' + (allRepairs.length !== 1 ? 's' : ''));
+        if (booked) parts.push(booked + ' booked');
+        if (sent) parts.push(sent + ' sent');
+        if (received) parts.push(received + ' received');
+        if (overdue) parts.push(overdue + ' overdue');
+        $('#hm-repairs-stats').text(parts.join(' — '));
     }
 
     function renderTable() {
