@@ -62,16 +62,19 @@ class HearMed_Staff_Auth {
             return self::get_auth_by_staff_id( $staff_id );
         }
 
-        // Don't auto-set password - admin must explicitly set on creation
-        // password_hash stays NULL until first password is set
+        // Insert with a placeholder hash that cannot match any real password.
+        // The admin must explicitly set a real password on creation or later.
+        $placeholder_hash = password_hash( bin2hex( random_bytes(32) ), PASSWORD_DEFAULT );
+
         $insert_result = HearMed_DB::insert(
             'hearmed_reference.staff_auth',
             [
                 'staff_id' => $staff_id,
                 'username' => $username,
-                'password_hash' => null,          // No password until set by admin
-                'temp_password' => false,         // Not a temp password (no password at all)
-                'two_factor_enabled' => false,    // No 2FA by default
+                'email'    => trim( (string) $email ),
+                'password_hash' => $placeholder_hash,
+                'temp_password' => true,
+                'two_factor_enabled' => false,
                 'created_at' => current_time( 'mysql' ),
                 'updated_at' => current_time( 'mysql' ),
             ]
