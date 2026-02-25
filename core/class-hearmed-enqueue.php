@@ -200,6 +200,7 @@ class HearMed_Enqueue {
             'hearmed_calendar', 'hearmed_calendar_settings',
             'hearmed_blockouts', 'hearmed_holidays',
             'hearmed_appointment_types',
+            'hearmed_appointment_type_detail',
             'hearmed_patients',
             'hearmed_order_status', 'hearmed_approvals', 'hearmed_awaiting_fitting', 'hearmed_orders',
             'hearmed_accounting', 'hearmed_invoices', 'hearmed_payments',
@@ -229,6 +230,8 @@ class HearMed_Enqueue {
             'hearmed_chat_logs',
             // Document template editor
             'hearmed_document_template_editor',
+            // Form templates
+            'hearmed_form_templates',
         ];
 
         foreach ( $portal_shortcodes as $shortcode ) {

@@ -127,7 +127,7 @@ class HearMed_Admin_Appointment_Type_Detail {
         #hm-app .hm-btn-red     { color:#ef4444; }
 
         /* Preview bar */
-        #hm-app #hm-svc-preview { display:inline-block; padding:8px 84px; border-radius:6px; font-size:13px; font-weight:600; white-space:nowrap; }
+        #hm-app #hm-svc-preview { display:inline-block; padding:10px 126px; border-radius:6px; font-size:13px; font-weight:600; white-space:nowrap; }
 
         /* Modal */
         .hm-modal-bg             { display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:9999; align-items:center; justify-content:center; }
