@@ -1275,28 +1275,46 @@ function hm_ajax_create_patient_repair() {
         if ( $dev ) $product_id = $dev->product_id ? (int) $dev->product_id : null;
     }
 
-    $id = $db->insert( 'hearmed_core.repairs', [
+    // Build insert data — start with columns guaranteed to exist in schema
+    $data = [
         'patient_id'       => $pid,
         'patient_device_id'=> $pp_id,
         'product_id'       => $product_id,
         'serial_number'    => sanitize_text_field( $_POST['serial_number'] ?? '' ),
         'warranty_status'  => sanitize_text_field( $_POST['warranty_status'] ?? 'Unknown' ),
-        'under_warranty'   => ( $_POST['under_warranty'] ?? '0' ) === '1',
         'repair_notes'     => sanitize_textarea_field( $_POST['repair_notes'] ?? '' ),
-        'repair_reason'    => sanitize_textarea_field( $_POST['repair_reason'] ?? '' ),
         'manufacturer_id'  => intval( $_POST['manufacturer_id'] ?? 0 ) ?: null,
         'date_booked'      => date( 'Y-m-d' ),
         'repair_status'    => 'Booked',
         'staff_id'         => $staff_id ?: null,
         'created_by'       => $staff_id ?: null,
-    ]);
+    ];
 
-    if ( ! $id ) wp_send_json_error( 'Failed to create repair' );
+    // Add optional columns (may not exist yet — migration adds them)
+    $data['under_warranty'] = ( $_POST['under_warranty'] ?? '0' ) === '1';
+    $data['repair_reason']  = sanitize_textarea_field( $_POST['repair_reason'] ?? '' );
 
-    // Generate HMREP number
+    $id = $db->insert( 'hearmed_core.repairs', $data );
+
+    // If insert failed, retry without optional columns
+    if ( ! $id ) {
+        error_log( '[HM Repairs] Insert with extended columns failed: ' . HearMed_DB::last_error() . ' — retrying with base columns' );
+        unset( $data['under_warranty'], $data['repair_reason'] );
+        $id = $db->insert( 'hearmed_core.repairs', $data );
+    }
+
+    if ( ! $id ) wp_send_json_error( 'Failed to create repair — ' . HearMed_DB::last_error() );
+
+    // Generate HMREP number — try sequence, fallback to MAX+1
     $prefix = get_option( 'hm_repair_prefix', 'HMREP' );
     $seq    = $db->get_var( "SELECT nextval('hearmed_core.repair_number_seq')" );
+    if ( ! $seq ) {
+        // Sequence may not exist yet — fallback
+        $seq = $db->get_var( "SELECT COALESCE(MAX(id), 0) FROM hearmed_core.repairs" );
+    }
     $repair_number = $prefix . '-' . str_pad( $seq, 4, '0', STR_PAD_LEFT );
+
+    // Try to update repair_number — may fail if column doesn't exist yet
     $db->update( 'hearmed_core.repairs', [ 'repair_number' => $repair_number ], [ 'id' => $id ] );
 
     hm_patient_audit( 'CREATE_REPAIR', 'repair', $id, [ 'patient_id' => $pid, 'repair_number' => $repair_number ] );

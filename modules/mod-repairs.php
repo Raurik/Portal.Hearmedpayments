@@ -44,17 +44,26 @@ function hm_repairs_render() {
         function loadClinics(){
             $.post(_hm.ajax,{action:'hm_get_clinics',nonce:_hm.nonce},function(r){
                 if(r&&r.success&&r.data){
-                    r.data.forEach(function(c){$('#hm-repair-filter-clinic').append('<option value="'+c._ID+'">'+esc(c.name)+'</option>');});
+                    r.data.forEach(function(c){$('#hm-repair-filter-clinic').append('<option value="'+(c.id||c._ID)+'">'+esc(c.name)+'</option>');});
                 }
             });
         }
 
         function loadRepairs(){
             $.post(_hm.ajax,{action:'hm_get_all_repairs',nonce:_hm.nonce},function(r){
-                if(!r||!r.success){$('#hm-repairs-table').html('<div class="hm-empty"><div class="hm-empty-text">Failed to load repairs</div></div>');return;}
+                console.log('[HM Repairs] response:', r);
+                if(!r||!r.success){
+                    var errMsg=(r&&r.data)?r.data:'Failed to load repairs';
+                    console.error('[HM Repairs] Error:', errMsg);
+                    $('#hm-repairs-table').html('<div class="hm-empty"><div class="hm-empty-text">'+esc(String(errMsg))+'</div></div>');
+                    return;
+                }
                 allRepairs=r.data||[];
                 renderStats();
                 renderTable();
+            }).fail(function(xhr,status,err){
+                console.error('[HM Repairs] AJAX failed:', status, err);
+                $('#hm-repairs-table').html('<div class="hm-empty"><div class="hm-empty-text">Network error — check console</div></div>');
             });
         }
 
@@ -166,6 +175,8 @@ class HearMed_Repairs {
         check_ajax_referer('hm_nonce', 'nonce');
         
         $db = HearMed_DB::instance();
+
+        // First try the full query with all expected columns
         $rows = $db->get_results(
             "SELECT r.id, r.repair_number, r.serial_number, r.date_booked, r.date_sent,
                     r.date_received, r.repair_status, r.warranty_status, r.repair_notes,
@@ -189,6 +200,33 @@ class HearMed_Repairs {
                 r.date_booked DESC"
         );
 
+        // If failed (likely missing columns), try minimal query with only schema columns
+        $last_err = HearMed_DB::last_error();
+        if (empty($rows) && $last_err) {
+            error_log('[HM Repairs] Full query failed, trying minimal: ' . $last_err);
+            $rows = $db->get_results(
+                "SELECT r.id, r.serial_number, r.date_booked, r.date_sent,
+                        r.date_received, r.repair_status, r.warranty_status, r.repair_notes,
+                        r.patient_id,
+                        COALESCE(pr.product_name, 'Unknown') AS product_name,
+                        COALESCE(m.name, '') AS manufacturer_name,
+                        CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
+                        p.clinic_id
+                 FROM hearmed_core.repairs r
+                 LEFT JOIN hearmed_core.patient_devices pd ON pd.id = r.patient_device_id
+                 LEFT JOIN hearmed_reference.products pr ON pr.id = COALESCE(r.product_id, pd.product_id)
+                 LEFT JOIN hearmed_reference.manufacturers m ON m.id = COALESCE(r.manufacturer_id, pr.manufacturer_id)
+                 LEFT JOIN hearmed_core.patients p ON p.id = r.patient_id
+                 ORDER BY
+                    CASE r.repair_status
+                        WHEN 'Booked' THEN 1
+                        WHEN 'Sent' THEN 2
+                        ELSE 3
+                    END,
+                    r.date_booked DESC"
+            );
+        }
+
         $out = [];
         if ($rows) {
             foreach ($rows as $r) {
@@ -200,17 +238,17 @@ class HearMed_Repairs {
                 }
                 $out[] = [
                     '_ID'              => (int) $r->id,
-                    'repair_number'    => $r->repair_number ?: '',
-                    'product_name'     => $r->product_name,
-                    'manufacturer_name'=> $r->manufacturer_name,
-                    'serial_number'    => $r->serial_number ?: '',
+                    'repair_number'    => $r->repair_number ?? '',
+                    'product_name'     => $r->product_name ?? 'Unknown',
+                    'manufacturer_name'=> $r->manufacturer_name ?? '',
+                    'serial_number'    => $r->serial_number ?? '',
                     'date_booked'      => $r->date_booked,
                     'status'           => $r->repair_status ?: 'Booked',
-                    'warranty_status'  => $r->warranty_status ?: '',
-                    'under_warranty'   => hm_pg_bool($r->under_warranty ?? false),
-                    'repair_reason'    => $r->repair_reason ?: '',
-                    'repair_notes'     => $r->repair_notes ?: '',
-                    'patient_name'     => $r->patient_name ?: 'Unknown',
+                    'warranty_status'  => $r->warranty_status ?? '',
+                    'under_warranty'   => isset($r->under_warranty) ? hm_pg_bool($r->under_warranty) : false,
+                    'repair_reason'    => $r->repair_reason ?? '',
+                    'repair_notes'     => $r->repair_notes ?? '',
+                    'patient_name'     => $r->patient_name ?? 'Unknown',
                     'patient_id'       => (int) $r->patient_id,
                     'clinic_id'        => $r->clinic_id ? (int) $r->clinic_id : null,
                     'days_open'        => $days_open,
