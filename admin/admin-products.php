@@ -110,11 +110,7 @@ class HearMed_Admin_Products {
             <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Products &amp; Services</h2>
-                <div style="display:flex;gap:8px;">
-                    <button class="hm-btn hm-btn-teal" style="background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;" onclick="hmProd.showImport()">&#8593; Import CSV</button>
-                    <button class="hm-btn hm-btn-teal" style="background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;" onclick="hmProd.downloadTemplate()">&#8595; Download Template</button>
-                    <button class="hm-btn hm-btn-teal" onclick="hmProd.open()">+ Add <?php echo esc_html(rtrim(self::$item_types[$active_tab], 's')); ?></button>
-                </div>
+                <button class="hm-btn hm-btn-teal" onclick="hmProd.open()">+ Add <?php echo esc_html(rtrim(self::$item_types[$active_tab], 's')); ?></button>
             </div>
 
             <!-- Category Tabs -->
@@ -207,6 +203,11 @@ class HearMed_Admin_Products {
                 </tbody>
             </table>
             <?php endif; ?>
+
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:20px;align-items:flex-start;">
+                <button class="hm-btn" style="background:#e2e8f0;color:#64748b;border:1px solid #cbd5e1;font-size:13px;" onclick="hmProd.showImport()">&#8593; Import CSV</button>
+                <button class="hm-btn" style="background:#e2e8f0;color:#64748b;border:1px solid #cbd5e1;font-size:13px;" onclick="hmProd.downloadTemplate()">&#8595; Download Template</button>
+            </div>
 
             <!-- ========== ADD/EDIT MODAL ========== -->
             <div class="hm-modal-bg" id="hm-prod-modal">
