@@ -73,215 +73,256 @@ class HearMed_Admin_Appointment_Type_Detail {
 
         $colour      = $svc->service_color ?? '#3B82F6';
         $text_colour = $svc->text_color ?? '#FFFFFF';
+        $assigned_ids = array_map(function($a) { return (int)$a->staff_id; }, $assigned);
 
         ob_start();
         ?>
-        <div id="hm-svc-detail" class="hm-admin" data-service-id="<?php echo $service_id; ?>">
+        <style>
+        /* Appointment-type-detail supplements (extends calendar-settings.css) */
+        #hm-app .hm-page-header { margin-bottom:24px; }
+        #hm-app .hm-page-title  { font-size:22px; font-weight:700; color:#0f172a; margin:0 0 4px; }
+        #hm-app .hm-page-subtitle { font-size:13px; color:#64748b; }
+        #hm-app .hm-color-box   { width:48px; height:32px; border:1px solid #e2e8f0; border-radius:6px; padding:2px; cursor:pointer; }
+        #hm-app .hm-color-row .hm-sval { width:auto; }
+        #hm-app .hm-card-grid   { margin-bottom:20px; }
+        #hm-app .hm-badge       { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; line-height:1.5; }
+        #hm-app .hm-badge-sm    { font-size:10px; padding:1px 6px; }
+        #hm-app .hm-badge-amber { background:#fef3c7; color:#92400e; }
+        #hm-app .hm-badge-blue  { background:#dbeafe; color:#1e40af; }
+        #hm-app .hm-badge-green { background:#dcfce7; color:#166534; }
+        #hm-app .hm-inp, #hm-app .hm-dd { width:100%; padding:6px 10px; font-size:13px; border:1px solid #e2e8f0; border-radius:6px; color:#0f172a; background:#fff; box-sizing:border-box; }
+        /* Modal */
+        .hm-modal-bg             { display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:9999; align-items:center; justify-content:center; }
+        .hm-modal-bg.open        { display:flex; }
+        .hm-modal                { background:#fff; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.18); max-height:90vh; overflow-y:auto; }
+        .hm-modal-hd             { display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid #e2e8f0; }
+        .hm-modal-hd h3          { margin:0; font-size:16px; font-weight:600; color:#0f172a; }
+        .hm-modal-x              { background:none; border:none; font-size:22px; color:#94a3b8; cursor:pointer; line-height:1; }
+        .hm-modal-ft             { display:flex; justify-content:flex-end; gap:10px; padding:14px 24px; border-top:1px solid #e2e8f0; }
+        .hm-days-grid            { display:flex; flex-wrap:wrap; gap:8px; }
+        </style>
+        <div id="hm-app" class="hm-calendar" data-module="calendar" data-view="settings">
+        <div class="hm-page" data-service-id="<?php echo $service_id; ?>">
 
-            <!-- Back + Title -->
-            <div class="hm-admin-hd">
-                <h2><?php echo esc_html($svc->service_name); ?></h2>
-            </div>
-            <div style="margin-bottom:20px;">
-                <a href="<?php echo esc_url(home_url('/appointment-types/')); ?>" class="hm-btn">&larr; Back</a>
+            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url('/appointment-types/')); ?>" class="hm-btn">&larr; Back</a></div>
+
+            <div class="hm-page-header">
+                <h1 class="hm-page-title"><?php echo esc_html($svc->service_name); ?></h1>
+                <div class="hm-page-subtitle">Configure this appointment type's details, outcomes, and staff assignments.</div>
             </div>
 
-            <!-- ════ Details Card ════ -->
-            <div class="hm-card" style="padding:24px;margin-bottom:20px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                    <h3 style="margin:0;font-size:15px;font-weight:600;color:#0f172a;">Details</h3>
-                    <button class="hm-btn hm-btn-teal hm-btn-sm" id="hm-svc-save-details">Save Changes</button>
-                </div>
-                <div class="hm-form-row" style="display:flex;gap:16px;flex-wrap:wrap;">
-                    <div class="hm-form-group" style="flex:2;min-width:200px;">
-                        <label class="hm-label">Name</label>
-                        <input type="text" class="hm-inp" id="hm-svc-name" value="<?php echo esc_attr($svc->service_name); ?>">
-                    </div>
-                    <div class="hm-form-group" style="flex:0 0 100px;">
-                        <label class="hm-label">Block Colour</label>
-                        <input type="color" id="hm-svc-colour" value="<?php echo esc_attr($colour); ?>" style="width:100%;height:38px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;">
-                    </div>
-                    <div class="hm-form-group" style="flex:0 0 100px;">
-                        <label class="hm-label">Text Colour</label>
-                        <input type="color" id="hm-svc-text-colour" value="<?php echo esc_attr($text_colour); ?>" style="width:100%;height:38px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;">
-                    </div>
-                </div>
-                <div class="hm-form-row" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;">
-                    <div class="hm-form-group" style="flex:1;min-width:120px;">
-                        <label class="hm-label">Duration (minutes)</label>
-                        <input type="number" class="hm-inp" id="hm-svc-duration" value="<?php echo intval($svc->duration_minutes ?? 30); ?>" min="5" step="5">
-                    </div>
-                    <div class="hm-form-group" style="flex:1;min-width:120px;">
-                        <label class="hm-label">Category</label>
-                        <select class="hm-inp" id="hm-svc-category">
-                            <option value="">— None —</option>
-                            <?php
+            <!-- ═══ ROW 1: Details + Preview ═══ -->
+            <div class="hm-card-grid hm-card-grid--3" style="grid-template-columns:1fr 1fr 300px;">
+
+                <!-- Card 1: Details -->
+                <div class="hm-card">
+                    <div class="hm-card-hd">Details</div>
+                    <div class="hm-card-body">
+                        <div class="hm-srow"><span class="hm-slbl">Name</span><span class="hm-sval"><input type="text" class="hm-inp" id="hm-svc-name" value="<?php echo esc_attr($svc->service_name); ?>"></span></div>
+                        <div class="hm-srow"><span class="hm-slbl">Duration (min)</span><span class="hm-sval"><input type="number" class="hm-inp" id="hm-svc-duration" value="<?php echo intval($svc->duration_minutes ?? 30); ?>" min="5" step="5"></span></div>
+                        <div class="hm-srow"><span class="hm-slbl">Category</span><span class="hm-sval"><select class="hm-dd" id="hm-svc-category"><option value="">— None —</option><?php
                             $cats = ['consultation'=>'Consultation','service'=>'Service','review'=>'Review','diagnostic'=>'Diagnostic','fitting'=>'Fitting','repair'=>'Repair'];
                             $cur = $svc->appointment_category ?? '';
                             foreach ($cats as $ck => $cv):
-                            ?>
-                                <option value="<?php echo esc_attr($ck); ?>" <?php selected($cur, $ck); ?>><?php echo esc_html($cv); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="hm-form-group" style="flex:1;min-width:120px;">
-                        <label class="hm-label">&nbsp;</label>
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#334155;">
-                            <input type="checkbox" id="hm-svc-sales" <?php checked(!empty($svc->sales_opportunity)); ?>>
-                            Sales opportunity
-                        </label>
-                    </div>
-                    <div class="hm-form-group" style="flex:1;min-width:120px;">
-                        <label class="hm-label">&nbsp;</label>
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#334155;">
-                            <input type="checkbox" id="hm-svc-income" <?php checked($svc->income_bearing !== false && $svc->income_bearing !== 'f'); ?>>
-                            Income bearing
-                        </label>
+                        ?><option value="<?php echo esc_attr($ck); ?>" <?php selected($cur, $ck); ?>><?php echo esc_html($cv); ?></option><?php endforeach; ?></select></span></div>
+                        <div class="hm-srow">
+                            <label class="hm-day-check">
+                                <input type="checkbox" id="hm-svc-sales" <?php checked(!empty($svc->sales_opportunity)); ?>>
+                                <span class="hm-check"></span>
+                                Sales opportunity
+                            </label>
+                        </div>
+                        <div class="hm-srow">
+                            <label class="hm-day-check">
+                                <input type="checkbox" id="hm-svc-income" <?php checked($svc->income_bearing !== false && $svc->income_bearing !== 'f'); ?>>
+                                <span class="hm-check"></span>
+                                Income bearing
+                            </label>
+                        </div>
                     </div>
                 </div>
-                <div style="margin-top:14px;">
-                    <label class="hm-label">Preview</label>
-                    <div id="hm-svc-preview" style="display:inline-block;padding:6px 16px;border-radius:4px;font-size:13px;font-weight:600;background:<?php echo esc_attr($colour); ?>;color:<?php echo esc_attr($text_colour); ?>;">
-                        <?php echo esc_html($svc->service_name); ?>
+
+                <!-- Card 2: Colours -->
+                <div class="hm-card">
+                    <div class="hm-card-hd">Colours</div>
+                    <div class="hm-card-body">
+                        <div class="hm-srow hm-color-row">
+                            <span class="hm-slbl">Block colour</span>
+                            <span class="hm-sval"><input type="color" id="hm-svc-colour" value="<?php echo esc_attr($colour); ?>" class="hm-color-box"></span>
+                        </div>
+                        <div class="hm-srow hm-color-row">
+                            <span class="hm-slbl">Text colour</span>
+                            <span class="hm-sval"><input type="color" id="hm-svc-text-colour" value="<?php echo esc_attr($text_colour); ?>" class="hm-color-box"></span>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Card 3: Preview -->
+                <div class="hm-card">
+                    <div class="hm-card-hd">Preview</div>
+                    <div class="hm-card-body" style="display:flex;align-items:center;justify-content:center;min-height:80px;">
+                        <div id="hm-svc-preview" style="display:inline-block;padding:8px 20px;border-radius:6px;font-size:14px;font-weight:600;background:<?php echo esc_attr($colour); ?>;color:<?php echo esc_attr($text_colour); ?>;">
+                            <?php echo esc_html($svc->service_name); ?>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- ════ Outcomes Card ════ -->
-            <div class="hm-card" style="padding:24px;margin-bottom:20px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                    <h3 style="margin:0;font-size:15px;font-weight:600;color:#0f172a;">Outcomes</h3>
-                    <button class="hm-btn hm-btn-teal hm-btn-sm" id="hm-add-outcome">+ Add Outcome</button>
+            <div style="text-align:right;margin-bottom:20px;">
+                <button type="button" class="hm-btn hm-btn-teal" id="hm-svc-save-details">Save Details</button>
+            </div>
+
+            <!-- ═══ ROW 2: Outcomes ═══ -->
+            <div class="hm-card">
+                <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
+                    Outcomes
+                    <button class="hm-btn hm-btn-teal" id="hm-add-outcome">+ Add Outcome</button>
                 </div>
-                <div id="hm-outcomes-list">
+                <div class="hm-card-body">
                     <?php if (empty($outcomes)): ?>
-                        <p style="color:#94a3b8;font-size:13px;">No outcomes defined yet.</p>
+                        <p style="color:#94a3b8;font-size:13px;margin:0;">No outcomes defined yet.</p>
                     <?php else: ?>
                         <?php foreach ($outcomes as $o):
                             $oc = $o->outcome_color ?: '#cccccc';
                             $fu_ids = $o->followup_service_ids ? json_decode($o->followup_service_ids, true) : [];
                         ?>
-                        <div class="hm-outcome-row" data-id="<?php echo (int)$o->id; ?>" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;background:#fff;">
-                            <span style="width:20px;height:20px;border-radius:4px;background:<?php echo esc_attr($oc); ?>;flex-shrink:0;"></span>
-                            <strong style="flex:1;font-size:13px;color:#0f172a;"><?php echo esc_html($o->outcome_name); ?></strong>
-                            <?php if (!empty($o->is_invoiceable) && $o->is_invoiceable): ?>
-                                <span class="hm-badge hm-badge-sm hm-badge-amber" title="Triggers order flow">Invoiceable</span>
-                            <?php endif; ?>
-                            <?php if (!empty($o->requires_note) && $o->requires_note): ?>
-                                <span class="hm-badge hm-badge-sm hm-badge-blue" title="Note required">Note</span>
-                            <?php endif; ?>
-                            <?php if (!empty($o->triggers_followup) && $o->triggers_followup): ?>
-                                <span class="hm-badge hm-badge-sm hm-badge-green" title="Follow-up appointment">Follow-up</span>
-                            <?php endif; ?>
-                            <?php if (!empty($o->triggers_reminder) && $o->triggers_reminder): ?>
-                                <span class="hm-badge hm-badge-sm hm-badge-purple" title="SMS reminder">SMS</span>
-                            <?php endif; ?>
-                            <button class="hm-btn hm-btn-sm hm-outcome-edit" data-row='<?php echo json_encode([
-                                'id'                   => (int)$o->id,
-                                'outcome_name'         => $o->outcome_name,
-                                'outcome_color'        => $oc,
-                                'is_invoiceable'       => !empty($o->is_invoiceable) && $o->is_invoiceable,
-                                'requires_note'        => !empty($o->requires_note) && $o->requires_note,
-                                'triggers_followup'    => !empty($o->triggers_followup) && $o->triggers_followup,
-                                'followup_service_ids' => $fu_ids,
-                                'triggers_reminder'    => !empty($o->triggers_reminder) && $o->triggers_reminder,
-                            ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>'>✏ Edit</button>
-                            <button class="hm-btn hm-btn-sm hm-btn-red hm-outcome-del" data-id="<?php echo (int)$o->id; ?>" data-name="<?php echo esc_attr($o->outcome_name); ?>">✕</button>
+                        <div class="hm-srow" style="padding:8px 0;border-bottom:1px solid #f1f5f9;" data-id="<?php echo (int)$o->id; ?>">
+                            <span style="width:16px;height:16px;border-radius:4px;background:<?php echo esc_attr($oc); ?>;flex-shrink:0;display:inline-block;"></span>
+                            <span class="hm-slbl" style="font-weight:600;color:#0f172a;"><?php echo esc_html($o->outcome_name); ?></span>
+                            <span style="display:flex;gap:6px;align-items:center;">
+                                <?php if (!empty($o->is_invoiceable) && $o->is_invoiceable): ?>
+                                    <span class="hm-badge hm-badge-sm hm-badge-amber">Invoiceable</span>
+                                <?php endif; ?>
+                                <?php if (!empty($o->requires_note) && $o->requires_note): ?>
+                                    <span class="hm-badge hm-badge-sm hm-badge-blue">Note</span>
+                                <?php endif; ?>
+                                <?php if (!empty($o->triggers_followup) && $o->triggers_followup): ?>
+                                    <span class="hm-badge hm-badge-sm hm-badge-green">Follow-up</span>
+                                <?php endif; ?>
+                                <?php if (!empty($o->triggers_reminder) && $o->triggers_reminder): ?>
+                                    <span class="hm-badge hm-badge-sm" style="background:#a855f7;color:#fff;">SMS</span>
+                                <?php endif; ?>
+                                <button class="hm-btn hm-btn-sm hm-outcome-edit" data-row='<?php echo json_encode([
+                                    'id'                   => (int)$o->id,
+                                    'outcome_name'         => $o->outcome_name,
+                                    'outcome_color'        => $oc,
+                                    'is_invoiceable'       => !empty($o->is_invoiceable) && $o->is_invoiceable,
+                                    'requires_note'        => !empty($o->requires_note) && $o->requires_note,
+                                    'triggers_followup'    => !empty($o->triggers_followup) && $o->triggers_followup,
+                                    'followup_service_ids' => $fu_ids,
+                                    'triggers_reminder'    => !empty($o->triggers_reminder) && $o->triggers_reminder,
+                                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>'>Edit</button>
+                                <button class="hm-btn hm-btn-sm hm-btn-red hm-outcome-del" data-id="<?php echo (int)$o->id; ?>" data-name="<?php echo esc_attr($o->outcome_name); ?>">Delete</button>
+                            </span>
                         </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
             </div>
 
-            <!-- ════ Assignable Staff Card ════ -->
-            <div class="hm-card" style="padding:24px;margin-bottom:20px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                    <h3 style="margin:0;font-size:15px;font-weight:600;color:#0f172a;">Assignable Staff</h3>
-                    <button class="hm-btn hm-btn-teal hm-btn-sm" id="hm-save-staff">Save</button>
-                </div>
-                <p style="color:#94a3b8;font-size:13px;margin-bottom:12px;">Select which staff members can be assigned to this appointment type.</p>
-                <div id="hm-staff-checkboxes" style="display:flex;flex-wrap:wrap;gap:10px;">
-                    <?php
-                    $assigned_ids = array_map(function($a) { return (int)$a->staff_id; }, $assigned);
-                    foreach ($all_staff as $st):
-                        $checked = in_array((int)$st->id, $assigned_ids) ? 'checked' : '';
-                        $sname   = trim($st->first_name . ' ' . $st->last_name);
-                        $srole   = ucfirst($st->role ?? '');
-                    ?>
-                    <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:13px;color:#334155;background:#fff;min-width:160px;">
-                        <input type="checkbox" class="hm-staff-cb" value="<?php echo (int)$st->id; ?>" <?php echo $checked; ?>>
-                        <?php echo esc_html($sname); ?>
-                        <span style="color:#94a3b8;font-size:11px;">(<?php echo esc_html($srole); ?>)</span>
-                    </label>
-                    <?php endforeach; ?>
-                </div>
-            </div>
+            <!-- ═══ ROW 3: Assignable Staff + Reminders ═══ -->
+            <div class="hm-card-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:0;">
 
-            <!-- ════ Reminders Card ════ -->
-            <div class="hm-card" style="padding:24px;margin-bottom:20px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                    <h3 style="margin:0;font-size:15px;font-weight:600;color:#0f172a;">Confirmation &amp; Reminders</h3>
-                </div>
-                <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
-                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#334155;">
-                        <input type="checkbox" id="hm-svc-reminder" <?php checked(!empty($svc->reminder_enabled)); ?>>
-                        Send SMS reminder for this type
-                    </label>
-                    <div class="hm-form-group" style="min-width:200px;">
-                        <label class="hm-label">SMS Template</label>
-                        <select class="hm-inp" id="hm-svc-sms-tpl">
-                            <option value="">— None —</option>
-                            <?php foreach ($sms_templates as $tpl): ?>
-                                <option value="<?php echo (int)$tpl->id; ?>" <?php selected(($svc->reminder_sms_template_id ?? ''), $tpl->id); ?>>
-                                    <?php echo esc_html($tpl->template_name); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                <!-- Assignable Staff -->
+                <div class="hm-card">
+                    <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
+                        Assignable Staff
+                        <button class="hm-btn hm-btn-teal" id="hm-save-staff">Save</button>
+                    </div>
+                    <div class="hm-card-body">
+                        <?php foreach ($all_staff as $st):
+                            $checked = in_array((int)$st->id, $assigned_ids) ? 'checked' : '';
+                            $sname   = trim($st->first_name . ' ' . $st->last_name);
+                            $srole   = ucfirst($st->role ?? '');
+                        ?>
+                        <div class="hm-srow" style="margin-bottom:10px;">
+                            <label class="hm-day-check">
+                                <input type="checkbox" class="hm-staff-cb" value="<?php echo (int)$st->id; ?>" <?php echo $checked; ?>>
+                                <span class="hm-check"></span>
+                                <?php echo esc_html($sname); ?>
+                                <span style="color:#94a3b8;font-size:11px;margin-left:4px;"><?php echo esc_html($srole); ?></span>
+                            </label>
+                        </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
+
+                <!-- Reminders -->
+                <div class="hm-card">
+                    <div class="hm-card-hd">Confirmation &amp; Reminders</div>
+                    <div class="hm-card-body">
+                        <div class="hm-srow">
+                            <label class="hm-day-check">
+                                <input type="checkbox" id="hm-svc-reminder" <?php checked(!empty($svc->reminder_enabled)); ?>>
+                                <span class="hm-check"></span>
+                                Send SMS reminder for this type
+                            </label>
+                        </div>
+                        <div class="hm-srow">
+                            <span class="hm-slbl">SMS Template</span>
+                            <span class="hm-sval">
+                                <select class="hm-dd" id="hm-svc-sms-tpl">
+                                    <option value="">— None —</option>
+                                    <?php foreach ($sms_templates as $tpl): ?>
+                                        <option value="<?php echo (int)$tpl->id; ?>" <?php selected(($svc->reminder_sms_template_id ?? ''), $tpl->id); ?>>
+                                            <?php echo esc_html($tpl->template_name); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- ════ Outcome Modal ════ -->
+            <!-- ═══ Outcome Modal ═══ -->
             <div class="hm-modal-bg" id="hm-outcome-modal">
-                <div class="hm-modal" style="width:580px;">
+                <div class="hm-modal" style="width:560px;">
                     <div class="hm-modal-hd">
                         <h3 id="hm-outcome-title">Add Outcome</h3>
                         <button class="hm-modal-x" onclick="hmOutcome.close()">&times;</button>
                     </div>
                     <div class="hm-modal-body" style="padding:20px 24px;">
                         <input type="hidden" id="hmo-id">
-                        <div class="hm-form-row" style="display:flex;gap:12px;">
-                            <div class="hm-form-group" style="flex:2;">
-                                <label class="hm-label">Outcome Name *</label>
-                                <input type="text" class="hm-inp" id="hmo-name" placeholder="e.g. Completed">
-                            </div>
-                            <div class="hm-form-group" style="flex:0 0 80px;">
-                                <label class="hm-label">Colour</label>
-                                <input type="color" id="hmo-colour" value="#22c55e" style="width:100%;height:38px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;">
-                            </div>
-                        </div>
-                        <div class="hm-form-row" style="display:flex;gap:24px;margin-top:14px;">
-                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#334155;">
-                                <input type="checkbox" id="hmo-invoiceable"> Invoiceable (triggers order flow)
-                            </label>
-                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#334155;">
-                                <input type="checkbox" id="hmo-note"> Requires note
+                        <div class="hm-srow"><span class="hm-slbl">Outcome Name *</span><span class="hm-sval" style="width:220px;"><input type="text" class="hm-inp" id="hmo-name" placeholder="e.g. Completed"></span></div>
+                        <div class="hm-srow hm-color-row"><span class="hm-slbl">Banner Colour</span><span class="hm-sval"><input type="color" id="hmo-colour" value="#22c55e" class="hm-color-box"></span></div>
+                        <div class="hm-srow">
+                            <label class="hm-day-check">
+                                <input type="checkbox" id="hmo-invoiceable">
+                                <span class="hm-check"></span>
+                                Invoiceable (triggers order flow)
                             </label>
                         </div>
-                        <div class="hm-form-row" style="display:flex;gap:24px;margin-top:12px;">
-                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#334155;">
-                                <input type="checkbox" id="hmo-followup"> Triggers follow-up
-                            </label>
-                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#334155;">
-                                <input type="checkbox" id="hmo-reminder"> Triggers SMS reminder
+                        <div class="hm-srow">
+                            <label class="hm-day-check">
+                                <input type="checkbox" id="hmo-note">
+                                <span class="hm-check"></span>
+                                Requires note
                             </label>
                         </div>
-                        <div id="hmo-followup-wrap" style="margin-top:14px;display:none;">
-                            <label class="hm-label">Follow-up appointment type(s)</label>
-                            <div id="hmo-followup-opts" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+                        <div class="hm-srow">
+                            <label class="hm-day-check">
+                                <input type="checkbox" id="hmo-followup">
+                                <span class="hm-check"></span>
+                                Triggers follow-up appointment
+                            </label>
+                        </div>
+                        <div class="hm-srow">
+                            <label class="hm-day-check">
+                                <input type="checkbox" id="hmo-reminder">
+                                <span class="hm-check"></span>
+                                Triggers SMS reminder
+                            </label>
+                        </div>
+                        <div id="hmo-followup-wrap" style="margin-top:4px;display:none;">
+                            <span class="hm-slbl" style="display:block;margin-bottom:8px;">Follow-up appointment type(s)</span>
+                            <div class="hm-days-grid" id="hmo-followup-opts">
                                 <?php foreach ($all_services as $as): ?>
-                                <label style="display:flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid #e2e8f0;border-radius:5px;cursor:pointer;font-size:12px;color:#334155;background:#fff;">
+                                <label class="hm-day-check">
                                     <input type="checkbox" class="hmo-fu-svc" value="<?php echo (int)$as->id; ?>">
+                                    <span class="hm-check"></span>
                                     <?php echo esc_html($as->service_name); ?>
                                 </label>
                                 <?php endforeach; ?>
@@ -295,7 +336,8 @@ class HearMed_Admin_Appointment_Type_Detail {
                 </div>
             </div>
 
-        </div><!-- #hm-svc-detail -->
+        </div><!-- .hm-page -->
+        </div><!-- #hm-app -->
 
         <script>
         (function($){
@@ -329,8 +371,8 @@ class HearMed_Admin_Appointment_Type_Detail {
                     reminder_enabled:    $('#hm-svc-reminder').is(':checked') ? 1 : 0,
                     reminder_sms_template_id: $('#hm-svc-sms-tpl').val()
                 }, function(r){
-                    btn.text('Save Changes').prop('disabled', false);
-                    if (r.success) { btn.text('✓ Saved'); setTimeout(function(){ btn.text('Save Changes'); }, 1500); }
+                    btn.text('Save Details').prop('disabled', false);
+                    if (r.success) { btn.text('✓ Saved'); setTimeout(function(){ btn.text('Save Details'); }, 1500); }
                     else alert(r.data || 'Error saving');
                 });
             });
