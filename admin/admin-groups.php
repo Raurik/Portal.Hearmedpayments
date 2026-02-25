@@ -104,7 +104,7 @@ class HearMed_Admin_Groups {
 
         ob_start(); ?>
         <div class="hm-admin" id="hm-groups-admin">
-            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
+            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Staff Groups</h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmGroups.open()">+ Add Group</button>

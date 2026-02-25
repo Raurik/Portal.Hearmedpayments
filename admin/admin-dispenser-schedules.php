@@ -272,6 +272,7 @@ class HearMed_Admin_Dispenser_Schedules {
 
         ob_start(); ?>
         <div class="hm-admin" id="hm-schedules-admin">
+            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url('/admin-console/')); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Dispenser Schedules</h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmSchedules.open()">+ Add Schedule</button>

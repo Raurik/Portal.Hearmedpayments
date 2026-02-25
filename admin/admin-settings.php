@@ -138,7 +138,7 @@ class HearMed_Admin_Settings {
         ob_start(); ?>
         <style>.hm-secret-wrap{display:flex;gap:8px;align-items:center;}.hm-secret-wrap input{flex:1;}</style>
         <div class="hm-admin">
-            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
+            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2><?php echo esc_html($page['title']); ?></h2>
                 <?php if (!empty($page['fields'])): ?>

@@ -107,7 +107,7 @@ class HearMed_Admin_Products {
 
         ob_start(); ?>
         <div class="hm-admin">
-            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
+            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Products &amp; Services</h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmProd.open()">+ Add <?php echo esc_html(rtrim(self::$item_types[$active_tab], 's')); ?></button>

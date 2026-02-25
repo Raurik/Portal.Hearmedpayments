@@ -88,7 +88,7 @@ class HearMed_Admin_Clinics {
 
         ob_start(); ?>
         <div class="hm-page" id="hm-clinics-app">
-            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
+            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-page-hd">
                 <h1 class="hm-page-title">Clinics</h1>
                 <button class="hm-btn-add" type="button" onclick="hmClinic.open()">+ Add Clinic</button>

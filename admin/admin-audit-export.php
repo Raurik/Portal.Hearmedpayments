@@ -35,7 +35,7 @@ class HearMed_Admin_AuditLog {
 
         ob_start(); ?>
         <div class="hm-admin">
-            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
+            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Audit Log</h2>
                 <div style="display:flex;gap:8px;align-items:center;">

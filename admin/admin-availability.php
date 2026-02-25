@@ -135,7 +135,7 @@ class HearMed_Admin_Availability {
 
         ob_start(); ?>
         <div class="hm-admin" id="hm-availability-admin">
-            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
+            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Staff Availability</h2>
             </div>

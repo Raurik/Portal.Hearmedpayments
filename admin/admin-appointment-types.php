@@ -44,7 +44,7 @@ class HearMed_Admin_Appointment_Types {
                 <h2>Appointment Types</h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmApptType.open()">+ Add Type</button>
             </div>
-            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
+            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
 
             <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">
                 Define the appointment types available in the calendar. Each type has a colour, duration, and category settings.

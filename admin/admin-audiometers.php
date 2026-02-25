@@ -61,7 +61,7 @@ class HearMed_Admin_Audiometers {
 
         ob_start(); ?>
         <div class="hm-admin">
-            <div style="margin-bottom:16px;"><a href="javascript:history.back()" class="hm-btn">&larr; Back</a></div>
+            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Audiometers</h2>
                 <button class="hm-btn hm-btn-teal" onclick="hmAud.open()">+ Add Audiometer</button>
