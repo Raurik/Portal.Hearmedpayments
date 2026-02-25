@@ -54,7 +54,7 @@ function hm_patients_render() {
 
 // List / Search
 add_action( 'wp_ajax_hm_get_patients',      'hm_ajax_get_patients' );
-add_action( 'wp_ajax_hm_search_patients',   'hm_ajax_search_patients' );
+// hm_search_patients is registered in mod-calendar.php — no duplicate needed
 
 // CRUD
 add_action( 'wp_ajax_hm_create_patient',    'hm_ajax_create_patient' );
@@ -308,36 +308,7 @@ function hm_ajax_get_patients() {
 //  2. SEARCH PATIENTS (global search bar — compact results)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function hm_ajax_search_patients() {
-    check_ajax_referer( 'hearmed_nonce', 'nonce' );
-    $q = sanitize_text_field( $_POST['q'] ?? '' );
-    if ( strlen( $q ) < 2 ) wp_send_json_success( [] );
-
-    $db   = HearMed_DB::instance();
-    $rows = $db->get_results(
-        "SELECT p.id, p.first_name, p.last_name, p.patient_number, p.phone
-         FROM hearmed_core.patients p
-         WHERE (p.first_name ILIKE \$1 OR p.last_name ILIKE \$1
-                OR CONCAT(p.first_name,' ',p.last_name) ILIKE \$1
-                OR p.patient_number ILIKE \$1
-                OR p.phone ILIKE \$1)
-           AND p.is_active = true
-         ORDER BY p.last_name, p.first_name
-         LIMIT 10",
-        [ '%' . $q . '%' ]
-    );
-
-    $out = [];
-    foreach ( $rows as $r ) {
-        $out[] = [
-            'id'             => (int) $r->id,
-            'name'           => $r->first_name . ' ' . $r->last_name,
-            'patient_number' => $r->patient_number,
-            'phone'          => $r->phone,
-        ];
-    }
-    wp_send_json_success( $out );
-}
+// hm_ajax_search_patients() lives in mod-calendar.php — shared across modules
 
 
 // ═══════════════════════════════════════════════════════════════════════════
