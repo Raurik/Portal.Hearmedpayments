@@ -351,22 +351,9 @@ var Cal={
 
     // ── APPOINTMENTS ──
     renderAppts:function(){
-        $('.hm-appt,.hm-lunch').remove();
+        $('.hm-appt').remove();
         var dates=this.visDates(),disps=this.visDisps(),cfg=this.cfg,slotH=cfg.slotHpx;
         if(!disps.length)return;
-
-        // Lunch 13:00-13:30
-        var lStart=13*60,lDur=30;
-        var lH=(lDur/cfg.slotMin)*slotH;
-        var lSlot=Math.floor((lStart-cfg.startH*60)/cfg.slotMin);
-        if(lSlot>=0&&lSlot<cfg.totalSlots){
-            dates.forEach(function(d,di){
-                disps.forEach(function(p){
-                    var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+lSlot+'"][data-disp="'+p.id+'"]');
-                    if($t.length)$t.append('<div class="hm-lunch" style="top:0;height:'+lH+'px">LUNCH</div>');
-                });
-            });
-        }
 
         var self=this;
         this.appts.forEach(function(a){
