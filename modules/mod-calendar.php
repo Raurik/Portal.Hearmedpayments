@@ -60,17 +60,19 @@ function hm_ajax_get_settings() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
 
     try {
-        // PostgreSQL only - no $wpdb needed
         $t = HearMed_Portal::table( 'calendar_settings' );
-        if ( HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) === null ) { wp_send_json_success( [] ); return; }
-        wp_send_json_success( HearMed_DB::get_row( "SELECT * FROM {$t} LIMIT 1", ARRAY_A ) ?: [] );
-    } catch ( Throwable $e ) {
-        // In debug mode return detailed error to AJAX caller; otherwise generic message
-        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-            wp_send_json_error( [ 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString() ] );
+        // Check table exists
+        $exists = HearMed_DB::get_var( "SELECT to_regclass('hearmed_core.calendar_settings')" );
+        if ( ! $exists ) { wp_send_json_success( [] ); return; }
+        $row = HearMed_DB::get_row( "SELECT * FROM {$t} LIMIT 1" );
+        if ( $row ) {
+            wp_send_json_success( (array) $row );
         } else {
-            wp_send_json_error( 'Server error' );
+            wp_send_json_success( [] );
         }
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] get_settings error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
     }
 }
 
@@ -153,6 +155,7 @@ function hm_ajax_save_settings() {
 // ================================================================
 function hm_ajax_get_clinics() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
+    try {
     $ps = HearMed_DB::get_results(
         "SELECT id, clinic_name, clinic_color, is_active, opening_hours
          FROM hearmed_reference.clinics
@@ -181,16 +184,22 @@ function hm_ajax_get_clinics() {
         $d[] = [
             'id'             => (int) $p->id,
             'name'           => $p->clinic_name,
-            'clinic_colour'  => $p->clinic_color ?: 'var(--hm-teal)',
+            'color'          => $p->clinic_color ?: '#0BB4C4',
+            'clinic_colour'  => $p->clinic_color ?: '#0BB4C4',
             'text_colour'    => $extra['text_colour'],
             'is_active'      => (bool) $p->is_active,
         ];
     }
     wp_send_json_success( $d );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] get_clinics error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 function hm_ajax_get_dispensers() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
+    try {
     $clinic_id = intval( $_POST['clinic'] ?? 0 );
     $date = sanitize_text_field( $_POST['date'] ?? '' );
     $scheduled_ids = [];
@@ -244,20 +253,30 @@ function hm_ajax_get_dispensers() {
         if ( !$p->is_active ) continue;
         $fname = $p->full_name ?: trim( $p->first_name . ' ' . $p->last_name );
         $initials = strtoupper( substr( $p->first_name, 0, 1 ) . substr( $p->last_name, 0, 1 ) );
+        // Parse PostgreSQL array string {1,2,3} into PHP array
+        $cids = [];
+        if ( ! empty( $p->clinic_ids ) && is_string( $p->clinic_ids ) ) {
+            $cids = array_map( 'intval', explode( ',', trim( $p->clinic_ids, '{}' ) ) );
+        }
         $d[] = [
             'id'             => (int) $p->id,
             'name'           => $fname,
             'initials'       => $initials,
-            'clinic_id'      => $clinic_id ?: ( $p->clinic_ids ? $p->clinic_ids[0] : null ),
+            'clinic_id'      => $clinic_id ?: ( ! empty( $cids ) ? $cids[0] : null ),
             'calendar_order' => 99,
             'role_type'      => $p->role,
+            'color'          => $p->staff_color ?: '#0BB4C4',
         ];
     }
     wp_send_json_success( $d );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] get_dispensers error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
-
 function hm_ajax_get_services() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
+    try {
     $ps = HearMed_DB::get_results(
         "SELECT id, service_name, colour, duration, is_active, sales_opportunity, income_bearing, appointment_category FROM hearmed_reference.services WHERE is_active = true ORDER BY service_name"
     );
@@ -276,6 +295,10 @@ function hm_ajax_get_services() {
         ];
     }
     wp_send_json_success( $d );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] get_services error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 // ================================================================
@@ -315,74 +338,97 @@ function hm_ajax_search_patients() {
 // ================================================================
 function hm_ajax_get_appointments() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-        // PostgreSQL only - no $wpdb needed
-    $t = HearMed_Portal::table( 'appointments' );
-    if ( HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) === null ) { wp_send_json_success( [] ); return; }
+    try {
     $start = sanitize_text_field( $_POST['start'] ?? date( 'Y-m-d' ) );
     $end   = sanitize_text_field( $_POST['end']   ?? $start );
     $cl    = intval( $_POST['clinic']    ?? 0 );
     $dp    = intval( $_POST['dispenser'] ?? 0 );
-    $w     = HearMed_DB::get_results(   "WHERE appointment_date BETWEEN %s AND %s", $start, $end );
-    if ( $cl ) $w .= HearMed_DB::get_results(   " AND clinic_id=%d",    $cl );
-    if ( $dp ) $w .= HearMed_DB::get_results(   " AND dispenser_id=%d", $dp );
-    $rows = HearMed_DB::get_results( "SELECT * FROM `$t` $w ORDER BY appointment_date, start_time" );
+
+    // Build query with JOINs — fully PostgreSQL, no get_post_meta
+    $sql = "SELECT a.id, a.patient_id, a.dispenser_id, a.clinic_id, a.service_id,
+                   a.appointment_date, a.start_time, a.end_time, a.duration,
+                   a.status, a.location_type, a.notes,
+                   a.outcome_id, a.outcome_banner_colour, a.created_by,
+                   p.first_name AS patient_first, p.last_name AS patient_last, p.patient_number,
+                   (st.first_name || ' ' || st.last_name) AS dispenser_name,
+                   c.clinic_name,
+                   sv.service_name, sv.colour AS service_colour, sv.duration AS service_duration
+            FROM hearmed_core.appointments a
+            LEFT JOIN hearmed_core.patients p ON a.patient_id = p.id
+            LEFT JOIN hearmed_reference.staff st ON a.dispenser_id = st.id
+            LEFT JOIN hearmed_reference.clinics c ON a.clinic_id = c.id
+            LEFT JOIN hearmed_reference.services sv ON a.service_id = sv.id
+            WHERE a.appointment_date >= $1 AND a.appointment_date <= $2";
+    $params = [ $start, $end ];
+    $pi = 3;
+    if ( $cl ) {
+        $sql .= " AND a.clinic_id = \${$pi}";
+        $params[] = $cl;
+        $pi++;
+    }
+    if ( $dp ) {
+        $sql .= " AND a.dispenser_id = \${$pi}";
+        $params[] = $dp;
+        $pi++;
+    }
+    $sql .= " ORDER BY a.appointment_date, a.start_time";
+    $rows = HearMed_DB::get_results( $sql, $params );
     $d = [];
     foreach ( $rows as $r ) {
-        $pname = $r->patient_id ? get_the_title( $r->patient_id ) : 'Walk-in';
-        if ( $r->patient_id ) {
-            $fn = // TODO: USE PostgreSQL: Get from table columns
-    get_post_meta( $r->patient_id, 'first_name', true );
-            $ln = // TODO: USE PostgreSQL: Get from table columns
-    get_post_meta( $r->patient_id, 'last_name',  true );
-            if ( $fn && $ln ) $pname = "$fn $ln";
+        $pname = 'Walk-in';
+        if ( $r->patient_first && $r->patient_last ) {
+            $pname = $r->patient_first . ' ' . $r->patient_last;
         }
         $d[] = [
-            'id'                   => $r->id,
-            'patient_id'            => $r->patient_id,
+            'id'                    => (int) $r->id,
+            'patient_id'            => (int) ($r->patient_id ?: 0),
             'patient_name'          => $pname,
-            'patient_number'        => $r->patient_id ? // TODO: USE PostgreSQL: Get from table columns
-    get_post_meta( $r->patient_id, 'patient_number', true ) : '',
-            'dispenser_id'          => $r->dispenser_id,
-            'dispenser_name'        => get_the_title( $r->dispenser_id ),
-            'clinic_id'             => $r->clinic_id,
-            'clinic_name'           => get_the_title( $r->clinic_id ),
-            'service_id'            => $r->service_id,
-            'service_name'          => get_the_title( $r->service_id ),
-            'service_colour'        => // TODO: USE PostgreSQL: Get from table columns
-    get_post_meta( $r->service_id, 'colour', true ) ?: // TODO: USE PostgreSQL: Get from table columns
-    get_post_meta( $r->service_id, 'service_colour', true ) ?: '#3B82F6',
+            'patient_number'        => $r->patient_number ?? '',
+            'dispenser_id'          => (int) ($r->dispenser_id ?: 0),
+            'dispenser_name'        => $r->dispenser_name ?? '',
+            'clinic_id'             => (int) ($r->clinic_id ?: 0),
+            'clinic_name'           => $r->clinic_name ?? '',
+            'service_id'            => (int) ($r->service_id ?: 0),
+            'service_name'          => $r->service_name ?? '',
+            'service_colour'        => $r->service_colour ?: '#3B82F6',
             'appointment_date'      => $r->appointment_date,
             'start_time'            => $r->start_time,
             'end_time'              => $r->end_time,
-            'duration'              => intval( $r->duration ?: // TODO: USE PostgreSQL: Get from table columns
-    get_post_meta( $r->service_id, 'duration', true ) ?: 30 ),
+            'duration'              => (int) ($r->duration ?: $r->service_duration ?: 30),
             'status'                => $r->status ?: 'Confirmed',
             'location_type'         => $r->location_type ?? 'Clinic',
             'notes'                 => $r->notes ?? '',
-            'outcome_id'            => $r->outcome_id ?? 0,
+            'outcome_id'            => (int) ($r->outcome_id ?? 0),
             'outcome_banner_colour' => $r->outcome_banner_colour ?? '',
-            'created_by'            => $r->created_by ?? 0,
+            'created_by'            => (int) ($r->created_by ?? 0),
         ];
     }
     wp_send_json_success( $d );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] get_appointments error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 function hm_ajax_create_appointment() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
-        // PostgreSQL only - no $wpdb needed
+    try {
     $t   = HearMed_Portal::table( 'appointments' );
     $sid = intval( $_POST['service_id'] );
-    $dur = intval( // TODO: USE PostgreSQL: Get from table columns
-    get_post_meta( $sid, 'duration', true ) ) ?: 30;
+    // Get duration from PostgreSQL services table
+    $dur = intval( $_POST['duration'] ?? 0 );
+    if ( ! $dur && $sid ) {
+        $svc_dur = HearMed_DB::get_var( "SELECT duration FROM hearmed_reference.services WHERE id = $1", [ $sid ] );
+        $dur = intval( $svc_dur ) ?: 30;
+    }
+    if ( ! $dur ) $dur = 30;
     $st  = sanitize_text_field( $_POST['start_time'] );
     $sp  = explode( ':', $st );
     $em  = intval( $sp[0] ) * 60 + intval( $sp[1] ) + $dur;
     $et  = sprintf( '%02d:%02d', floor( $em / 60 ), $em % 60 );
-    HearMed_DB::insert( $t, [
-        'cct_status'       => 'publish',
-        'cct_author_id'    => get_current_user_id(),
-        'created_at'      => current_time( 'mysql' ),
+    $new_id = HearMed_DB::insert( $t, [
+        'created_at'       => current_time( 'mysql' ),
         'patient_id'       => intval( $_POST['patient_id']   ?? 0 ),
         'dispenser_id'     => intval( $_POST['dispenser_id'] ),
         'clinic_id'        => intval( $_POST['clinic_id']    ?? 0 ),
@@ -394,29 +440,37 @@ function hm_ajax_create_appointment() {
         'notes'            => sanitize_textarea_field( $_POST['notes']     ?? '' ),
         'created_by'       => get_current_user_id(),
     ] );
-    $new_id = $last_insert_id /* TODO: Get this from HearMed_DB::insert() return value */;
-    HearMed_Portal::log( 'created', 'appointment', $new_id, [
+    HearMed_Portal::log( 'created', 'appointment', $new_id ?: 0, [
         'patient_id' => intval( $_POST['patient_id'] ?? 0 ),
         'date'       => sanitize_text_field( $_POST['appointment_date'] ),
     ] );
     wp_send_json_success( [ 'id' => $new_id ] );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] create_appointment error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 function hm_ajax_update_appointment() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
-        // PostgreSQL only - no $wpdb needed
+    try {
     $t   = HearMed_Portal::table( 'appointments' );
     $id  = intval( $_POST['appointment_id'] );
     $sid = intval( $_POST['service_id'] );
-    $dur = intval( // TODO: USE PostgreSQL: Get from table columns
-    get_post_meta( $sid, 'duration', true ) ) ?: 30;
+    // Get duration from PostgreSQL services table
+    $dur = intval( $_POST['duration'] ?? 0 );
+    if ( ! $dur && $sid ) {
+        $svc_dur = HearMed_DB::get_var( "SELECT duration FROM hearmed_reference.services WHERE id = $1", [ $sid ] );
+        $dur = intval( $svc_dur ) ?: 30;
+    }
+    if ( ! $dur ) $dur = 30;
     $st  = sanitize_text_field( $_POST['start_time'] );
     $sp  = explode( ':', $st );
     $em  = intval( $sp[0] ) * 60 + intval( $sp[1] ) + $dur;
     $et  = sprintf( '%02d:%02d', floor( $em / 60 ), $em % 60 );
     $data = [
-        'updated_at'     => current_time( 'mysql' ),
+        'updated_at'       => current_time( 'mysql' ),
         'patient_id'       => intval( $_POST['patient_id']   ?? 0 ),
         'dispenser_id'     => intval( $_POST['dispenser_id'] ),
         'clinic_id'        => intval( $_POST['clinic_id']    ?? 0 ),
@@ -432,12 +486,16 @@ function hm_ajax_update_appointment() {
     HearMed_DB::update( $t, $data, [ 'id' => $id ] );
     HearMed_Portal::log( 'updated', 'appointment', $id );
     wp_send_json_success( [ 'id' => $id ] );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] update_appointment error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 function hm_ajax_delete_appointment() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
-        // PostgreSQL only - no $wpdb needed
+    try {
     if ( HearMed_Portal::setting( 'require_cancel_reason', '1' ) === '1' ) {
         if ( empty( $_POST['reason'] ) ) { wp_send_json_error( 'Reason required' ); return; }
     }
@@ -445,28 +503,40 @@ function hm_ajax_delete_appointment() {
     HearMed_Portal::log( 'cancelled', 'appointment', $id, [ 'reason' => sanitize_text_field( $_POST['reason'] ?? '' ) ] );
     HearMed_DB::delete( HearMed_Portal::table( 'appointments' ), [ 'id' => $id ] );
     wp_send_json_success();
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] delete_appointment error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
-
 // ================================================================
 // HOLIDAYS — GET, SAVE, DELETE
 // ================================================================
 function hm_ajax_get_holidays() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-        // PostgreSQL only - no $wpdb needed
-    $t = HearMed_Portal::table( 'holidays' );
-    if ( HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) === null ) { wp_send_json_success( [] ); return; }
-    $dp   = intval( $_POST['dispenser_id'] ?? 0 );
-    $w    = $dp ? HearMed_DB::get_results(   "WHERE dispenser_id=%d", $dp ) : "";
-    $rows = HearMed_DB::get_results( "SELECT * FROM `$t` $w ORDER BY start_date DESC" );
-    foreach ( $rows as &$r ) $r->dispenser_name = get_the_title( $r->dispenser_id );
+    try {
+    $dp = intval( $_POST['dispenser_id'] ?? 0 );
+    $sql = "SELECT h.*, (s.first_name || ' ' || s.last_name) AS dispenser_name
+            FROM hearmed_core.staff_absences h
+            LEFT JOIN hearmed_reference.staff s ON h.dispenser_id = s.id";
+    $params = [];
+    if ( $dp ) {
+        $sql .= " WHERE h.dispenser_id = $1";
+        $params[] = $dp;
+    }
+    $sql .= " ORDER BY h.start_date DESC";
+    $rows = HearMed_DB::get_results( $sql, $params );
     wp_send_json_success( $rows );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] get_holidays error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 function hm_ajax_save_holiday() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
-        // PostgreSQL only - no $wpdb needed
-    $t  = HearMed_Portal::table( 'holidays' );
+    try {
+    $t  = HearMed_Portal::table( 'staff_absences' );
     $id = intval( $_POST['id'] ?? 0 );
     $d  = [
         'dispenser_id' => intval( $_POST['dispenser_id'] ),
@@ -476,19 +546,31 @@ function hm_ajax_save_holiday() {
         'end_date'     => sanitize_text_field( $_POST['end_date'] ),
         'start_time'   => sanitize_text_field( $_POST['start_time'] ?? '09:00' ),
         'end_time'     => sanitize_text_field( $_POST['end_time']   ?? '17:00' ),
-        'updated_at' => current_time( 'mysql' ),
+        'updated_at'   => current_time( 'mysql' ),
     ];
-    if ( $id ) { HearMed_DB::update( $t, $d, [ 'id' => $id ] ); }
-    else { $d['created_at'] = current_time( 'mysql' ); $d['cct_status'] = 'publish'; HearMed_DB::insert( $t, $d ); $id = $last_insert_id /* TODO: Get this from HearMed_DB::insert() return value */; }
+    if ( $id ) {
+        HearMed_DB::update( $t, $d, [ 'id' => $id ] );
+    } else {
+        $d['created_at'] = current_time( 'mysql' );
+        $id = HearMed_DB::insert( $t, $d );
+    }
     wp_send_json_success( [ 'id' => $id ] );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] save_holiday error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 function hm_ajax_delete_holiday() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
-        // PostgreSQL only - no $wpdb needed
-    HearMed_DB::delete( HearMed_Portal::table( 'holidays' ), [ 'id' => intval( $_POST['id'] ) ] );
+    try {
+    HearMed_DB::delete( HearMed_Portal::table( 'staff_absences' ), [ 'id' => intval( $_POST['id'] ) ] );
     wp_send_json_success();
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] delete_holiday error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 // ================================================================
@@ -496,22 +578,27 @@ function hm_ajax_delete_holiday() {
 // ================================================================
 function hm_ajax_get_blockouts() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-        // PostgreSQL only - no $wpdb needed
-    $t = HearMed_Portal::table( 'blockouts' );
-    if ( HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $t ) ) === null ) { wp_send_json_success( [] ); return; }
-    $rows = HearMed_DB::get_results( "SELECT * FROM `$t` ORDER BY start_date DESC" );
-    foreach ( $rows as &$r ) {
-        $r->service_name   = get_the_title( $r->service_id );
-        $r->dispenser_name = $r->dispenser_id ? get_the_title( $r->dispenser_id ) : 'All';
-    }
+    try {
+    $rows = HearMed_DB::get_results(
+        "SELECT b.*, sv.service_name,
+                CASE WHEN b.dispenser_id > 0 THEN (s.first_name || ' ' || s.last_name) ELSE 'All' END AS dispenser_name
+         FROM hearmed_core.calendar_blockouts b
+         LEFT JOIN hearmed_reference.services sv ON b.service_id = sv.id
+         LEFT JOIN hearmed_reference.staff s ON b.dispenser_id = s.id
+         ORDER BY b.start_date DESC"
+    );
     wp_send_json_success( $rows );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] get_blockouts error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 function hm_ajax_save_blockout() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
-        // PostgreSQL only - no $wpdb needed
-    $t  = HearMed_Portal::table( 'blockouts' );
+    try {
+    $t  = HearMed_Portal::table( 'calendar_blockouts' );
     $id = intval( $_POST['id'] ?? 0 );
     $d  = [
         'service_id'   => intval( $_POST['service_id'] ),
@@ -520,19 +607,31 @@ function hm_ajax_save_blockout() {
         'end_date'     => sanitize_text_field( $_POST['end_date'] ),
         'start_time'   => sanitize_text_field( $_POST['start_time'] ?? '09:00' ),
         'end_time'     => sanitize_text_field( $_POST['end_time']   ?? '17:00' ),
-        'updated_at' => current_time( 'mysql' ),
+        'updated_at'   => current_time( 'mysql' ),
     ];
-    if ( $id ) { HearMed_DB::update( $t, $d, [ 'id' => $id ] ); }
-    else { $d['created_at'] = current_time( 'mysql' ); $d['cct_status'] = 'publish'; HearMed_DB::insert( $t, $d ); $id = $last_insert_id /* TODO: Get this from HearMed_DB::insert() return value */; }
+    if ( $id ) {
+        HearMed_DB::update( $t, $d, [ 'id' => $id ] );
+    } else {
+        $d['created_at'] = current_time( 'mysql' );
+        $id = HearMed_DB::insert( $t, $d );
+    }
     wp_send_json_success( [ 'id' => $id ] );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] save_blockout error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 function hm_ajax_delete_blockout() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
-        // PostgreSQL only - no $wpdb needed
-    HearMed_DB::delete( HearMed_Portal::table( 'blockouts' ), [ 'id' => intval( $_POST['id'] ) ] );
+    try {
+    HearMed_DB::delete( HearMed_Portal::table( 'calendar_blockouts' ), [ 'id' => intval( $_POST['id'] ) ] );
     wp_send_json_success();
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] delete_blockout error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 // ================================================================
@@ -541,32 +640,42 @@ function hm_ajax_delete_blockout() {
 function hm_ajax_save_service() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    try {
     $id   = intval( $_POST['id'] ?? 0 );
     $name = sanitize_text_field( $_POST['name'] );
-    if ( $id ) wp_update_post( [ 'ID' => $id, 'post_title' => $name ] );
-    else        $id = // TODO: USE PostgreSQL: HearMed_DB::insert()
-    wp_insert_post( [ 'post_type' => 'service', 'post_title' => $name, 'post_status' => 'publish' ] );
-    $meta = [
-        'colour'               => $_POST['colour']               ?? '#3B82F6',
-        'service_colour'       => $_POST['colour']               ?? '#3B82F6',
-        'duration'             => intval( $_POST['duration']       ?? 30 ),
-        'sales_opportunity'    => $_POST['sales_opportunity']    ?? 'no',
-        'income_bearing'       => $_POST['income_bearing']       ?? 'no',
-        'appointment_category' => $_POST['appointment_category'] ?? 'Normal',
-        'send_reminders'       => $_POST['reminders']            ?? '0',
-        'send_confirmation'    => $_POST['confirmation']         ?? 'no',
-        'reminders'            => $_POST['reminders']            ?? '0',
-        'confirmation'         => $_POST['confirmation']         ?? 'no',
+    $d = [
+        'service_name'         => $name,
+        'colour'               => sanitize_text_field( $_POST['colour'] ?? '#3B82F6' ),
+        'duration'             => intval( $_POST['duration'] ?? 30 ),
+        'sales_opportunity'    => ( $_POST['sales_opportunity'] ?? 'no' ) === 'yes',
+        'income_bearing'       => ( $_POST['income_bearing'] ?? 'no' ) === 'yes',
+        'appointment_category' => sanitize_text_field( $_POST['appointment_category'] ?? 'Normal' ),
+        'updated_at'           => current_time( 'mysql' ),
     ];
-    foreach ( $meta as $k => $v ) update_post_meta( $id, $k, sanitize_text_field( $v ) );
+    if ( $id ) {
+        HearMed_DB::update( 'services', $d, [ 'id' => $id ] );
+    } else {
+        $d['created_at'] = current_time( 'mysql' );
+        $d['is_active'] = true;
+        $id = HearMed_DB::insert( 'services', $d );
+    }
     wp_send_json_success( [ 'id' => $id ] );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] save_service error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 function hm_ajax_delete_service() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
-    wp_trash_post( intval( $_POST['id'] ) );
+    try {
+    HearMed_DB::update( 'services', [ 'is_active' => false ], [ 'id' => intval( $_POST['id'] ) ] );
     wp_send_json_success();
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] delete_service error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 // ================================================================
@@ -575,11 +684,18 @@ function hm_ajax_delete_service() {
 function hm_ajax_save_dispenser_order() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    try {
     $order = json_decode( stripslashes( $_POST['order'] ), true );
     if ( is_array( $order ) ) {
-        foreach ( $order as $i => $did ) update_post_meta( intval( $did ), 'calendar_order', $i + 1 );
+        foreach ( $order as $i => $did ) {
+            HearMed_DB::update( 'staff', [ 'calendar_order' => $i + 1 ], [ 'id' => intval( $did ) ] );
+        }
     }
     wp_send_json_success();
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] save_dispenser_order error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 // ================================================================

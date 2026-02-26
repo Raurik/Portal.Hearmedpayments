@@ -148,9 +148,9 @@ class HearMed_Enqueue {
         // Load calendar settings from PostgreSQL
         $settings = [];
         try {
-            $settings_row = HearMed_DB::get_row( "SELECT * FROM hearmed_core.calendar_settings LIMIT 1", ARRAY_A );
+            $settings_row = HearMed_DB::get_row( "SELECT * FROM hearmed_core.calendar_settings LIMIT 1" );
             if ( $settings_row ) {
-                $settings = $settings_row;
+                $settings = (array) $settings_row;
             }
         } catch ( Throwable $e ) {
             error_log( '[HearMed] Could not load calendar settings: ' . $e->getMessage() );
