@@ -615,7 +615,15 @@
 }
 
 #hm-bell-svg {
-    transition: filter 0.2s;
+    transition: filter 0.2s, stroke 0.2s;
+    transform-origin: 50% 15%;
+}
+
+/* Hover: glow + shake */
+#hm-bell-link:hover #hm-bell-svg {
+    stroke: #F5C218;
+    filter: drop-shadow(0 0 6px rgba(245,194,24,0.5));
+    animation: hm-bell-ring 0.8s ease;
 }
 
 /* Gold drop-shadow when unread */
