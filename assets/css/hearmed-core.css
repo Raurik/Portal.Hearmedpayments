@@ -11,44 +11,81 @@
    CSS VARIABLES (DESIGN TOKENS)
    ============================================================ */
 
-#hm-app {
-  --hm-teal: #0BB4C4;
-  --hm-teal-hover: #0a9eac;
-  --hm-teal-light: #f0fdfa;
+:root {
+  /* ── Brand ── */
+  --hm-teal:        #0BB4C4;
+  --hm-teal-hover:  #0a9eac;
+  --hm-teal-light:  #e6f7f9;
+  --hm-navy:        #151B33;
+  --hm-navy-light:  #1e293b;
 
-  --hm-navy: #151B33;
-  --hm-navy-light: #1e293b;
+  /* ── Typography ── */
+  --hm-font-title: 'Cormorant Garamond', serif;
+  --hm-font-sub:   'Bricolage Grotesque', sans-serif;
+  --hm-font:       'Source Sans 3', sans-serif;
+  --hm-font-btn:   'Plus Jakarta Sans', sans-serif;
+  --hm-font-mono:  'SF Mono', 'Fira Code', Consolas, monospace;
 
-  --hm-text: #334155;
-  --hm-text-light: #64748b;
-  --hm-text-muted: #94a3b8;
-  --hm-text-faint: #b8c4ce;
+  --hm-font-size-xs:   11px;
+  --hm-font-size-sm:   13px;
+  --hm-font-size-base: 14px;
+  --hm-font-size-lg:   16px;
+  --hm-font-size-xl:   18px;
+  --hm-font-size-2xl:  24px;
 
-  --hm-border: #e2e8f0;
+  /* ── Text colours ── */
+  --hm-text:        #334155;
+  --hm-text-light:  #64748b;
+  --hm-text-muted:  #94a3b8;
+  --hm-text-faint:  #cbd5e0;
+
+  /* ── Backgrounds ── */
+  --hm-bg:          #ffffff;
+  --hm-bg-alt:      #f8fafc;
+  --hm-bg-hover:    #f1f5f9;
+  --hm-bg-card:     #ffffff;
+  --hm-bg-input:    #ffffff;
+
+  /* ── Borders ── */
+  --hm-border:       #e2e8f0;
   --hm-border-light: #f1f5f9;
 
-  --hm-bg: #fff;
-  --hm-bg-card: #ffffff;
-  --hm-bg-input: #ffffff;
+  /* ── Status colours ── */
+  --hm-green:   #10b981;
+  --hm-red:     #ef4444;
+  --hm-amber:   #f59e0b;
+  --hm-blue:    #3b82f6;
+  --hm-success: #10b981;
+  --hm-warning: #f59e0b;
+  --hm-error:   #ef4444;
+  --hm-info:    #3b82f6;
 
-  --hm-radius-sm: 4px;
-  --hm-radius: 6px;
-  --hm-radius-md: 8px;
-  --hm-radius-lg: 12px;
-  --hm-radius-xl: 16px;
+  /* ── Spacing ── */
+  --hm-space-xs:  4px;
+  --hm-space-sm:  8px;
+  --hm-space-md:  16px;
+  --hm-space-lg:  24px;
+  --hm-space-xl:  32px;
+  --hm-space-2xl: 48px;
 
-  --hm-shadow-sm: 0 1px 4px rgba(21,27,51,0.04);
-  --hm-shadow: 0 1px 8px rgba(21,27,51,0.04);
-  --hm-shadow-md: 0 4px 16px rgba(21,27,51,0.07);
-  --hm-shadow-lg: 0 12px 40px rgba(21,27,51,0.12);
+  /* ── Radii ── */
+  --hm-radius-sm:   4px;
+  --hm-radius:      6px;
+  --hm-radius-md:   8px;
+  --hm-radius-lg:   12px;
+  --hm-radius-xl:   16px;
+  --hm-radius-full: 9999px;
 
-  --hm-green: #10b981;
-  --hm-red: #ef4444;
-  --hm-amber: #f59e0b;
-  --hm-blue: #3b82f6;
+  /* ── Shadows ── */
+  --hm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --hm-shadow:    0 1px 3px rgba(0, 0, 0, 0.1);
+  --hm-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --hm-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --hm-shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
 
-  --hm-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
-  --hm-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  /* ── Transitions ── */
+  --hm-transition:      all 0.15s ease;
+  --hm-transition-slow: all 0.3s ease;
 }
 
 
