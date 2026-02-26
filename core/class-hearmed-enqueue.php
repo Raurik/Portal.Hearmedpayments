@@ -254,6 +254,17 @@ class HearMed_Enqueue {
             }
         }
 
+        // Fallback: check Elementor data for shortcodes placed via widgets/templates
+        $elementor_data = get_post_meta( $post->ID, '_elementor_data', true );
+        if ( ! empty( $elementor_data ) && is_string( $elementor_data ) ) {
+            foreach ( $portal_shortcodes as $shortcode ) {
+                if ( strpos( $elementor_data, $shortcode ) !== false ) {
+                    self::$is_portal_page = true;
+                    return true;
+                }
+            }
+        }
+
         self::$is_portal_page = false;
         return false;
     }
@@ -396,11 +407,25 @@ class HearMed_Enqueue {
             return;
         }
         
-        // Check if any shortcode is present
+        // Check if any shortcode is present in post_content
         foreach ( $shortcodes as $shortcode ) {
             if ( has_shortcode( $content, $shortcode ) ) {
                 $this->load_module( $module );
                 return;
+            }
+        }
+
+        // Fallback: check Elementor data for shortcodes in widgets/templates
+        global $post;
+        if ( $post ) {
+            $elementor_data = get_post_meta( $post->ID, '_elementor_data', true );
+            if ( ! empty( $elementor_data ) && is_string( $elementor_data ) ) {
+                foreach ( $shortcodes as $shortcode ) {
+                    if ( strpos( $elementor_data, $shortcode ) !== false ) {
+                        $this->load_module( $module );
+                        return;
+                    }
+                }
             }
         }
     }
