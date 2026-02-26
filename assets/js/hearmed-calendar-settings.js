@@ -15,7 +15,7 @@ var SettingsPage = {
         var fullName = $('#hs-fullName').prop('checked');
         var name = fullName ? 'Piet Pompies' : 'Piet';
         var outcome = $('input[name="outcome_style"]:checked').val() || 'default';
-        var bg = $('#hs-appt-bg').val() || '#0BB4C4';
+        var bg = $('#hs-appt-bg').val() || 'var(--hm-teal)';
         var font = $('#hs-appt-font').val() || '#ffffff';
         var badge = $('#hs-appt-badge').val() || '#3b82f6';
         var badgeFont = $('#hs-appt-badge-font').val() || '#ffffff';

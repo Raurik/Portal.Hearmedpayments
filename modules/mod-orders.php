@@ -1041,14 +1041,14 @@ class HearMed_Orders {
         <style>
             *{box-sizing:border-box}
             body{font-family:Arial,sans-serif;max-width:820px;margin:2rem auto;color:#151B33;font-size:13px}
-            h1{color:#151B33;margin-bottom:0.25rem} .teal{color:#0BB4C4}
+            h1{color:#151B33;margin-bottom:0.25rem} .teal{color:var(--hm-teal)}
             .sub{color:#64748b;font-size:12px;margin-bottom:2rem}
             .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem 1.5rem;margin-bottom:1.5rem}
             .grid div strong{display:block;font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
             table{width:100%;border-collapse:collapse;margin-top:1rem}
             th{background:#151B33;color:#fff;padding:7px 10px;text-align:left;font-size:11px;text-transform:uppercase}
             td{padding:8px 10px;border-bottom:1px solid #e2e8f0}
-            .badge{background:#0BB4C4;color:#fff;padding:1px 7px;border-radius:3px;font-size:11px;font-weight:bold}
+            .badge{background:var(--hm-teal);color:#fff;padding:1px 7px;border-radius:3px;font-size:11px;font-weight:bold}
             .notes{margin-top:1.5rem;padding:0.75rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px}
             .sign{margin-top:2.5rem;border-top:2px solid #151B33;padding-top:1.25rem}
             .sign-row{display:flex;gap:3rem;margin-top:0.75rem}

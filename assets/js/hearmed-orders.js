@@ -183,7 +183,7 @@
                     '<div class="hm-product-item" style="padding:9px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;">' +
                         '<div style="font-weight:600;font-size:.875rem;color:#1e293b;">' + escHtml(p.name) + '</div>' +
                         (sub ? '<div style="font-size:.78rem;color:#94a3b8;margin-top:2px;">' + escHtml(sub) + '</div>' : '') +
-                        '<div style="font-size:.8rem;color:#0BB4C4;margin-top:2px;">€' + (p.retail_price || 0).toFixed(2) + '</div>' +
+                        '<div style="font-size:.8rem;color:var(--hm-teal);margin-top:2px;">€' + (p.retail_price || 0).toFixed(2) + '</div>' +
                     '</div>'
                 );
                 $item.on('mouseenter', function () { $(this).css('background', '#f8fafc'); });
@@ -528,7 +528,7 @@
                 rows += '<tr data-order-id="' + o.id + '">' +
                     '<td>' + esc(o.patient_name) + '</td>' +
                     '<td><code>' + esc(o.patient_number) + '</code></td>' +
-                    '<td><a href="#" class="hm-order-detail-link" data-id="' + o.id + '" style="color:#0BB4C4;text-decoration:none;">' + esc(o.order_number) + '</a></td>' +
+                    '<td><a href="#" class="hm-order-detail-link" data-id="' + o.id + '" style="color:var(--hm-teal);text-decoration:none;">' + esc(o.order_number) + '</a></td>' +
                     '<td style="max-width:200px;white-space:normal;">' + esc(o.product_summary) + '</td>' +
                     '<td>' + eur(o.grand_total) + '</td>' +
                     '<td>' + (o.prsi_applicable ? '<span class="hm-badge hm-badge-teal">PRSI −' + eur(o.prsi_amount) + '</span>' : '—') + '</td>' +
@@ -711,7 +711,7 @@
                         '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#64748b;">Subtotal</span><span>' + eur(o.subtotal) + '</span></div>' +
                         '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#64748b;">Discount</span><span>−' + eur(o.discount) + '</span></div>' +
                         '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#64748b;">VAT</span><span>' + eur(o.vat_total) + '</span></div>' +
-                        (o.prsi_applicable ? '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#64748b;">PRSI</span><span style="color:#0BB4C4;">−' + eur(o.prsi_amount) + '</span></div>' : '') +
+                        (o.prsi_applicable ? '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#64748b;">PRSI</span><span style="color:var(--hm-teal);">−' + eur(o.prsi_amount) + '</span></div>' : '') +
                         '<div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:700;"><span>Grand Total</span><span>' + eur(o.grand_total) + '</span></div>' +
                     '</div></div>' +
                     margin +

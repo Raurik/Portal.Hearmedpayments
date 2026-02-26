@@ -89,11 +89,11 @@ class HearMed_Admin_Roles {
         .hmr-perm-count{font-size:11px;color:#64748b;white-space:nowrap;}
         .hmr-acts{display:flex;gap:4px;}
         .hmr-acts button{border:none;background:none;cursor:pointer;font-size:12px;padding:4px 8px;border-radius:6px;color:#64748b;transition:all .15s;}
-        .hmr-acts button:hover{background:#f1f5f9;color:var(--hm-primary,#0BB4C4);}
+        .hmr-acts button:hover{background:#f1f5f9;color:var(--hm-primary,var(--hm-teal));}
         .hmr-acts button.hmr-del:hover{color:#ef4444;}
         .hm-perms-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px 16px;max-height:300px;overflow-y:auto;padding:8px 12px;border:1px solid var(--hm-border,#e2e8f0);border-radius:8px;background:#f8fafc;}
         .hm-perms-grid label{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:4px 0;color:#334155;}
-        .hm-perms-grid label input{accent-color:var(--hm-primary,#0BB4C4);width:14px;height:14px;margin:0;}
+        .hm-perms-grid label input{accent-color:var(--hm-primary,var(--hm-teal));width:14px;height:14px;margin:0;}
         .hm-perm-group-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;grid-column:1/-1;margin-top:6px;padding-bottom:2px;border-bottom:1px solid #e2e8f0;}
         .hm-perm-group-label:first-child{margin-top:0;}
         @media(max-width:700px){.hm-perms-grid{grid-template-columns:1fr 1fr;}}

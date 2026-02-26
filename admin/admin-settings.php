@@ -354,8 +354,8 @@ class HearMed_Admin_Settings {
         ob_start(); ?>
         <style>
         .hm-ft-blocks{display:flex;flex-wrap:wrap;gap:4px 12px;margin-bottom:10px;}
-        .hm-ft-block{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--hm-primary,#0BB4C4);}
-        .hm-ft-block .hm-ft-x{cursor:pointer;opacity:.5;font-size:13px;line-height:1;color:var(--hm-primary,#0BB4C4);}
+        .hm-ft-block{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--hm-primary,var(--hm-teal));}
+        .hm-ft-block .hm-ft-x{cursor:pointer;opacity:.5;font-size:13px;line-height:1;color:var(--hm-primary,var(--hm-teal));}
         .hm-ft-block .hm-ft-x:hover{opacity:1;}
         .hm-ft-add-wrap{display:flex;gap:6px;align-items:center;}
         .hm-ft-add-wrap input{flex:1;}

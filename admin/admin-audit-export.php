@@ -154,7 +154,7 @@ class HearMed_Admin_AuditLog {
         @media(max-width:800px){.hm-export-grid{grid-template-columns:1fr;}}
         .hm-export-checks{display:flex;flex-wrap:wrap;gap:4px 8px;}
         .hm-export-checks label{display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:3px 0;}
-        .hm-export-checks label input{accent-color:var(--hm-primary,#0BB4C4);width:14px;height:14px;margin:0;}
+        .hm-export-checks label input{accent-color:var(--hm-primary,var(--hm-teal));width:14px;height:14px;margin:0;}
         </style>
         <div class="hm-admin">
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>

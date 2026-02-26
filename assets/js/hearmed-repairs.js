@@ -139,7 +139,7 @@
 
             h += '<tr' + rowClass + '>' +
                 '<td><code class="hm-pt-hnum">' + esc(x.repair_number || '—') + '</code></td>' +
-                '<td><a href="/patients/?id=' + x.patient_id + '" style="color:#0BB4C4;">' + esc(x.patient_name) + '</a>' + (x.patient_number ? ' <span style="color:#94a3b8;font-size:11px;">' + esc(x.patient_number) + '</span>' : '') + '</td>' +
+                '<td><a href="/patients/?id=' + x.patient_id + '" style="color:var(--hm-teal);">' + esc(x.patient_name) + '</a>' + (x.patient_number ? ' <span style="color:#94a3b8;font-size:11px;">' + esc(x.patient_number) + '</span>' : '') + '</td>' +
                 '<td style="font-size:12px;">' + esc(x.clinic_name || '—') + '</td>' +
                 '<td>' + esc(x.product_name || '—') + '</td>' +
                 '<td>' + esc(x.manufacturer_name || '—') + '</td>' +

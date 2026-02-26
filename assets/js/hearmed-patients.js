@@ -97,7 +97,7 @@ function initGlobalSearch(){
             var h='';
             if(!r.success||!r.data||!r.data.length)h='<div style="padding:12px 16px;text-align:center;color:#94a3b8;font-size:13px;">No patients found</div>';
             else for(var i=0;i<r.data.length;i++){var p=r.data[i];h+='<a href="'+PG+'?id='+p.id+'" style="display:block;padding:10px 16px;text-decoration:none;color:#151B33;border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background=\'#f0fdfa\'" onmouseout="this.style.background=\'#fff\'"><span style="display:block;font-weight:500;font-size:14px;">'+esc(p.name)+'</span><span style="display:block;font-size:12px;color:#94a3b8;">'+esc(p.patient_number||'')+(p.phone?' · '+esc(p.phone):'')+'</span></a>';}
-            h+='<a href="#" id="hm-gsr-add" style="display:block;padding:12px 16px;text-align:center;color:#0BB4C4;font-size:13px;font-weight:500;text-decoration:none;border-top:1px solid #edf2f7;" onmouseover="this.style.background=\'#f0fdfa\'" onmouseout="this.style.background=\'\'">+ Add new patient</a>';
+            h+='<a href="#" id="hm-gsr-add" style="display:block;padding:12px 16px;text-align:center;color:var(--hm-teal);font-size:13px;font-weight:500;text-decoration:none;border-top:1px solid #edf2f7;" onmouseover="this.style.background=\'#f0fdfa\'" onmouseout="this.style.background=\'\'">+ Add new patient</a>';
             posDD();$dd.html(h).show();
         });
     }
@@ -216,7 +216,7 @@ function showCreateModal(){
                     '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" id="cp-msms"> SMS marketing</label>'+
                     '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" id="cp-mphone"> Phone marketing</label>'+
                 '</div>'+
-                '<div style="margin-top:16px;padding:16px;background:#f0fdfa;border:1px solid #0BB4C4;border-radius:8px;">'+
+                '<div style="margin-top:16px;padding:16px;background:#f0fdfa;border:1px solid var(--hm-teal);border-radius:8px;">'+
                     '<p style="margin:0 0 10px;font-size:13px;font-weight:500;color:#151B33;">GDPR Consent — Required</p>'+
                     '<label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;">'+
                         '<input type="checkbox" id="cp-gdpr" style="margin-top:2px;flex-shrink:0;">'+
@@ -348,8 +348,8 @@ function initProfile(){
     /* ── OVERVIEW ── */
     function loadOverview($c){
         var p=patient,s=p.stats;
-        var fh=p.has_finance?'<div class="hm-overview-card"><h3>Outstanding Balance</h3><div style="font-size:24px;font-weight:500;color:'+(s.balance>0?'#e53e3e':'#0BB4C4')+';">'+euro(s.balance)+'</div><div style="font-size:12px;color:#94a3b8;margin-top:4px;">Revenue: '+euro(s.revenue)+' · Paid: '+euro(s.payments)+'</div><a href="#" class="hm-ov-tab" data-tab="invoices" style="font-size:13px;color:#0BB4C4;text-decoration:none;display:block;margin-top:8px;">View invoices →</a></div>':'';
-        var rh='';if(p.annual_review_date){var rc=p.review_status==='overdue'?'#e53e3e':p.review_status==='soon'?'#d97706':'#0BB4C4';var rl=p.review_status==='overdue'?'Overdue '+Math.abs(p.review_days)+'d':'Review in '+p.review_days+'d';rh='<div class="hm-overview-card"><h3>Annual Review</h3><div style="font-size:14px;">'+fmtDate(p.annual_review_date)+'</div><div style="font-size:13px;color:'+rc+';margin-top:4px;">'+rl+'</div></div>';}
+        var fh=p.has_finance?'<div class="hm-overview-card"><h3>Outstanding Balance</h3><div style="font-size:24px;font-weight:500;color:'+(s.balance>0?'#e53e3e':'var(--hm-teal)')+';">'+euro(s.balance)+'</div><div style="font-size:12px;color:#94a3b8;margin-top:4px;">Revenue: '+euro(s.revenue)+' · Paid: '+euro(s.payments)+'</div><a href="#" class="hm-ov-tab" data-tab="invoices" style="font-size:13px;color:var(--hm-teal);text-decoration:none;display:block;margin-top:8px;">View invoices →</a></div>':'';
+        var rh='';if(p.annual_review_date){var rc=p.review_status==='overdue'?'#e53e3e':p.review_status==='soon'?'#d97706':'var(--hm-teal)';var rl=p.review_status==='overdue'?'Overdue '+Math.abs(p.review_days)+'d':'Review in '+p.review_days+'d';rh='<div class="hm-overview-card"><h3>Annual Review</h3><div style="font-size:14px;">'+fmtDate(p.annual_review_date)+'</div><div style="font-size:13px;color:'+rc+';margin-top:4px;">'+rl+'</div></div>';}
         $c.html('<div class="hm-tab-section"><div class="hm-overview-grid">'+
             '<div class="hm-overview-card" id="hm-ov-aids"><h3>Current Hearing Aids</h3><div style="color:#94a3b8;font-size:13px;">Loading…</div></div>'+
             '<div class="hm-overview-card" id="hm-ov-appts"><h3>Appointments</h3><div style="color:#94a3b8;font-size:13px;">Loading…</div></div>'+
@@ -495,10 +495,10 @@ function initProfile(){
     function loadNotes($c){
         $.post(_hm.ajax,{action:'hm_get_patient_notes',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
-            var n=r.data,tc={clinical:'#0BB4C4',admin:'#64748b',cancellation:'#e53e3e',system:'#3b82f6','follow-up':'#d97706',manual:'#0BB4C4'};
+            var n=r.data,tc={clinical:'var(--hm-teal)',admin:'#64748b',cancellation:'#e53e3e',system:'#3b82f6','follow-up':'#d97706',manual:'var(--hm-teal)'};
             var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Notes ('+n.length+')</h3><button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-add-note-btn">+ Add Note</button></div>';
             if(!n.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.note+'</div><div class="hm-empty-text">No notes</div></div>';
-            else n.forEach(function(x){var c=tc[x.note_type.toLowerCase()]||'#0BB4C4';var pinCls=x.is_pinned?' hm-note-pinned':'';var pinIcon=x.is_pinned?'📌 ':'';h+='<div class="hm-note-card'+pinCls+'" style="border-left-color:'+c+';">'+(x.is_pinned?'<div class="hm-note-pin-badge">📌 Pinned</div>':'')+'<div class="hm-note-type"><span class="hm-badge hm-badge--sm" style="background:'+c+';color:#fff;">'+esc(x.note_type)+'</span></div><div class="hm-note-text">'+esc(x.note_text)+'</div><div style="display:flex;gap:16px;align-items:center;margin-top:8px;"><div class="hm-note-meta">By '+esc(x.created_by)+' at '+fmtDateTime(x.created_at)+'</div>'+(x.can_edit?'<a href="#" class="hm-pin-note" data-id="'+x._ID+'" data-pinned="'+(x.is_pinned?'1':'0')+'" style="font-size:12px;color:#d97706;">'+(x.is_pinned?'Unpin':'Pin')+'</a><a href="#" class="hm-edit-note" data-id="'+x._ID+'" data-text="'+esc(x.note_text)+'" data-type="'+esc(x.note_type)+'" style="font-size:12px;color:#0BB4C4;">Edit</a><a href="#" class="hm-delete-note" data-id="'+x._ID+'" style="font-size:12px;color:#e53e3e;">Delete</a>':'')+'</div></div>';});
+            else n.forEach(function(x){var c=tc[x.note_type.toLowerCase()]||'var(--hm-teal)';var pinCls=x.is_pinned?' hm-note-pinned':'';var pinIcon=x.is_pinned?'📌 ':'';h+='<div class="hm-note-card'+pinCls+'" style="border-left-color:'+c+';">'+(x.is_pinned?'<div class="hm-note-pin-badge">📌 Pinned</div>':'')+'<div class="hm-note-type"><span class="hm-badge hm-badge--sm" style="background:'+c+';color:#fff;">'+esc(x.note_type)+'</span></div><div class="hm-note-text">'+esc(x.note_text)+'</div><div style="display:flex;gap:16px;align-items:center;margin-top:8px;"><div class="hm-note-meta">By '+esc(x.created_by)+' at '+fmtDateTime(x.created_at)+'</div>'+(x.can_edit?'<a href="#" class="hm-pin-note" data-id="'+x._ID+'" data-pinned="'+(x.is_pinned?'1':'0')+'" style="font-size:12px;color:#d97706;">'+(x.is_pinned?'Unpin':'Pin')+'</a><a href="#" class="hm-edit-note" data-id="'+x._ID+'" data-text="'+esc(x.note_text)+'" data-type="'+esc(x.note_type)+'" style="font-size:12px;color:var(--hm-teal);">Edit</a><a href="#" class="hm-delete-note" data-id="'+x._ID+'" style="font-size:12px;color:#e53e3e;">Delete</a>':'')+'</div></div>';});
             $c.html(h+'</div>');
         });
         $c.off('click','#hm-add-note-btn').on('click','#hm-add-note-btn',function(){showNoteModal();});
@@ -685,24 +685,24 @@ function initProfile(){
                 // Show each side as its own selectable option
                 if(d.serial_left){
                     h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
-                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="left" data-name="'+esc(d.product_name)+' (Left)" style="width:18px;height:18px;accent-color:#0BB4C4;">'+
+                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="left" data-name="'+esc(d.product_name)+' (Left)" style="width:18px;height:18px;accent-color:var(--hm-teal);">'+
                         '<div><strong>'+esc(d.product_name)+' — LEFT</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · Serial: '+esc(d.serial_left)+'</div></div></label>';
                 }
                 if(d.serial_right){
                     h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
-                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="right" data-name="'+esc(d.product_name)+' (Right)" style="width:18px;height:18px;accent-color:#0BB4C4;">'+
+                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="right" data-name="'+esc(d.product_name)+' (Right)" style="width:18px;height:18px;accent-color:var(--hm-teal);">'+
                         '<div><strong>'+esc(d.product_name)+' — RIGHT</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · Serial: '+esc(d.serial_right)+'</div></div></label>';
                 }
                 // Also offer both as an option
                 if(d.serial_left && d.serial_right){
                     h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;background:#f0fdfa;">'+
-                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(d.product_name)+' (Both)" style="width:18px;height:18px;accent-color:#0BB4C4;">'+
+                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(d.product_name)+' (Both)" style="width:18px;height:18px;accent-color:var(--hm-teal);">'+
                         '<div><strong>'+esc(d.product_name)+' — BOTH SIDES</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · L: '+esc(d.serial_left)+' · R: '+esc(d.serial_right)+'</div></div></label>';
                 }
                 // If only one serial, no need for "both" option — the single side IS the device
                 if(!d.serial_left && !d.serial_right){
                     h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
-                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(d.product_name)+'" style="width:18px;height:18px;accent-color:#0BB4C4;">'+
+                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(d.product_name)+'" style="width:18px;height:18px;accent-color:var(--hm-teal);">'+
                         '<div><strong>'+esc(d.product_name)+'</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · No serial on file</div></div></label>';
                 }
             });

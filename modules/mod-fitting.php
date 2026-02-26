@@ -55,7 +55,7 @@ function hm_render_fitting_page() {
     .hm-stat{background:#fff;border-radius:10px;padding:14px 20px;flex:1;min-width:140px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(15,23,42,.03);}
     .hm-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;}
     .hm-stat-val{font-size:22px;font-weight:700;color:#0f172a;margin-top:2px;}
-    .hm-stat-val.teal{color:#0BB4C4;}
+    .hm-stat-val.teal{color:var(--hm-teal);}
     .hm-stat-val.amber{color:#d97706;}
     .hm-stat-val.green{color:#059669;}
 
@@ -85,12 +85,12 @@ function hm_render_fitting_page() {
     .hmf-fitting-date.none{color:#94a3b8;font-style:italic;}
 
     .hm-btn{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
-    .hm-btn-receive{background:#0BB4C4;color:#fff;}
+    .hm-btn-receive{background:var(--hm-teal);color:#fff;}
     .hm-btn-receive:hover{background:#0a9aa8;}
     .hm-btn-fitted{background:#059669;color:#fff;}
     .hm-btn-fitted:hover{background:#047857;}
     .hm-btn-receipt{background:#fff;color:#475569;border:1px solid #e2e8f0;}
-    .hm-btn-receipt:hover{background:#f8fafc;border-color:#0BB4C4;color:#0BB4C4;}
+    .hm-btn-receipt:hover{background:#f8fafc;border-color:var(--hm-teal);color:var(--hm-teal);}
 
     .hm-empty{text-align:center;padding:60px 20px;color:#94a3b8;font-size:13px;}
     .hm-empty-icon{font-size:32px;margin-bottom:8px;}
@@ -109,7 +109,7 @@ function hm_render_fitting_page() {
     .hm-form-group{margin-bottom:14px;}
     .hm-form-group label{display:block;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;}
     .hm-form-group input,.hm-form-group select,.hm-form-group textarea{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#1e293b;transition:border-color .15s;}
-    .hm-form-group input:focus,.hm-form-group select:focus{outline:none;border-color:#0BB4C4;box-shadow:0 0 0 3px rgba(11,180,196,.1);}
+    .hm-form-group input:focus,.hm-form-group select:focus{outline:none;border-color:var(--hm-teal);box-shadow:0 0 0 3px rgba(11,180,196,.1);}
     .hm-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 
     .hmf-serial-item{background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:10px;border:1px solid #f1f5f9;}
@@ -124,7 +124,7 @@ function hm_render_fitting_page() {
     .hmf-invoice-row span:first-child{color:#64748b;}
     .hmf-invoice-row span:last-child{color:#0f172a;font-weight:500;}
     .hmf-invoice-total{font-size:14px;font-weight:700;border-top:1px solid #e2e8f0;padding-top:6px;margin-top:4px;}
-    .hmf-invoice-total span:last-child{color:#0BB4C4;}
+    .hmf-invoice-total span:last-child{color:var(--hm-teal);}
 
     .hmf-prev-payments{margin:14px 0;}
     .hmf-prev-payments h4{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;margin:0 0 6px;}
@@ -137,10 +137,10 @@ function hm_render_fitting_page() {
     .hmf-toolbar{display:flex;align-items:center;gap:16px;padding:10px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:16px;}
     .hmf-toolbar-label{font-size:11px;font-weight:600;color:#475569;white-space:nowrap;}
     .hmf-toolbar select{padding:7px 30px 7px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;color:#1e293b;background:#fff;min-width:170px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color .15s;}
-    .hmf-toolbar select:focus{outline:none;border-color:#0BB4C4;box-shadow:0 0 0 2px rgba(11,180,196,.12);}
+    .hmf-toolbar select:focus{outline:none;border-color:var(--hm-teal);box-shadow:0 0 0 2px rgba(11,180,196,.12);}
     .hmf-toolbar-sep{width:1px;height:24px;background:#e2e8f0;}
     .hmf-toolbar-reset{padding:6px 14px;border:none;border-radius:6px;font-size:11px;font-weight:600;color:#64748b;background:#e2e8f0;cursor:pointer;transition:all .15s;}
-    .hmf-toolbar-reset:hover{background:#0BB4C4;color:#fff;}
+    .hmf-toolbar-reset:hover{background:var(--hm-teal);color:#fff;}
 
     /* Totals footer — clean summary strip */
     .hmf-summary{margin-top:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;}
@@ -1341,8 +1341,8 @@ function hm_ajax_fitting_receipt() {
 @media print { body { -webkit-print-color-adjust: exact; } .no-print { display: none !important; } }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: #1e293b; line-height: 1.5; padding: 30px; max-width: 700px; margin: 0 auto; }
-.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #0BB4C4; }
-.header h1 { font-size: 24px; color: #0BB4C4; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid var(--hm-teal); }
+.header h1 { font-size: 24px; color: var(--hm-teal); }
 .header-sub { font-size: 11px; color: #64748b; }
 .header-meta { text-align: right; font-size: 11px; color: #64748b; }
 .header-meta strong { color: #1e293b; display: block; }
@@ -1356,7 +1356,7 @@ th { background: #f8fafc; text-align: left; padding: 8px 10px; font-size: 10px; 
 td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
 .money { text-align: right; }
 tfoot td { font-weight: 600; border-bottom: none; }
-tfoot tr:last-child td { font-size: 14px; color: #0BB4C4; border-top: 2px solid #e2e8f0; }
+tfoot tr:last-child td { font-size: 14px; color: var(--hm-teal); border-top: 2px solid #e2e8f0; }
 .payments-section { background: #f0fdfa; border-radius: 6px; padding: 14px 16px; margin-bottom: 16px; }
 .payments-section h3 { font-size: 11px; font-weight: 600; color: #065f46; text-transform: uppercase; margin-bottom: 8px; }
 .pay-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #d1fae5; }
@@ -1365,7 +1365,7 @@ tfoot tr:last-child td { font-size: 14px; color: #0BB4C4; border-top: 2px solid 
 .serials span { font-family: monospace; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; }
 .footer { margin-top: 30px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
 .status-paid { display: inline-block; background: #d1fae5; color: #065f46; padding: 4px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-top: 4px; }
-.print-btn { position: fixed; top: 10px; right: 10px; padding: 10px 20px; background: #0BB4C4; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; z-index: 100; }
+.print-btn { position: fixed; top: 10px; right: 10px; padding: 10px 20px; background: var(--hm-teal); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; z-index: 100; }
 .print-btn:hover { background: #0a9aa8; }
 </style>
 </head>

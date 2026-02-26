@@ -291,7 +291,7 @@ class HearMed_Refunds {
 
                     h += '<tr>' +
                         '<td><code class="hm-mono">'+esc(x.credit_note_number)+'</code></td>' +
-                        '<td><a href="/patients/?id='+x.patient_id+'" style="color:#0BB4C4;">'+esc(x.patient_name)+'</a></td>' +
+                        '<td><a href="/patients/?id='+x.patient_id+'" style="color:var(--hm-teal);">'+esc(x.patient_name)+'</a></td>' +
                         '<td>'+typeBadge+'</td>' +
                         '<td style="font-weight:600;">'+amt+'</td>' +
                         '<td class="hm-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(x.reason)+'">'+esc(x.reason||'—')+'</td>' +

@@ -227,7 +227,7 @@ class HearMed_Repairs {
         <style>
             *{box-sizing:border-box}
             body{font-family:Arial,sans-serif;max-width:820px;margin:2rem auto;color:#151B33;font-size:13px}
-            h1{color:#151B33;margin-bottom:0.25rem} .teal{color:#0BB4C4}
+            h1{color:#151B33;margin-bottom:0.25rem} .teal{color:var(--hm-teal)}
             .sub{color:#64748b;font-size:12px;margin-bottom:2rem}
             .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem 1.5rem;margin-bottom:1.5rem}
             .grid div strong{display:block;font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}

@@ -173,7 +173,7 @@ function hm_ajax_get_clinics() {
         $d[] = [
             'id'             => (int) $p->id,
             'name'           => $p->clinic_name,
-            'clinic_colour'  => $p->clinic_color ?: '#0BB4C4',
+            'clinic_colour'  => $p->clinic_color ?: 'var(--hm-teal)',
             'text_colour'    => $extra['text_colour'],
             'is_active'      => (bool) $p->is_active,
         ];

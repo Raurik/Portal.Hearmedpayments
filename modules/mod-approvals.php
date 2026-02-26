@@ -41,7 +41,7 @@ function hm_render_approvals_page() {
     .hma-margin-good{background:#d1fae5;color:#065f46;}
     .hma-margin-warn{background:#fef3cd;color:#92400e;}
     .hma-margin-bad{background:#fee2e2;color:#991b1b;}
-    .hma-prsi{font-size:11px;color:#0BB4C4;font-weight:600;}
+    .hma-prsi{font-size:11px;color:var(--hm-teal);font-weight:600;}
     .hma-expand{color:#94a3b8;font-size:12px;transition:transform .2s;user-select:none;}
     .hma-expand.open{transform:rotate(180deg);}
     .hma-body{display:none;padding:0 18px 18px;border-top:1px solid #f1f5f9;}

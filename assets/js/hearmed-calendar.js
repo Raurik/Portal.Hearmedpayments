@@ -61,7 +61,7 @@ var Cal={
             hideCancelled:s.hide_cancelled!=='no',
             displayFull:s.display_full_name==='yes',
             enabledDays:(s.enabled_days||'mon,tue,wed,thu,fri').split(','),
-            appt_bg_color:s.appt_bg_color||'#0BB4C4',
+            appt_bg_color:s.appt_bg_color||'var(--hm-teal)',
             appt_font_color:s.appt_font_color||'#ffffff',
             appt_badge_color:s.appt_badge_color||'#3b82f6',
             appt_badge_font_color:s.appt_badge_font_color||'#ffffff',

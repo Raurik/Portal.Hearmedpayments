@@ -70,7 +70,7 @@ class HearMed_Admin_Clinics {
                 'clinic_phone'   => $row->phone ?? '',
                 'clinic_email'   => $row->email ?? '',
                 'eircode'        => $row->postcode ?? '',
-                'clinic_colour'  => $row->clinic_color ?: '#0BB4C4',
+                'clinic_colour'  => $row->clinic_color ?: 'var(--hm-teal)',
                 'text_colour'    => $extra['text_colour'],
                 'days_available' => $extra['days_available'],
                 'is_active'      => $row->is_active ? '1' : '0',
@@ -227,7 +227,7 @@ class HearMed_Admin_Clinics {
                 document.getElementById('hmc-phone').value = isEdit ? (data.clinic_phone || '') : '';
                 document.getElementById('hmc-email').value = isEdit ? (data.clinic_email || '') : '';
                 document.getElementById('hmc-eircode').value = isEdit ? (data.eircode || '') : '';
-                document.getElementById('hmc-colour').value = isEdit ? (data.clinic_colour || '#0BB4C4') : '#0BB4C4';
+                document.getElementById('hmc-colour').value = isEdit ? (data.clinic_colour || 'var(--hm-teal)') : 'var(--hm-teal)';
                 document.getElementById('hmc-text-colour').value = isEdit ? (data.text_colour || '#ffffff') : '#ffffff';
                 document.getElementById('hmc-active').checked = isEdit ? data.is_active === '1' : true;
 
@@ -253,7 +253,7 @@ class HearMed_Admin_Clinics {
                 document.getElementById('hmc-phone').value = '';
                 document.getElementById('hmc-email').value = '';
                 document.getElementById('hmc-eircode').value = '';
-                document.getElementById('hmc-colour').value = '#0BB4C4';
+                document.getElementById('hmc-colour').value = 'var(--hm-teal)';
                 document.getElementById('hmc-text-colour').value = '#ffffff';
                 document.getElementById('hmc-active').checked = true;
 
@@ -324,7 +324,7 @@ class HearMed_Admin_Clinics {
             'phone'        => sanitize_text_field($_POST['clinic_phone'] ?? ''),
             'email'        => sanitize_email($_POST['clinic_email'] ?? ''),
             'postcode'     => sanitize_text_field($_POST['eircode'] ?? ''),
-            'clinic_color' => sanitize_text_field($_POST['clinic_colour'] ?? '#0BB4C4'),
+            'clinic_color' => sanitize_text_field($_POST['clinic_colour'] ?? 'var(--hm-teal)'),
             'is_active'    => ($_POST['is_active'] ?? '1') === '1',
         ];
 

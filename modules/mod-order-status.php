@@ -67,7 +67,7 @@ function hm_render_order_status_page() {
     .hm-stat{background:#fff;border-radius:10px;padding:14px 20px;flex:1;min-width:140px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(15,23,42,.03);}
     .hm-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;}
     .hm-stat-val{font-size:22px;font-weight:700;color:#0f172a;margin-top:2px;}
-    .hm-stat-val.teal{color:#0BB4C4;}
+    .hm-stat-val.teal{color:var(--hm-teal);}
     .hm-stat-val.blue{color:#2563eb;}
     .hm-stat-val.amber{color:#d97706;}
     .hm-stat-val.red{color:#dc2626;}
@@ -98,10 +98,10 @@ function hm_render_order_status_page() {
     .hmos-class-ready{background:#dbeafe;color:#1e40af;}
 
     .hm-btn{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
-    .hm-btn-order{background:#0BB4C4;color:#fff;}
+    .hm-btn-order{background:var(--hm-teal);color:#fff;}
     .hm-btn-order:hover{background:#0a9aa8;}
     .hm-btn-pdf{background:#fff;color:#475569;border:1px solid #e2e8f0;}
-    .hm-btn-pdf:hover{background:#f8fafc;border-color:#0BB4C4;color:#0BB4C4;}
+    .hm-btn-pdf:hover{background:#f8fafc;border-color:var(--hm-teal);color:var(--hm-teal);}
 
     .hm-empty{text-align:center;padding:40px 20px;color:#94a3b8;font-size:13px;}
     .hm-empty-icon{font-size:32px;margin-bottom:8px;}
@@ -594,8 +594,8 @@ function hm_ajax_os_order_pdf() {
 @media print { body { -webkit-print-color-adjust: exact; } .no-print { display: none !important; } }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; color: #1e293b; line-height: 1.5; padding: 20px; }
-.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #0BB4C4; }
-.header h1 { font-size: 20px; color: #0BB4C4; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid var(--hm-teal); }
+.header h1 { font-size: 20px; color: var(--hm-teal); }
 .header-meta { text-align: right; font-size: 10px; color: #64748b; }
 .header-meta strong { color: #1e293b; }
 .section { margin-bottom: 16px; }
@@ -611,7 +611,7 @@ td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; font-size: 11px; }
 .mfr-name { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
 .mfr-contact { font-size: 10px; color: #475569; }
 .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 9px; color: #94a3b8; text-align: center; }
-.print-btn { position: fixed; top: 10px; right: 10px; padding: 10px 20px; background: #0BB4C4; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; z-index: 100; }
+.print-btn { position: fixed; top: 10px; right: 10px; padding: 10px 20px; background: var(--hm-teal); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; z-index: 100; }
 .print-btn:hover { background: #0a9aa8; }
 </style>
 </head>
