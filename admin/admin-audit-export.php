@@ -35,7 +35,7 @@ class HearMed_Admin_AuditLog {
 
         ob_start(); ?>
         <div class="hm-admin">
-            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+            <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
             <div class="hm-admin-hd">
                 <h2>Audit Log</h2>
                 <div style="display:flex;gap:8px;align-items:center;">
@@ -157,7 +157,7 @@ class HearMed_Admin_AuditLog {
         .hm-export-checks label input{accent-color:var(--hm-primary,var(--hm-teal));width:14px;height:14px;margin:0;}
         </style>
         <div class="hm-admin">
-            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+            <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
             <div class="hm-admin-hd"><h2>Data Export</h2></div>
 
             <div class="hm-export-grid">

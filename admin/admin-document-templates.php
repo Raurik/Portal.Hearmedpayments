@@ -141,7 +141,7 @@ class HearMed_Admin_Document_Templates {
         </style>
 
         <div class="hm-admin">
-            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+            <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
             <div class="hm-admin-hd">
                 <h2>Document Types & Templates</h2>
                 <button class="hm-btn hm-btn--primary" onclick="hmDocTypes.openAdd()">+ Add Document Type</button>
@@ -356,7 +356,7 @@ class HearMed_Admin_Document_Templates {
         </style>
 
         <div class="hm-admin">
-            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/document-types/")); ?>" class="hm-btn">&larr; Back to Document Types</a></div>
+            <a href="<?php echo esc_url(home_url("/document-types/")); ?>" class="hm-back">← Back to Document Types</a>
             <div class="hm-admin-hd">
                 <h2>Template: <?php echo esc_html($doc->name); ?></h2>
                 <button class="hm-btn hm-btn--primary" onclick="hmTemplateEditor.saveAll()" id="hm-te-save">Save Template</button>

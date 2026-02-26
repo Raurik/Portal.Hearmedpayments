@@ -94,7 +94,7 @@ class HearMed_Admin_Resources {
 
         ob_start(); ?>
         <div class="hm-admin" id="hm-resources-admin">
-            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+            <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
             <div class="hm-admin-hd">
                 <h2>Resources &amp; Equipment</h2>
                 <div style="display:flex;gap:8px;">

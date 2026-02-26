@@ -100,7 +100,7 @@ class HearMed_Admin_Roles {
         </style>
         <div id="hm-app" class="hm-calendar" data-module="admin" data-view="roles">
             <div class="hm-page">
-                <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+                <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
                 <div class="hm-page-header">
                     <div>
                         <h1 class="hm-page-title">Roles &amp; Permissions</h1>

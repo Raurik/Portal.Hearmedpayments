@@ -125,7 +125,7 @@ function hm_render_debug_page() {
 
     ?>
     <div class="hm-admin" id="hm-debug-wrap">
-        <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+        <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
         <div class="hm-admin-hd">
             <h2>Debug / Health Check</h2>
         </div>

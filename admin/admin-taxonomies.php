@@ -76,7 +76,7 @@ class HearMed_Admin_Taxonomies {
 
         ob_start(); ?>
         <div class="hm-admin">
-            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+            <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
             <div class="hm-admin-hd">
                 <h2><?php echo esc_html($cfg['title']); ?></h2>
                 <button class="hm-btn hm-btn--primary" onclick="hmTax.open('<?php echo esc_attr($tag); ?>')">+ Add <?php echo esc_html($cfg['singular']); ?></button>

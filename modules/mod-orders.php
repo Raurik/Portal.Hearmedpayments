@@ -248,7 +248,7 @@ class HearMed_Orders {
         <div class="hm-content hm-orders-create">
 
             <div class="hm-page-header">
-                <a href="<?php echo esc_url($base); ?>" class="hm-back-btn">← Orders</a>
+                <a href="<?php echo esc_url($base); ?>" class="hm-back">← Orders</a>
                 <h1 class="hm-page-title">New Order</h1>
                 <span class="hm-workflow-hint">Will be sent to C-Level for approval before supplier is contacted.</span>
             </div>
@@ -512,7 +512,7 @@ class HearMed_Orders {
         <div class="hm-content hm-order-view">
 
             <div class="hm-page-header">
-                <a href="<?php echo esc_url($base); ?>" class="hm-back-btn">← Orders</a>
+                <a href="<?php echo esc_url($base); ?>" class="hm-back">← Orders</a>
                 <h1 class="hm-page-title"><?php echo esc_html($order->order_number); ?></h1>
                 <?php echo self::status_badge($order->current_status); ?>
             </div>
@@ -797,7 +797,7 @@ class HearMed_Orders {
         ob_start(); ?>
         <div class="hm-content hm-serials-form">
             <div class="hm-page-header">
-                <a href="<?php echo esc_url($base.'?hm_action=view&order_id='.$order_id); ?>" class="hm-back-btn">← Order</a>
+                <a href="<?php echo esc_url($base.'?hm_action=view&order_id='.$order_id); ?>" class="hm-back">← Order</a>
                 <h1 class="hm-page-title">Serial Numbers</h1>
                 <span class="hm-workflow-hint"><?php echo esc_html($order->first_name.' '.$order->last_name); ?></span>
             </div>
@@ -923,7 +923,7 @@ class HearMed_Orders {
         ob_start(); ?>
         <div class="hm-content hm-complete-form">
             <div class="hm-page-header">
-                <a href="<?php echo esc_url($base.'?hm_action=view&order_id='.$order_id); ?>" class="hm-back-btn">← Order</a>
+                <a href="<?php echo esc_url($base.'?hm_action=view&order_id='.$order_id); ?>" class="hm-back">← Order</a>
                 <h1 class="hm-page-title">Record Fitting + Payment</h1>
             </div>
 

@@ -157,7 +157,7 @@ class HearMed_Admin_Appointment_Type_Detail {
         <div id="hm-app" class="hm-calendar" data-module="calendar" data-view="settings">
         <div class="hm-page" data-service-id="<?php echo $service_id; ?>">
 
-            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url('/appointment-types/')); ?>" class="hm-btn">&larr; Back</a></div>
+            <a href="<?php echo esc_url(home_url('/appointment-types/')); ?>" class="hm-back">← Back</a>
 
             <div class="hm-page-header">
                 <h1 class="hm-page-title"><?php echo esc_html($svc->service_name); ?></h1>

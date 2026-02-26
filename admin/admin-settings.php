@@ -154,7 +154,7 @@ class HearMed_Admin_Settings {
         ob_start(); ?>
         <style>.hm-secret-wrap{display:flex;gap:8px;align-items:center;}.hm-secret-wrap input{flex:1;}</style>
         <div class="hm-admin">
-            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+            <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
             <div class="hm-admin-hd">
                 <h2><?php echo esc_html($page['title']); ?></h2>
                 <?php if (!empty($page['fields'])): ?>
@@ -361,7 +361,7 @@ class HearMed_Admin_Settings {
         .hm-ft-add-wrap input{flex:1;}
         </style>
         <div class="hm-admin">
-            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+            <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
             <div class="hm-admin-hd">
                 <h2>Form &amp; Input Settings</h2>
                 <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
@@ -490,7 +490,7 @@ class HearMed_Admin_Settings {
         .hm-inv-last{font-size:11px;color:var(--hm-text-light,#94a3b8);white-space:nowrap;min-width:100px;}
         </style>
         <div class="hm-admin">
-            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+            <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
             <div class="hm-admin-hd">
                 <h2>Finance Settings</h2>
                 <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
@@ -662,7 +662,7 @@ class HearMed_Admin_Settings {
         @media(max-width:600px){.hm-section-toggles{grid-template-columns:1fr;}}
         </style>
         <div class="hm-admin">
-            <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
+            <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
             <div class="hm-admin-hd">
                 <h2>Report Layout</h2>
                 <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>

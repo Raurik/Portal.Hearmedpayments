@@ -176,7 +176,7 @@ class HearMed_Accounting {
         ob_start(); ?>
         <div class="hm-content">
         <div class="hm-page-header">
-            <a href="<?php echo esc_url($base); ?>" class="hm-back-btn">← Accounting</a>
+            <a href="<?php echo esc_url($base); ?>" class="hm-back">← Accounting</a>
             <h1 class="hm-page-title">Invoices</h1>
         </div>
         <div class="hm-tabs">
@@ -252,7 +252,7 @@ class HearMed_Accounting {
         ob_start(); ?>
         <div class="hm-content">
         <div class="hm-page-header">
-            <a href="<?php echo esc_url($base); ?>" class="hm-back-btn">← Accounting</a>
+            <a href="<?php echo esc_url($base); ?>" class="hm-back">← Accounting</a>
             <h1 class="hm-page-title">Supplier Invoices</h1>
             <a href="<?php echo esc_url($base.'?hm_action=supplier-new'); ?>" class="hm-btn hm-btn--primary">+ Add Invoice</a>
         </div>
@@ -307,7 +307,7 @@ class HearMed_Accounting {
         ob_start(); ?>
         <div class="hm-content">
         <div class="hm-page-header">
-            <a href="<?php echo esc_url($base.'?hm_action=supplier'); ?>" class="hm-back-btn">← Supplier Invoices</a>
+            <a href="<?php echo esc_url($base.'?hm_action=supplier'); ?>" class="hm-back">← Supplier Invoices</a>
             <h1 class="hm-page-title">New Supplier Invoice</h1>
             <span class="hm-workflow-hint">Saves to portal + pushes to QuickBooks as a Bill.</span>
         </div>
@@ -476,7 +476,7 @@ class HearMed_Accounting {
         ob_start(); ?>
         <div class="hm-content">
         <div class="hm-page-header">
-            <a href="<?php echo esc_url($base); ?>" class="hm-back-btn">← Accounting</a>
+            <a href="<?php echo esc_url($base); ?>" class="hm-back">← Accounting</a>
             <h1 class="hm-page-title">Bank Feed</h1>
             <div class="hm-page-header__actions">
                 <?php if ($last) : ?>
@@ -567,7 +567,7 @@ class HearMed_Accounting {
         ob_start(); ?>
         <div class="hm-content">
         <div class="hm-page-header">
-            <a href="<?php echo esc_url($base); ?>" class="hm-back-btn">← Accounting</a>
+            <a href="<?php echo esc_url($base); ?>" class="hm-back">← Accounting</a>
             <h1 class="hm-page-title">QuickBooks Connection</h1>
         </div>
 
