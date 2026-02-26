@@ -882,11 +882,11 @@ class HearMed_Orders {
                         msg.style.display='block';
                         if (d.success) {
                             msg.className='hm-notice hm-notice--success';
-                            msg.textContent='Serials saved!';
+                            msg.innerHTML='<div class="hm-notice-body"><span class="hm-notice-icon">✓</span> Serials saved!</div>';
                             setTimeout(()=>location.href=base, 1200);
                         } else {
                             msg.className='hm-notice hm-notice--error';
-                            msg.textContent=d.data;
+                            msg.innerHTML='<div class="hm-notice-body"><span class="hm-notice-icon">×</span> '+d.data+'</div>';
                             btn.disabled=false;
                             btn.textContent='Save Serials → Move to Awaiting Fitting';
                         }
@@ -994,11 +994,11 @@ class HearMed_Orders {
                 msg.style.display='block';
                 if (d.success) {
                     msg.className='hm-notice hm-notice--success';
-                    msg.textContent=d.data.message;
+                    msg.innerHTML='<div class="hm-notice-body"><span class="hm-notice-icon">✓</span> '+d.data.message+'</div>';
                     setTimeout(()=>window.location=d.data.redirect, 1500);
                 } else {
                     msg.className='hm-notice hm-notice--error';
-                    msg.textContent=d.data;
+                    msg.innerHTML='<div class="hm-notice-body"><span class="hm-notice-icon">×</span> '+d.data+'</div>';
                     btn.disabled=false; btn.textContent='✓ Confirm Fitted + Paid — Finalise';
                 }
             });
@@ -1727,11 +1727,11 @@ class HearMed_Orders {
                     msg.style.display = 'block';
                     if (d.success) {
                         msg.className = 'hm-notice hm-notice--success';
-                        msg.textContent = d.data.message;
+                        msg.innerHTML = '<div class="hm-notice-body"><span class="hm-notice-icon">✓</span> '+d.data.message+'</div>';
                         setTimeout(()=>window.location=d.data.redirect, 1200);
                     } else {
                         msg.className = 'hm-notice hm-notice--error';
-                        msg.textContent = d.data;
+                        msg.innerHTML = '<div class="hm-notice-body"><span class="hm-notice-icon">×</span> '+d.data+'</div>';
                         btn.disabled=false; btn.textContent='Submit for Approval →';
                     }
                 });

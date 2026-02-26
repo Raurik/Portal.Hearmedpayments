@@ -388,10 +388,11 @@ class HearMed_Refunds {
                 },
 
                 msg: function(text, type){
+                    var icon = type==='error' ? '×' : '✓';
                     $('#hm-cn-msg')
                         .removeClass('hm-notice--success hm-notice--error')
                         .addClass(type==='error' ? 'hm-notice--error' : 'hm-notice--success')
-                        .text(text).show();
+                        .html('<div class="hm-notice-body"><span class="hm-notice-icon">'+icon+'</span> '+text+'</div>').show();
                 }
             };
 
@@ -460,7 +461,7 @@ class HearMed_Refunds {
                 if (!processingId) return;
                 var cheque = $.trim($('#hm-proc-cheque').val());
                 var date   = $('#hm-proc-date').val();
-                if (!cheque) { $('#hm-proc-msg').removeClass('hm-notice--success').addClass('hm-notice--error').text('Enter cheque number.').show(); return; }
+                if (!cheque) { $('#hm-proc-msg').removeClass('hm-notice--success').addClass('hm-notice--error').html('<div class="hm-notice-body"><span class="hm-notice-icon">×</span> Enter cheque number.</div>').show(); return; }
 
                 var btn = $(this).prop('disabled',true).text('Saving…');
                 $.post(ajax, {
@@ -472,10 +473,10 @@ class HearMed_Refunds {
                 }, function(r){
                     btn.prop('disabled',false).text('Mark Cheque Sent');
                     if (r.success) {
-                        $('#hm-proc-msg').removeClass('hm-notice--error').addClass('hm-notice--success').text('✓ Refund processed.').show();
+                        $('#hm-proc-msg').removeClass('hm-notice--error').addClass('hm-notice--success').html('<div class="hm-notice-body"><span class="hm-notice-icon">✓</span> Refund processed.</div>').show();
                         setTimeout(function(){ $('#hm-process-modal').fadeOut(150); processingId=null; load(); }, 1400);
                     } else {
-                        $('#hm-proc-msg').removeClass('hm-notice--success').addClass('hm-notice--error').text(r.data||'Error.').show();
+                        $('#hm-proc-msg').removeClass('hm-notice--success').addClass('hm-notice--error').html('<div class="hm-notice-body"><span class="hm-notice-icon">×</span> '+(r.data||'Error.')+'</div>').show();
                     }
                 });
             });
