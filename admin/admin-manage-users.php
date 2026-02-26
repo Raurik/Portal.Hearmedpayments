@@ -556,40 +556,36 @@ class HearMed_Admin_Manage_Users {
             'phone' => sanitize_text_field($_POST['phone'] ?? ''),
             'role' => $role,
             'wp_user_id' => ($_POST['wp_user_id'] ?? '') !== '' ? intval($_POST['wp_user_id']) : null,
-            'is_active' => intval($_POST['is_active'] ?? 1),
+            'is_active' => intval($_POST['is_active'] ?? 1) ? true : false,
             'updated_at' => current_time('mysql'),
         ];
         
-        // Add optional columns only if data provided (they may not exist in DB yet)
+        // employee_number is INTEGER in Postgres — cast properly
         $employee_number = sanitize_text_field($_POST['employee_number'] ?? '');
-        $hire_date = sanitize_text_field($_POST['hire_date'] ?? '');
-        
         if ($employee_number !== '') {
-            $data['employee_number'] = $employee_number;
+            $data['employee_number'] = intval($employee_number);
         }
+
+        // hire_date is DATE in Postgres — pass as-is (YYYY-MM-DD from input type=date)
+        $hire_date = sanitize_text_field($_POST['hire_date'] ?? '');
         if ($hire_date !== '') {
             $data['hire_date'] = $hire_date;
         }
 
         if ($id) {
             $result = HearMed_DB::update('hearmed_reference.staff', $data, ['id' => $id]);
-            // If update fails (columns might not exist), try without optional columns
-            if ($result === false) {
-                unset($data['employee_number'], $data['hire_date']);
-                $result = HearMed_DB::update('hearmed_reference.staff', $data, ['id' => $id]);
-            }
         } else {
             $data['created_at'] = current_time('mysql');
             $id = HearMed_DB::insert('hearmed_reference.staff', $data);
-            // If insert fails (columns might not exist), try without optional columns
-            if (!$id) {
-                unset($data['employee_number'], $data['hire_date']);
-                $id = HearMed_DB::insert('hearmed_reference.staff', $data);
-            }
             $result = $id ? 1 : false;
         }
 
-        if ($result === false) { wp_send_json_error(HearMed_DB::last_error() ?: 'Database error'); return; }
+        if ($result === false) {
+            $err = HearMed_DB::last_error() ?: 'Database error';
+            error_log('[HearMed Staff Save] Failed: ' . $err . ' | Data: ' . print_r($data, true));
+            wp_send_json_error($err);
+            return;
+        }
 
         $clinic_ids = json_decode(stripslashes($_POST['clinics'] ?? '[]'), true);
         if (!is_array($clinic_ids)) $clinic_ids = [];
