@@ -480,7 +480,7 @@
 #hm-app .hm-modal-x:hover,
 #hm-app .hm-close:hover { background: var(--hm-border); color: var(--hm-red); }
 /* Legacy modal aliases */
-.hm-modal-overlay {
+#hm-app .hm-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
@@ -680,11 +680,7 @@
 }
 
 /* ── Back links — text link with arrow ── */
-#hm-app .hm-back,
-#hm-app .hm-back-btn,
-.hm-admin .hm-back-btn,
-.hm-page .hm-back-btn,
-.hm-sc .hm-back-btn {
+#hm-app .hm-back {
   font-family: var(--hm-font);
   font-size: 13px;
   font-weight: 600;
@@ -695,11 +691,7 @@
   gap: 4px;
   margin-bottom: var(--hm-space-md);
 }
-#hm-app .hm-back:hover,
-#hm-app .hm-back-btn:hover,
-.hm-admin .hm-back-btn:hover,
-.hm-page .hm-back-btn:hover,
-.hm-sc .hm-back-btn:hover {
+#hm-app .hm-back:hover {
   color: var(--hm-teal-hover);
   text-decoration: underline;
 }
@@ -931,7 +923,7 @@
 #hm-app .hm-close:hover { background: var(--hm-border); color: var(--hm-red); }
 
 /* ── Loading overlay ── */
-.hm-loading-overlay {
+#hm-app .hm-loading-overlay {
   position: absolute;
   inset: 0;
   background: rgba(255, 255, 255, 0.8);
@@ -946,7 +938,7 @@
    TABLE FILTER BAR & PAGINATION
    ============================================================ */
 
-.hm-table-filter-bar {
+#hm-app .hm-table-filter-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -954,14 +946,14 @@
   margin-bottom: 10px;
   flex-wrap: wrap;
 }
-.hm-tf-left { flex: 1 1 200px; min-width: 160px; }
-.hm-tf-right {
+#hm-app .hm-tf-left { flex: 1 1 200px; min-width: 160px; }
+#hm-app .hm-tf-right {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
-.hm-tf-search {
+#hm-app .hm-tf-search {
   width: 100%;
   max-width: 260px;
   padding: 7px 10px;
@@ -972,12 +964,12 @@
   outline: none;
   transition: border-color 0.15s;
 }
-.hm-tf-search:focus {
+#hm-app .hm-tf-search:focus {
   border-color: var(--hm-primary, #0066cc);
   box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.12);
 }
-.hm-tf-perpage,
-.hm-tf-col-filter {
+#hm-app .hm-tf-perpage,
+#hm-app .hm-tf-col-filter {
   padding: 6px 8px;
   font-size: 12px;
   border: 1px solid var(--hm-border, #d1d5db);
@@ -987,12 +979,12 @@
   color: var(--hm-text, #1e293b);
   max-width: 160px;
 }
-.hm-tf-col-filter {
+#hm-app .hm-tf-col-filter {
   font-weight: 500;
 }
 
 /* Pagination */
-.hm-table-pagination {
+#hm-app .hm-table-pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1001,15 +993,15 @@
   flex-wrap: wrap;
   min-height: 28px;
 }
-.hm-tp-info {
+#hm-app .hm-tp-info {
   font-size: 12px;
   color: var(--hm-muted, #64748b);
 }
-.hm-tp-btns {
+#hm-app .hm-tp-btns {
   display: flex;
   gap: 4px;
 }
-.hm-tp-btn {
+#hm-app .hm-tp-btn {
   padding: 5px 10px;
   font-size: 12px;
   font-weight: 500;
@@ -1020,40 +1012,40 @@
   color: var(--hm-text, #1e293b);
   transition: all 0.15s;
 }
-.hm-tp-btn:hover:not(:disabled) {
+#hm-app .hm-tp-btn:hover:not(:disabled) {
   border-color: var(--hm-primary, #0066cc);
   color: var(--hm-primary, #0066cc);
 }
-.hm-tp-btn.active {
+#hm-app .hm-tp-btn.active {
   background: var(--hm-primary, #0066cc);
   color: #fff;
   border-color: var(--hm-primary, #0066cc);
 }
-.hm-tp-btn:disabled {
+#hm-app .hm-tp-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
 /* Sortable Column Headers */
-.hm-sortable {
+#hm-app .hm-sortable {
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   white-space: nowrap;
 }
-.hm-sortable:hover {
+#hm-app .hm-sortable:hover {
   color: var(--hm-primary, #0066cc);
 }
-.hm-sort-arrow {
+#hm-app .hm-sort-arrow {
   font-size: 10px;
   color: var(--hm-muted, #94a3b8);
   margin-left: 2px;
 }
-.hm-sortable:hover .hm-sort-arrow {
+#hm-app .hm-sortable:hover .hm-sort-arrow {
   color: var(--hm-primary, #0066cc);
 }
-.hm-sort-asc .hm-sort-arrow,
-.hm-sort-desc .hm-sort-arrow {
+#hm-app .hm-sort-asc .hm-sort-arrow,
+#hm-app .hm-sort-desc .hm-sort-arrow {
   color: var(--hm-primary, #0066cc);
   font-weight: 700;
 }
