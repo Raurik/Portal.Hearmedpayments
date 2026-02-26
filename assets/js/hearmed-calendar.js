@@ -71,7 +71,7 @@ var App={
 // ═══════════════════════════════════════════════════════
 var Cal={
     $el:null,date:new Date(),mode:'week',viewMode:'people',
-    dispensers:[],services:[],clinics:[],appts:[],holidays:[],blockouts:[],
+    dispensers:[],services:[],clinics:[],appts:[],holidays:[],blockouts:[],exclusionTypes:[],
     selClinics:[],selDisps:[],svcMap:{},cfg:{},
     _hoverTimer:null,_popAppt:null,
 
@@ -213,31 +213,41 @@ var Cal={
         $(document).on('keydown',function(e){if(e.key==='Escape'){$('#hm-pop').removeClass('open');$('#hm-tooltip').hide();}});
     },
 
-    // ── Data loading ──
+    // ── Data loading (parallel, fault-tolerant) ──
     loadData:function(){
         var self=this;
-        this.loadClinics().then(function(){return self.loadDispensers();}).then(function(){return self.loadServices();}).then(function(){self.refresh();});
+        $.when(
+            this.loadClinics(),
+            this.loadDispensers(),
+            this.loadServices(),
+            this.loadExclusionTypes()
+        ).always(function(){ self.refresh(); });
     },
     loadClinics:function(){
         return post('get_clinics').then(function(r){
             if(!r.success)return;
             Cal.clinics=r.data;
             Cal.renderMultiSelect();
-        });
+        }).fail(function(){ console.warn('[HearMed] get_clinics failed'); });
     },
     loadDispensers:function(){
         return post('get_dispensers',{clinic:0,date:fmt(this.date)}).then(function(r){
             if(!r.success)return;
             Cal.dispensers=r.data;
             Cal.renderMultiSelect();
-        });
+        }).fail(function(){ console.warn('[HearMed] get_dispensers failed'); });
     },
     loadServices:function(){
         return post('get_services').then(function(r){
             if(!r.success)return;
             Cal.services=r.data;Cal.svcMap={};
             r.data.forEach(function(s){Cal.svcMap[s.id]=s;});
-        });
+        }).fail(function(){ console.warn('[HearMed] get_services failed'); });
+    },
+    loadExclusionTypes:function(){
+        return post('get_exclusion_types').then(function(r){
+            if(r.success) Cal.exclusionTypes=r.data||[];
+        }).fail(function(){ Cal.exclusionTypes=[]; });
     },
     loadAppts:function(){
         var dates=this.visDates();
@@ -549,12 +559,34 @@ var Cal={
 
     openNewApptModal:function(date,time,dispId){
         var self=this;
+        // Ensure services & clinics are loaded before building dropdown HTML
+        var ready=$.Deferred();
+        if(!self.services.length||!self.clinics.length){
+            $.when(
+                self.services.length?null:self.loadServices(),
+                self.clinics.length?null:self.loadClinics(),
+                self.dispensers.length?null:self.loadDispensers()
+            ).always(function(){ready.resolve();});
+        } else { ready.resolve(); }
+        ready.then(function(){ self._buildApptModal(date,time,dispId); });
+    },
+    _buildApptModal:function(date,time,dispId){
+        var self=this;
+        var svcOpts=self.services.length?self.services.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join(''):'<option value="">No types available</option>';
+        var cliOpts=self.clinics.length?self.clinics.map(function(c){return'<option value="'+c.id+'">'+esc(c.name)+'</option>';}).join(''):'<option value="">No clinics</option>';
         var html='<div class="hm-modal-bg open"><div class="hm-modal hm-modal--md">'+
             '<div class="hm-modal-hd"><h3>New Appointment</h3><button class="hm-close hm-new-close">'+IC.x+'</button></div>'+
             '<div class="hm-modal-body">'+
-                '<div class="hm-fld"><label>Patient search</label><input class="hm-inp" id="hmn-ptsearch" placeholder="Search by name..." autocomplete="off"><div class="hm-pt-results" id="hmn-ptresults"></div><input type="hidden" id="hmn-patientid" value="0"></div>'+
-                '<div class="hm-row"><div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hmn-service">'+self.services.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
-                '<div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hmn-clinic">'+self.clinics.map(function(c){return'<option value="'+c.id+'">'+esc(c.name)+'</option>';}).join('')+'</select></div></div>'+
+                '<div class="hm-fld" style="position:relative"><label>Patient search</label>'+
+                    '<div style="display:flex;gap:8px;align-items:center">'+
+                        '<input class="hm-inp" id="hmn-ptsearch" placeholder="Search by name..." autocomplete="off" style="flex:1">'+
+                        '<button class="hm-btn hm-btn--sm" id="hmn-quickadd" type="button" title="Quick add patient" style="white-space:nowrap;padding:8px 10px">+ New</button>'+
+                    '</div>'+
+                    '<div class="hm-pt-results" id="hmn-ptresults"></div>'+
+                    '<input type="hidden" id="hmn-patientid" value="0">'+
+                '</div>'+
+                '<div class="hm-row"><div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hmn-service">'+svcOpts+'</select></div>'+
+                '<div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hmn-clinic">'+cliOpts+'</select></div></div>'+
                 '<div class="hm-row"><div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hmn-disp">'+self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(parseInt(d.id)===dispId?' selected':'')+'>'+esc(d.name)+'</option>';}).join('')+'</select></div>'+
                 '<div class="hm-fld"><label>Status</label><select class="hm-inp" id="hmn-status"><option>Confirmed</option><option>Pending</option></select></div></div>'+
                 '<div class="hm-row"><div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hmn-date" value="'+date+'"></div>'+
@@ -571,36 +603,194 @@ var Cal={
             if(q.length<2){$('#hmn-ptresults').removeClass('open').empty();return;}
             searchTimer=setTimeout(function(){
                 post('search_patients',{query:q}).then(function(r){
-                    if(!r.success||!r.data.length){$('#hmn-ptresults').removeClass('open').empty();return;}
-                    var h='';r.data.forEach(function(p){h+='<div class="hm-pt-item" data-id="'+p.id+'"><span>'+esc(p.name)+'</span><span class="hm-pt-newtab">Select</span></div>';});
+                    if(!r.success||!r.data||!r.data.length){$('#hmn-ptresults').removeClass('open').html('<div class="hm-pt-item" style="color:#94a3b8;cursor:default">No patients found</div>').addClass('open');return;}
+                    var h='';r.data.forEach(function(p){
+                        var lbl=p.label||p.name;
+                        h+='<div class="hm-pt-item" data-id="'+p.id+'"><span>'+esc(lbl)+'</span><span class="hm-pt-newtab">Select</span></div>';
+                    });
                     $('#hmn-ptresults').html(h).addClass('open');
-                });
+                }).fail(function(){ $('#hmn-ptresults').removeClass('open').empty(); });
             },300);
         });
-        $(document).on('click.newmodal','.hm-pt-item',function(){
+        $(document).on('click.newmodal','.hm-pt-item[data-id]',function(){
             var id=$(this).data('id'),name=$(this).find('span:first').text();
             $('#hmn-ptsearch').val(name);$('#hmn-patientid').val(id);$('#hmn-ptresults').removeClass('open');
+        });
+        // Quick-add patient inline
+        $(document).on('click.newmodal','#hmn-quickadd',function(e){
+            e.preventDefault();
+            self.openQuickPatientModal(function(id, name){
+                $('#hmn-ptsearch').val(name);$('#hmn-patientid').val(id);
+            });
         });
         $(document).off('click.newclose').on('click.newclose','.hm-new-close',function(e){e.stopPropagation();$('.hm-modal-bg').remove();$(document).off('.newmodal .newclose');});
         $(document).off('click.newbg').on('click.newbg','.hm-modal-bg',function(e){if($(e.target).hasClass('hm-modal-bg')){$('.hm-modal-bg').remove();$(document).off('.newmodal .newclose .newbg');}});
         $(document).off('click.newsave').on('click.newsave','.hm-new-save',function(){
+            var pid=$('#hmn-patientid').val();
+            if(!pid||pid==='0'){alert('Please search and select a patient first.');return;}
             post('create_appointment',{
-                patient_id:$('#hmn-patientid').val(),service_id:$('#hmn-service').val(),
+                patient_id:pid,service_id:$('#hmn-service').val(),
                 clinic_id:$('#hmn-clinic').val(),dispenser_id:$('#hmn-disp').val(),
                 status:$('#hmn-status').val(),appointment_date:$('#hmn-date').val(),
                 start_time:$('#hmn-time').val(),location_type:$('#hmn-loc').val(),
                 notes:$('#hmn-notes').val()
             }).then(function(r){
                 if(r.success){$('.hm-modal-bg').remove();$(document).off('.newmodal .newclose .newbg .newsave');self.refresh();}
-                else{alert('Error creating appointment');}
-            });
+                else{alert(r.data&&r.data.message?r.data.message:'Error creating appointment');}
+            }).fail(function(){ alert('Network error — please try again.'); });
+        });
+    },
+
+    /* ── Quick-Add Patient popup ── */
+    openQuickPatientModal:function(onCreated){
+        var h='<div class="hm-modal-bg hm-modal-bg--top open"><div class="hm-modal hm-modal--sm">'+
+            '<div class="hm-modal-hd"><h3>Quick Add Patient</h3><button class="hm-close hm-qp-close">'+IC.x+'</button></div>'+
+            '<div class="hm-modal-body">'+
+                '<div class="hm-row"><div class="hm-fld"><label>First name *</label><input class="hm-inp" id="hmqp-fn" placeholder="First name" autofocus></div>'+
+                '<div class="hm-fld"><label>Last name *</label><input class="hm-inp" id="hmqp-ln" placeholder="Last name"></div></div>'+
+                '<div class="hm-row"><div class="hm-fld"><label>Phone</label><input class="hm-inp" id="hmqp-phone" placeholder="Phone"></div>'+
+                '<div class="hm-fld"><label>Email</label><input class="hm-inp" id="hmqp-email" placeholder="Email" type="email"></div></div>'+
+            '</div>'+
+            '<div class="hm-modal-ft"><span class="hm-qp-err" style="color:#ef4444;font-size:12px"></span><div class="hm-modal-acts"><button class="hm-btn hm-qp-close">Cancel</button><button class="hm-btn hm-btn--primary hm-qp-save">Add Patient</button></div></div>'+
+        '</div></div>';
+        $('body').append(h);
+        $(document).off('click.qpclose').on('click.qpclose','.hm-qp-close',function(e){e.stopPropagation();$('.hm-modal-bg--top').remove();$(document).off('.qpclose .qpsave');});
+        $(document).off('click.qpsave').on('click.qpsave','.hm-qp-save',function(){
+            var fn=$('#hmqp-fn').val().trim(),ln=$('#hmqp-ln').val().trim();
+            if(!fn||!ln){$('.hm-qp-err').text('First and last name are required.');return;}
+            var $btn=$(this);$btn.prop('disabled',true).text('Adding...');
+            post('create_patient',{
+                first_name:fn,last_name:ln,
+                patient_phone:$('#hmqp-phone').val().trim(),
+                patient_email:$('#hmqp-email').val().trim()
+            }).then(function(r){
+                if(r.success){
+                    $('.hm-modal-bg--top').remove();$(document).off('.qpclose .qpsave');
+                    if(onCreated)onCreated(r.data.id,fn+' '+ln);
+                } else {
+                    $btn.prop('disabled',false).text('Add Patient');
+                    $('.hm-qp-err').text(r.data&&r.data.message?r.data.message:'Failed to add patient.');
+                }
+            }).fail(function(){ $btn.prop('disabled',false).text('Add Patient');$('.hm-qp-err').text('Network error.'); });
+        });
+    },
+
+    /* ── Exclusion / Unavailability modal ── */
+    openExclusionModal:function(){
+        var self=this;
+        var types=this.exclusionTypes||[];
+        var typeOpts=types.length?types.map(function(t){return'<option value="'+t.id+'" data-color="'+(t.color||'#6b7280')+'">'+esc(t.type_name)+'</option>';}).join(''):'<option value="0">No exclusion types defined</option>';
+        var dispOpts=self.dispensers.map(function(d){return'<option value="'+d.id+'">'+esc(d.name)+'</option>';}).join('');
+        var h='<div class="hm-modal-bg open"><div class="hm-modal hm-modal--md">'+
+            '<div class="hm-modal-hd"><h3>Add Exclusion / Unavailability</h3><button class="hm-close hm-excl-close">'+IC.x+'</button></div>'+
+            '<div class="hm-modal-body">'+
+                '<div class="hm-row"><div class="hm-fld"><label>Exclusion Type</label><select class="hm-inp" id="hmex-type">'+typeOpts+'</select></div>'+
+                '<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hmex-disp"><option value="0">All dispensers</option>'+dispOpts+'</select></div></div>'+
+                '<div class="hm-fld"><label>Scope</label>'+
+                    '<div class="hm-scope-pills"><label class="hm-pill on"><input type="radio" name="hmex-scope" value="day" checked> Full Day</label>'+
+                    '<label class="hm-pill"><input type="radio" name="hmex-scope" value="hours"> Custom Hours</label></div>'+
+                '</div>'+
+                '<div class="hm-fld hm-excl-hours" style="display:none">'+
+                    '<div class="hm-row"><div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hmex-st" value="09:00"></div>'+
+                    '<div class="hm-fld"><label>End Time</label><input type="time" class="hm-inp" id="hmex-et" value="17:00"></div></div>'+
+                '</div>'+
+                '<div class="hm-row"><div class="hm-fld"><label>Start Date</label><input type="date" class="hm-inp" id="hmex-sd" value="'+fmt(self.date)+'"></div>'+
+                '<div class="hm-fld"><label>End Date</label><input type="date" class="hm-inp" id="hmex-ed" value="'+fmt(self.date)+'"></div></div>'+
+                '<div class="hm-fld"><label>Reason / Notes</label><input class="hm-inp" id="hmex-reason" placeholder="e.g. Annual leave, Lunch break"></div>'+
+                '<div class="hm-fld"><label>Repeat</label>'+
+                    '<div class="hm-scope-pills"><label class="hm-pill on"><input type="radio" name="hmex-repeat" value="no" checked> No Repeat</label>'+
+                    '<label class="hm-pill"><input type="radio" name="hmex-repeat" value="days"> Repeat on Days</label>'+
+                    '<label class="hm-pill"><input type="radio" name="hmex-repeat" value="until"> Until Date</label>'+
+                    '<label class="hm-pill"><input type="radio" name="hmex-repeat" value="indefinite"> Indefinitely</label></div>'+
+                '</div>'+
+                '<div class="hm-fld hm-excl-days" style="display:none"><label>Repeat on</label>'+
+                    '<div class="hm-day-pills">'+
+                    ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(d,i){var v=(i<6)?i+1:0;return'<label class="hm-pill"><input type="checkbox" class="hmex-wd" value="'+v+'"> '+d+'</label>';}).join('')+
+                    '</div>'+
+                '</div>'+
+                '<div class="hm-fld hm-excl-until" style="display:none"><label>Repeat until</label><input type="date" class="hm-inp" id="hmex-untilDate"></div>'+
+            '</div>'+
+            '<div class="hm-modal-ft"><span class="hm-excl-err" style="color:#ef4444;font-size:12px"></span><div class="hm-modal-acts"><button class="hm-btn hm-excl-close">Cancel</button><button class="hm-btn hm-btn--primary hm-excl-save">Save</button></div></div>'+
+        '</div></div>';
+        $('body').append(h);
+
+        // Scope toggle
+        $(document).on('change.excl','input[name="hmex-scope"]',function(){
+            var v=$(this).val();
+            $(this).closest('.hm-scope-pills').find('.hm-pill').removeClass('on');
+            $(this).closest('.hm-pill').addClass('on');
+            $('.hm-excl-hours').toggle(v==='hours');
+        });
+        // Repeat toggle
+        $(document).on('change.excl','input[name="hmex-repeat"]',function(){
+            var v=$(this).val();
+            $(this).closest('.hm-scope-pills').find('.hm-pill').removeClass('on');
+            $(this).closest('.hm-pill').addClass('on');
+            $('.hm-excl-days').toggle(v==='days');
+            $('.hm-excl-until').toggle(v==='until');
+        });
+        // Day pill toggle
+        $(document).on('change.excl','.hmex-wd',function(){
+            $(this).closest('.hm-pill').toggleClass('on',this.checked);
+        });
+
+        $(document).off('click.exclclose').on('click.exclclose','.hm-excl-close',function(e){e.stopPropagation();$('.hm-modal-bg').remove();$(document).off('.excl .exclclose .exclsave');});
+        $(document).off('click.exclbg').on('click.exclbg','.hm-modal-bg',function(e){if($(e.target).hasClass('hm-modal-bg')){$('.hm-modal-bg').remove();$(document).off('.excl .exclclose .exclsave .exclbg');}});
+        $(document).off('click.exclsave').on('click.exclsave','.hm-excl-save',function(){
+            var scope=$('input[name="hmex-scope"]:checked').val();
+            var repeat=$('input[name="hmex-repeat"]:checked').val();
+            var sd=$('#hmex-sd').val(),ed=$('#hmex-ed').val();
+            if(!sd){$('.hm-excl-err').text('Start date is required.');return;}
+            if(!ed)ed=sd;
+
+            // Get exclusion type name for the reason
+            var typeEl=$('#hmex-type option:selected');
+            var typeName=typeEl.text();
+            var reasonText=$('#hmex-reason').val().trim();
+            var reason=reasonText?(typeName+' — '+reasonText):typeName;
+
+            var data={
+                dispenser_id:$('#hmex-disp').val()||0,
+                reason:reason,
+                exclusion_type_id:$('#hmex-type').val()||0,
+                start_date:sd,
+                end_date:ed,
+                start_time:scope==='hours'?$('#hmex-st').val():'00:00',
+                end_time:scope==='hours'?$('#hmex-et').val():'23:59',
+                is_full_day:scope==='day'?'1':'0',
+                repeats:repeat==='no'?'no':(repeat==='days'?'custom_days':(repeat==='indefinite'?'indefinite':'until')),
+            };
+            // Repeat days
+            if(repeat==='days'){
+                var days=[];$('.hmex-wd:checked').each(function(){days.push($(this).val());});
+                if(!days.length){$('.hm-excl-err').text('Select at least one day.');return;}
+                data.repeat_days=days.join(',');
+            }
+            // Repeat until date
+            if(repeat==='until'){
+                var ud=$('#hmex-untilDate').val();
+                if(!ud){$('.hm-excl-err').text('Please set a repeat-until date.');return;}
+                data.repeat_end_date=ud;
+            }
+            if(repeat==='indefinite')data.repeat_end_date='2099-12-31';
+
+            var $btn=$('.hm-excl-save');$btn.prop('disabled',true).text('Saving...');
+            post('save_holiday',data).then(function(r){
+                if(r.success){
+                    $('.hm-modal-bg').remove();$(document).off('.excl .exclclose .exclsave .exclbg');
+                    self.refresh();
+                } else {
+                    $btn.prop('disabled',false).text('Save');
+                    $('.hm-excl-err').text(r.data&&r.data.message?r.data.message:'Save failed.');
+                }
+            }).fail(function(){$btn.prop('disabled',false).text('Save');$('.hm-excl-err').text('Network error.');});
         });
     },
 
     onPlusAction:function(act){
         if(act==='appointment')this.openNewApptModal(fmt(this.date),pad(this.cfg.startH)+':00',this.dispensers.length?parseInt(this.dispensers[0].id):0);
-        else if(act==='patient')alert('Navigate to your patient admin page to add a new patient');
-        else if(act==='holiday')window.location.href='/adminconsole/holidays';
+        else if(act==='patient')this.openQuickPatientModal();
+        else if(act==='holiday')this.openExclusionModal();
     },
 };
 

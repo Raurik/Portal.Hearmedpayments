@@ -1139,6 +1139,62 @@ textarea.hm-inp {
   background: var(--hm-bg-hover, #f1f5f9);
 }
 
+/* ── Small Modal variant ── */
+.hm-modal--sm {
+  width: 420px;
+}
+
+/* ── Top-layer modal (stacks above existing modal) ── */
+.hm-modal-bg--top {
+  z-index: 250;
+}
+
+/* ── Scope / Repeat Pills ── */
+.hm-scope-pills,
+.hm-day-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hm-scope-pills .hm-pill,
+.hm-day-pills .hm-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--hm-border, #e2e8f0);
+  background: #fff;
+  color: var(--hm-text-muted, #64748b);
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.hm-scope-pills .hm-pill input,
+.hm-day-pills .hm-pill input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hm-scope-pills .hm-pill.on,
+.hm-day-pills .hm-pill.on {
+  background: var(--hm-teal, #0BB4C4);
+  border-color: var(--hm-teal, #0BB4C4);
+  color: #fff;
+}
+
+/* ── Quick-add button in search row ── */
+.hm-btn--sm {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
 .hm-pt-newtab {
   font-size: 11px;
   font-weight: 600;

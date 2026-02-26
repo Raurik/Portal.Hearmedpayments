@@ -52,6 +52,8 @@ add_action( 'wp_ajax_hm_delete_blockout',      'hm_ajax_delete_blockout' );
 add_action( 'wp_ajax_hm_save_service',         'hm_ajax_save_service' );
 add_action( 'wp_ajax_hm_delete_service',       'hm_ajax_delete_service' );
 add_action( 'wp_ajax_hm_save_dispenser_order', 'hm_ajax_save_dispenser_order' );
+add_action( 'wp_ajax_hm_get_exclusion_types',  'hm_ajax_get_exclusion_types' );
+add_action( 'wp_ajax_hm_create_patient',       'hm_ajax_create_patient_from_calendar' );
 
 // ================================================================
 // CALENDAR SETTINGS
@@ -550,6 +552,14 @@ function hm_ajax_save_holiday() {
         'end_time'     => sanitize_text_field( $_POST['end_time']   ?? '17:00' ),
         'updated_at'   => current_time( 'mysql' ),
     ];
+    // New exclusion fields (optional — columns may not exist yet)
+    $excl_id = intval( $_POST['exclusion_type_id'] ?? 0 );
+    if ( $excl_id ) $d['exclusion_type_id'] = $excl_id;
+    if ( isset( $_POST['is_full_day'] ) ) $d['is_full_day'] = ( $_POST['is_full_day'] === '1' );
+    $rd = sanitize_text_field( $_POST['repeat_days'] ?? '' );
+    if ( $rd ) $d['repeat_days'] = $rd;
+    $red = sanitize_text_field( $_POST['repeat_end_date'] ?? '' );
+    if ( $red ) $d['repeat_end_date'] = $red;
     if ( $id ) {
         HearMed_DB::update( $t, $d, [ 'id' => $id ] );
     } else {
@@ -703,6 +713,58 @@ function hm_ajax_save_dispenser_order() {
 // ================================================================
 // CALENDAR RENDER FUNCTION (called by router)
 // ================================================================
+
+// ================================================================
+// EXCLUSION TYPES — GET (for calendar modal)
+// ================================================================
+function hm_ajax_get_exclusion_types() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    try {
+        $check = HearMed_DB::get_var( "SELECT to_regclass('hearmed_reference.exclusion_types')" );
+        if ( $check === null ) { wp_send_json_success( [] ); return; }
+        $rows = HearMed_DB::get_results(
+            "SELECT id, type_name, color, description
+             FROM hearmed_reference.exclusion_types
+             WHERE is_active = true
+             ORDER BY sort_order, type_name"
+        );
+        wp_send_json_success( $rows ?: [] );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] get_exclusion_types error: ' . $e->getMessage() );
+        wp_send_json_success( [] ); // graceful fallback
+    }
+}
+
+// ================================================================
+// CREATE PATIENT (calendar quick-add proxy)
+// ================================================================
+function hm_ajax_create_patient_from_calendar() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    try {
+        $fn = sanitize_text_field( $_POST['first_name'] ?? '' );
+        $ln = sanitize_text_field( $_POST['last_name']  ?? '' );
+        if ( ! $fn || ! $ln ) { wp_send_json_error( [ 'message' => 'First and last name are required.' ] ); return; }
+        $data = [
+            'patient_number' => 'P' . str_pad( mt_rand( 1, 999999 ), 6, '0', STR_PAD_LEFT ),
+            'first_name'     => $fn,
+            'last_name'      => $ln,
+            'is_active'      => true,
+            'created_at'     => current_time( 'mysql' ),
+        ];
+        $phone = sanitize_text_field( $_POST['patient_phone'] ?? '' );
+        $email = sanitize_email( $_POST['patient_email'] ?? '' );
+        if ( $phone ) $data['phone']  = $phone;
+        if ( $email ) $data['email']  = $email;
+        $id = HearMed_DB::insert( 'hearmed_core.patients', $data );
+        if ( ! $id ) { wp_send_json_error( [ 'message' => 'Failed to create patient.' ] ); return; }
+        wp_send_json_success( [ 'id' => $id ] );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] create_patient_from_calendar error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
 function hm_calendar_render() {
     ?>
     <script>
