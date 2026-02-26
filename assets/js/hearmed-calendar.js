@@ -308,7 +308,7 @@ var Cal={
         if(!g)return;
         this.updateDateLbl(dates);this.updateViewBtns();
 
-        var slotMap={compact:22,regular:28,large:36};
+        var slotMap={compact:32,regular:40,large:52};
         var slotH=slotMap[cfg.slotHt]||28;
         cfg.slotHpx=slotH;
 
