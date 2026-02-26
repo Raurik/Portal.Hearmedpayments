@@ -1,667 +1,352 @@
 /* ============================================================
-   HearMed Calendar - Module CSS (Clean Build)
-   Scope: #hm-app.hm-calendar
-   - Viewport scroll owned by hearmed-layout.css
-  - Scrolling owned by hm-main (Elementor)
-   - Premium visuals: grey headers, compact toolbar, now-line, etc.
+   HearMed Calendar v3.0 — NEW STYLES
+   Append to end of hearmed-calendar.css
    ============================================================ */
 
-/* Bubble-tight variant (no layout control) */
-#hm-app.hm-calendar.hm-bubble-tight {
-  padding: 0 !important;
+/* ── Multi-select dropdowns ── */
+#hm-app.hm-calendar .hm-ms {
+  position: relative;
+  min-width: 170px;
+  max-width: 240px;
 }
 
-/* ============================================================
-   WRAPPER
-   ============================================================ */
-
-#hm-app.hm-calendar {
-  display: flex;
-  flex-direction: column;
-  height: 100% !important;
-  min-height: 100% !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 0;
-  margin: 0;
-  align-self: stretch;
-  border-radius: var(--hm-radius-lg);
-}
-
-#hm-app.hm-calendar .hm-cal-wrap {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 100%;
+#hm-app.hm-calendar .hm-ms-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 30px;
   width: 100%;
-  min-width: 0;
-  background: var(--hm-bg);
-  border-radius: var(--hm-radius-lg);
-  overflow: visible;
-  box-shadow: var(--hm-shadow-md);
-}
-
-@media (max-width: 1100px) {
-  #hm-app.hm-calendar .hm-toolbar {
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: 8px;
-    min-height: 0;
-    padding: 8px 10px;
-  }
-
-  #hm-app.hm-calendar .hm-tb-left,
-  #hm-app.hm-calendar .hm-tb-right {
-    width: 100%;
-    min-width: 0;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
-
-  #hm-app.hm-calendar .hm-dd {
-    min-width: 130px;
-    max-width: 100%;
-    flex: 1 1 180px;
-  }
-}
-
-@media (max-width: 768px) {
-  #hm-app.hm-calendar .hm-date-box,
-  #hm-app.hm-calendar .hm-view-tog,
-  #hm-app.hm-calendar .hm-plus-btn {
-    flex: 0 0 auto;
-  }
-
-  #hm-app.hm-calendar .hm-grid-wrap {
-    overflow: visible;
-  }
-}
-
-/* ============================================================
-   TOOLBAR (compact, premium)
-   ============================================================ */
-
-#hm-app.hm-calendar .hm-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 14px;
-  padding: 6px 12px;
-  min-height: 46px;
-  background: var(--hm-bg);
-  border-bottom: 1px solid var(--hm-border);
-  flex: 0 0 auto;
-}
-
-#hm-app.hm-calendar .hm-tb-left,
-#hm-app.hm-calendar .hm-tb-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-#hm-app.hm-calendar .hm-tb-left {
-  flex: 0 0 auto;
-}
-
-#hm-app.hm-calendar .hm-tb-right {
-  flex: 1 1 auto;
-  justify-content: flex-end;
-}
-
-/* Buttons */
-#hm-app.hm-calendar .hm-nav-btn,
-#hm-app.hm-calendar .hm-icon-btn {
-  width: 26px;
-  height: 26px;
-  border: 1px solid var(--hm-border);
-  border-radius: 8px;
-  background: var(--hm-bg);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
-}
-
-#hm-app.hm-calendar .hm-nav-btn:hover,
-#hm-app.hm-calendar .hm-icon-btn:hover {
-  background: var(--hm-bg-hover);
-  border-color: #cbd5e0;
-}
-
-/* Date box */
-#hm-app.hm-calendar .hm-date-box {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 10px;
+  padding: 0 30px 0 12px;
   border: 1px solid var(--hm-border);
   border-radius: 10px;
   background: var(--hm-bg);
-  cursor: pointer;
+  color: var(--hm-text);
   font-size: 12px;
   font-weight: 600;
-  color: var(--hm-text);
-  white-space: nowrap;
-  transition: background .15s ease, border-color .15s ease;
+  cursor: pointer;
+  text-align: left;
+  outline: none;
+  transition: all .15s ease;
   position: relative;
 }
 
-#hm-app.hm-calendar .hm-date-box:hover {
+#hm-app.hm-calendar .hm-ms-btn:hover {
   background: var(--hm-bg-hover);
   border-color: #cbd5e0;
 }
 
-/* View toggle */
-#hm-app.hm-calendar .hm-view-tog {
-  display: inline-flex;
+#hm-app.hm-calendar .hm-ms-chev {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--hm-text-muted);
+  transition: transform .2s ease;
+  display: flex;
+  align-items: center;
+}
+
+#hm-app.hm-calendar .hm-ms-drop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
   border: 1px solid var(--hm-border);
   border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.14);
+  z-index: 90;
   overflow: hidden;
-  background: var(--hm-bg);
+  max-height: 260px;
+  overflow-y: auto;
+  display: none;
 }
 
-#hm-app.hm-calendar .hm-view-btn {
-  height: 24px;
-  padding: 3px 12px;
-  border: none;
-  background: transparent;
+#hm-app.hm-calendar .hm-ms-drop.open {
+  display: block;
+}
+
+#hm-app.hm-calendar .hm-ms-item {
+  padding: 9px 14px;
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--hm-text-faint);
-  transition: background .15s ease, color .15s ease;
-}
-
-#hm-app.hm-calendar .hm-view-btn:hover {
-  background: var(--hm-bg-hover);
+  font-size: 12px;
+  font-weight: 500;
   color: var(--hm-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all .12s ease;
 }
 
-#hm-app.hm-calendar .hm-view-btn.on {
+#hm-app.hm-calendar .hm-ms-item:first-child {
+  border-bottom: 1px solid var(--hm-border-light);
+}
+
+#hm-app.hm-calendar .hm-ms-item:hover {
+  background: var(--hm-bg-hover);
+}
+
+#hm-app.hm-calendar .hm-ms-item.on {
   background: var(--hm-teal);
   color: #fff;
+  font-weight: 700;
 }
 
-/* Separator */
-#hm-app.hm-calendar .hm-sep {
-  width: 1px;
-  height: 22px;
-  background: var(--hm-border);
-  margin: 0 2px;
+#hm-app.hm-calendar .hm-ms-item.on:hover {
+  background: var(--hm-teal-hover);
 }
 
-/* Dropdowns (clinic/assignee) */
-#hm-app.hm-calendar .hm-dd {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  height: 30px;
-  padding: 0 34px 0 12px;
-  border: 1px solid var(--hm-border);
-  border-radius: 10px;
-  background: var(--hm-bg);
-  color: var(--hm-text);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  min-width: 170px;
-  max-width: 240px;
-  flex: 0 0 auto;
-  transition: background .15s ease, border-color .15s ease;
-  background-image:
-    linear-gradient(45deg, transparent 50%, #111827 50%),
-    linear-gradient(135deg, #111827 50%, transparent 50%),
-    linear-gradient(to right, transparent, transparent);
-  background-position:
-    calc(100% - 18px) 12px,
-    calc(100% - 13px) 12px,
-    0 0;
-  background-size:
-    5px 5px,
-    5px 5px,
-    100% 100%;
-  background-repeat: no-repeat;
+#hm-app.hm-calendar .hm-ms-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-#hm-app.hm-calendar .hm-dd:hover {
-  background: var(--hm-bg-hover);
-  border-color: #cbd5e0;
-}
-
-#hm-app.hm-calendar .hm-dd:focus {
-  outline: none;
+/* Focus state for active dropdown */
+#hm-app.hm-calendar .hm-ms-drop.open + .hm-ms-btn,
+#hm-app.hm-calendar .hm-ms:has(.hm-ms-drop.open) .hm-ms-btn {
   border-color: var(--hm-teal);
   box-shadow: 0 0 0 3px rgba(11, 180, 196, 0.18);
 }
 
-/* Plus button + menu */
-#hm-app.hm-calendar .hm-plus-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: none;
-  background: var(--hm-teal);
+/* ── Appointment outcome banner ── */
+#hm-app.hm-calendar .hm-appt-outcome {
   color: #fff;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 10px rgba(11,180,196,.35);
-  transition: transform .12s ease, box-shadow .15s ease, background .15s ease;
-}
-
-#hm-app.hm-calendar .hm-plus-btn:hover {
-  background: var(--hm-teal-hover);
-  box-shadow: 0 4px 16px rgba(11,180,196,.45);
-  transform: translateY(-1px);
-}
-
-#hm-app.hm-calendar .hm-plus-menu {
-  position: absolute;
-  right: 0;
-  top: 42px;
-  min-width: 240px;
-  background: #fff;
-  border: 1px solid var(--hm-border-light);
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.14);
-  overflow: hidden;
-  display: none;
-  z-index: 80;
-}
-
-#hm-app.hm-calendar .hm-plus-menu.open {
-  display: block;
-}
-
-#hm-app.hm-calendar .hm-plus-item {
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-#hm-app.hm-calendar .hm-plus-item svg {
-  opacity: .85;
-}
-
-#hm-app.hm-calendar .hm-plus-item:hover {
-  background: #f3f6f9;
-}
-
-/* ============================================================
-  GRID REGION (scrolling delegated to hm-main)
-  ============================================================ */
-
-#hm-app.hm-calendar .hm-grid-wrap {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: visible;
-  background: var(--hm-bg);
-}
-
-#hm-app.hm-calendar .hm-grid {
-  display: grid;
-  position: relative;
-  min-height: 100%;
-}
-
-/* scrollbar handled by .hm-main */
-
-/* ============================================================
-   STICKY HEADERS + TIME COLUMN (grey bands)
-   ============================================================ */
-
-#hm-app.hm-calendar .hm-time-corner {
-  position: sticky;
-  top: 0;
-  left: 0;
-  z-index: 7;
-  background: #f8fafc;
-  border-right: 1px solid var(--hm-border-light);
-  border-bottom: 1px solid var(--hm-border);
-  width: 44px;
-  min-width: 44px;
-}
-
-#hm-app.hm-calendar .hm-day-hd {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  background: #f8fafc;
-  text-align: center;
-  padding: 5px 3px 2px;
-  border-right: 1px solid var(--hm-border-light);
-  border-bottom: 1px solid var(--hm-border);
-}
-
-#hm-app.hm-calendar .hm-day-hd.today {
-  background: var(--hm-teal-soft);
-}
-
-#hm-app.hm-calendar .hm-day-lbl {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: .8px;
-  font-weight: 500;
-  color: var(--hm-text);
-}
-
-#hm-app.hm-calendar .hm-day-num {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--hm-teal);
-  margin: 0 2px;
-}
-
-#hm-app.hm-calendar .hm-day-hd.today .hm-day-num {
-  background: var(--hm-teal);
-  color: #fff;
-  border-radius: 50%;
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-}
-
-/* Provider initials row */
-#hm-app.hm-calendar .hm-prov-row {
-  display: flex;
-  border-top: 1px solid var(--hm-border-light);
-  background: #f8fafc;
-}
-
-#hm-app.hm-calendar .hm-prov-cell {
-  flex: 1;
-  text-align: center;
-  padding: 4px 2px;
-  border-right: 1px solid var(--hm-border-light);
-}
-
-#hm-app.hm-calendar .hm-prov-cell:last-child {
-  border-right: none;
-}
-
-/* ============================================================
-   SETTINGS PREVIEW (admin settings preview appointment block)
-   ============================================================ */
-.hs-preview-container{display:flex;flex-direction:column;gap:12px}
-.hm-appt-preview{border-radius:10px;overflow:hidden;display:flex;flex-direction:column;width:100%;max-width:680px;border:1px solid var(--hm-border);box-shadow:var(--hm-shadow-sm)}
-.hm-appt-preview .hm-appt-outcome{background:linear-gradient(90deg,#2dd4bf,#06b6d4);color:#fff;padding:10px 12px;font-weight:700}
-
-/* Two-column settings layout specific tweaks */
-.hm-settings-two .hs-left .hm-card{margin-bottom:14px}
-.hm-settings-two .hs-right .hm-card{margin-bottom:12px}
-.hs-preview-container{min-height:160px;display:flex;align-items:center;justify-content:center}
-.hs-preview-container .hm-appt-preview-card{width:100%}
-.hm-settings-two .hm-card-hd h3{font-size:15px;margin:0}
-
-/* Preview & outcome visual styles */
-.outcome-header{background:#10b981;color:#fff;padding:10px 12px;border-top-left-radius:8px;border-top-right-radius:8px;font-weight:700}
-.hm-appt-preview{border-radius:8px;overflow:hidden;background:linear-gradient(180deg,#06b6d4,#0ea5a3);color:#fff;box-shadow:0 6px 18px rgba(6,95,70,0.08);padding:0}
-.hm-appt-preview .hm-appt-outcome{display:none}
-.hm-appt-preview .hm-appt-body{padding:14px}
-.hm-appt-name{font-weight:700;margin-bottom:6px}
-.hm-appt-time{font-size:13px;opacity:.9;margin-bottom:8px}
-.hm-appt-meta{font-size:13px;opacity:.95}
-.hm-badge{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.12);color:#fff;margin-right:6px;font-size:12px}
-
-/* Outcome variants */
-.hm-appt-preview.outcome-default{background:linear-gradient(180deg,#06b6d4,#0ea5a3)}
-.hm-appt-preview.outcome-small{background:linear-gradient(180deg,#06b6d4,#0fb6b0);padding:8px}
-.hm-appt-preview.outcome-tag{background:#fff;color:#0f172a;border:1px solid var(--hm-border);box-shadow:none}
-.hm-appt-preview.outcome-popover{background:#fff;border:1px solid var(--hm-border);box-shadow:0 6px 20px rgba(2,6,23,0.06)}
-
-/* Controls polish */
-.hm-card{border-radius:10px;border:1px solid var(--hm-border);background:var(--hm-bg);box-shadow:var(--hm-shadow-sm)}
-.hm-card-hd{padding:12px 14px;border-bottom:1px solid rgba(15,23,42,0.04)}
-.hm-card-body{padding:12px 14px}
-.hm-srow{display:flex;justify-content:space-between;align-items:center;padding:8px 0}
-.hm-slbl{font-weight:600;color:var(--hm-text)}
-.hm-sval{color:var(--hm-text-light)}
-
-
-.hm-appt-preview .hm-appt-body{padding:14px;background:linear-gradient(180deg,#06b6d4,#0bb4c4);color:#fff}
-.hm-appt-preview .hm-appt-name{font-weight:800;font-size:1.05rem;margin-bottom:6px}
-.hm-appt-preview .hm-appt-time{font-weight:600;opacity:0.95;margin-bottom:6px}
-.hm-appt-preview .hm-appt-meta{font-size:0.95rem;opacity:0.95}
-
-/* Outcome style variations */
-.hm-appt-preview.outcome-default .hm-appt-outcome{background:linear-gradient(90deg,#10b981,#06b6d4)}
-.hm-appt-preview.outcome-small .hm-appt-body{background:linear-gradient(180deg,#06b6d4,#0891b2);padding:8px}
-.hm-appt-preview.outcome-tag .hm-appt-body{background:linear-gradient(180deg,#06b6d4,#0bb4c4);padding:10px}
-.hm-appt-preview.outcome-popover .hm-appt-body{background:linear-gradient(180deg,#06b6d4,#0bb4c4);opacity:0.95}
-
-/* New preview card layout */
-.hm-appt-preview-wrap{display:flex;justify-content:flex-start}
-.hm-appt-preview-card{width:340px;border-radius:10px;overflow:hidden;border:1px solid var(--hm-border);box-shadow:var(--hm-shadow-sm);background:#fff}
-.hm-appt-preview-card .hm-appt-outcome{padding:10px 14px;font-weight:700;color:#fff;background:linear-gradient(90deg,#10b981,#06b6d4)}
-.hm-appt-preview-card .hm-appt-body{padding:14px;background:linear-gradient(180deg,#06b6d4,#0bb4c4);color:#fff}
-.hm-appt-badges{display:flex;gap:6px;margin-bottom:8px}
-.hm-badge{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-weight:700;color:#fff;font-size:12px}
-.hm-badge-c{background:#1e293b}
-.hm-badge-r{background:#7c3aed}
-.hm-badge-v{background:#fb7185;color:#fff;padding:0 6px;border-radius:12px;font-size:11px}
-
-/* outcome variants */
-.hm-appt-preview-card.outcome-default .hm-appt-outcome{background:linear-gradient(90deg,#10b981,#06b6d4)}
-.hm-appt-preview-card.outcome-small .hm-appt-body{padding:8px}
-.hm-appt-preview-card.outcome-tag .hm-appt-body{background:linear-gradient(180deg,#06b6d4,#0891b2)}
-.hm-appt-preview-card.outcome-popover .hm-appt-body{opacity:0.95}
-
-#hm-app.hm-calendar .hm-prov-ini {
+  font-size: 8px;
   font-weight: 800;
-  font-size: 12px;
-  color: #334155;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  line-height: 14px;
+  font-family: var(--hm-font-btn);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Time column */
-#hm-app.hm-calendar .hm-time-cell {
-  position: sticky;
-  left: 0;
-  z-index: 3;
-  background: #f8fafc;
-  border-right: 1px solid var(--hm-border-light);
-  width: 44px;
-  min-width: 44px;
-  font-size: 9px;
-  font-weight: 600;
-  text-align: right;
-  padding-right: 6px;
-  color: var(--hm-text-muted);
-}
-
-#hm-app.hm-calendar .hm-time-cell.hr {
-  border-top: 1px solid var(--hm-border-light);
-}
-
-/* ============================================================
-   SLOTS
-   ============================================================ */
-
-#hm-app.hm-calendar .hm-slot {
-  position: relative;
-  border-right: 0.5px solid var(--hm-border-light);
-  border-bottom: 0.5px solid var(--hm-border-light);
-  cursor: pointer;
-  transition: background .12s ease;
-}
-
-#hm-app.hm-calendar .hm-slot.hr {
-  border-top: 0.5px solid var(--hm-border-light);
-}
-
-#hm-app.hm-calendar .hm-slot.dl {
-  border-right: 0.5px solid var(--hm-border-light);
-}
-
-#hm-app.hm-calendar .hm-slot:hover {
-  background: var(--hm-bg-hover);
-}
-
-/* Lunch overlay */
-#hm-app.hm-calendar .hm-lunch {
-  position: absolute;
-  left: 2px;
-  right: 2px;
-  border-radius: 3px;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 1.5px;
-  color: #475569;
-  display: flex;
-  align-items: center;
-  padding-left: 6px;
-  background: repeating-linear-gradient(
-    135deg,
-    #e8ecf1,
-    #e8ecf1 3px,
-    #f0f4f8 3px,
-    #f0f4f8 7px
-  );
-}
-
-/* ============================================================
-   APPOINTMENTS (compact premium)
-   ============================================================ */
-
-#hm-app.hm-calendar .hm-appt {
-  position: absolute;
-  left: 2px;
-  right: 2px;
-  border-radius: var(--hm-radius-md);
+#hm-app.hm-calendar .hm-appt-inner {
   padding: 3px 6px;
-  font-size: 10px;
-  color: #fff;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
-  cursor: pointer;
-  z-index: 2;
-  line-height: 1.25;
-  box-shadow: var(--hm-shadow-sm);
-  transition: box-shadow .15s ease, transform .12s ease;
 }
 
-#hm-app.hm-calendar .hm-appt:hover {
-  box-shadow: var(--hm-shadow);
-  transform: translateY(-1px);
-}
-
-#hm-app.hm-calendar .hm-appt-svc {
-  font-size: 9px;
-  font-weight: 700;
-  opacity: .95;
-}
-
-#hm-app.hm-calendar .hm-appt-pt {
-  font-size: 10px;
-  font-weight: 900;
-  margin-top: 1px;
-}
-
-#hm-app.hm-calendar .hm-appt-tm {
-  font-size: 9px;
-  font-weight: 700;
-  opacity: .95;
-  margin-top: 1px;
-}
-
-/* ============================================================
-   NOW LINE (green live time indicator)
-   ============================================================ */
-
-#hm-app.hm-calendar .hm-now {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #00d59b;
-  z-index: 5;
-}
-
-#hm-app.hm-calendar .hm-now-dot {
-  position: absolute;
-  left: -3px;
-  top: -4px;
-  width: 8px;
-  height: 8px;
-  background: #00d59b;
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px #fff;
-}
-
-/* ============================================================
-   DROPDOWNS / PANELS (bounded scroll only)
-   ============================================================ */
-
-#hm-app.hm-calendar .hm-pt-results {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: var(--hm-bg);
-  border: 1px solid var(--hm-border-light);
-  border-top: none;
-  border-radius: 0 0 10px 10px;
-  max-height: 220px;
-  overflow: auto;
-  z-index: 90;
-  display: none;
-}
-
-#hm-app.hm-calendar .hm-pt-results.open {
-  display: block;
-}
-
-/* ============================================================
-   POPOVER
-   ============================================================ */
-
-#hm-app.hm-calendar .hm-pop {
-  position: fixed;
-  background: var(--hm-bg);
-  border-radius: 12px;
-  width: 280px;
-  box-shadow: var(--hm-shadow-lg);
-  z-index: 120;
-  overflow: hidden;
-  display: none;
-  border: 1px solid var(--hm-border-light);
-}
-
-#hm-app.hm-calendar .hm-pop.open {
-  display: block;
-}
-
-/* ============================================================
-   SETTINGS PANEL (fixed overlay - no vh)
-   ============================================================ */
-
-#hm-app.hm-calendar .hm-cog-panel {
-  position: fixed;
-  top: 0;
-  right: -420px;
-  width: 400px;
-  bottom: 0;
-  background: var(--hm-bg);
-  box-shadow: -8px 0 40px rgba(0,0,0,.1);
-  z-index: 130;
-  transition: right .3s cubic-bezier(.4,0,.2,1);
-  overflow: auto;
-  border-left: 1px solid var(--hm-border-light);
+/* Card layout for outcome banner */
+#hm-app.hm-calendar .hm-appt {
   display: flex;
   flex-direction: column;
 }
 
-#hm-app.hm-calendar .hm-cog-panel.open {
-  right: 0;
+/* No Show / Cancelled opacity */
+#hm-app.hm-calendar .hm-appt.noshow,
+#hm-app.hm-calendar .hm-appt.cancelled {
+  opacity: 0.5;
+}
+
+/* ── Hover tooltip ── */
+#hm-app .hm-tooltip,
+.hm-tooltip {
+  position: fixed;
+  width: 215px;
+  background: var(--hm-navy, #151B33);
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  font-size: 11px;
+  line-height: 1.5;
+  font-family: var(--hm-font);
+  display: none;
+  animation: hmTipIn .15s ease;
+}
+
+@keyframes hmTipIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hm-tip-name {
+  font-weight: 800;
+  font-size: 13px;
+  margin-bottom: 2px;
+  font-family: var(--hm-font-sub);
+}
+
+.hm-tip-num {
+  color: rgba(255,255,255,0.5);
+  font-size: 10px;
+  font-family: var(--hm-font-btn);
+  margin-bottom: 6px;
+}
+
+.hm-tip-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hm-tip-row {
+  display: flex;
+  gap: 6px;
+}
+
+.hm-tip-lbl {
+  color: rgba(255,255,255,0.4);
+  min-width: 58px;
+  font-weight: 600;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+/* ── Fixed popover ── */
+#hm-app.hm-calendar .hm-pop-bar {
+  height: 4px;
+}
+
+#hm-app.hm-calendar .hm-pop-outcome {
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 6px 16px;
+  font-family: var(--hm-font-btn);
+  letter-spacing: 0.3px;
+}
+
+#hm-app.hm-calendar .hm-pop-body {
+  padding: 14px 16px;
+}
+
+#hm-app.hm-calendar .hm-pop-hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+#hm-app.hm-calendar .hm-pop-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--hm-navy);
+  font-family: var(--hm-font-sub);
+}
+
+#hm-app.hm-calendar .hm-pop-num {
+  font-size: 11px;
+  color: var(--hm-text-muted);
+  font-family: var(--hm-font-btn);
+  margin-top: 2px;
+}
+
+#hm-app.hm-calendar .hm-pop-x {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--hm-text-muted);
+  padding: 2px;
+}
+
+#hm-app.hm-calendar .hm-pop-status {
+  margin-top: 10px;
+}
+
+#hm-app.hm-calendar .hm-status-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--hm-font-btn);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+#hm-app.hm-calendar .hm-pop-details {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#hm-app.hm-calendar .hm-pop-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--hm-text);
+}
+
+#hm-app.hm-calendar .hm-pop-row svg {
+  color: var(--hm-text-muted);
+  flex-shrink: 0;
+}
+
+#hm-app.hm-calendar .hm-pop-row span {
+  font-weight: 500;
+}
+
+#hm-app.hm-calendar .hm-pop-svc-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+#hm-app.hm-calendar .hm-pop-actions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hm-border-light);
+  display: flex;
+  gap: 6px;
+}
+
+#hm-app.hm-calendar .hm-pop-act {
+  flex: 1;
+  padding: 6px 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--hm-font-btn);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  transition: all .15s ease;
+  border: 1px solid var(--hm-border);
+  background: transparent;
+  color: var(--hm-text-muted);
+}
+
+#hm-app.hm-calendar .hm-pop-act:hover {
+  background: var(--hm-bg-hover);
+}
+
+#hm-app.hm-calendar .hm-pop-act--primary {
+  background: var(--hm-teal);
+  color: #fff;
+  border-color: var(--hm-teal);
+}
+
+#hm-app.hm-calendar .hm-pop-act--primary:hover {
+  background: var(--hm-teal-hover);
+}
+
+#hm-app.hm-calendar .hm-pop-act--green {
+  background: transparent;
+  color: var(--hm-green);
+  border-color: var(--hm-border);
+}
+
+#hm-app.hm-calendar .hm-pop-act--green:hover {
+  background: #ecfdf5;
+}
+
+#hm-app.hm-calendar .hm-pop-act--red {
+  background: transparent;
+  color: var(--hm-red);
+  border-color: var(--hm-border);
+}
+
+#hm-app.hm-calendar .hm-pop-act--red:hover {
+  background: #fef2f2;
 }

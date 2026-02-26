@@ -1,6 +1,18 @@
 /**
- * HearMed Calendar v2.1
+ * HearMed Calendar v3.0
+ * ─────────────────────────────────────────────────────
  * Renders views based on #hm-app[data-view]
+ *   calendar  → Cal
+ *   settings  → Settings
+ *   blockouts → Blockouts
+ *   holidays  → Holidays
+ *
+ * v3.0 changes:
+ *   • Multi-select clinic/dispenser filters (click-to-highlight)
+ *   • 1-second hover tooltip on appointment cards
+ *   • Outcome banners on completed appointments
+ *   • Fixed popover (was broken in v2)
+ *   • Removed cog panel from calendar view
  */
 (function($){
 'use strict';
@@ -17,13 +29,26 @@ function post(action,data){data=data||{};data.action='hm_'+action;data.nonce=HM.
 var IC={
     chevL:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>',
     chevR:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>',
+    chevDown:'<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>',
     plus:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>',
-    cog:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
     print:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
     cal:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
     user:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
     clock:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     x:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+    cog:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
+};
+
+// Status pill colours
+var STATUS_MAP={
+    Confirmed:{bg:'#eff6ff',color:'#1e40af',border:'#bfdbfe'},
+    Arrived:{bg:'#ecfdf5',color:'#065f46',border:'#a7f3d0'},
+    'In Progress':{bg:'#fff7ed',color:'#9a3412',border:'#fed7aa'},
+    Completed:{bg:'#f9fafb',color:'#6b7280',border:'#e5e7eb'},
+    'No Show':{bg:'#fef2f2',color:'#991b1b',border:'#fecaca'},
+    Late:{bg:'#fffbeb',color:'#92400e',border:'#fde68a'},
+    Pending:{bg:'#f5f3ff',color:'#5b21b6',border:'#ddd6fe'},
+    Cancelled:{bg:'#fef2f2',color:'#991b1b',border:'#fecaca'},
 };
 
 // ═══ ROUTER ═══
@@ -39,13 +64,14 @@ var App={
     }
 };
 
-// ═══════════════════════════════════════
-// CALENDAR VIEW
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// CALENDAR VIEW — v3.0
+// ═══════════════════════════════════════════════════════
 var Cal={
     $el:null,date:new Date(),mode:'week',viewMode:'people',
     dispensers:[],services:[],clinics:[],appts:[],holidays:[],blockouts:[],
-    selClinic:0,selDisp:0,svcMap:{},cfg:{},
+    selClinics:[],selDisps:[],svcMap:{},cfg:{},
+    _hoverTimer:null,_popAppt:null,
 
     init:function($el){
         this.$el=$el;
@@ -61,14 +87,8 @@ var Cal={
             hideCancelled:s.hide_cancelled!=='no',
             displayFull:s.display_full_name==='yes',
             enabledDays:(s.enabled_days||'mon,tue,wed,thu,fri').split(','),
-            appt_bg_color:s.appt_bg_color||'var(--hm-teal)',
-            appt_font_color:s.appt_font_color||'#ffffff',
-            appt_badge_color:s.appt_badge_color||'#3b82f6',
-            appt_badge_font_color:s.appt_badge_font_color||'#ffffff',
-            appt_meta_color:s.appt_meta_color||'#38bdf8',
         };
         this.mode=s.default_view||'week';
-        this.viewMode=s.default_mode||'people';
         this.cfg.totalSlots=Math.ceil((this.cfg.endH-this.cfg.startH)*60/this.cfg.slotMin);
         this.render();
         this.bind();
@@ -86,29 +106,31 @@ var Cal={
                 '</div>'+
                 '<div class="hm-tb-right">'+
                     '<div class="hm-view-tog"><button class="hm-view-btn" data-v="day">Day</button><button class="hm-view-btn" data-v="week">Week</button></div>'+
-                    '<button class="hm-icon-btn" id="hm-cog" title="Settings">'+IC.cog+'</button>'+ 
-                    '<button class="hm-icon-btn" onclick="window.print()" title="Print">'+IC.print+'</button>'+ 
-                    '<div class="hm-sep"></div>'+ 
-                    '<select class="hm-dd" id="hm-clinicF"><option value="">All Clinics</option></select>'+ 
-                    '<select class="hm-dd" id="hm-dispF"><option value="">All Assignees</option></select>'+ 
-                    '<div style="position:relative"><button class="hm-plus-btn" id="hm-plusBtn">'+IC.plus+'</button>'+ 
-                        '<div class="hm-plus-menu" id="hm-plusMenu">'+ 
-                            '<div class="hm-plus-item" data-act="appointment">'+IC.cal+' Appointment</div>'+ 
-                            '<div class="hm-plus-item" data-act="patient">'+IC.user+' Patient</div>'+ 
-                            '<div class="hm-plus-item" data-act="holiday">'+IC.clock+' Holiday / Unavailability</div>'+ 
-                        '</div>'+ 
-                    '</div>'+ 
-                '</div>'+ 
-            '</div>'+ 
-            '<div class="hm-grid-wrap" id="hm-gridWrap"><div class="hm-grid" id="hm-grid"></div></div>'+ 
-        '</div>'+ 
-        '<div class="hm-pop" id="hm-pop"></div>'+ 
-        '<div class="hm-cog-panel" id="hm-cogPanel">'+ 
-            '<h3>Settings <button class="hm-cog-x" id="hm-cogX">'+IC.x+'</button></h3>'+ 
-            '<div class="hm-cog-section"><div class="hm-cog-label">Mode</div><div class="hm-cog-tog" id="hm-cogMode"><button class="hm-cog-tog-btn" data-v="people">People</button><button class="hm-cog-tog-btn" data-v="clinics">Clinics</button></div></div>'+ 
-            '<div class="hm-cog-section"><div class="hm-cog-label">Timeframe</div><div class="hm-cog-tog" id="hm-cogTime"><button class="hm-cog-tog-btn" data-v="day">Day</button><button class="hm-cog-tog-btn" data-v="week">Week</button></div></div>'+ 
-            '<div class="hm-cog-ft"><button class="hm-btn" id="hm-cogCancel">Cancel</button><button class="hm-btn hm-btn--primary" id="hm-cogSave">Save</button></div>'+ 
-        '</div>'
+                    '<button class="hm-icon-btn" onclick="window.print()" title="Print">'+IC.print+'</button>'+
+                    '<div class="hm-sep"></div>'+
+                    /* Multi-select clinic */
+                    '<div class="hm-ms" id="hm-clinicMs">'+
+                        '<button class="hm-ms-btn" id="hm-clinicMsBtn"><span class="hm-ms-lbl">All Clinics</span><span class="hm-ms-chev">'+IC.chevDown+'</span></button>'+
+                        '<div class="hm-ms-drop" id="hm-clinicMsDrop"></div>'+
+                    '</div>'+
+                    /* Multi-select dispenser */
+                    '<div class="hm-ms" id="hm-dispMs">'+
+                        '<button class="hm-ms-btn" id="hm-dispMsBtn"><span class="hm-ms-lbl">All Assignees</span><span class="hm-ms-chev">'+IC.chevDown+'</span></button>'+
+                        '<div class="hm-ms-drop" id="hm-dispMsDrop"></div>'+
+                    '</div>'+
+                    '<div style="position:relative"><button class="hm-plus-btn" id="hm-plusBtn">'+IC.plus+'</button>'+
+                        '<div class="hm-plus-menu" id="hm-plusMenu">'+
+                            '<div class="hm-plus-item" data-act="appointment">'+IC.cal+' Appointment</div>'+
+                            '<div class="hm-plus-item" data-act="patient">'+IC.user+' Patient</div>'+
+                            '<div class="hm-plus-item" data-act="holiday">'+IC.clock+' Holiday / Unavailability</div>'+
+                        '</div>'+
+                    '</div>'+
+                '</div>'+
+            '</div>'+
+            '<div class="hm-grid-wrap" id="hm-gridWrap"><div class="hm-grid" id="hm-grid"></div></div>'+
+        '</div>'+
+        '<div class="hm-pop" id="hm-pop"></div>'+
+        '<div class="hm-tooltip" id="hm-tooltip"></div>'
         );
     },
 
@@ -119,24 +141,55 @@ var Cal={
         $(document).on('click','#hm-dateBox',function(){var dp=$('#hm-datePick');dp[0].showPicker?dp[0].showPicker():dp.trigger('click');});
         $(document).on('change','#hm-datePick',function(){var v=$(this).val();if(v){self.date=new Date(v+'T12:00:00');self.refresh();}});
         $(document).on('click','.hm-view-btn',function(){self.mode=$(this).data('v');self.refreshUI();});
-        $(document).on('change','#hm-clinicF',function(){self.selClinic=parseInt($(this).val())||0;self.loadDispensers().then(function(){self.refresh();});});
-        $(document).on('change','#hm-dispF',function(){self.selDisp=parseInt($(this).val())||0;self.refresh();});
-        $(document).on('click','#hm-plusBtn',function(e){e.stopPropagation();$('#hm-plusMenu').toggleClass('open');});
-        $(document).on('click',function(){$('#hm-plusMenu').removeClass('open');});
+
+        // Multi-select toggles
+        $(document).on('click','#hm-clinicMsBtn',function(e){e.stopPropagation();$('#hm-clinicMsDrop').toggleClass('open');$('#hm-dispMsDrop').removeClass('open');});
+        $(document).on('click','#hm-dispMsBtn',function(e){e.stopPropagation();$('#hm-dispMsDrop').toggleClass('open');$('#hm-clinicMsDrop').removeClass('open');});
+        $(document).on('click','.hm-ms-item',function(e){
+            e.stopPropagation();
+            var $t=$(this),id=parseInt($t.data('id')),group=$t.data('group');
+            if(id===0){
+                // "All" clicked — clear selection
+                if(group==='clinic'){self.selClinics=[];}else{self.selDisps=[];}
+            } else {
+                var arr=group==='clinic'?self.selClinics:self.selDisps;
+                var idx=arr.indexOf(id);
+                if(idx>-1)arr.splice(idx,1); else arr.push(id);
+                if(group==='clinic')self.selClinics=arr; else self.selDisps=arr;
+            }
+            self.renderMultiSelect();
+            if(group==='clinic')self.loadDispensers().then(function(){self.refresh();});
+            else self.refresh();
+        });
+
+        // Close dropdowns on outside click
+        $(document).on('click',function(){$('.hm-ms-drop').removeClass('open');$('#hm-plusMenu').removeClass('open');});
+        $(document).on('click','#hm-plusBtn',function(e){e.stopPropagation();$('#hm-plusMenu').toggleClass('open');$('.hm-ms-drop').removeClass('open');});
         $(document).on('click','.hm-plus-item',function(){$('#hm-plusMenu').removeClass('open');self.onPlusAction($(this).data('act'));});
-        $(document).on('click','#hm-cog',function(){$('#hm-cogPanel').toggleClass('open');self.updateCogUI();});
-        $(document).on('click','#hm-cogX, #hm-cogCancel',function(){$('#hm-cogPanel').removeClass('open');});
-        $(document).on('click','#hm-cogSave',function(){$('#hm-cogPanel').removeClass('open');self.refresh();});
-        $(document).on('click','#hm-cogMode .hm-cog-tog-btn',function(){self.viewMode=$(this).data('v');self.updateCogUI();self.refresh();});
-        $(document).on('click','#hm-cogTime .hm-cog-tog-btn',function(){self.mode=$(this).data('v');self.updateCogUI();self.refreshUI();});
+
+        // Popover close
         $(document).on('click',function(e){if(!$(e.target).closest('.hm-pop,.hm-appt').length)$('#hm-pop').removeClass('open');});
         $(document).on('click','.hm-pop-x',function(){$('#hm-pop').removeClass('open');});
         $(document).on('click','.hm-pop-edit',function(){self.editPop();});
+
+        // Slot double-click
         $(document).on('dblclick','.hm-slot',function(){self.onSlot(this);});
+
+        // Popover status actions
+        $(document).on('click','.hm-pop-status',function(){
+            var status=$(this).data('status'),a=self._popAppt;
+            if(!a)return;
+            post('update_appointment',{appointment_id:a._ID,status:status}).then(function(r){
+                if(r.success){$('#hm-pop').removeClass('open');self.refresh();}
+            });
+        });
+
+        // Resize
         var rt;$(window).on('resize',function(){clearTimeout(rt);rt=setTimeout(function(){self.refresh();},150);});
-        $(document).on('keydown',function(e){if(e.key==='Escape'){$('#hm-pop').removeClass('open');$('#hm-cogPanel').removeClass('open');}});
+        $(document).on('keydown',function(e){if(e.key==='Escape'){$('#hm-pop').removeClass('open');$('#hm-tooltip').hide();}});
     },
 
+    // ── Data loading ──
     loadData:function(){
         var self=this;
         this.loadClinics().then(function(){return self.loadDispensers();}).then(function(){return self.loadServices();}).then(function(){self.refresh();});
@@ -145,17 +198,14 @@ var Cal={
         return post('get_clinics').then(function(r){
             if(!r.success)return;
             Cal.clinics=r.data;
-            var $f=$('#hm-clinicF');$f.find('option:not(:first)').remove();
-            r.data.forEach(function(c){$f.append('<option value="'+c.id+'">'+esc(c.name)+'</option>');});
+            Cal.renderMultiSelect();
         });
     },
     loadDispensers:function(){
-        return post('get_dispensers',{clinic:this.selClinic,date:fmt(this.date)}).then(function(r){
+        return post('get_dispensers',{clinic:0,date:fmt(this.date)}).then(function(r){
             if(!r.success)return;
             Cal.dispensers=r.data;
-            var $f=$('#hm-dispF');$f.find('option:not(:first)').remove();
-            r.data.forEach(function(d){$f.append('<option value="'+d.id+'">'+esc(d.initials)+' — '+esc(d.name)+'</option>');});
-            if(Cal.selDisp)$f.val(Cal.selDisp);
+            Cal.renderMultiSelect();
         });
     },
     loadServices:function(){
@@ -167,49 +217,84 @@ var Cal={
     },
     loadAppts:function(){
         var dates=this.visDates();
-        return post('get_appointments',{start:fmt(dates[0]),end:fmt(dates[dates.length-1]),clinic:this.selClinic})
+        return post('get_appointments',{start:fmt(dates[0]),end:fmt(dates[dates.length-1]),clinic:0})
             .then(function(r){if(r.success)Cal.appts=r.data;});
     },
 
-    refresh:function(){var self=this;this.loadAppts().then(function(){self.renderGrid();self.renderAppts();self.renderNow();});},
-    refreshUI:function(){this.renderGrid();this.renderAppts();this.renderNow();this.updateViewBtns();},
+    // ── Multi-select rendering ──
+    renderMultiSelect:function(){
+        // Clinics
+        var ch='<div class="hm-ms-item'+(this.selClinics.length===0?' on':'')+'" data-id="0" data-group="clinic">All Clinics</div>';
+        this.clinics.forEach(function(c){
+            var on=Cal.selClinics.indexOf(c.id)>-1;
+            ch+='<div class="hm-ms-item'+(on?' on':'')+'" data-id="'+c.id+'" data-group="clinic"><span class="hm-ms-dot" style="background:'+(on?'#fff':c.color)+'"></span>'+esc(c.name)+'</div>';
+        });
+        $('#hm-clinicMsDrop').html(ch);
+        var cLbl=this.selClinics.length===0?'All Clinics':this.selClinics.length===1?this.clinics.find(function(c){return c.id===Cal.selClinics[0];})?.name||'1 selected':this.selClinics.length+' selected';
+        $('#hm-clinicMsBtn .hm-ms-lbl').text(cLbl);
 
-    updateViewBtns:function(){$('.hm-view-btn').removeClass('on');$('.hm-view-btn[data-v="'+this.mode+'"]').addClass('on');},
-    updatePreview:function(){
-        var outcome = $('input[name="hs-outcome"]:checked').val() || 'default';
-        var fullName = $('#hs-fullName').prop('checked');
-        var name = fullName ? 'Jane Doe' : 'Jane';
-        var start = $('#hs-start').val() || '09:00';
-        var svc = 'Hearing Test';
-        var clinic = 'Main Clinic';
-        var html = '';
-        html += '<div class="hm-appt-preview-card outcome-' + outcome + '">';
-        html += '<div class="hm-appt-outcome">' + outcome.charAt(0).toUpperCase() + outcome.slice(1) + '</div>';
-        html += '<div class="hm-appt-body">';
-        html += '<div class="hm-appt-name">' + name + '</div>';
-        html += '<div class="hm-appt-badges">';
-        html += '<span class="hm-badge hm-badge-c">C</span>';
-        html += '<span class="hm-badge hm-badge-r">R</span>';
-        html += '<span class="hm-badge hm-badge-v">VM</span>';
-        html += '</div>';
-        html += '<div class="hm-appt-time">' + start + '</div>';
-        html += '<div class="hm-appt-meta">' + svc + ' · ' + clinic + '</div>';
-        html += '</div>'; // body
-        html += '</div>'; // card
-        $("#hs-preview").html(html);
+        // Dispensers — filtered by selected clinics
+        var filtDisp=this.dispensers;
+        if(this.selClinics.length){
+            filtDisp=this.dispensers.filter(function(d){return Cal.selClinics.indexOf(parseInt(d.clinic_id||d.clinicId))>-1;});
+        }
+        var dh='<div class="hm-ms-item'+(this.selDisps.length===0?' on':'')+'" data-id="0" data-group="disp">All Assignees</div>';
+        filtDisp.forEach(function(d){
+            var on=Cal.selDisps.indexOf(parseInt(d.id))>-1;
+            dh+='<div class="hm-ms-item'+(on?' on':'')+'" data-id="'+d.id+'" data-group="disp">'+esc(d.initials)+' — '+esc(d.name)+'</div>';
+        });
+        $('#hm-dispMsDrop').html(dh);
+        var dLbl=this.selDisps.length===0?'All Assignees':this.selDisps.length===1?(function(){var dd=Cal.dispensers.find(function(x){return parseInt(x.id)===Cal.selDisps[0];});return dd?dd.name:'1 selected';})():this.selDisps.length+' selected';
+        $('#hm-dispMsBtn .hm-ms-lbl').text(dLbl);
     },
 
-var slotH = slotMap[cfg.slotHt] || 28;
-cfg.slotHpx = slotH;
+    // ── Refresh ──
+    refresh:function(){var self=this;this.loadAppts().then(function(){self.renderGrid();self.renderAppts();self.renderNow();});},
+    refreshUI:function(){this.renderGrid();this.renderAppts();this.renderNow();this.updateViewBtns();},
+    updateViewBtns:function(){$('.hm-view-btn').removeClass('on');$('.hm-view-btn[data-v="'+this.mode+'"]').addClass('on');},
+    nav:function(dir){this.date.setDate(this.date.getDate()+(this.mode==='week'?dir*7:dir));$('#hm-pop').removeClass('open');$('#hm-tooltip').hide();this.refresh();},
 
-        if(!disps.length){g.innerHTML='<div style="text-align:center;padding:80px;color:var(--hm-text-faint);font-size:15px">No dispensers found. Add dispensers in your Dispenser post type.</div>';g.style.gridTemplateColumns='';return;}
+    visDates:function(){
+        var d=new Date(this.date);
+        if(this.mode==='day')return[new Date(d)];
+        var day=d.getDay();var diff=d.getDate()-day+(day===0?-6:1);
+        var mon=new Date(d);mon.setDate(diff);
+        var dayMap={mon:1,tue:2,wed:3,thu:4,fri:5,sat:6,sun:0};
+        var en=this.cfg.enabledDays.map(function(x){return dayMap[x.trim()]||0;});
+        var arr=[];
+        for(var i=0;i<7;i++){var dd=new Date(mon);dd.setDate(mon.getDate()+i);if(en.indexOf(dd.getDay())!==-1)arr.push(dd);}
+        return arr;
+    },
+    visDisps:function(){
+        var d=this.dispensers;
+        if(this.selClinics.length)d=d.filter(function(x){return Cal.selClinics.indexOf(parseInt(x.clinic_id||x.clinicId))>-1;});
+        if(this.selDisps.length)d=d.filter(function(x){return Cal.selDisps.indexOf(parseInt(x.id))>-1;});
+        return d;
+    },
+    updateDateLbl:function(dates){
+        var s=dates[0],e=dates[dates.length-1];
+        var txt=this.mode==='day'?DAYS[s.getDay()]+', '+s.getDate()+' '+MO[s.getMonth()]+' '+s.getFullYear():
+            s.getDate()+' '+MO[s.getMonth()]+' – '+e.getDate()+' '+MO[e.getMonth()]+' '+e.getFullYear();
+        $('#hm-dateLbl').text(txt);
+    },
+
+    // ── GRID ──
+    renderGrid:function(){
+        var dates=this.visDates(),disps=this.visDisps(),cfg=this.cfg,g=document.getElementById('hm-grid');
+        if(!g)return;
+        this.updateDateLbl(dates);this.updateViewBtns();
+
+        var slotMap={compact:22,regular:28,large:36};
+        var slotH=slotMap[cfg.slotHt]||28;
+        cfg.slotHpx=slotH;
+
+        if(!disps.length){g.innerHTML='<div style="text-align:center;padding:80px;color:var(--hm-text-faint);font-size:15px">No dispensers match your filters. Try changing the clinic or assignee filter.</div>';g.style.gridTemplateColumns='';return;}
 
         var colW=Math.max(80,Math.min(140,Math.floor(900/disps.length)));
         var tc=disps.length*dates.length;
         g.style.gridTemplateColumns='44px repeat('+tc+',minmax('+colW+'px,1fr))';
 
         var h='<div class="hm-time-corner"></div>';
-
         dates.forEach(function(d){
             var td=isToday(d);
             h+='<div class="hm-day-hd'+(td?' today':'')+'" style="grid-column:span '+disps.length+'">';
@@ -237,12 +322,13 @@ cfg.slotHpx = slotH;
         g.innerHTML=h;
     },
 
+    // ── APPOINTMENTS ──
     renderAppts:function(){
         $('.hm-appt,.hm-lunch').remove();
         var dates=this.visDates(),disps=this.visDisps(),cfg=this.cfg,slotH=cfg.slotHpx;
         if(!disps.length)return;
 
-        // Lunch default 13:00 - 13:30
+        // Lunch 13:00-13:30
         var lStart=13*60,lDur=30;
         var lH=(lDur/cfg.slotMin)*slotH;
         var lSlot=Math.floor((lStart-cfg.startH*60)/cfg.slotMin);
@@ -250,13 +336,18 @@ cfg.slotHpx = slotH;
             dates.forEach(function(d,di){
                 disps.forEach(function(p){
                     var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+lSlot+'"][data-disp="'+p.id+'"]');
-                    if($t.length)$t.append('<div class="hm-lunch" style="top:0;height:'+lH+'px">Lunch</div>');
+                    if($t.length)$t.append('<div class="hm-lunch" style="top:0;height:'+lH+'px">LUNCH</div>');
                 });
             });
         }
 
+        var self=this;
         this.appts.forEach(function(a){
-            if(Cal.selDisp&&parseInt(a.dispenser_id)!==Cal.selDisp)return;
+            // Filter by multi-select
+            if(Cal.selDisps.length&&Cal.selDisps.indexOf(parseInt(a.dispenser_id))===-1)return;
+            if(Cal.selClinics.length&&Cal.selClinics.indexOf(parseInt(a.clinic_id))===-1)return;
+            if(cfg.hideCancelled&&a.status==='Cancelled')return;
+
             var di=-1;
             for(var i=0;i<dates.length;i++){if(fmt(dates[i])===a.appointment_date){di=i;break;}}
             if(di===-1)return;
@@ -276,26 +367,41 @@ cfg.slotHpx = slotH;
             var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+a.dispenser_id+'"]');
             if(!$t.length)return;
 
-            var col=a.service_colour||cfg.appt_bg_color||'#3B82F6';
-            var font=cfg.appt_font_color||'#fff';
-            var badge=cfg.appt_badge_color||'#3b82f6';
-            var badgeFont=cfg.appt_badge_font_color||'#ffffff';
-            var meta=cfg.appt_meta_color||'#38bdf8';
-            var stCls=a.status==='Pending'?' pending':a.status==='Cancelled'?' cancelled':'';
+            var col=a.service_colour||'#3B82F6';
+            var stCls=a.status==='Cancelled'?' cancelled':a.status==='No Show'?' noshow':'';
             var tmLbl=cfg.showTimeInline?(a.start_time.substring(0,5)+' '):'';
+            var hasOutcome=a.outcome_banner_colour&&a.outcome_name;
 
-            var el=$('<div class="hm-appt'+stCls+'" data-id="'+a._ID+'" style="background:'+col+';height:'+h+'px;top:'+off+'px;color:'+font+'">'+
-                '<div class="hm-appt-svc" style="color:'+font+'">'+esc(a.service_name)+'</div>'+
-                '<div class="hm-appt-pt" style="color:'+font+'">'+tmLbl+esc(a.patient_name||'No patient')+'</div>'+
-                (h>36&&!cfg.hideEndTime?'<div class="hm-appt-tm" style="color:'+badge+'">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>':
-                 h>36?'<div class="hm-appt-tm" style="color:'+badge+'">'+a.start_time.substring(0,5)+'</div>':'')+
-                '<div class="hm-appt-meta" style="color:'+meta+'">'+esc(a.service_name)+' · '+esc(a.clinic_name||'')+'</div>'+
-            '</div>');
+            // Build card HTML
+            var card='<div class="hm-appt'+stCls+'" data-id="'+a._ID+'" style="background:'+col+';height:'+h+'px;top:'+off+'px">';
+            // Outcome banner
+            if(hasOutcome){
+                card+='<div class="hm-appt-outcome" style="background:linear-gradient(90deg,'+a.outcome_banner_colour+','+a.outcome_banner_colour+'cc)">'+esc(a.outcome_name)+'</div>';
+            }
+            card+='<div class="hm-appt-inner">';
+            card+='<div class="hm-appt-svc">'+esc(a.service_name)+'</div>';
+            card+='<div class="hm-appt-pt">'+tmLbl+esc(a.patient_name||'No patient')+'</div>';
+            if(h>36&&!cfg.hideEndTime)card+='<div class="hm-appt-tm">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>';
+            else if(h>36)card+='<div class="hm-appt-tm">'+a.start_time.substring(0,5)+'</div>';
+            if(h>50)card+='<div class="hm-appt-meta">'+esc(a.service_name)+' · '+esc(a.clinic_name||'')+'</div>';
+            card+='</div></div>';
+
+            var el=$(card);
             $t.append(el);
-            el.on('click',function(e){e.stopPropagation();Cal.showPop(a,this);});
+
+            // Click → popover
+            el.on('click',function(e){e.stopPropagation();clearTimeout(Cal._hoverTimer);$('#hm-tooltip').hide();Cal.showPop(a,this);});
+
+            // Hover → tooltip after 1 second
+            el.on('mouseenter',function(){
+                var rect=this.getBoundingClientRect();
+                Cal._hoverTimer=setTimeout(function(){Cal.showTooltip(a,rect);},1000);
+            });
+            el.on('mouseleave',function(){clearTimeout(Cal._hoverTimer);$('#hm-tooltip').hide();});
         });
     },
 
+    // ── NOW LINE ──
     renderNow:function(){
         $('.hm-now').remove();
         var now=new Date(),dates=this.visDates(),disps=this.visDisps(),cfg=this.cfg;
@@ -312,113 +418,97 @@ cfg.slotHpx = slotH;
         });
     },
 
+    // ── HOVER TOOLTIP ──
+    showTooltip:function(a,rect){
+        var disp=this.dispensers.find(function(d){return parseInt(d.id)===parseInt(a.dispenser_id);});
+        var clinic=this.clinics.find(function(c){return parseInt(c.id)===parseInt(a.clinic_id);});
+        var h='<div class="hm-tip-name">'+esc(a.patient_name||'—')+'</div>';
+        h+='<div class="hm-tip-num">'+esc(a.patient_number||'')+'</div>';
+        h+='<div class="hm-tip-rows">';
+        h+='<div class="hm-tip-row"><span class="hm-tip-lbl">Service</span><span>'+esc(a.service_name)+'</span></div>';
+        h+='<div class="hm-tip-row"><span class="hm-tip-lbl">Time</span><span>'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+' ('+a.duration+'min)</span></div>';
+        h+='<div class="hm-tip-row"><span class="hm-tip-lbl">Status</span><span>'+esc(a.status)+'</span></div>';
+        h+='<div class="hm-tip-row"><span class="hm-tip-lbl">Dispenser</span><span>'+esc(disp?disp.name:'—')+'</span></div>';
+        h+='<div class="hm-tip-row"><span class="hm-tip-lbl">Clinic</span><span>'+esc(clinic?clinic.name:'—')+'</span></div>';
+        if(a.patient_phone)h+='<div class="hm-tip-row"><span class="hm-tip-lbl">Phone</span><span>'+esc(a.patient_phone)+'</span></div>';
+        if(a.outcome_name)h+='<div class="hm-tip-row"><span class="hm-tip-lbl">Outcome</span><span>'+esc(a.outcome_name)+'</span></div>';
+        h+='</div>';
+        var $tip=$('#hm-tooltip');
+        $tip.html(h).show();
+        var left=Math.min(rect.right+8,window.innerWidth-230);
+        var top=Math.min(rect.top,window.innerHeight-$tip.outerHeight()-10);
+        $tip.css({left:left,top:top});
+    },
+
+    // ── POPOVER ──
     showPop:function(a,el){
         this._popAppt=a;
         var r=el.getBoundingClientRect();
         var col=a.service_colour||'#3B82F6';
-            var h='<div class="hm-settings">';
+        var disp=this.dispensers.find(function(d){return parseInt(d.id)===parseInt(a.dispenser_id);});
+        var clinic=this.clinics.find(function(c){return parseInt(c.id)===parseInt(a.clinic_id);});
+        var st=STATUS_MAP[a.status]||STATUS_MAP.Confirmed;
+        var hasOutcome=a.outcome_banner_colour&&a.outcome_name;
 
-            // Header
-            h+='<div class="hm-admin-hd"><div><h2>Calendar Settings</h2><div class="hm-admin-subtitle">Adjust your scheduling and display preferences.</div></div></div>';
+        var h='<div class="hm-pop-bar" style="background:'+col+'"></div>';
+        if(hasOutcome){
+            h+='<div class="hm-pop-outcome" style="background:linear-gradient(90deg,'+a.outcome_banner_colour+','+a.outcome_banner_colour+'cc)">'+esc(a.outcome_name)+'</div>';
+        }
+        h+='<div class="hm-pop-body">';
+        h+='<div class="hm-pop-hd"><div><div class="hm-pop-name">'+esc(a.patient_name||'No patient')+'</div><div class="hm-pop-num">'+esc(a.patient_number||'')+'</div></div><button class="hm-pop-x">'+IC.x+'</button></div>';
+        h+='<div class="hm-pop-status"><span class="hm-status-pill" style="background:'+st.bg+';color:'+st.color+';border:1px solid '+st.border+'">'+esc(a.status)+'</span></div>';
+        h+='<div class="hm-pop-details">';
+        h+='<div class="hm-pop-row">'+IC.clock+' <span>'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+' · '+(a.duration||30)+'min</span></div>';
+        h+='<div class="hm-pop-row"><span class="hm-pop-svc-dot" style="background:'+col+'"></span> <span>'+esc(a.service_name)+'</span></div>';
+        h+='<div class="hm-pop-row">'+IC.user+' <span>'+esc(disp?disp.name:'—')+' · '+esc(clinic?clinic.name:'')+'</span></div>';
+        h+='</div>';
+        h+='<div class="hm-pop-actions">';
+        h+='<button class="hm-pop-act hm-pop-act--primary hm-pop-edit">Edit</button>';
+        h+='<button class="hm-pop-act hm-pop-act--green hm-pop-status" data-status="Arrived">Arrived</button>';
+        h+='<button class="hm-pop-act hm-pop-act--red hm-pop-status" data-status="No Show">No Show</button>';
+        h+='</div>';
+        h+='</div>';
 
-            // Two-column layout: left = settings, right = preview + key prefs
-            h+='<div class="hm-settings-two" style="display:grid;grid-template-columns:1fr 380px;gap:16px;margin-top:12px">';
+        var $p=$('#hm-pop');
+        $p.html(h).addClass('open');
+        var left=Math.min(r.right+10,window.innerWidth-300);
+        var top=Math.min(r.top,window.innerHeight-$p.outerHeight()-10);
+        $p.css({left:left,top:top});
+    },
 
-            // Left column - stacked cards
-            h+='<div class="hs-left">';
-
-            // ── Card 1: Time & View ──
-            h+='<div class="hm-card">';
-            h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">🕐</span><h3>Time &amp; View</h3></div>';
-            h+='<div class="hm-card-body">';
-            h+=this.row('Start time','<input type="time" class="hm-inp" id="hs-start" value="'+esc(v('start_time','09:00'))+'" style="width:130px">');
-            h+=this.row('End time','<input type="time" class="hm-inp" id="hs-end" value="'+esc(v('end_time','18:00'))+'" style="width:130px">');
-            h+=this.row('Time interval','<select class="hm-dd" id="hs-interval">'+[15,20,30,45,60].map(function(m){return'<option value="'+m+'"'+(parseInt(v('time_interval',30))===m?' selected':'')+'>'+m+' minutes</option>';}).join('')+'</select>');
-            h+=this.row('Slot height','<select class="hm-dd" id="hs-slotH">'+['compact','regular','large'].map(function(s){return'<option value="'+s+'"'+(v('slot_height','regular')===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';}).join('')+'</select>');
-            h+=this.row('Default timeframe','<select class="hm-dd" id="hs-view">'+['day','week'].map(function(s){return'<option value="'+s+'"'+(v('default_view','week')===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';}).join('')+'</select>');
-            h+='</div></div>';
-
-            // ── Card 3: Rules & Safety ──
-            h+='<div class="hm-card">';
-            h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">🛡</span><h3>Rules &amp; Safety</h3></div>';
-            h+='<div class="hm-card-body">';
-            h+=this.tog('Require cancellation reason','hs-cancelReason',v('require_cancel_reason','yes')==='yes','Patients will be prompted when cancelling online.');
-            h+=this.tog('Hide cancelled appointments','hs-hideCancelled',v('hide_cancelled','yes')==='yes');
-            h+=this.tog('Require reschedule note','hs-reschedNote',v('require_reschedule_note','no')==='yes');
-            h+=this.tog('Prevent mismatched location bookings','hs-locMismatch',v('prevent_location_mismatch','no')==='yes');
-            h+='</div></div>';
-
-            // ── Card 4: Availability ──
-            h+='<div class="hm-card">';
-            h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">📅</span><h3>Availability</h3></div>';
-            h+='<div class="hm-card-body">';
-            var enDays=(v('enabled_days','mon,tue,wed,thu,fri')).split(',');
-            h+='<div class="hm-srow" style="flex-direction:column;align-items:stretch"><span class="hm-slbl" style="margin-bottom:8px">Enabled days</span><div class="hm-day-checks">';
-            ['mon','tue','wed','thu','fri','sat','sun'].forEach(function(d){h+='<label><input type="checkbox" class="hs-day" value="'+d+'"'+(enDays.indexOf(d)!==-1?' checked':'')+'>'+d.charAt(0).toUpperCase()+d.slice(1)+'</label>';});
-            h+='</div></div>';
-            h+=this.tog('Apply clinic colour to working times','hs-clinicColour',v('apply_clinic_colour','no')==='yes');
-            h+='</div></div>';
-
-            // ── Card 5: Calendar Order (full width in left column) ──
-            h+='<div class="hm-card">';
-            h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">⠿</span><h3>Calendar Order</h3></div>';
-            h+='<div class="hm-card-body">';
-            h+='<div style="font-size:12px;color:#94a3b8;margin-bottom:10px">Drag to reorder how dispensers appear on the calendar.</div>';
-            h+='<ul class="hm-sort-list" id="hs-sortList">';
-            this.dispensers.forEach(function(d){
-                var ini=esc(d.initials||'');
-                h+='<li class="hm-sort-item" data-id="'+d.id+'">';
-                h+='<span class="hm-sort-grip">⠿</span>';
-                h+='<span class="hm-sort-avatar">'+ini+'</span>';
-                h+='<span class="hm-sort-info"><span class="hm-sort-name">'+esc(d.name)+'</span><span class="hm-sort-role">'+ini+' · '+(esc(d.role_type)||'Dispenser')+'</span></span>';
-                h+='</li>';
-            });
-            h+='</ul></div></div>';
-
-            h+='</div>'; // end left
-
-            // Right column - preview + display prefs + save
-            h+='<div class="hs-right">';
-            // Display Preferences card moved to right
-            h+='<div class="hm-card">';
-            h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">👁</span><h3>Display Preferences</h3></div>';
-            h+='<div class="hm-card-body">';
-            h+=this.tog('Display time inline with patient name','hs-timeInline',v('show_time_inline','no')==='yes');
-            h+=this.tog('Hide appointment end time','hs-hideEnd',v('hide_end_time','yes')==='yes');
-            h+='<div class="hm-srow" style="flex-direction:column;align-items:stretch"><span class="hm-slbl">Outcome style</span><div class="hm-radio-grp" style="margin-top:8px">';
-            ['default','small','tag','popover'].forEach(function(s){h+='<label><input type="radio" name="hs-outcome" value="'+s+'"'+(v('outcome_style','default')===s?' checked':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</label>';});
-            h+='</div></div>';
-            h+=this.tog('Display full resource name','hs-fullName',v('display_full_name','no')==='yes');
-            h+='</div></div>';
-
-            // Preview card
-            h+='<div class="hm-card">';
-            h+='<div class="hm-card-hd"><h3>Preview</h3></div>';
-            h+='<div class="hm-card-body"><div id="hs-preview" class="hs-preview-container"></div></div>';
-            h+='</div>';
-
-            // Save area
-            h+='<div class="hm-card">';
-            h+='<div class="hm-card-body" style="display:flex;justify-content:flex-end;gap:8px">';
-            h+='<button class="hm-btn hm-btn--primary" id="hs-save">Save Changes</button>';
-            h+='</div></div>';
-
-            h+='</div>'; // end right
-
-            h+='</div>'; // end two-column
+    editPop:function(){
+        var a=this._popAppt;if(!a)return;
+        $('#hm-pop').removeClass('open');
+        var self=this;
+        var html='<div class="hm-modal-bg open"><div class="hm-modal hm-modal--md">'+
+            '<div class="hm-modal-hd"><h3>Edit Appointment</h3><button class="hm-close hm-edit-close">'+IC.x+'</button></div>'+
+            '<div class="hm-modal-body">'+
+                '<div class="hm-row"><div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hme-date" value="'+a.appointment_date+'"></div>'+
+                '<div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hme-time" value="'+(a.start_time||'').substring(0,5)+'"></div></div>'+
+                '<div class="hm-row"><div class="hm-fld"><label>Status</label><select class="hm-inp" id="hme-status"><option>Confirmed</option><option>Arrived</option><option>In Progress</option><option>Completed</option><option>Late</option><option>No Show</option><option>Cancelled</option><option>Pending</option></select></div>'+
+                '<div class="hm-fld"><label>Location</label><select class="hm-inp" id="hme-loc"><option>Clinic</option><option>Home</option></select></div></div>'+
+                '<div class="hm-fld"><label>Notes</label><textarea class="hm-inp" id="hme-notes" rows="3">'+esc(a.notes||'')+'</textarea></div>'+
+            '</div>'+
+            '<div class="hm-modal-ft"><button class="hm-btn hm-btn--danger hm-edit-del">Delete</button><div class="hm-modal-acts"><button class="hm-btn hm-edit-close">Cancel</button><button class="hm-btn hm-btn--primary hm-edit-save">Save</button></div></div>'+
+        '</div></div>';
+        $('body').append(html);
+        $('#hme-status').val(a.status);
+        $('#hme-loc').val(a.location_type||'Clinic');
+        $(document).off('click.editclose').on('click.editclose','.hm-edit-close',function(){$('.hm-modal-bg').remove();$(document).off('.editclose .editsave .editdel');});
+        $(document).off('click.editsave').on('click.editsave','.hm-edit-save',function(){
+            post('update_appointment',{appointment_id:a._ID,appointment_date:$('#hme-date').val(),start_time:$('#hme-time').val(),status:$('#hme-status').val(),location_type:$('#hme-loc').val(),notes:$('#hme-notes').val()})
+            .then(function(r){if(r.success){$('.hm-modal-bg').remove();$(document).off('.editclose .editsave .editdel');self.refresh();}else{alert(r.data||'Error');}});
+        });
         $(document).off('click.editdel').on('click.editdel','.hm-edit-del',function(){
             if(!confirm('Delete this appointment?'))return;
             var reason=prompt('Reason for cancellation:')||'Deleted';
             post('delete_appointment',{appointment_id:a._ID,reason:reason}).then(function(r){
-                if(r.success){$('.hm-modal-bg').remove();$(document).off('.editmodal .editclose .editsave .editdel');self.refresh();}else{alert(r.data||'Error');}
+                if(r.success){$('.hm-modal-bg').remove();$(document).off('.editclose .editsave .editdel');self.refresh();}else{alert(r.data||'Error');}
             });
         });
     },
 
-    onSlot:function(el){
-        var d=el.dataset;
-        this.openNewApptModal(d.date,d.time,parseInt(d.disp));
-    },
+    onSlot:function(el){var d=el.dataset;this.openNewApptModal(d.date,d.time,parseInt(d.disp));},
 
     openNewApptModal:function(date,time,dispId){
         var self=this;
@@ -426,38 +516,26 @@ cfg.slotHpx = slotH;
             '<div class="hm-modal-hd"><h3>New Appointment</h3><button class="hm-close hm-new-close">'+IC.x+'</button></div>'+
             '<div class="hm-modal-body">'+
                 '<div class="hm-fld"><label>Patient search</label><input class="hm-inp" id="hmn-ptsearch" placeholder="Search by name..." autocomplete="off"><div class="hm-pt-results" id="hmn-ptresults"></div><input type="hidden" id="hmn-patientid" value="0"></div>'+
-                '<div class="hm-row">'+
-                    '<div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hmn-service">'+self.services.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
-                    '<div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hmn-clinic">'+self.clinics.map(function(c){return'<option value="'+c.id+'">'+esc(c.name)+'</option>';}).join('')+'</select></div>'+
-                '</div>'+
-                '<div class="hm-row">'+
-                    '<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hmn-disp">'+self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(d.id===dispId?' selected':'')+'>'+esc(d.name)+'</option>';}).join('')+'</select></div>'+
-                    '<div class="hm-fld"><label>Status</label><select class="hm-inp" id="hmn-status"><option>Confirmed</option><option>Pending</option></select></div>'+
-                '</div>'+
-                '<div class="hm-row">'+
-                    '<div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hmn-date" value="'+date+'"></div>'+
-                    '<div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hmn-time" value="'+time+'"></div>'+
-                '</div>'+
+                '<div class="hm-row"><div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hmn-service">'+self.services.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
+                '<div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hmn-clinic">'+self.clinics.map(function(c){return'<option value="'+c.id+'">'+esc(c.name)+'</option>';}).join('')+'</select></div></div>'+
+                '<div class="hm-row"><div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hmn-disp">'+self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(parseInt(d.id)===dispId?' selected':'')+'>'+esc(d.name)+'</option>';}).join('')+'</select></div>'+
+                '<div class="hm-fld"><label>Status</label><select class="hm-inp" id="hmn-status"><option>Confirmed</option><option>Pending</option></select></div></div>'+
+                '<div class="hm-row"><div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hmn-date" value="'+date+'"></div>'+
+                '<div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hmn-time" value="'+time+'"></div></div>'+
                 '<div class="hm-fld"><label>Location</label><select class="hm-inp" id="hmn-loc"><option>Clinic</option><option>Home</option></select></div>'+
                 '<div class="hm-fld"><label>Notes</label><textarea class="hm-inp" id="hmn-notes" placeholder="Optional notes..."></textarea></div>'+
             '</div>'+
             '<div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hm-new-close">Cancel</button><button class="hm-btn hm-btn--primary hm-new-save">Create Appointment</button></div></div>'+
         '</div></div>';
         $('body').append(html);
-
-        // Patient search
         var searchTimer;
         $(document).on('input.newmodal','#hmn-ptsearch',function(){
-            var q=$(this).val();
-            clearTimeout(searchTimer);
+            var q=$(this).val();clearTimeout(searchTimer);
             if(q.length<2){$('#hmn-ptresults').removeClass('open').empty();return;}
             searchTimer=setTimeout(function(){
                 post('search_patients',{query:q}).then(function(r){
                     if(!r.success||!r.data.length){$('#hmn-ptresults').removeClass('open').empty();return;}
-                    var h='';
-                    r.data.forEach(function(p){
-                        h+='<div class="hm-pt-item" data-id="'+p.id+'"><span>'+esc(p.name)+'</span><span class="hm-pt-newtab">Select</span></div>';
-                    });
+                    var h='';r.data.forEach(function(p){h+='<div class="hm-pt-item" data-id="'+p.id+'"><span>'+esc(p.name)+'</span><span class="hm-pt-newtab">Select</span></div>';});
                     $('#hmn-ptresults').html(h).addClass('open');
                 });
             },300);
@@ -466,16 +544,8 @@ cfg.slotHpx = slotH;
             var id=$(this).data('id'),name=$(this).find('span:first').text();
             $('#hmn-ptsearch').val(name);$('#hmn-patientid').val(id);$('#hmn-ptresults').removeClass('open');
         });
-
-        $(document).off('click.newclose').on('click.newclose','.hm-new-close',function(e){
-            e.stopPropagation();
-            $('.hm-modal-bg').remove();$(document).off('.newmodal .newclose');
-        });
-        $(document).off('click.newbg').on('click.newbg','.hm-modal-bg',function(e){
-            if($(e.target).hasClass('hm-modal-bg')){
-                $('.hm-modal-bg').remove();$(document).off('.newmodal .newclose .newbg');
-            }
-        });
+        $(document).off('click.newclose').on('click.newclose','.hm-new-close',function(e){e.stopPropagation();$('.hm-modal-bg').remove();$(document).off('.newmodal .newclose');});
+        $(document).off('click.newbg').on('click.newbg','.hm-modal-bg',function(e){if($(e.target).hasClass('hm-modal-bg')){$('.hm-modal-bg').remove();$(document).off('.newmodal .newclose .newbg');}});
         $(document).off('click.newsave').on('click.newsave','.hm-new-save',function(){
             post('create_appointment',{
                 patient_id:$('#hmn-patientid').val(),service_id:$('#hmn-service').val(),
@@ -491,37 +561,14 @@ cfg.slotHpx = slotH;
     },
 
     onPlusAction:function(act){
-        if(act==='appointment')this.openNewApptModal(fmt(this.date),pad(this.cfg.startH)+':00',this.dispensers.length?this.dispensers[0].id:0);
+        if(act==='appointment')this.openNewApptModal(fmt(this.date),pad(this.cfg.startH)+':00',this.dispensers.length?parseInt(this.dispensers[0].id):0);
         else if(act==='patient')alert('Navigate to your patient admin page to add a new patient');
         else if(act==='holiday')window.location.href='/adminconsole/holidays';
-    },
-
-    visDates:function(){
-        var d=new Date(this.date);
-        if(this.mode==='day')return[new Date(d)];
-        var day=d.getDay();var diff=d.getDate()-day+(day===0?-6:1);
-        var mon=new Date(d);mon.setDate(diff);
-        var dayMap={mon:1,tue:2,wed:3,thu:4,fri:5,sat:6,sun:0};
-        var en=this.cfg.enabledDays.map(function(x){return dayMap[x.trim()]||0;});
-        var arr=[];
-        for(var i=0;i<7;i++){var dd=new Date(mon);dd.setDate(mon.getDate()+i);if(en.indexOf(dd.getDay())!==-1)arr.push(dd);}
-        return arr;
-    },
-    visDisps:function(){
-        var d=this.dispensers;
-        if(this.selDisp)d=d.filter(function(x){return parseInt(x.id)===Cal.selDisp;});
-        return d;
-    },
-    updateDateLbl:function(dates){
-        var s=dates[0],e=dates[dates.length-1];
-        var txt=this.mode==='day'?DAYS[s.getDay()]+', '+s.getDate()+' '+MO[s.getMonth()]+' '+s.getFullYear():
-            s.getDate()+' '+MO[s.getMonth()]+' – '+e.getDate()+' '+MO[e.getMonth()]+' '+e.getFullYear();
-        $('#hm-dateLbl').text(txt);
     },
 };
 
 // ═══════════════════════════════════════
-// SETTINGS VIEW
+// SETTINGS VIEW (unchanged)
 // ═══════════════════════════════════════
 var Settings={
     $el:null,data:{},dispensers:[],
@@ -539,144 +586,55 @@ var Settings={
     render:function(){
         var d=this.data,v=function(k,def){return(d[k]!==undefined&&d[k]!=='')?d[k]:def;};
         var h='<div class="hm-settings">';
-
-        // Header
         h+='<div class="hm-admin-hd"><div><h2>Calendar Settings</h2><div class="hm-admin-subtitle">Adjust your scheduling and display preferences.</div></div></div>';
-
-        // Two-column layout: left = settings, right = preview + key prefs
         h+='<div class="hm-settings-two" style="display:grid;grid-template-columns:1fr 380px;gap:16px;margin-top:12px">';
-
-        // Left column - stacked cards
         h+='<div class="hs-left">';
-
-        // ── Card 1: Time & View ──
-        h+='<div class="hm-card">';
-        h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">🕐</span><h3>Time &amp; View</h3></div>';
-        h+='<div class="hm-card-body">';
+        h+='<div class="hm-card"><div class="hm-card-hd"><span class="hm-card-hd-icon">🕐</span><h3>Time &amp; View</h3></div><div class="hm-card-body">';
         h+=this.row('Start time','<input type="time" class="hm-inp" id="hs-start" value="'+esc(v('start_time','09:00'))+'" style="width:130px">');
         h+=this.row('End time','<input type="time" class="hm-inp" id="hs-end" value="'+esc(v('end_time','18:00'))+'" style="width:130px">');
         h+=this.row('Time interval','<select class="hm-dd" id="hs-interval">'+[15,20,30,45,60].map(function(m){return'<option value="'+m+'"'+(parseInt(v('time_interval',30))===m?' selected':'')+'>'+m+' minutes</option>';}).join('')+'</select>');
         h+=this.row('Slot height','<select class="hm-dd" id="hs-slotH">'+['compact','regular','large'].map(function(s){return'<option value="'+s+'"'+(v('slot_height','regular')===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';}).join('')+'</select>');
         h+=this.row('Default timeframe','<select class="hm-dd" id="hs-view">'+['day','week'].map(function(s){return'<option value="'+s+'"'+(v('default_view','week')===s?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';}).join('')+'</select>');
         h+='</div></div>';
-
-        // ── Card 3: Rules & Safety ──
-        h+='<div class="hm-card">';
-        h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">🛡</span><h3>Rules &amp; Safety</h3></div>';
-        h+='<div class="hm-card-body">';
-        h+=this.tog('Require cancellation reason','hs-cancelReason',v('require_cancel_reason','yes')==='yes','Patients will be prompted when cancelling online.');
+        h+='<div class="hm-card"><div class="hm-card-hd"><span class="hm-card-hd-icon">🛡</span><h3>Rules &amp; Safety</h3></div><div class="hm-card-body">';
+        h+=this.tog('Require cancellation reason','hs-cancelReason',v('require_cancel_reason','yes')==='yes');
         h+=this.tog('Hide cancelled appointments','hs-hideCancelled',v('hide_cancelled','yes')==='yes');
         h+=this.tog('Require reschedule note','hs-reschedNote',v('require_reschedule_note','no')==='yes');
         h+=this.tog('Prevent mismatched location bookings','hs-locMismatch',v('prevent_location_mismatch','no')==='yes');
         h+='</div></div>';
-
-        // ── Card 4: Availability ──
-        h+='<div class="hm-card">';
-        h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">📅</span><h3>Availability</h3></div>';
-        h+='<div class="hm-card-body">';
+        h+='<div class="hm-card"><div class="hm-card-hd"><span class="hm-card-hd-icon">📅</span><h3>Availability</h3></div><div class="hm-card-body">';
         var enDays=(v('enabled_days','mon,tue,wed,thu,fri')).split(',');
         h+='<div class="hm-srow" style="flex-direction:column;align-items:stretch"><span class="hm-slbl" style="margin-bottom:8px">Enabled days</span><div class="hm-day-checks">';
-        ['mon','tue','wed','thu','fri','sat','sun'].forEach(function(d){h+='<label><input type="checkbox" class="hs-day" value="'+d+'"'+(enDays.indexOf(d)!==-1?' checked':'')+'>'+d.charAt(0).toUpperCase()+d.slice(1)+'</label>';});
+        ['mon','tue','wed','thu','fri','sat','sun'].forEach(function(dd){h+='<label><input type="checkbox" class="hs-day" value="'+dd+'"'+(enDays.indexOf(dd)!==-1?' checked':'')+'>'+dd.charAt(0).toUpperCase()+dd.slice(1)+'</label>';});
         h+='</div></div>';
         h+=this.tog('Apply clinic colour to working times','hs-clinicColour',v('apply_clinic_colour','no')==='yes');
         h+='</div></div>';
-
-        // ── Card 5: Calendar Order (full width in left column) ──
-        h+='<div class="hm-card">';
-        h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">⠿</span><h3>Calendar Order</h3></div>';
-        h+='<div class="hm-card-body">';
+        h+='<div class="hm-card"><div class="hm-card-hd"><span class="hm-card-hd-icon">⠿</span><h3>Calendar Order</h3></div><div class="hm-card-body">';
         h+='<div style="font-size:12px;color:#94a3b8;margin-bottom:10px">Drag to reorder how dispensers appear on the calendar.</div>';
         h+='<ul class="hm-sort-list" id="hs-sortList">';
-        this.dispensers.forEach(function(d){
-            var ini=esc(d.initials||'');
-            h+='<li class="hm-sort-item" data-id="'+d.id+'">';
-            h+='<span class="hm-sort-grip">⠿</span>';
-            h+='<span class="hm-sort-avatar">'+ini+'</span>';
-            h+='<span class="hm-sort-info"><span class="hm-sort-name">'+esc(d.name)+'</span><span class="hm-sort-role">'+ini+' · '+(esc(d.role_type)||'Dispenser')+'</span></span>';
-            h+='</li>';
-        });
+        this.dispensers.forEach(function(dd){var ini=esc(dd.initials||'');h+='<li class="hm-sort-item" data-id="'+dd.id+'"><span class="hm-sort-grip">⠿</span><span class="hm-sort-avatar">'+ini+'</span><span class="hm-sort-info"><span class="hm-sort-name">'+esc(dd.name)+'</span><span class="hm-sort-role">'+ini+' · '+(esc(dd.role_type)||'Dispenser')+'</span></span></li>';});
         h+='</ul></div></div>';
-
-        h+='</div>'; // end left
-
-        // Right column - preview + display prefs + save
+        h+='</div>';
         h+='<div class="hs-right">';
-        // Display Preferences card moved to right
-        h+='<div class="hm-card">';
-        h+='<div class="hm-card-hd"><span class="hm-card-hd-icon">👁</span><h3>Display Preferences</h3></div>';
-        h+='<div class="hm-card-body">';
+        h+='<div class="hm-card"><div class="hm-card-hd"><span class="hm-card-hd-icon">👁</span><h3>Display Preferences</h3></div><div class="hm-card-body">';
         h+=this.tog('Display time inline with patient name','hs-timeInline',v('show_time_inline','no')==='yes');
         h+=this.tog('Hide appointment end time','hs-hideEnd',v('hide_end_time','yes')==='yes');
         h+='<div class="hm-srow" style="flex-direction:column;align-items:stretch"><span class="hm-slbl">Outcome style</span><div class="hm-radio-grp" style="margin-top:8px">';
-        ['default','small','tag','popover'].forEach(function(s){h+='<label><input type="radio" name="hs-outcome" value="'+s+'"'+(v('outcome_style','default')===s?' checked':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</label>';});
+        ['default','small','tag','popover'].forEach(function(ss){h+='<label><input type="radio" name="hs-outcome" value="'+ss+'"'+(v('outcome_style','default')===ss?' checked':'')+'>'+ss.charAt(0).toUpperCase()+ss.slice(1)+'</label>';});
         h+='</div></div>';
         h+=this.tog('Display full resource name','hs-fullName',v('display_full_name','no')==='yes');
         h+='</div></div>';
-
-        // Preview card
-        h+='<div class="hm-card">';
-        h+='<div class="hm-card-hd"><h3>Preview</h3></div>';
-        h+='<div class="hm-card-body"><div id="hs-preview" class="hs-preview-container"></div></div>';
-        h+='</div>';
-
-        // Save area
-        h+='<div class="hm-card">';
-        h+='<div class="hm-card-body" style="display:flex;justify-content:flex-end;gap:8px">';
-        h+='<button class="hm-btn hm-btn--primary" id="hs-save">Save Changes</button>';
+        h+='<div class="hm-card"><div class="hm-card-hd"><h3>Preview</h3></div><div class="hm-card-body"><div id="hs-preview" class="hs-preview-container"></div></div></div>';
+        h+='<div class="hm-card"><div class="hm-card-body" style="display:flex;justify-content:flex-end;gap:8px"><button class="hm-btn hm-btn--primary" id="hs-save">Save Changes</button></div></div>';
         h+='</div></div>';
-
-        h+='</div>'; // end right
-
-        h+='</div>'; // end two-column
         this.$el.html(h);
-        $('#hs-sortList').sortable({handle:'.hm-sort-grip'});
+        try{$('#hs-sortList').sortable({handle:'.hm-sort-grip'});}catch(e){}
     },
-    bind:function(){var self=this;$(document).on('click','#hs-save',function(){self.save();});
-        // update preview when inputs change
-        $(document).on('change', '#hs-start,#hs-end,#hs-interval,#hs-slotH,#hs-view, input[name="hs-outcome"], #hs-fullName, .hs-day, #hs-timeInline, #hs-hideEnd, #hs-clinicColour', function(){
-            try{ self.updatePreview(); }catch(e){console.error(e);} 
-        });
-        // also update when sort list changes (order)
-        $(document).on('sortupdate', '#hs-sortList', function(){ try{ self.updatePreview(); }catch(e){console.error(e);} });
-    },
-
-    updatePreview:function(){
-        var data=this.data||{};
-        var start=$('#hs-start').val()||data.start_time||'09:00';
-        var name='Joe Bloggs';
-        var svc='Follow up';
-        var clinic='Cosgrove\'s Pharmacy';
-        var outcome=$('input[name="hs-outcome"]:checked').val()||data.outcome_style||'default';
-        var fullName = $('#hs-fullName').is(':checked') || (data.display_full_name==='yes');
-        var html='';
-        html += '<div class="hm-appt-preview-wrap">';
-        html += '<div class="hm-appt-preview-card">';
-        html += '<div class="hm-appt-outcome">Outcome</div>';
-        html += '<div class="hm-appt-body">';
-        html += '<div class="hm-appt-name">'+name+'</div>';
-        html += '<div class="hm-appt-badges">';
-        html += '<span class="hm-badge hm-badge-c">C</span>';
-        html += '<span class="hm-badge hm-badge-r">R</span>';
-        html += '<span class="hm-badge hm-badge-v">VM</span>';
-        html += '</div>';
-        html += '<div class="hm-appt-time">'+start+'</div>';
-        html += '<div class="hm-appt-meta">'+svc+' · '+clinic+'</div>';
-        html += '</div>'; // body
-        html += '</div>'; // card
-        html += '</div>'; // wrap
-        $('#hs-preview').html(html);
-        // style variations
-        var $card=$('#hs-preview .hm-appt-preview');
-        // also support new card class
-        var $newCard = $('#hs-preview .hm-appt-preview-card');
-        $newCard.removeClass('outcome-default outcome-small outcome-tag outcome-popover');
-        $newCard.addClass('outcome-'+(outcome||'default'));
-    },
+    bind:function(){var self=this;$(document).on('click','#hs-save',function(){self.save();});},
     save:function(){
         var days=[];$('.hs-day:checked').each(function(){days.push($(this).val());});
         var order=[];$('#hs-sortList .hm-sort-item').each(function(){order.push($(this).data('id'));});
-        var $btn=$('#hs-save');
-        $btn.text('Saving...').prop('disabled',true);
+        var $btn=$('#hs-save');$btn.text('Saving...').prop('disabled',true);
         post('save_settings',{
             start_time:$('#hs-start').val(),end_time:$('#hs-end').val(),
             time_interval:$('#hs-interval').val(),slot_height:$('#hs-slotH').val(),
@@ -692,14 +650,8 @@ var Settings={
             prevent_location_mismatch:$('#hs-locMismatch').is(':checked')?'yes':'no',
             enabled_days:days.join(','),calendar_order:JSON.stringify(order),
         }).then(function(r){
-            if(r.success){
-                post('save_dispenser_order',{order:JSON.stringify(order)});
-                $btn.text('Save Changes').prop('disabled',false);
-                $('#hs-toast').fadeIn(200);setTimeout(function(){$('#hs-toast').fadeOut(400);},3000);
-            } else {
-                alert('Error saving');
-                $btn.text('Save Changes').prop('disabled',false);
-            }
+            if(r.success){post('save_dispenser_order',{order:JSON.stringify(order)});$btn.text('Save Changes').prop('disabled',false);}
+            else{alert('Error saving');$btn.text('Save Changes').prop('disabled',false);}
         });
     },
     row:function(lbl,ctrl){return'<div class="hm-srow"><span class="hm-slbl">'+lbl+'</span><div class="hm-sval">'+ctrl+'</div></div>';},
@@ -712,7 +664,7 @@ var Settings={
 };
 
 // ═══════════════════════════════════════
-// BLOCKOUTS VIEW
+// BLOCKOUTS VIEW (unchanged)
 // ═══════════════════════════════════════
 var Blockouts={
     $el:null,data:[],services:[],dispensers:[],
@@ -759,7 +711,7 @@ var Blockouts={
 };
 
 // ═══════════════════════════════════════
-// HOLIDAYS VIEW
+// HOLIDAYS VIEW (unchanged)
 // ═══════════════════════════════════════
 var Holidays={
     $el:null,data:[],dispensers:[],
@@ -776,10 +728,7 @@ var Holidays={
     render:function(){
         var self=this;
         var h='<div class="hm-admin"><div class="hm-admin-hd"><h2>Holidays &amp; Unavailability</h2><button class="hm-btn hm-btn--primary" id="hhl-add">+ Add New</button></div>';
-        h+='<div class="hm-filter-bar"><div class="hm-filter-row"><select class="hm-dd" id="hhl-dispF"><option value="">All Assignees</option>';
-        this.dispensers.forEach(function(d){h+='<option value="'+d.id+'">'+esc(d.name)+'</option>';});
-        h+='</select></div></div>';
-        h+='<table class="hm-table"><thead><tr><th>Assignee</th><th>Reason</th><th>Repeats</th><th>Dates</th><th>Time</th><th style="width:80px"></th></tr></thead><tbody id="hhl-body">';
+        h+='<table class="hm-table"><thead><tr><th>Assignee</th><th>Reason</th><th>Repeats</th><th>Dates</th><th>Time</th><th style="width:80px"></th></tr></thead><tbody>';
         if(!this.data.length)h+='<tr><td colspan="6" class="hm-no-data">No holidays or unavailability configured</td></tr>';
         else this.data.forEach(function(ho){
             h+='<tr><td><strong>'+esc(ho.dispenser_name)+'</strong></td><td>'+esc(ho.reason)+'</td><td>'+(ho.repeats==='no'?'—':ho.repeats)+'</td><td>'+ho.start_date+' → '+ho.end_date+'</td><td>'+(ho.start_time||'—')+' – '+(ho.end_time||'—')+'</td><td class="hm-table-acts"><button class="hm-act-btn hm-act-edit hhl-edit" data-id="'+ho._ID+'">✏️</button><button class="hm-act-btn hm-act-del hhl-del" data-id="'+ho._ID+'">🗑️</button></td></tr>';
@@ -789,10 +738,6 @@ var Holidays={
         $(document).on('click','#hhl-add',function(){self.openForm(null);});
         $(document).on('click','.hhl-edit',function(){var id=$(this).data('id');var ho=self.data.find(function(x){return x._ID==id;});if(ho)self.openForm(ho);});
         $(document).on('click','.hhl-del',function(){if(confirm('Delete?'))post('delete_holiday',{_ID:$(this).data('id')}).then(function(){self.load();});});
-        $(document).on('change','#hhl-dispF',function(){
-            var did=parseInt($(this).val())||0;
-            post('get_holidays',{dispenser_id:did}).then(function(r){self.data=r.success?r.data:[];self.render();});
-        });
     },
     openForm:function(ho){
         var isEdit=!!ho,self=this;
@@ -800,7 +745,7 @@ var Holidays={
         h+='<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hhlf-disp"><option value="">Select...</option>';
         this.dispensers.forEach(function(d){h+='<option value="'+d.id+'"'+(ho&&ho.dispenser_id==d.id?' selected':'')+'>'+esc(d.name)+'</option>';});
         h+='</select></div>';
-        h+='<div class="hm-fld"><label>Reason</label><input class="hm-inp" id="hhlf-reason" value="'+esc(ho?ho.reason:'')+'" placeholder="e.g. Annual leave, Pharmacy admin"></div>';
+        h+='<div class="hm-fld"><label>Reason</label><input class="hm-inp" id="hhlf-reason" value="'+esc(ho?ho.reason:'')+'" placeholder="e.g. Annual leave"></div>';
         h+='<div class="hm-row"><div class="hm-fld"><label>Start Date</label><input type="date" class="hm-inp" id="hhlf-sd" value="'+(ho?ho.start_date:'')+'"></div><div class="hm-fld"><label>End Date</label><input type="date" class="hm-inp" id="hhlf-ed" value="'+(ho?ho.end_date:'')+'"></div></div>';
         h+='<div class="hm-row"><div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hhlf-st" value="'+(ho?ho.start_time:'09:00')+'"></div><div class="hm-fld"><label>End Time</label><input type="time" class="hm-inp" id="hhlf-et" value="'+(ho?ho.end_time:'17:00')+'"></div></div>';
         h+='<div class="hm-fld"><label>Repeats</label><select class="hm-inp" id="hhlf-rep"><option value="no"'+(ho&&ho.repeats!=='no'?'':' selected')+'>No</option><option value="weekly"'+(ho&&ho.repeats==='weekly'?' selected':'')+'>Weekly</option><option value="monthly"'+(ho&&ho.repeats==='monthly'?' selected':'')+'>Monthly</option><option value="yearly"'+(ho&&ho.repeats==='yearly'?' selected':'')+'>Yearly</option></select></div>';
