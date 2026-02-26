@@ -15,7 +15,7 @@ function hm_commissions_render() {
         <div class="hm-page-header">
             <h1 class="hm-page-title">Commissions</h1>
         </div>
-        <div class="hm-placeholder" style="padding:3rem;text-align:center;color:#94a3b8;">
+        <div class="hm-placeholder" style="padding:3rem;text-align:center;color:var(--hm-text-muted);">
             <p>Commission tracking module — coming soon</p>
             <p style="font-size:0.875rem;margin-top:0.5rem;">Track commission periods, calculations, and payments</p>
         </div>

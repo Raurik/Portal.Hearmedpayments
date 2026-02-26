@@ -740,7 +740,7 @@ class HearMed_Accounting {
                     <td>
                         <span class="hm-badge <?php echo $badge; ?>"><?php echo esc_html(ucfirst($q->status)); ?></span>
                         <?php if ($q->last_error) : ?>
-                        <span title="<?php echo esc_attr($q->last_error); ?>" style="cursor:help;color:#94a3b8;font-size:11px;">⚠</span>
+                        <span title="<?php echo esc_attr($q->last_error); ?>" style="cursor:help;color:var(--hm-text-muted);font-size:11px;">⚠</span>
                         <?php endif; ?>
                     </td>
                     <td class="hm-muted hm-mono" style="font-size:12px;"><?php echo esc_html(date('d/m/Y', strtotime($q->queued_at))); ?></td>

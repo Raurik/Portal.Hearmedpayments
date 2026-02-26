@@ -173,7 +173,7 @@ class HearMed_Admin_Document_Templates {
                 <div class="hm-dt-item" onclick="hmDocTypes.configure(<?php echo (int) $t->id; ?>,'<?php echo esc_js($t->name); ?>')">
                     <div class="hm-dt-actions">
                         <span class="hm-dt-edit-inline" onclick="event.stopPropagation();hmDocTypes.openEdit(<?php echo htmlspecialchars(wp_json_encode((array) $t), ENT_QUOTES); ?>)" title="Edit">&#9998;</span>
-                        <span class="hm-dt-edit-inline" onclick="event.stopPropagation();hmDocTypes.del(<?php echo (int) $t->id; ?>,'<?php echo esc_js($t->name); ?>')" title="Delete" style="color:#ef4444;">&times;</span>
+                        <span class="hm-dt-edit-inline" onclick="event.stopPropagation();hmDocTypes.del(<?php echo (int) $t->id; ?>,'<?php echo esc_js($t->name); ?>')" title="Delete" style="color:var(--hm-red);">&times;</span>
                     </div>
                     <h4><?php echo esc_html($t->name); ?></h4>
                     <div class="hm-dt-meta">
@@ -182,7 +182,7 @@ class HearMed_Admin_Document_Templates {
                             <span class="hm-dt-ai">&#9733; AI Formatting</span>
                         <?php endif; ?>
                         <?php if ($t->password_protect): ?>
-                            <span style="font-size:11px;color:#64748b;">&#128274;</span>
+                            <span style="font-size:11px;color:var(--hm-text-light);">&#128274;</span>
                         <?php endif; ?>
                     </div>
                     <div class="hm-dt-sections"><?php echo $enabled_count; ?> section<?php echo $enabled_count !== 1 ? 's' : ''; ?> configured</div>
@@ -340,7 +340,7 @@ class HearMed_Admin_Document_Templates {
         .hm-te-section:hover{border-color:#cbd5e1;}
         .hm-te-section.disabled{opacity:.5;}
         .hm-te-hd{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
-        .hm-te-drag{cursor:grab;color:#94a3b8;font-size:16px;user-select:none;}
+        .hm-te-drag{cursor:grab;color:var(--hm-text-muted);font-size:16px;user-select:none;}
         .hm-te-name{font-weight:600;font-size:13px;flex:1;}
         .hm-te-type{font-size:11px;color:var(--hm-text-light);background:#f1f5f9;padding:2px 8px;border-radius:4px;}
         .hm-te-body{margin-left:26px;}

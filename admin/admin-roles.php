@@ -82,18 +82,18 @@ class HearMed_Admin_Roles {
         .hmr-role-row:last-child{border-bottom:none;}
         .hmr-role-info{flex:1;min-width:0;}
         .hmr-role-name{font-size:13px;font-weight:600;color:#1e293b;}
-        .hmr-role-slug{font-size:11px;color:#94a3b8;font-family:monospace;}
-        .hmr-role-desc{font-size:11px;color:#64748b;margin-top:2px;}
+        .hmr-role-slug{font-size:11px;color:var(--hm-text-muted);font-family:monospace;}
+        .hmr-role-desc{font-size:11px;color:var(--hm-text-light);margin-top:2px;}
         .hmr-role-meta{display:flex;align-items:center;gap:12px;flex-shrink:0;}
-        .hmr-perm-count{font-size:11px;color:#64748b;white-space:nowrap;}
+        .hmr-perm-count{font-size:11px;color:var(--hm-text-light);white-space:nowrap;}
         .hmr-acts{display:flex;gap:4px;}
-        .hmr-acts button{border:none;background:none;cursor:pointer;font-size:12px;padding:4px 8px;border-radius:6px;color:#64748b;transition:all .15s;}
+        .hmr-acts button{border:none;background:none;cursor:pointer;font-size:12px;padding:4px 8px;border-radius:6px;color:var(--hm-text-light);transition:all .15s;}
         .hmr-acts button:hover{background:#f1f5f9;color:var(--hm-primary,var(--hm-teal));}
-        .hmr-acts button.hmr-del:hover{color:#ef4444;}
+        .hmr-acts button.hmr-del:hover{color:var(--hm-red);}
         .hm-perms-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px 16px;max-height:300px;overflow-y:auto;padding:8px 12px;border:1px solid var(--hm-border,#e2e8f0);border-radius:8px;background:#f8fafc;}
         .hm-perms-grid label{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:4px 0;color:#334155;}
         .hm-perms-grid label input{accent-color:var(--hm-primary,var(--hm-teal));width:14px;height:14px;margin:0;}
-        .hm-perm-group-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;grid-column:1/-1;margin-top:6px;padding-bottom:2px;border-bottom:1px solid #e2e8f0;}
+        .hm-perm-group-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--hm-text-muted);grid-column:1/-1;margin-top:6px;padding-bottom:2px;border-bottom:1px solid #e2e8f0;}
         .hm-perm-group-label:first-child{margin-top:0;}
         @media(max-width:700px){.hm-perms-grid{grid-template-columns:1fr 1fr;}}
         </style>
@@ -103,7 +103,7 @@ class HearMed_Admin_Roles {
                 <div class="hm-page-header">
                     <div>
                         <h1 class="hm-page-title">Roles &amp; Permissions</h1>
-                        <div style="color:#94a3b8;font-size:12px;margin-top:4px;">Define roles and their permissions. Each staff member is assigned a role that controls what they can see and do.</div>
+                        <div style="color:var(--hm-text-muted);font-size:12px;margin-top:4px;">Define roles and their permissions. Each staff member is assigned a role that controls what they can see and do.</div>
                     </div>
                     <button class="hm-btn hm-btn--primary" onclick="hmRoles.open()">+ Add Role</button>
                 </div>
@@ -113,7 +113,7 @@ class HearMed_Admin_Roles {
                     <div class="hm-card">
                         <div class="hm-card-hd">Defined Roles</div>
                         <?php if (empty($roles)): ?>
-                            <p style="color:#94a3b8;font-size:12px;text-align:center;padding:20px 0;">No roles defined yet. Click "+ Add Role" to get started.</p>
+                            <p style="color:var(--hm-text-muted);font-size:12px;text-align:center;padding:20px 0;">No roles defined yet. Click "+ Add Role" to get started.</p>
                         <?php else: ?>
                             <?php foreach ($roles as $r):
                                 $role_perms = json_decode($r->permissions ?: '[]', true) ?: [];
@@ -147,10 +147,10 @@ class HearMed_Admin_Roles {
                     <!-- Permissions Reference -->
                     <div class="hm-card">
                         <div class="hm-card-hd">Available Permissions</div>
-                        <p style="color:#94a3b8;font-size:11px;margin-bottom:10px;">These permissions can be assigned to any role.</p>
+                        <p style="color:var(--hm-text-muted);font-size:11px;margin-bottom:10px;">These permissions can be assigned to any role.</p>
                         <?php foreach ($perm_groups as $group => $keys): ?>
                             <div style="margin-bottom:10px;">
-                                <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;margin-bottom:4px;"><?php echo esc_html($group); ?></div>
+                                <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--hm-text-muted);margin-bottom:4px;"><?php echo esc_html($group); ?></div>
                                 <div style="display:flex;flex-wrap:wrap;gap:4px;">
                                     <?php foreach ($keys as $key):
                                         if (!isset($perms[$key])) continue;

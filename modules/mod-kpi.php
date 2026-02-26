@@ -15,7 +15,7 @@ function hm_kpi_render() {
         <div class="hm-page-header">
             <h1 class="hm-page-title">KPI Dashboard</h1>
         </div>
-        <div class="hm-placeholder" style="padding:3rem;text-align:center;color:#94a3b8;">
+        <div class="hm-placeholder" style="padding:3rem;text-align:center;color:var(--hm-text-muted);">
             <p>KPI tracking module — coming soon</p>
             <p style="font-size:0.875rem;margin-top:0.5rem;">Monitor targets, actuals, and performance trends</p>
         </div>

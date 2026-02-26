@@ -68,7 +68,7 @@ function hm_render_fitting_page() {
     .hm-status-awaiting-fitting{background:#d1fae5;color:#065f46;}
 
     .hmf-fitting-date{font-size:12px;color:#334155;}
-    .hmf-fitting-date.none{color:#94a3b8;font-style:italic;}
+    .hmf-fitting-date.none{color:var(--hm-text-muted);font-style:italic;}
 
     .hm-btn-receive{background:var(--hm-teal);color:#fff;}
     .hm-btn-receive:hover{background:#0a9aa8;}
@@ -86,13 +86,13 @@ function hm_render_fitting_page() {
 
     .hmf-invoice-summary{background:#f8fafc;border-radius:8px;padding:14px;margin-bottom:14px;border:1px solid #f1f5f9;}
     .hmf-invoice-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;}
-    .hmf-invoice-row span:first-child{color:#64748b;}
+    .hmf-invoice-row span:first-child{color:var(--hm-text-light);}
     .hmf-invoice-row span:last-child{color:#0f172a;font-weight:500;}
     .hmf-invoice-total{font-size:14px;font-weight:700;border-top:1px solid #e2e8f0;padding-top:6px;margin-top:4px;}
     .hmf-invoice-total span:last-child{color:var(--hm-teal);}
 
     .hmf-prev-payments{margin:14px 0;}
-    .hmf-prev-payments h4{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;margin:0 0 6px;}
+    .hmf-prev-payments h4{font-size:11px;font-weight:600;color:var(--hm-text-light);text-transform:uppercase;margin:0 0 6px;}
     .hmf-prev-pay-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f1f5f9;}
 
     /* Filter bar */
@@ -101,7 +101,7 @@ function hm_render_fitting_page() {
     .hmf-toolbar select{padding:7px 30px 7px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;color:#1e293b;background:#fff;min-width:170px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color .15s;}
     .hmf-toolbar select:focus{outline:none;border-color:var(--hm-teal);box-shadow:0 0 0 2px rgba(11,180,196,.12);}
     .hmf-toolbar-sep{width:1px;height:24px;background:#e2e8f0;}
-    .hmf-toolbar-reset{padding:6px 14px;border:none;border-radius:6px;font-size:11px;font-weight:600;color:#64748b;background:#e2e8f0;cursor:pointer;transition:all .15s;}
+    .hmf-toolbar-reset{padding:6px 14px;border:none;border-radius:6px;font-size:11px;font-weight:600;color:var(--hm-text-light);background:#e2e8f0;cursor:pointer;transition:all .15s;}
     .hmf-toolbar-reset:hover{background:var(--hm-teal);color:#fff;}
 
     /* Totals footer */
@@ -109,12 +109,12 @@ function hm_render_fitting_page() {
     .hmf-summary-row{display:flex;align-items:center;}
     .hmf-summary-cell{flex:1;padding:14px 20px;text-align:center;position:relative;}
     .hmf-summary-cell + .hmf-summary-cell{border-left:1px solid #e2e8f0;}
-    .hmf-summary-cell-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;font-weight:600;margin-bottom:2px;}
+    .hmf-summary-cell-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--hm-text-light);font-weight:600;margin-bottom:2px;}
     .hmf-summary-cell-val{font-size:20px;font-weight:700;color:#0f172a;}
     .hmf-summary-cell-val.green{color:#059669;}
     .hmf-summary-cell-val.blue{color:#2563eb;}
     .hmf-summary-cell-val.purple{color:#7c3aed;}
-    .hmf-summary-cell-sub{font-size:10px;color:#94a3b8;margin-top:2px;}
+    .hmf-summary-cell-sub{font-size:10px;color:var(--hm-text-muted);margin-top:2px;}
     </style>
 
     <div id="hm-app" class="hm-calendar" data-module="admin" data-view="fitting">
@@ -252,7 +252,7 @@ function hm_render_fitting_page() {
             <div class="hm-modal-body" style="text-align:center;">
                 <div style="font-size:40px;margin-bottom:8px;">&#10004;</div>
                 <p style="font-size:14px;font-weight:600;color:#065f46;margin:0 0 6px;">Paid in Full</p>
-                <p style="font-size:12px;color:#64748b;margin:0 0 16px;" id="hmf-receipt-summary"></p>
+                <p style="font-size:12px;color:var(--hm-text-light);margin:0 0 16px;" id="hmf-receipt-summary"></p>
                 <button class="hm-btn hm-btn-receipt" onclick="hmFitting.printReceipt()" style="padding:10px 24px;font-size:13px;">
                     &#128424; Print Receipt
                 </button>
@@ -419,7 +419,7 @@ function hm_render_fitting_page() {
                 } else if (o.current_status === 'Awaiting Fitting') {
                     actions = '<button class="hm-btn hm-btn-fitted" onclick="hmFitting.openPayment(' + o.id + ')">&#9989; Fitted</button>';
                 } else {
-                    actions = '<span style="color:#94a3b8;font-size:11px;">Awaiting finance</span>';
+                    actions = '<span style="color:var(--hm-text-muted);font-size:11px;">Awaiting finance</span>';
                 }
 
                 html += '<tr>';
@@ -510,7 +510,7 @@ function hm_render_fitting_page() {
 
             var items = order.items || [];
             if (!items.length) {
-                html = '<p style="color:#94a3b8;font-size:12px;">No hearing aid items found on this order.</p>';
+                html = '<p style="color:var(--hm-text-muted);font-size:12px;">No hearing aid items found on this order.</p>';
             } else {
                 items.forEach(function(it, idx) {
                     var earLabel = it.ear_side || 'Unknown';

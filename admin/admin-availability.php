@@ -185,7 +185,7 @@ class HearMed_Admin_Availability {
                         <td style="font-size:13px;color:var(--hm-text-light);"><?php echo esc_html($r['role']); ?></td>
                         <td>
                             <?php if ($r['on_leave']): ?>
-                                <span style="color:#ef4444;font-size:12px;">On leave</span>
+                                <span style="color:var(--hm-red);font-size:12px;">On leave</span>
                             <?php elseif (!empty($r['today_clinics'])): ?>
                                 <?php foreach ($r['today_clinics'] as $cn): ?>
                                     <span class="hm-badge hm-badge--blue" style="margin-right:4px;"><?php echo esc_html($cn); ?></span>

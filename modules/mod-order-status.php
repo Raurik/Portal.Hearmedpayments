@@ -92,7 +92,7 @@ function hm_render_order_status_page() {
         <div class="hm-page">
             <div class="hm-page-header">
                 <h1 class="hm-page-title">Order Status</h1>
-                <div style="color:#94a3b8;font-size:12px;margin-top:4px;">Track approved orders through to delivery.</div>
+                <div style="color:var(--hm-text-muted);font-size:12px;margin-top:4px;">Track approved orders through to delivery.</div>
             </div>
 
             <!-- Summary Boxes -->
@@ -255,7 +255,7 @@ function hm_render_order_status_page() {
                 html += '<td>' + hmOsE(o.product_name) + '</td>';
                 html += '<td>' + (o.hearing_aid_class ? '<span class="hmos-class-badge ' + clsClass + '">' + hmOsE(clsLabel) + '</span>' : '\u2014') + '</td>';
                 html += '<td>' + hmOsE(o.ordered_date) + '</td>';
-                html += '<td>' + (o.fitting_date ? hmOsE(o.fitting_date) : '<span style="color:#94a3b8;font-style:italic;">Not booked</span>') + '</td>';
+                html += '<td>' + (o.fitting_date ? hmOsE(o.fitting_date) : '<span style="color:var(--hm-text-muted);font-style:italic;">Not booked</span>') + '</td>';
                 html += '<td><span class="hmos-days ' + daysClass + '">' + o.days_since_order + ' days</span>' + alertBadge + '</td>';
                 html += '</tr>';
             });

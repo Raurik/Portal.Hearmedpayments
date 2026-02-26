@@ -71,7 +71,7 @@ class HearMed_Admin_Holidays {
                         <span class="hm-status-dot <?php echo $is_away ? 'hm-status-dot--red' : 'hm-status-dot--green'; ?>"></span>
                         <span><?php echo esc_html($name); ?></span>
                         <?php if ($is_away): ?>
-                            <span style="font-size:11px;color:#ef4444;font-weight:600;">Away</span>
+                            <span style="font-size:11px;color:var(--hm-red);font-weight:600;">Away</span>
                         <?php endif; ?>
                     </div>
                     <?php endforeach; ?>

@@ -129,7 +129,7 @@ function hm_render_debug_page() {
         <div class="hm-admin-hd">
             <h2>Debug / Health Check</h2>
         </div>
-        <p style="color:#64748b;font-size:13px;margin-bottom:20px;">
+        <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">
             Plugin version: <strong><?php echo esc_html( HEARMED_VERSION ); ?></strong> &nbsp;|&nbsp;
             Generated: <strong><?php echo esc_html( current_time( 'mysql' ) ); ?></strong>
         </p>
@@ -152,7 +152,7 @@ function hm_render_debug_page() {
 
         <!-- ── B. Module / shortcode detection ───────────────── -->
         <h3 class="hm-section-heading">B. Module / Shortcode Detection</h3>
-        <p style="font-size:13px;color:#64748b;margin-bottom:14px;">
+        <p style="font-size:13px;color:var(--hm-text-light);margin-bottom:14px;">
             HearMed loads module assets <em>conditionally</em>: a module's CSS and JS are
             only enqueued when a page's content contains the corresponding shortcode.
             Use this section to check which HearMed shortcodes appear on a given page.
@@ -199,7 +199,7 @@ function hm_render_debug_page() {
         </form>
 
         <details style="margin-bottom:24px;">
-            <summary style="cursor:pointer;font-size:13px;color:#64748b;">Show all registered shortcodes</summary>
+            <summary style="cursor:pointer;font-size:13px;color:var(--hm-text-light);">Show all registered shortcodes</summary>
             <table class="hm-table" data-no-enhance style="margin-top:10px;">
                 <thead><tr><th>Shortcode</th><th>Module</th></tr></thead>
                 <tbody>
@@ -267,7 +267,7 @@ function hm_render_debug_page() {
                 <?php endforeach; ?>
             </tbody>
         </table>
-        <p style="font-size:12px;color:#94a3b8;margin-top:8px;">
+        <p style="font-size:12px;color:var(--hm-text-muted);margin-top:8px;">
             Tables are resolved via <code>HearMed_DB::table()</code> to their PostgreSQL schema-qualified names.
             "Missing" means the table does not yet exist in the Railway PostgreSQL database.
         </p>

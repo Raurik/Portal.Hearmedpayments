@@ -101,7 +101,7 @@ class HearMed_Refunds {
                                            onchange="hmCN.typeChange()">
                                     <div>
                                         <div style="font-weight:600;font-size:13px;">Cheque Refund</div>
-                                        <div style="font-size:11px;color:#64748b;">Cash returned to patient by cheque</div>
+                                        <div style="font-size:11px;color:var(--hm-text-light);">Cash returned to patient by cheque</div>
                                     </div>
                                 </label>
                                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;
@@ -111,7 +111,7 @@ class HearMed_Refunds {
                                            onchange="hmCN.typeChange()">
                                     <div>
                                         <div style="font-weight:600;font-size:13px;">Exchange</div>
-                                        <div style="font-size:11px;color:#64748b;">Return HAs, create new order</div>
+                                        <div style="font-size:11px;color:var(--hm-text-light);">Return HAs, create new order</div>
                                     </div>
                                 </label>
                             </div>

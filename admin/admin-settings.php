@@ -191,7 +191,7 @@ class HearMed_Admin_Settings {
                         <?php elseif ($f['type'] === 'password'): ?>
                             <?php if ($val !== '' && $val !== $f['default']): ?>
                             <div class="hm-secret-wrap" data-key="<?php echo esc_attr($f['key']); ?>">
-                                <input type="text" class="hm-form-group" data-key="<?php echo esc_attr($f['key']); ?>" value="••••••••" readonly style="color:#94a3b8;letter-spacing:2px;">
+                                <input type="text" class="hm-form-group" data-key="<?php echo esc_attr($f['key']); ?>" value="••••••••" readonly style="color:var(--hm-text-muted);letter-spacing:2px;">
                                 <button type="button" class="hm-btn hm-btn--sm" onclick="hmSettings.editSecret(this)">Change</button>
                             </div>
                             <?php else: ?>

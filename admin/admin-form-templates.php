@@ -64,7 +64,7 @@ class HearMed_Admin_Form_Templates {
 
         $role = HearMed_Auth::current_role();
         if ( ! in_array( $role, [ 'c_level', 'admin' ] ) ) {
-            return '<div style="padding:24px;color:#ef4444;">Access restricted to admin users.</div>';
+            return '<div style="padding:24px;color:var(--hm-red);">Access restricted to admin users.</div>';
         }
 
         $templates = $this->get_templates();
@@ -405,7 +405,7 @@ class HearMed_Admin_Form_Templates {
                     <div class="ft-card-badges">
                         <span class="hm-badge" style="background:<?php echo esc_attr($bg); ?>;color:<?php echo esc_attr($color); ?>;"><?php echo esc_html($label); ?></span>
                         <?php if ( $t->requires_signature ) : ?><span class="hm-badge" style="background:#fef3c7;color:#d97706;">✍ Signature</span><?php endif; ?>
-                        <?php if ( ! $t->is_active ) : ?><span class="hm-badge" style="background:#f1f5f9;color:#64748b;">Inactive</span><?php endif; ?>
+                        <?php if ( ! $t->is_active ) : ?><span class="hm-badge" style="background:#f1f5f9;color:var(--hm-text-light);">Inactive</span><?php endif; ?>
                     </div>
                     <div class="ft-card-footer">
                         <span class="ft-card-stats"><?php echo $fields; ?> field<?php echo $fields !== 1 ? 's' : ''; ?> &nbsp;·&nbsp; <?php echo number_format($chars); ?> chars</span>
@@ -510,7 +510,7 @@ class HearMed_Admin_Form_Templates {
 
                 <!-- Preview Pane -->
                 <div class="ft-pane" id="hm-ft-pane-preview">
-                    <p style="font-size:12px;color:#94a3b8;margin-bottom:14px;">Sample data substituted for placeholders. Signature pad shown as placeholder box.</p>
+                    <p style="font-size:12px;color:var(--hm-text-muted);margin-bottom:14px;">Sample data substituted for placeholders. Signature pad shown as placeholder box.</p>
                     <div class="ft-preview-card" id="hm-ft-preview-out"></div>
                 </div>
 
@@ -635,7 +635,7 @@ class HearMed_Admin_Form_Templates {
                     '{{clinic_email}}':'tullamore@hearmed.ie',
                     '{{clinic_phone}}':'057 123 4567',
                     '{{clinic_address}}':'12 Main Street, Tullamore, Co. Offaly',
-                    '{{signature}}':'<div style="border:2px solid #e2e8f0;border-radius:8px;padding:16px;text-align:center;color:#94a3b8;font-size:13px;margin:16px 0;background:#fafafa;">[Patient signature pad]</div>'
+                    '{{signature}}':'<div style="border:2px solid #e2e8f0;border-radius:8px;padding:16px;text-align:center;color:var(--hm-text-muted);font-size:13px;margin:16px 0;background:#fafafa;">[Patient signature pad]</div>'
                 };
                 Object.entries(map).forEach(function(e){ html = html.split(e[0]).join(e[1]); });
                 document.getElementById('hm-ft-preview-out').innerHTML = html;

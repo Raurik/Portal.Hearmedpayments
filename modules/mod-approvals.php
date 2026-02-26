@@ -21,7 +21,7 @@ add_shortcode( 'hearmed_approvals', 'hm_render_approvals_page' );
 function hm_render_approvals_page() {
     if ( ! is_user_logged_in() ) return '<p>Please log in.</p>';
     if ( ! hm_user_can_approve() ) {
-        return '<div id="hm-app" class="hm-admin"><p style="padding:2rem;color:#94a3b8;">You do not have permission to view this page.</p></div>';
+        return '<div id="hm-app" class="hm-admin"><p style="padding:2rem;color:var(--hm-text-muted);">You do not have permission to view this page.</p></div>';
     }
 
     $db = HearMed_DB::instance();
@@ -40,19 +40,19 @@ function hm_render_approvals_page() {
     .hma-margin-warn{background:#fef3cd;color:#92400e;}
     .hma-margin-bad{background:#fee2e2;color:#991b1b;}
     .hma-prsi{font-size:11px;color:var(--hm-teal);font-weight:600;}
-    .hma-expand{color:#94a3b8;font-size:12px;transition:transform .2s;user-select:none;}
+    .hma-expand{color:var(--hm-text-muted);font-size:12px;transition:transform .2s;user-select:none;}
     .hma-expand.open{transform:rotate(180deg);}
     .hma-body{display:none;padding:0 18px 18px;border-top:1px solid #f1f5f9;}
     .hma-body.open{display:block;}
     .hma-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:14px 0;font-size:12px;}
-    .hma-meta-label{color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+    .hma-meta-label{color:var(--hm-text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
     .hma-meta-val{color:#1e293b;font-weight:500;margin-top:2px;}
     .hma-acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9;}
     .hma-notes{margin-top:10px;padding:8px 12px;background:#f8fafc;border-radius:8px;font-size:12px;color:#475569;}
     .hma-totals{display:flex;justify-content:flex-end;margin:8px 0;}
     .hma-totals-box{min-width:220px;font-size:12px;}
     .hma-totals-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f1f5f9;}
-    .hma-totals-row span:first-child{color:#64748b;}
+    .hma-totals-row span:first-child{color:var(--hm-text-light);}
     .hma-totals-total{font-weight:700;font-size:14px;border-bottom:none;padding-top:6px;}
     .hma-flag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;}
     .hma-flag-red{background:#fee2e2;color:#991b1b;}
@@ -147,7 +147,7 @@ function hm_render_approvals_page() {
                 }
                 html += '</div>';
                 html += '<div class="hm-card-right">';
-                html += '<span style="font-size:11px;color:#64748b;">Cost: &euro;' + hmN(o.cost_total) + '</span>';
+                html += '<span style="font-size:11px;color:var(--hm-text-light);">Cost: &euro;' + hmN(o.cost_total) + '</span>';
                 html += '<span class="hma-total">Retail: &euro;' + hmN(o.grand_total) + '</span>';
                 html += '<span class="hma-margin ' + marginClass + '">' + o.margin_percent.toFixed(1) + '%</span>';
                 html += '<span class="hma-expand" id="hma-arrow-' + o.id + '">&#9660;</span>';

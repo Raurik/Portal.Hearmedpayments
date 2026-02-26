@@ -113,7 +113,7 @@ class HearMed_Admin_Appointment_Type_Detail {
         #hm-app .hm-badge-r { background:#6366f1; }
         #hm-app .hm-badge-v { background:#8b5cf6; }
         #hm-app .hm-appt-time { font-size:13px; font-weight:600; color:#0ea5a4; }
-        #hm-app .hm-appt-meta { font-size:12px; color:#64748b; }
+        #hm-app .hm-appt-meta { font-size:12px; color:var(--hm-text-light); }
         /* Outcome row hover */
         #hm-app .hm-outcome-row { cursor:pointer; transition:background .15s; }
         #hm-app .hm-outcome-row:hover { background:#f8fafc; }
@@ -206,7 +206,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                 </div>
                 <div class="hm-card-body">
                     <?php if (empty($outcomes)): ?>
-                        <p style="color:#94a3b8;font-size:13px;margin:0;">No outcomes defined yet.</p>
+                        <p style="color:var(--hm-text-muted);font-size:13px;margin:0;">No outcomes defined yet.</p>
                     <?php else: ?>
                         <?php foreach ($outcomes as $o):
                             $oc = $o->outcome_color ?: '#cccccc';
@@ -271,7 +271,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                                 <input type="checkbox" class="hm-staff-cb" value="<?php echo (int)$st->id; ?>" <?php echo $checked; ?>>
                                 <span class="hm-check"></span>
                                 <?php echo esc_html($sname); ?>
-                                <span style="color:#94a3b8;font-size:11px;margin-left:4px;"><?php echo esc_html($srole); ?></span>
+                                <span style="color:var(--hm-text-muted);font-size:11px;margin-left:4px;"><?php echo esc_html($srole); ?></span>
                             </label>
                         </div>
                         <?php endforeach; ?>
@@ -358,7 +358,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                                 <span class="hm-slbl">Call patient after</span>
                                 <span class="hm-sval" style="width:120px;display:flex;align-items:center;gap:6px;"><input type="number" class="hm-inp" id="hmo-call-days" value="7" min="1" max="365" style="width:60px;"> days</span>
                             </div>
-                            <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">Creates a reminder in the patient file for the dispenser to phone the patient.</p>
+                            <p style="font-size:11px;color:var(--hm-text-muted);margin:4px 0 0;">Creates a reminder in the patient file for the dispenser to phone the patient.</p>
                         </div>
                         <div id="hmo-followup-wrap" style="margin-top:4px;display:none;">
                             <span class="hm-slbl" style="display:block;margin-bottom:8px;">Follow-up appointment type(s)</span>

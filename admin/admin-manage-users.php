@@ -285,18 +285,18 @@ class HearMed_Admin_Manage_Users {
                         </div>
                         <div class="hm-form-row">
                             <div class="hm-form-group">
-                                <label>Set New Password <span id="hmu-pass-req" style="color:#ef4444;">*</span></label>
+                                <label>Set New Password <span id="hmu-pass-req" style="color:var(--hm-red);">*</span></label>
                                 <input type="password" id="hmu-pass" placeholder="Required for new staff" onkeyup="hmUsers.checkPasswordStrength(); hmUsers.checkPasswordMatch()">
                                 <div id="hmu-pass-strength" style="font-size:12px;color:#dc2626;margin-top:4px;font-weight:500;"></div>
                             </div>
                             <div class="hm-form-group">
-                                <label>Confirm Password <span id="hmu-pass2-req" style="color:#ef4444;display:none;">*</span></label>
+                                <label>Confirm Password <span id="hmu-pass2-req" style="color:var(--hm-red);display:none;">*</span></label>
                                 <input type="password" id="hmu-pass2" onkeyup="hmUsers.checkPasswordMatch()">
                                 <div id="hmu-pass-match" style="font-size:12px;margin-top:4px;font-weight:500;"></div>
                             </div>
                         </div>
                         <div class="hm-form-row">
-                            <div class="hm-form-group" style="font-size:12px;color:#64748b;" id="hmu-passes-help">
+                            <div class="hm-form-group" style="font-size:12px;color:var(--hm-text-light);" id="hmu-passes-help">
                                 <strong>New staff:</strong> Password required. Must have 8+ chars, 1 uppercase, 1 special char. Will be marked temporary so user must change on first login.<br>
                                 <strong>Edit staff:</strong> Password optional. Leave blank to keep current password.
                             </div>

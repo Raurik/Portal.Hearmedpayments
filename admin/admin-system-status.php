@@ -69,7 +69,7 @@ function hearmed_render_system_status_page() {
         <div class="hm-admin-hd">
             <h2>System Status</h2>
         </div>
-        <p style="color:#64748b;font-size:13px;margin-bottom:20px;">
+        <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">
             Version: <strong><?php echo HEARMED_VERSION; ?></strong>
         </p>
         

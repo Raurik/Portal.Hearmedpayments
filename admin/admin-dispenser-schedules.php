@@ -29,7 +29,7 @@ class HearMed_Admin_Dispenser_Schedules {
         <div class="hm-admin" id="hm-schedule-detail-page">
             <div class="hm-admin-hd" style="display:flex;align-items:center;gap:20px;">
                 <a href="<?php echo esc_attr( strtok($_SERVER['REQUEST_URI'], '?') ); ?>" class="hm-back">← Back</a>
-                <h2 style="margin:0;">Dispenser Schedule: <?php echo esc_html($staff_data['staff_name']); ?> <span style="font-size:16px;color:#64748b;">(<?php echo esc_html($staff_data['staff_role']); ?>)</span></h2>
+                <h2 style="margin:0;">Dispenser Schedule: <?php echo esc_html($staff_data['staff_name']); ?> <span style="font-size:16px;color:var(--hm-text-light);">(<?php echo esc_html($staff_data['staff_role']); ?>)</span></h2>
             </div>
             <div style="margin:20px 0 30px 0;">
                 <button class="hm-btn hm-btn--primary" onclick="hmSchedEdit.open({staff_id:<?php echo (int)$staff_data['staff_id']; ?>})">+ Add Schedule</button>
@@ -414,7 +414,7 @@ class HearMed_Admin_Dispenser_Schedules {
                                 </label>
                             </div>
                         </div>
-                        <div class="hm-form-group" style="font-size:12px;color:#64748b;">
+                        <div class="hm-form-group" style="font-size:12px;color:var(--hm-text-light);">
                             <strong>Select one or more days.</strong> A separate schedule entry will be created for each day selected.
                         </div>
                     </div>
