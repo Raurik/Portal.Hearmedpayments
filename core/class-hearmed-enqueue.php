@@ -60,9 +60,18 @@ class HearMed_Enqueue {
      * These files control layout, design system, and core JS
      */
     public function enqueue_foundation() {
+        // Google Fonts — Cormorant Garamond (titles), Bricolage Grotesque (subtitles),
+        // Source Sans 3 (body), Plus Jakarta Sans (buttons)
+        wp_enqueue_style(
+            'hearmed-google-fonts',
+            'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Source+Sans+3:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap',
+            [],
+            null
+        );
+
         // Core CSS - viewport, layout, and component styles
         // Depend on Elementor frontend so our CSS loads AFTER Elementor
-        $core_deps = [];
+        $core_deps = [ 'hearmed-google-fonts' ];
         if ( wp_style_is( 'elementor-frontend', 'registered' ) ) {
             $core_deps[] = 'elementor-frontend';
         }
