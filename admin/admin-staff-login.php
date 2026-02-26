@@ -85,8 +85,8 @@ class HearMed_Staff_Login {
         ob_start(); ?>
         <div class="hm-admin" id="hm-staff-login">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2>Staff Login</h2>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Staff Login</h1>
             </div>
 
             <?php if ( ! empty( $errors ) ): ?>

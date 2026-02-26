@@ -59,9 +59,11 @@ class HearMed_Admin_SMS_Templates {
         ob_start(); ?>
         <div class="hm-admin">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2>SMS Templates</h2>
-                <button class="hm-btn hm-btn--primary" onclick="hmSms.open()">+ Add Template</button>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">SMS Templates</h1>
+                <div class="hm-page-header__actions">
+                    <button class="hm-btn hm-btn--primary" onclick="hmSms.open()">+ Add Template</button>
+                </div>
             </div>
 
             <div class="hm-sms-vars" style="margin-bottom:20px;">

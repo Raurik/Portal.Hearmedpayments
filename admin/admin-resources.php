@@ -95,9 +95,9 @@ class HearMed_Admin_Resources {
         ob_start(); ?>
         <div class="hm-admin" id="hm-resources-admin">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2>Resources &amp; Equipment</h2>
-                <div style="display:flex;gap:8px;">
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Resources &amp; Equipment</h1>
+                <div class="hm-page-header__actions">
                     <button class="hm-btn hm-btn--primary" onclick="hmRes.openRoom()">+ Add Room</button>
                     <button class="hm-btn hm-btn--primary" onclick="hmRes.openEquip()">+ Add Equipment</button>
                 </div>

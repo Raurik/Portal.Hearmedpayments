@@ -142,9 +142,11 @@ class HearMed_Admin_Document_Templates {
 
         <div class="hm-admin">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2>Document Types & Templates</h2>
-                <button class="hm-btn hm-btn--primary" onclick="hmDocTypes.openAdd()">+ Add Document Type</button>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Document Types & Templates</h1>
+                <div class="hm-page-header__actions">
+                    <button class="hm-btn hm-btn--primary" onclick="hmDocTypes.openAdd()">+ Add Document Type</button>
+                </div>
             </div>
 
             <div class="hm-gdpr-note">
@@ -357,9 +359,11 @@ class HearMed_Admin_Document_Templates {
 
         <div class="hm-admin">
             <a href="<?php echo esc_url(home_url("/document-types/")); ?>" class="hm-back">← Back to Document Types</a>
-            <div class="hm-admin-hd">
-                <h2>Template: <?php echo esc_html($doc->name); ?></h2>
-                <button class="hm-btn hm-btn--primary" onclick="hmTemplateEditor.saveAll()" id="hm-te-save">Save Template</button>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Template: <?php echo esc_html($doc->name); ?></h1>
+                <div class="hm-page-header__actions">
+                    <button class="hm-btn hm-btn--primary" onclick="hmTemplateEditor.saveAll()" id="hm-te-save">Save Template</button>
+                </div>
             </div>
 
             <div style="display:flex;gap:6px;margin-bottom:16px;align-items:center;">

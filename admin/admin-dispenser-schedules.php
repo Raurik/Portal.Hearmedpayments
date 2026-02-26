@@ -27,12 +27,12 @@ class HearMed_Admin_Dispenser_Schedules {
         ob_start();
         ?>
         <div class="hm-admin" id="hm-schedule-detail-page">
-            <div class="hm-admin-hd" style="display:flex;align-items:center;gap:20px;">
-                <a href="<?php echo esc_attr( strtok($_SERVER['REQUEST_URI'], '?') ); ?>" class="hm-back">← Back</a>
-                <h2 style="margin:0;">Dispenser Schedule: <?php echo esc_html($staff_data['staff_name']); ?> <span style="font-size:16px;color:var(--hm-text-light);">(<?php echo esc_html($staff_data['staff_role']); ?>)</span></h2>
-            </div>
-            <div style="margin:20px 0 30px 0;">
-                <button class="hm-btn hm-btn--primary" onclick="hmSchedEdit.open({staff_id:<?php echo (int)$staff_data['staff_id']; ?>})">+ Add Schedule</button>
+            <a href="<?php echo esc_attr( strtok($_SERVER['REQUEST_URI'], '?') ); ?>" class="hm-back">← Back</a>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Dispenser Schedule: <?php echo esc_html($staff_data['staff_name']); ?> <span style="font-size:16px;color:var(--hm-text-light);">(<?php echo esc_html($staff_data['staff_role']); ?>)</span></h1>
+                <div class="hm-page-header__actions">
+                    <button class="hm-btn hm-btn--primary" onclick="hmSchedEdit.open({staff_id:<?php echo (int)$staff_data['staff_id']; ?>})">+ Add Schedule</button>
+                </div>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:32px;">
                 <?php
@@ -275,9 +275,11 @@ class HearMed_Admin_Dispenser_Schedules {
         ob_start(); ?>
         <div class="hm-admin" id="hm-schedules-admin">
             <a href="<?php echo esc_url(home_url('/admin-console/')); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2>Dispenser Schedules</h2>
-                <button class="hm-btn hm-btn--primary" onclick="hmSchedules.open()">+ Add Schedule</button>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Dispenser Schedules</h1>
+                <div class="hm-page-header__actions">
+                    <button class="hm-btn hm-btn--primary" onclick="hmSchedules.open()">+ Add Schedule</button>
+                </div>
             </div>
 
             <?php if ( empty( $payload ) ): ?>

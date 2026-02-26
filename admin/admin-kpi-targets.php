@@ -77,9 +77,11 @@ class HearMed_Admin_KPI_Targets {
         ob_start(); ?>
         <div class="hm-admin">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2>KPI Targets</h2>
-                <button class="hm-btn hm-btn--primary" onclick="hmKpi.saveAll()" id="hmk-save">Save Targets</button>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">KPI Targets</h1>
+                <div class="hm-page-header__actions">
+                    <button class="hm-btn hm-btn--primary" onclick="hmKpi.saveAll()" id="hmk-save">Save Targets</button>
+                </div>
             </div>
 
             <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">

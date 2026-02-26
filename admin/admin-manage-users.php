@@ -139,9 +139,11 @@ class HearMed_Admin_Manage_Users {
         ob_start(); ?>
         <div class="hm-admin" id="hm-users-admin">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2>Staff</h2>
-                <button class="hm-btn hm-btn--primary" onclick="hmUsers.open()">+ Add Staff</button>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Staff</h1>
+                <div class="hm-page-header__actions">
+                    <button class="hm-btn hm-btn--primary" onclick="hmUsers.open()">+ Add Staff</button>
+                </div>
             </div>
 
             <?php if (empty($staff_payload)): ?>

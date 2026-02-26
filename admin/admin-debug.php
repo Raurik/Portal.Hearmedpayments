@@ -126,8 +126,8 @@ function hm_render_debug_page() {
     ?>
     <div class="hm-admin" id="hm-debug-wrap">
         <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-        <div class="hm-admin-hd">
-            <h2>Debug / Health Check</h2>
+        <div class="hm-page-header">
+            <h1 class="hm-page-title">Debug / Health Check</h1>
         </div>
         <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">
             Plugin version: <strong><?php echo esc_html( HEARMED_VERSION ); ?></strong> &nbsp;|&nbsp;

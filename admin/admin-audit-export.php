@@ -36,9 +36,9 @@ class HearMed_Admin_AuditLog {
         ob_start(); ?>
         <div class="hm-admin">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2>Audit Log</h2>
-                <div style="display:flex;gap:8px;align-items:center;">
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Audit Log</h1>
+                <div class="hm-page-header__actions">
                     <input type="text" id="hmal-search" placeholder="Search actions..." class="hm-search-input" style="width:180px">
                     <select id="hmal-entity" class="hm-filter-select">
                         <option value="">All Entities</option>
@@ -158,7 +158,7 @@ class HearMed_Admin_AuditLog {
         </style>
         <div class="hm-admin">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd"><h2>Data Export</h2></div>
+            <div class="hm-page-header"><h1 class="hm-page-title">Data Export</h1></div>
 
             <div class="hm-export-grid">
             <!-- LEFT COLUMN -->

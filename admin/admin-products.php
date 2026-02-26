@@ -234,9 +234,11 @@ class HearMed_Admin_Products {
         ob_start(); ?>
         <div class="hm-admin">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2>Products &amp; Services</h2>
-                <button class="hm-btn hm-btn--primary" onclick="hmProd.open()">+ Add <?php echo esc_html(rtrim(self::$item_types[$active_tab], 's')); ?></button>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Products &amp; Services</h1>
+                <div class="hm-page-header__actions">
+                    <button class="hm-btn hm-btn--primary" onclick="hmProd.open()">+ Add <?php echo esc_html(rtrim(self::$item_types[$active_tab], 's')); ?></button>
+                </div>
             </div>
 
             <!-- Category Tabs -->

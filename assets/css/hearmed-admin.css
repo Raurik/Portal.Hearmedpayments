@@ -259,6 +259,7 @@
 .hm-settings-panel {
     background: #fff;
     border: 1px solid #e2e8f0;
+    border-top: 3px solid var(--hm-teal);
     border-radius: 12px;
     padding: 20px 24px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.03);
@@ -370,26 +371,31 @@
 .hm-admin {
     width: 100%;
     max-width: 100%;
-    padding: 20px 28px 28px;
+    padding: 24px 28px;
     background: transparent;
     min-height: 100%;
 }
 
+/* ── Legacy alias — matches hm-page-header in core.css ── */
 .hm-page-hd,
 .hm-admin-hd {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--hm-teal);
+    margin-bottom: var(--hm-space-lg);
 }
 
 .hm-page-title,
 .hm-admin-hd h2 {
-    font-size: 22px;
-    font-weight: 600;
-    color: #151B33;
+    font-family: var(--hm-font-title);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--hm-navy);
     margin: 0;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
 }
 
 .hm-btn--add {

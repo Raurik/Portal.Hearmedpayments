@@ -155,10 +155,12 @@ class HearMed_Admin_Settings {
         <style>.hm-secret-wrap{display:flex;gap:8px;align-items:center;}.hm-secret-wrap input{flex:1;}</style>
         <div class="hm-admin">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2><?php echo esc_html($page['title']); ?></h2>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title"><?php echo esc_html($page['title']); ?></h1>
                 <?php if (!empty($page['fields'])): ?>
-                <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+                <div class="hm-page-header__actions">
+                    <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+                </div>
                 <?php endif; ?>
             </div>
 
@@ -363,9 +365,11 @@ class HearMed_Admin_Settings {
         </style>
         <div class="hm-admin">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2>Form &amp; Input Settings</h2>
-                <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Form &amp; Input Settings</h1>
+                <div class="hm-page-header__actions">
+                    <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+                </div>
             </div>
 
             <div class="hm-settings-panel" style="max-width:560px;">
@@ -493,9 +497,11 @@ class HearMed_Admin_Settings {
         </style>
         <div class="hm-admin">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2>Finance Settings</h2>
-                <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Finance Settings</h1>
+                <div class="hm-page-header__actions">
+                    <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+                </div>
             </div>
 
             <div class="hm-finance-grid">
@@ -665,9 +671,11 @@ class HearMed_Admin_Settings {
         </style>
         <div class="hm-admin">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2>Report Layout</h2>
-                <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Report Layout</h1>
+                <div class="hm-page-header__actions">
+                    <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+                </div>
             </div>
 
             <!-- Report Branding -->

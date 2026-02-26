@@ -66,8 +66,8 @@ function hearmed_render_system_status_page() {
     ?>
     <div class="hm-admin">
         <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-        <div class="hm-admin-hd">
-            <h2>System Status</h2>
+        <div class="hm-page-header">
+            <h1 class="hm-page-title">System Status</h1>
         </div>
         <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">
             Version: <strong><?php echo HEARMED_VERSION; ?></strong>

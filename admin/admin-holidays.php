@@ -54,9 +54,11 @@ class HearMed_Admin_Holidays {
         ob_start(); ?>
         <div class="hm-admin">
             <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
-            <div class="hm-admin-hd">
-                <h2>Staff Holidays</h2>
-                <button class="hm-btn hm-btn--primary" onclick="hmHol.open()">+ Add Holiday</button>
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Staff Holidays</h1>
+                <div class="hm-page-header__actions">
+                    <button class="hm-btn hm-btn--primary" onclick="hmHol.open()">+ Add Holiday</button>
+                </div>
             </div>
 
             <!-- Status lights summary -->
