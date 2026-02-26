@@ -98,8 +98,8 @@ class HearMed_Admin_Resources {
             <div class="hm-admin-hd">
                 <h2>Resources &amp; Equipment</h2>
                 <div style="display:flex;gap:8px;">
-                    <button class="hm-btn hm-btn-teal" onclick="hmRes.openRoom()">+ Add Room</button>
-                    <button class="hm-btn hm-btn-teal" onclick="hmRes.openEquip()">+ Add Equipment</button>
+                    <button class="hm-btn hm-btn--primary" onclick="hmRes.openRoom()">+ Add Room</button>
+                    <button class="hm-btn hm-btn--primary" onclick="hmRes.openEquip()">+ Add Equipment</button>
                 </div>
             </div>
 
@@ -129,8 +129,8 @@ class HearMed_Admin_Resources {
                             <tr>
                                 <td><strong><?php echo esc_html($r->title); ?></strong></td>
                                 <td class="hm-table-acts">
-                                    <button class="hm-btn hm-btn-sm" onclick='hmRes.openRoom(<?php echo $row; ?>)'>Edit</button>
-                                    <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmRes.del(<?php echo (int) $r->id; ?>,'<?php echo esc_js($r->title); ?>')">Delete</button>
+                                    <button class="hm-btn hm-btn--sm" onclick='hmRes.openRoom(<?php echo $row; ?>)'>Edit</button>
+                                    <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmRes.del(<?php echo (int) $r->id; ?>,'<?php echo esc_js($r->title); ?>')">Delete</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -172,12 +172,12 @@ class HearMed_Admin_Resources {
                         ?>
                             <tr>
                                 <td><strong><?php echo esc_html($r->title); ?></strong></td>
-                                <td><span class="hm-badge hm-badge-blue"><?php echo esc_html($r->category ?: '—'); ?></span></td>
+                                <td><span class="hm-badge hm-badge--blue"><?php echo esc_html($r->category ?: '—'); ?></span></td>
                                 <td><?php echo esc_html($r->room_name ?: '—'); ?></td>
                                 <td><?php echo esc_html($r->description ?: '—'); ?></td>
                                 <td class="hm-table-acts">
-                                    <button class="hm-btn hm-btn-sm" onclick='hmRes.openEquip(<?php echo $row; ?>)'>Edit</button>
-                                    <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmRes.del(<?php echo (int) $r->id; ?>,'<?php echo esc_js($r->title); ?>')">Delete</button>
+                                    <button class="hm-btn hm-btn--sm" onclick='hmRes.openEquip(<?php echo $row; ?>)'>Edit</button>
+                                    <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmRes.del(<?php echo (int) $r->id; ?>,'<?php echo esc_js($r->title); ?>')">Delete</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -213,7 +213,7 @@ class HearMed_Admin_Resources {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmRes.closeRoom()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmRes.saveRoom()" id="hmr-room-save">Save</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmRes.saveRoom()" id="hmr-room-save">Save</button>
                     </div>
                 </div>
             </div>
@@ -268,7 +268,7 @@ class HearMed_Admin_Resources {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmRes.closeEquip()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmRes.saveEquip()" id="hmr-equip-save">Save</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmRes.saveEquip()" id="hmr-equip-save">Save</button>
                     </div>
                 </div>
             </div>

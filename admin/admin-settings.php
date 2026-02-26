@@ -158,7 +158,7 @@ class HearMed_Admin_Settings {
             <div class="hm-admin-hd">
                 <h2><?php echo esc_html($page['title']); ?></h2>
                 <?php if (!empty($page['fields'])): ?>
-                <button class="hm-btn hm-btn-teal" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
                 <?php endif; ?>
             </div>
 
@@ -174,15 +174,15 @@ class HearMed_Admin_Settings {
                 <div class="hm-form-group">
                     <?php if ($f['type'] === 'toggle'): ?>
                         <label class="hm-toggle-label">
-                            <input type="checkbox" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" <?php checked($val, '1'); ?>>
+                            <input type="checkbox" class="hm-form-group" data-key="<?php echo esc_attr($f['key']); ?>" <?php checked($val, '1'); ?>>
                             <?php echo esc_html($f['label']); ?>
                         </label>
                     <?php else: ?>
                         <label><?php echo esc_html($f['label']); ?></label>
                         <?php if ($f['type'] === 'textarea'): ?>
-                            <textarea class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" rows="5"><?php echo esc_textarea($val); ?></textarea>
+                            <textarea class="hm-form-group" data-key="<?php echo esc_attr($f['key']); ?>" rows="5"><?php echo esc_textarea($val); ?></textarea>
                         <?php elseif ($f['type'] === 'select'): ?>
-                            <select class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>">
+                            <select class="hm-form-group" data-key="<?php echo esc_attr($f['key']); ?>">
                                 <?php foreach ($f['options'] as $k => $v): ?>
                                 <option value="<?php echo esc_attr($k); ?>" <?php selected($val, $k); ?>><?php echo esc_html($v); ?></option>
                                 <?php endforeach; ?>
@@ -190,14 +190,14 @@ class HearMed_Admin_Settings {
                         <?php elseif ($f['type'] === 'password'): ?>
                             <?php if ($val !== '' && $val !== $f['default']): ?>
                             <div class="hm-secret-wrap" data-key="<?php echo esc_attr($f['key']); ?>">
-                                <input type="text" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="••••••••" readonly style="color:#94a3b8;letter-spacing:2px;">
-                                <button type="button" class="hm-btn hm-btn-sm" onclick="hmSettings.editSecret(this)">Change</button>
+                                <input type="text" class="hm-form-group" data-key="<?php echo esc_attr($f['key']); ?>" value="••••••••" readonly style="color:#94a3b8;letter-spacing:2px;">
+                                <button type="button" class="hm-btn hm-btn--sm" onclick="hmSettings.editSecret(this)">Change</button>
                             </div>
                             <?php else: ?>
-                            <input type="password" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="" placeholder="Enter value...">
+                            <input type="password" class="hm-form-group" data-key="<?php echo esc_attr($f['key']); ?>" value="" placeholder="Enter value...">
                             <?php endif; ?>
                         <?php else: ?>
-                            <input type="<?php echo $f['type'] === 'number' ? 'number' : 'text'; ?>" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($val); ?>" <?php echo $f['type'] === 'number' ? 'step="0.1" min="0"' : ''; ?>>
+                            <input type="<?php echo $f['type'] === 'number' ? 'number' : 'text'; ?>" class="hm-form-group" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($val); ?>" <?php echo $f['type'] === 'number' ? 'step="0.1" min="0"' : ''; ?>>
                         <?php endif; ?>
                     <?php endif; ?>
                 </div>
@@ -220,7 +220,7 @@ class HearMed_Admin_Settings {
                         <option value="other">Other</option>
                     </select>
                     <input type="text" id="hm-gdpr-doc-name" class="hm-search-input" placeholder="Document name..." style="flex:1;">
-                    <label class="hm-btn hm-btn-teal" style="cursor:pointer;margin:0;">
+                    <label class="hm-btn hm-btn--primary" style="cursor:pointer;margin:0;">
                         Upload PDF
                         <input type="file" id="hm-gdpr-doc-file" accept=".pdf" style="display:none;" onchange="hmGdpr.upload()">
                     </label>
@@ -241,11 +241,11 @@ class HearMed_Admin_Settings {
                     <?php foreach ($docs as $doc): ?>
                     <tr data-id="<?php echo (int) $doc->id; ?>">
                         <td><strong><?php echo esc_html($doc->doc_name); ?></strong></td>
-                        <td><span class="hm-badge hm-badge-blue"><?php echo esc_html($type_labels[$doc->doc_type] ?? $doc->doc_type); ?></span></td>
+                        <td><span class="hm-badge hm-badge--blue"><?php echo esc_html($type_labels[$doc->doc_type] ?? $doc->doc_type); ?></span></td>
                         <td style="font-size:12px;color:var(--hm-text-light);"><?php echo esc_html(date('d M Y', strtotime($doc->created_at))); ?></td>
                         <td class="hm-table-acts">
-                            <a href="<?php echo esc_url($doc->file_url); ?>" target="_blank" class="hm-btn hm-btn-sm">View</a>
-                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmGdpr.del(<?php echo (int) $doc->id; ?>,'<?php echo esc_js($doc->doc_name); ?>')">Delete</button>
+                            <a href="<?php echo esc_url($doc->file_url); ?>" target="_blank" class="hm-btn hm-btn--sm">View</a>
+                            <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmGdpr.del(<?php echo (int) $doc->id; ?>,'<?php echo esc_js($doc->doc_name); ?>')">Delete</button>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -296,7 +296,7 @@ class HearMed_Admin_Settings {
         var hmSettings = {
             save: function(tag) {
                 var data = { action:'hm_admin_save_settings_page', nonce:HM.nonce, page_tag:tag, settings:{} };
-                document.querySelectorAll('.hm-stg-field').forEach(function(el) {
+                document.querySelectorAll('.hm-form-group').forEach(function(el) {
                     var key = el.dataset.key;
                     if (el.type === 'checkbox') data.settings[key] = el.checked ? '1' : '0';
                     else if (el.readOnly && el.value === '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022') return; // skip masked secrets
@@ -364,13 +364,13 @@ class HearMed_Admin_Settings {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Form &amp; Input Settings</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
             </div>
 
             <div class="hm-settings-panel" style="max-width:560px;">
                 <div class="hm-form-group">
                     <label>Signature Capture Method</label>
-                    <select class="hm-stg-field" data-key="hm_signature_method">
+                    <select class="hm-form-group" data-key="hm_signature_method">
                         <option value="wacom" <?php selected($sig_method, 'wacom'); ?>>Wacom Signature Pad</option>
                         <option value="touch" <?php selected($sig_method, 'touch'); ?>>Touch/Mouse Canvas</option>
                         <option value="none" <?php selected($sig_method, 'none'); ?>>No Signature</option>
@@ -379,7 +379,7 @@ class HearMed_Admin_Settings {
 
                 <div class="hm-form-group">
                     <label class="hm-toggle-label">
-                        <input type="checkbox" class="hm-stg-field" data-key="hm_require_gdpr_consent" <?php checked($gdpr_req, '1'); ?>>
+                        <input type="checkbox" class="hm-form-group" data-key="hm_require_gdpr_consent" <?php checked($gdpr_req, '1'); ?>>
                         Require GDPR Consent on Forms
                     </label>
                 </div>
@@ -399,9 +399,9 @@ class HearMed_Admin_Settings {
                 </div>
                 <div class="hm-ft-add-wrap">
                     <input type="text" id="hm-ft-new" placeholder="New form type..." class="hm-search-input" style="font-size:12px;padding:5px 8px;" onkeydown="if(event.key==='Enter'){event.preventDefault();hmFormTypes.add();}">
-                    <button type="button" class="hm-btn hm-btn-teal hm-btn-sm" onclick="hmFormTypes.add()">+ Add</button>
+                    <button type="button" class="hm-btn hm-btn--primary hm-btn--sm" onclick="hmFormTypes.add()">+ Add</button>
                 </div>
-                <input type="hidden" class="hm-stg-field" data-key="hm_form_types" id="hm-ft-hidden" value="<?php echo esc_attr($ft_raw); ?>">
+                <input type="hidden" class="hm-form-group" data-key="hm_form_types" id="hm-ft-hidden" value="<?php echo esc_attr($ft_raw); ?>">
             </div>
         </div>
 
@@ -441,7 +441,7 @@ class HearMed_Admin_Settings {
             save: function(tag) {
                 hmFormTypes.syncHidden();
                 var data = { action:'hm_admin_save_settings_page', nonce:HM.nonce, page_tag:tag, settings:{} };
-                document.querySelectorAll('.hm-stg-field').forEach(function(el) {
+                document.querySelectorAll('.hm-form-group').forEach(function(el) {
                     var key = el.dataset.key;
                     if (el.type === 'checkbox') data.settings[key] = el.checked ? '1' : '0';
                     else data.settings[key] = el.value;
@@ -493,7 +493,7 @@ class HearMed_Admin_Settings {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Finance Settings</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
             </div>
 
             <div class="hm-finance-grid">
@@ -512,7 +512,7 @@ class HearMed_Admin_Settings {
                 foreach ($vat_fields as $f): ?>
                 <div class="hm-form-group">
                     <label><?php echo esc_html($f['label']); ?></label>
-                    <input type="number" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($v($f['key'], $f['default'])); ?>" step="1" min="0">
+                    <input type="number" class="hm-form-group" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($v($f['key'], $f['default'])); ?>" step="1" min="0">
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -536,13 +536,13 @@ class HearMed_Admin_Settings {
                 </div>
                 <div class="hm-pm-add-wrap">
                     <input type="text" id="hm-pm-new" placeholder="New method..." class="hm-search-input" style="font-size:12px;padding:5px 8px;">
-                    <button type="button" class="hm-btn hm-btn-teal hm-btn-sm" onclick="hmFinance.addMethod()">+ Add</button>
+                    <button type="button" class="hm-btn hm-btn--primary hm-btn--sm" onclick="hmFinance.addMethod()">+ Add</button>
                 </div>
-                <input type="hidden" class="hm-stg-field" data-key="hm_payment_methods" id="hm-pm-hidden" value="<?php echo esc_attr($methods_raw); ?>">
+                <input type="hidden" class="hm-form-group" data-key="hm_payment_methods" id="hm-pm-hidden" value="<?php echo esc_attr($methods_raw); ?>">
 
                 <div class="hm-form-group" style="margin-top:14px;">
                     <label>PRSI Amount Per Ear (€)</label>
-                    <input type="number" class="hm-stg-field" data-key="hm_prsi_amount_per_ear" value="<?php echo esc_attr($v('hm_prsi_amount_per_ear', '500')); ?>" step="1" min="0">
+                    <input type="number" class="hm-form-group" data-key="hm_prsi_amount_per_ear" value="<?php echo esc_attr($v('hm_prsi_amount_per_ear', '500')); ?>" step="1" min="0">
                 </div>
             </div>
 
@@ -565,7 +565,7 @@ class HearMed_Admin_Settings {
                 <div class="hm-inv-row">
                     <div class="hm-form-group">
                         <label><?php echo esc_html($f['label']); ?></label>
-                        <input type="text" class="hm-stg-field" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($prefix); ?>">
+                        <input type="text" class="hm-form-group" data-key="<?php echo esc_attr($f['key']); ?>" value="<?php echo esc_attr($prefix); ?>">
                     </div>
                     <div class="hm-inv-last">
                         <?php if ($last_num > 0): ?>
@@ -617,7 +617,7 @@ class HearMed_Admin_Settings {
             save: function(tag) {
                 hmFinance.syncHidden();
                 var data = { action:'hm_admin_save_settings_page', nonce:HM.nonce, page_tag:tag, settings:{} };
-                document.querySelectorAll('.hm-stg-field').forEach(function(el) {
+                document.querySelectorAll('.hm-form-group').forEach(function(el) {
                     var key = el.dataset.key;
                     if (el.type === 'checkbox') data.settings[key] = el.checked ? '1' : '0';
                     else data.settings[key] = el.value;
@@ -665,7 +665,7 @@ class HearMed_Admin_Settings {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Report Layout</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmSettings.save('<?php echo esc_attr($tag); ?>')" id="hms-save-btn">Save Settings</button>
             </div>
 
             <!-- Report Branding -->
@@ -689,18 +689,18 @@ class HearMed_Admin_Settings {
                             <input type="file" id="hm-logo-file" accept=".png,image/png" style="display:none;" onchange="hmReport.uploadLogo()">
                         </label>
                         <?php if ($logo_url): ?>
-                        <button type="button" class="hm-btn hm-btn-red hm-btn-sm" id="hm-logo-remove-btn" onclick="hmReport.removeLogo()">Remove</button>
+                        <button type="button" class="hm-btn hm-btn--danger hm-btn--sm" id="hm-logo-remove-btn" onclick="hmReport.removeLogo()">Remove</button>
                         <?php else: ?>
-                        <button type="button" class="hm-btn hm-btn-red hm-btn-sm" id="hm-logo-remove-btn" onclick="hmReport.removeLogo()" style="display:none;">Remove</button>
+                        <button type="button" class="hm-btn hm-btn--danger hm-btn--sm" id="hm-logo-remove-btn" onclick="hmReport.removeLogo()" style="display:none;">Remove</button>
                         <?php endif; ?>
                     </div>
                     <p class="hm-logo-hint">Recommended: PNG with transparent background, max 400 &times; 120 px.</p>
-                    <input type="hidden" class="hm-stg-field" data-key="hm_report_logo_url" id="hm-logo-url-field" value="<?php echo esc_attr($logo_url); ?>">
+                    <input type="hidden" class="hm-form-group" data-key="hm_report_logo_url" id="hm-logo-url-field" value="<?php echo esc_attr($logo_url); ?>">
                 </div>
 
                 <div class="hm-form-group">
                     <label>Company Name on Reports</label>
-                    <input type="text" class="hm-stg-field" data-key="hm_report_company_name" value="<?php echo esc_attr($v('hm_report_company_name', 'HearMed Acoustic Health Care Ltd')); ?>">
+                    <input type="text" class="hm-form-group" data-key="hm_report_company_name" value="<?php echo esc_attr($v('hm_report_company_name', 'HearMed Acoustic Health Care Ltd')); ?>">
                 </div>
             </div>
 
@@ -709,7 +709,7 @@ class HearMed_Admin_Settings {
                 <h3 style="font-size:15px;margin-bottom:16px;">Report Footer</h3>
                 <div class="hm-form-group">
                     <label>Footer Text</label>
-                    <textarea class="hm-stg-field" data-key="hm_report_footer_text" rows="6" placeholder="Enter footer text that appears at the bottom of reports..."><?php echo esc_textarea($v('hm_report_footer_text', '')); ?></textarea>
+                    <textarea class="hm-form-group" data-key="hm_report_footer_text" rows="6" placeholder="Enter footer text that appears at the bottom of reports..."><?php echo esc_textarea($v('hm_report_footer_text', '')); ?></textarea>
                 </div>
             </div>
 
@@ -718,7 +718,7 @@ class HearMed_Admin_Settings {
                 <h3 style="font-size:15px;margin-bottom:16px;">Company Terms &amp; Conditions</h3>
                 <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:12px;">This text will be included as a separate Terms &amp; Conditions page at the end of reports when enabled.</p>
                 <div class="hm-form-group">
-                    <textarea class="hm-stg-field" data-key="hm_report_terms" rows="10" placeholder="Enter your company terms and conditions..."><?php echo esc_textarea($v('hm_report_terms', '')); ?></textarea>
+                    <textarea class="hm-form-group" data-key="hm_report_terms" rows="10" placeholder="Enter your company terms and conditions..."><?php echo esc_textarea($v('hm_report_terms', '')); ?></textarea>
                 </div>
             </div>
 
@@ -741,7 +741,7 @@ class HearMed_Admin_Settings {
                     ];
                     foreach ($toggles as $t): ?>
                     <label class="hm-toggle-label">
-                        <input type="checkbox" class="hm-stg-field" data-key="<?php echo esc_attr($t['key']); ?>" <?php checked($v($t['key'], $t['default']), '1'); ?>>
+                        <input type="checkbox" class="hm-form-group" data-key="<?php echo esc_attr($t['key']); ?>" <?php checked($v($t['key'], $t['default']), '1'); ?>>
                         <?php echo esc_html($t['label']); ?>
                     </label>
                     <?php endforeach; ?>
@@ -787,7 +787,7 @@ class HearMed_Admin_Settings {
         var hmSettings = {
             save: function(tag) {
                 var data = { action:'hm_admin_save_settings_page', nonce:HM.nonce, page_tag:tag, settings:{} };
-                document.querySelectorAll('.hm-stg-field').forEach(function(el) {
+                document.querySelectorAll('.hm-form-group').forEach(function(el) {
                     var key = el.dataset.key;
                     if (el.type === 'checkbox') data.settings[key] = el.checked ? '1' : '0';
                     else data.settings[key] = el.value;

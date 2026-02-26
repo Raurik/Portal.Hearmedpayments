@@ -77,8 +77,8 @@ class HearMed_Admin_Roles {
         <style>
         .hmr-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
         @media(max-width:900px){.hmr-grid{grid-template-columns:1fr;}}
-        .hmr-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(15,23,42,.04);}
-        .hmr-card-hd{font-size:15px;font-weight:600;color:#0f172a;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(15,23,42,.04);}
+        .hm-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(15,23,42,.04);}
+        .hm-card-hd{font-size:15px;font-weight:600;color:#0f172a;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(15,23,42,.04);}
         .hmr-role-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;}
         .hmr-role-row:last-child{border-bottom:none;}
         .hmr-role-info{flex:1;min-width:0;}
@@ -106,13 +106,13 @@ class HearMed_Admin_Roles {
                         <h1 class="hm-page-title" style="font-size:22px;font-weight:700;color:#0f172a;margin:0;">Roles &amp; Permissions</h1>
                         <div style="color:#94a3b8;font-size:12px;margin-top:4px;">Define roles and their permissions. Each staff member is assigned a role that controls what they can see and do.</div>
                     </div>
-                    <button class="hm-btn hm-btn-teal" onclick="hmRoles.open()">+ Add Role</button>
+                    <button class="hm-btn hm-btn--primary" onclick="hmRoles.open()">+ Add Role</button>
                 </div>
 
                 <div class="hmr-grid" style="margin-top:20px;">
                     <!-- Roles List -->
-                    <div class="hmr-card">
-                        <div class="hmr-card-hd">Defined Roles</div>
+                    <div class="hm-card">
+                        <div class="hm-card-hd">Defined Roles</div>
                         <?php if (empty($roles)): ?>
                             <p style="color:#94a3b8;font-size:12px;text-align:center;padding:20px 0;">No roles defined yet. Click "+ Add Role" to get started.</p>
                         <?php else: ?>
@@ -146,8 +146,8 @@ class HearMed_Admin_Roles {
                     </div>
 
                     <!-- Permissions Reference -->
-                    <div class="hmr-card">
-                        <div class="hmr-card-hd">Available Permissions</div>
+                    <div class="hm-card">
+                        <div class="hm-card-hd">Available Permissions</div>
                         <p style="color:#94a3b8;font-size:11px;margin-bottom:10px;">These permissions can be assigned to any role.</p>
                         <?php foreach ($perm_groups as $group => $keys): ?>
                             <div style="margin-bottom:10px;">
@@ -209,7 +209,7 @@ class HearMed_Admin_Roles {
                 </div>
                 <div class="hm-modal-ft">
                     <button class="hm-btn" onclick="hmRoles.close()">Cancel</button>
-                    <button class="hm-btn hm-btn-teal" onclick="hmRoles.save()" id="hmrl-save">Save</button>
+                    <button class="hm-btn hm-btn--primary" onclick="hmRoles.save()" id="hmrl-save">Save</button>
                 </div>
             </div>
         </div>

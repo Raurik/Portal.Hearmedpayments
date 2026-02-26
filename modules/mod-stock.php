@@ -91,7 +91,7 @@ function hm_stock_render() {
 
             var h='<table class="hm-table"><thead><tr><th>Manufacturer</th><th>Model</th><th>Style</th><th>Tech Level</th><th>Serial #</th><th>Clinic</th><th>Qty</th><th>Status</th><th></th></tr></thead><tbody>';
             filtered.forEach(function(x){
-                var sc=x.status==='Available'?'hm-badge-green':x.status==='Reserved'?'hm-badge-amber':'hm-badge-gray';
+                var sc=x.status==='Available'?'hm-badge--green':x.status==='Reserved'?'hm-badge--amber':'hm-badge--grey';
                 h+='<tr>'+
                     '<td>'+esc(x.manufacturer_name||'—')+'</td>'+
                     '<td style="font-weight:500;">'+esc(x.model_name||'—')+'</td>'+
@@ -100,10 +100,10 @@ function hm_stock_render() {
                     '<td><code class="hm-pt-hnum">'+esc(x.serial_number||'—')+'</code></td>'+
                     '<td>'+esc(x.clinic_name||'—')+'</td>'+
                     '<td style="text-align:center;">'+esc(x.quantity||0)+'</td>'+
-                    '<td><span class="hm-badge hm-badge-sm '+sc+'">'+esc(x.status||'Available')+'</span></td>'+
+                    '<td><span class="hm-badge hm-badge--sm '+sc+'">'+esc(x.status||'Available')+'</span></td>'+
                     '<td style="display:flex;gap:4px;">'+
-                        (x.status==='Available'?'<button class="hm-btn hm-btn-outline hm-btn-sm hm-stock-transfer" data-id="'+x._ID+'">Transfer</button>'+
-                        '<button class="hm-btn hm-btn-teal hm-btn-sm hm-stock-fit" data-id="'+x._ID+'" data-name="'+esc(x.manufacturer_name+' '+x.model_name)+'">Fit</button>':'')+
+                        (x.status==='Available'?'<button class="hm-btn hm-btn--secondary hm-btn--sm hm-stock-transfer" data-id="'+x._ID+'">Transfer</button>'+
+                        '<button class="hm-btn hm-btn--primary hm-btn--sm hm-stock-fit" data-id="'+x._ID+'" data-name="'+esc(x.manufacturer_name+' '+x.model_name)+'">Fit</button>':'')+
                     '</td>'+
                 '</tr>';
             });
@@ -123,7 +123,7 @@ function hm_stock_render() {
                 '<div class="hm-form-group"><label class="hm-label">Transfer to clinic *</label><select class="hm-dd" id="transfer-clinic"><option value="">— Select clinic —</option></select></div>'+
                 '<div class="hm-form-group"><label class="hm-label">Quantity</label><input type="number" class="hm-inp" id="transfer-qty" value="1" min="1"></div>'+
                 '<div class="hm-form-group"><label class="hm-label">Notes</label><textarea class="hm-textarea" id="transfer-notes" rows="2"></textarea></div>'+
-            '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="transfer-save">Transfer</button></div></div></div>');
+            '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="transfer-save">Transfer</button></div></div></div>');
             // Load clinics into transfer dropdown
             $.post(_hm.ajax,{action:'hm_get_clinics',nonce:_hm.nonce},function(r){
                 if(r&&r.success&&r.data){r.data.forEach(function(c){$('#transfer-clinic').append('<option value="'+c._ID+'">'+esc(c.name)+'</option>');});}

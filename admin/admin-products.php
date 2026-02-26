@@ -236,7 +236,7 @@ class HearMed_Admin_Products {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Products &amp; Services</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmProd.open()">+ Add <?php echo esc_html(rtrim(self::$item_types[$active_tab], 's')); ?></button>
+                <button class="hm-btn hm-btn--primary" onclick="hmProd.open()">+ Add <?php echo esc_html(rtrim(self::$item_types[$active_tab], 's')); ?></button>
             </div>
 
             <!-- Category Tabs -->
@@ -373,8 +373,8 @@ class HearMed_Admin_Products {
                             <td class="hm-num"><?php echo $p->retail_price !== null ? '€' . number_format((float) $p->retail_price, 2) : '—'; ?></td>
                         <?php endif; ?>
                         <td class="hm-table-acts">
-                            <button class="hm-btn hm-btn-sm" onclick='hmProd.open(<?php echo $row; ?>)'>Edit</button>
-                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmProd.del(<?php echo (int) $p->id; ?>,'<?php echo esc_js($p->product_name); ?>')">Delete</button>
+                            <button class="hm-btn hm-btn--sm" onclick='hmProd.open(<?php echo $row; ?>)'>Edit</button>
+                            <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmProd.del(<?php echo (int) $p->id; ?>,'<?php echo esc_js($p->product_name); ?>')">Delete</button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -705,7 +705,7 @@ class HearMed_Admin_Products {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmProd.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmProd.save()" id="hmp-save-btn">Save</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmProd.save()" id="hmp-save-btn">Save</button>
                     </div>
                 </div>
             </div>
@@ -732,7 +732,7 @@ class HearMed_Admin_Products {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="document.getElementById('hm-import-modal').classList.remove('open')">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmProd.doImport()" id="hmp-import-btn">Import</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmProd.doImport()" id="hmp-import-btn">Import</button>
                     </div>
                 </div>
             </div>

@@ -225,25 +225,25 @@
   text-decoration: none;
 }
 #hm-app .hm-btn--primary,
-#hm-app .hm-btn-teal {
+#hm-app .hm-btn--primary {
   background: var(--hm-teal);
   color: #fff;
   border-color: var(--hm-teal);
 }
 #hm-app .hm-btn--primary:hover,
-#hm-app .hm-btn-teal:hover {
+#hm-app .hm-btn--primary:hover {
   background: var(--hm-teal-hover);
   border-color: var(--hm-teal-hover);
   color: #fff;
 }
 #hm-app .hm-btn--danger,
-#hm-app .hm-btn-red {
+#hm-app .hm-btn--danger {
   background: var(--hm-red);
   color: #fff;
   border-color: var(--hm-red);
 }
 #hm-app .hm-btn--danger:hover,
-#hm-app .hm-btn-red:hover {
+#hm-app .hm-btn--danger:hover {
   background: #dc2626;
   border-color: #dc2626;
   color: #fff;
@@ -269,7 +269,7 @@
   color: var(--hm-teal-hover);
 }
 #hm-app .hm-btn--sm,
-#hm-app .hm-btn-sm {
+#hm-app .hm-btn--sm {
   padding: 4px 10px;
   font-size: 11px;
 }
@@ -281,13 +281,13 @@
   display: flex;
   width: 100%;
 }
-#hm-app .hm-btn-add,
+#hm-app .hm-btn--add,
 #hm-app .hm-btn--add {
   background: transparent;
   color: var(--hm-teal);
   border: none;
 }
-#hm-app .hm-btn-add:hover,
+#hm-app .hm-btn--add:hover,
 #hm-app .hm-btn--add:hover {
   background: var(--hm-teal-light);
   color: var(--hm-teal-hover);
@@ -307,12 +307,12 @@
   border-color: var(--hm-teal-hover);
   color: #fff;
 }
-#hm-app .hm-btn-outline {
+#hm-app .hm-btn--secondary {
   background: transparent;
   color: var(--hm-teal);
   border-color: var(--hm-teal);
 }
-#hm-app .hm-btn-outline:hover {
+#hm-app .hm-btn--secondary:hover {
   background: var(--hm-teal-light);
   color: var(--hm-teal-hover);
 }
@@ -377,17 +377,17 @@
 #hm-app .hm-badge--orange { background: rgba(249,115,22,0.08); color: #c2410c; border: 1px solid rgba(249,115,22,0.25); }
 #hm-app .hm-badge--purple { background: rgba(139,92,246,0.08); color: #6d28d9; border: 1px solid rgba(139,92,246,0.25); }
 /* Legacy badge aliases */
-#hm-app .hm-badge-green,
+#hm-app .hm-badge--green,
 #hm-app .hm-badge-success { background: rgba(16,185,129,0.08); color: #059669; border: 1px solid rgba(16,185,129,0.25); }
-#hm-app .hm-badge-red,
+#hm-app .hm-badge--red,
 #hm-app .hm-badge-error   { background: rgba(239,68,68,0.08);  color: #dc2626; border: 1px solid rgba(239,68,68,0.25); }
-#hm-app .hm-badge-yellow,
+#hm-app .hm-badge--amber,
 #hm-app .hm-badge-amber,
 #hm-app .hm-badge-warning { background: rgba(245,158,11,0.08); color: #92400e; border: 1px solid rgba(245,158,11,0.25); }
-#hm-app .hm-badge-blue   { background: rgba(59,130,246,0.08); color: #1e40af; border: 1px solid rgba(59,130,246,0.25); }
-#hm-app .hm-badge-gray,
+#hm-app .hm-badge--blue   { background: rgba(59,130,246,0.08); color: #1e40af; border: 1px solid rgba(59,130,246,0.25); }
+#hm-app .hm-badge--grey,
 #hm-app .hm-badge-grey   { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
-#hm-app .hm-badge-orange  { background: rgba(249,115,22,0.08); color: #c2410c; border: 1px solid rgba(249,115,22,0.25); }
+#hm-app .hm-badge--orange  { background: rgba(249,115,22,0.08); color: #c2410c; border: 1px solid rgba(249,115,22,0.25); }
 
 /* ── Dot indicators — inline status ── */
 #hm-app .hm-dot {

@@ -116,16 +116,16 @@ class HearMed_Admin_Appointment_Type_Detail {
 
         /* Badges */
         #hm-app .hm-badge       { display:inline-block; padding:2px 7px; border-radius:4px; font-size:10px; font-weight:600; line-height:1.4; }
-        #hm-app .hm-badge-amber { background:#fef3c7; color:#92400e; }
-        #hm-app .hm-badge-blue  { background:#dbeafe; color:#1e40af; }
-        #hm-app .hm-badge-green { background:#dcfce7; color:#166534; }
+        #hm-app .hm-badge--amber { background:#fef3c7; color:#92400e; }
+        #hm-app .hm-badge--blue  { background:#dbeafe; color:#1e40af; }
+        #hm-app .hm-badge--green { background:#dcfce7; color:#166534; }
 
         /* Buttons */
         #hm-app .hm-btn         { background:none; border:none; font-size:13px; font-weight:600; color:#64748b; cursor:pointer; padding:0; }
-        #hm-app .hm-btn-teal    { color:#0BB4C4; }
-        #hm-app .hm-btn-teal:hover { color:#0a9eac; }
-        #hm-app .hm-btn-sm      { font-size:12px; }
-        #hm-app .hm-btn-red     { color:#ef4444; }
+        #hm-app .hm-btn--primary    { color:#0BB4C4; }
+        #hm-app .hm-btn--primary:hover { color:#0a9eac; }
+        #hm-app .hm-btn--sm      { font-size:12px; }
+        #hm-app .hm-btn--danger     { color:#ef4444; }
 
         /* Preview bar */
         /* Appointment preview card — matches calendar-settings preview */
@@ -172,7 +172,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                 <div class="hm-card">
                     <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
                         Details
-                        <button type="button" class="hm-btn hm-btn-teal" id="hm-svc-save-details">Save Details</button>
+                        <button type="button" class="hm-btn hm-btn--primary" id="hm-svc-save-details">Save Details</button>
                     </div>
                     <div class="hm-card-body">
                         <div class="hm-srow"><span class="hm-slbl">Name</span><span class="hm-sval"><input type="text" class="hm-inp" id="hm-svc-name" value="<?php echo esc_attr($svc->service_name); ?>"></span></div>
@@ -238,7 +238,7 @@ class HearMed_Admin_Appointment_Type_Detail {
             <div class="hm-card" style="margin-bottom:16px;">
                 <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
                     Outcomes
-                    <button class="hm-btn hm-btn-teal" id="hm-add-outcome">+ Add Outcome</button>
+                    <button class="hm-btn hm-btn--primary" id="hm-add-outcome">+ Add Outcome</button>
                 </div>
                 <div class="hm-card-body">
                     <?php if (empty($outcomes)): ?>
@@ -253,21 +253,21 @@ class HearMed_Admin_Appointment_Type_Detail {
                             <span class="hm-slbl" style="font-weight:600;color:#0f172a;"><?php echo esc_html($o->outcome_name); ?></span>
                             <span style="display:flex;gap:6px;align-items:center;">
                                 <?php if (!empty($o->is_invoiceable) && $o->is_invoiceable): ?>
-                                    <span class="hm-badge hm-badge-sm hm-badge-amber">Invoiceable</span>
+                                    <span class="hm-badge hm-badge--sm hm-badge--amber">Invoiceable</span>
                                 <?php endif; ?>
                                 <?php if (!empty($o->requires_note) && $o->requires_note): ?>
-                                    <span class="hm-badge hm-badge-sm hm-badge-blue">Note</span>
+                                    <span class="hm-badge hm-badge--sm hm-badge--blue">Note</span>
                                 <?php endif; ?>
                                 <?php if (!empty($o->triggers_followup) && $o->triggers_followup): ?>
-                                    <span class="hm-badge hm-badge-sm hm-badge-green">Follow-up</span>
+                                    <span class="hm-badge hm-badge--sm hm-badge--green">Follow-up</span>
                                 <?php endif; ?>
                                 <?php if (!empty($o->triggers_reminder) && $o->triggers_reminder): ?>
-                                    <span class="hm-badge hm-badge-sm" style="background:#a855f7;color:#fff;">SMS</span>
+                                    <span class="hm-badge hm-badge--sm" style="background:#a855f7;color:#fff;">SMS</span>
                                 <?php endif; ?>
                                 <?php if (!empty($o->triggers_followup_call) && $o->triggers_followup_call): ?>
-                                    <span class="hm-badge hm-badge-sm" style="background:#f97316;color:#fff;">Call <?php echo intval($o->followup_call_days ?? 7); ?>d</span>
+                                    <span class="hm-badge hm-badge--sm" style="background:#f97316;color:#fff;">Call <?php echo intval($o->followup_call_days ?? 7); ?>d</span>
                                 <?php endif; ?>
-                                <button class="hm-btn hm-btn-sm hm-outcome-edit" data-row='<?php echo json_encode([
+                                <button class="hm-btn hm-btn--sm hm-outcome-edit" data-row='<?php echo json_encode([
                                     'id'                    => (int)$o->id,
                                     'outcome_name'          => $o->outcome_name,
                                     'outcome_color'         => $oc,
@@ -279,7 +279,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                                     'triggers_followup_call'=> !empty($o->triggers_followup_call) && $o->triggers_followup_call,
                                     'followup_call_days'    => intval($o->followup_call_days ?? 7),
                                 ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>'>Edit</button>
-                                <button class="hm-btn hm-btn-sm hm-btn-red hm-outcome-del" data-id="<?php echo (int)$o->id; ?>" data-name="<?php echo esc_attr($o->outcome_name); ?>">Delete</button>
+                                <button class="hm-btn hm-btn--sm hm-btn--danger hm-outcome-del" data-id="<?php echo (int)$o->id; ?>" data-name="<?php echo esc_attr($o->outcome_name); ?>">Delete</button>
                             </span>
                         </div>
                         <?php endforeach; ?>
@@ -294,7 +294,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                 <div class="hm-card">
                     <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
                         Assignable Staff
-                        <button class="hm-btn hm-btn-teal" id="hm-save-staff">Save</button>
+                        <button class="hm-btn hm-btn--primary" id="hm-save-staff">Save</button>
                     </div>
                     <div class="hm-card-body">
                         <?php foreach ($all_staff as $st):
@@ -411,7 +411,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmOutcome.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" id="hmo-save">Save Outcome</button>
+                        <button class="hm-btn hm-btn--primary" id="hmo-save">Save Outcome</button>
                     </div>
                 </div>
             </div>

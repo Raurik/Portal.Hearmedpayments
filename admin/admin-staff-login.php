@@ -122,7 +122,7 @@ class HearMed_Staff_Login {
                 </div>
 
                 <div class="hm-form-row" style="margin-top:16px;">
-                    <button class="hm-btn hm-btn-teal" type="submit">Sign in</button>
+                    <button class="hm-btn hm-btn--primary" type="submit">Sign in</button>
                 </div>
             </form>
         </div>

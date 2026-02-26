@@ -122,7 +122,7 @@ function initList(){
         var dop='<option value="">All dispensers</option>';dispensers.forEach(function(d){dop+='<option value="'+d.id+'">'+esc(d.name)+'</option>';});
         $el.html(
             '<div class="hm-patient-list-shell">'+
-                '<div class="hm-patients-header"><h2>Patients</h2><div class="hm-patients-actions"><button class="hm-btn hm-btn-teal" id="hm-create-patient">+ Add Patient</button></div></div>'+
+                '<div class="hm-patients-header"><h2>Patients</h2><div class="hm-patients-actions"><button class="hm-btn hm-btn--primary" id="hm-create-patient">+ Add Patient</button></div></div>'+
                 '<div class="hm-pt-search-wrap">'+HM_ICONS.search+'<input type="text" class="hm-search-input" id="hm-pt-search" placeholder="Search patients…"></div>'+
                 '<div class="hm-pt-filters">'+
                     '<div class="hm-pt-filter"><div class="hm-pt-filter-label">'+HM_ICONS.clinic+'<span>Clinic</span></div><select class="hm-dd" id="hm-filter-clinic">'+co+'</select></div>'+
@@ -130,7 +130,7 @@ function initList(){
                     '<div class="hm-pt-filter"><div class="hm-pt-filter-label">'+HM_ICONS.status+'<span>Status</span></div><select class="hm-dd" id="hm-filter-active"><option value="all">Active &amp; Inactive</option><option value="1">Active only</option><option value="0">Inactive only</option></select></div>'+
                     '<div class="hm-pt-filter"><div class="hm-pt-filter-label">'+HM_ICONS.person+'<span>Referral</span></div><input type="text" class="hm-inp" id="hm-filter-ref" placeholder="All sources"></div>'+
                 '</div>'+
-                '<button class="hm-btn hm-btn-outline hm-btn-sm" id="hm-filter-clear">Reset</button>'+
+                '<button class="hm-btn hm-btn--secondary hm-btn--sm" id="hm-filter-clear">Reset</button>'+
                 '<div id="hm-pt-table-wrap" style="overflow-y:auto;flex:1 1 auto;min-height:0;"></div>'+
             '</div>'
         );
@@ -162,15 +162,15 @@ function initList(){
                 var la=p.last_appt_date?fmtDate(p.last_appt_date)+(p.last_appt_time?' '+p.last_appt_time.substr(0,5):''):'—';
                 var phoneCell=p.phone?'<div class="hm-pt-phone-cell">'+HM_ICONS.phone+'<span>'+esc(p.phone)+'</span></div>':'—';
                 var apptCell=la!=='—'?'<div class="hm-pt-appt-cell">'+HM_ICONS.calendar+'<span>'+la+'</span></div>':'—';
-                var sb=p.is_active?'<span class="hm-badge hm-badge-green"><span class="hm-dot-green"></span> Active</span>':'<span class="hm-badge hm-badge-red"><span class="hm-dot-red"></span> Inactive</span>';
+                var sb=p.is_active?'<span class="hm-badge hm-badge--green"><span class="hm-dot-green"></span> Active</span>':'<span class="hm-badge hm-badge--red"><span class="hm-dot-red"></span> Inactive</span>';
                 h+='<tr class="hm-pt-row" data-id="'+p.id+'"><td class="hm-pt-hnum">'+esc(p.patient_number)+'</td>'+
                     '<td><div class="hm-pt-name-cell">'+HM_ICONS.person+'<a href="#" class="hm-pt-name-link" data-id="'+p.id+'">'+esc(p.name)+'</a></div></td>'+
                     '<td>'+fmtDate(p.dob)+'</td><td>'+phoneCell+'</td><td class="hm-pt-lastappt">'+apptCell+'</td>'+
                     '<td class="hm-pt-location">'+esc(p.dispenser_name)+'</td><td class="hm-pt-location">'+esc(p.clinic_name)+'</td>'+
-                    '<td>'+sb+'</td><td><button class="hm-btn hm-btn-outline hm-btn-sm hm-pt-view-btn" data-id="'+p.id+'">View</button></td></tr>';
+                    '<td>'+sb+'</td><td><button class="hm-btn hm-btn--secondary hm-btn--sm hm-pt-view-btn" data-id="'+p.id+'">View</button></td></tr>';
             });
             h+='</tbody></table>';
-            if(d.pages>1){h+='<div class="hm-pagination" style="display:flex;gap:6px;margin-top:16px;align-items:center;">';for(var j=1;j<=d.pages;j++)h+='<button class="hm-btn hm-btn-sm hm-page-btn '+(j===d.page?'hm-btn-teal':'hm-btn-outline')+'" data-page="'+j+'">'+j+'</button>';h+='<span style="color:#94a3b8;font-size:13px;margin-left:8px;">'+d.total+' patients</span></div>';}
+            if(d.pages>1){h+='<div class="hm-pagination" style="display:flex;gap:6px;margin-top:16px;align-items:center;">';for(var j=1;j<=d.pages;j++)h+='<button class="hm-btn hm-btn--sm hm-page-btn '+(j===d.page?'hm-btn--primary':'hm-btn--secondary')+'" data-page="'+j+'">'+j+'</button>';h+='<span style="color:#94a3b8;font-size:13px;margin-left:8px;">'+d.total+' patients</span></div>';}
             $w.html(h);
         }).fail(function(xhr){
             console.error('[HearMed] hm_get_patients failed',xhr.status,xhr.responseText);
@@ -224,7 +224,7 @@ function showCreateModal(){
                     '</label>'+
                 '</div>'+
             '</div>'+
-            '<div class="hm-modal-ft" style="display:flex;justify-content:flex-end;gap:10px;padding:14px 22px;border-top:1px solid #e2e8f0;background:#f8fafc;"><button class="hm-btn hm-btn-outline" id="cp-cancel">Cancel</button><button class="hm-btn hm-btn-primary" id="cp-save" disabled style="padding:8px 20px;">Create Patient</button></div>'+
+            '<div class="hm-modal-ft" style="display:flex;justify-content:flex-end;gap:10px;padding:14px 22px;border-top:1px solid #e2e8f0;background:#f8fafc;"><button class="hm-btn hm-btn--secondary" id="cp-cancel">Cancel</button><button class="hm-btn hm-btn-primary" id="cp-save" disabled style="padding:8px 20px;">Create Patient</button></div>'+
         '</div></div>'
     );
     $('#cp-gdpr').on('change',function(){$('#cp-save').prop('disabled',!this.checked);});
@@ -273,14 +273,14 @@ function initProfile(){
         });
         var rh='';
         if(p.annual_review_date){
-            var rc=p.review_status==='overdue'?'hm-badge-red':p.review_status==='soon'?'hm-badge-amber':'hm-badge-green';
+            var rc=p.review_status==='overdue'?'hm-badge--red':p.review_status==='soon'?'hm-badge--amber':'hm-badge--green';
             var rl=p.review_status==='overdue'?'Overdue '+Math.abs(p.review_days)+'d':'Review in '+p.review_days+'d';
             rh='<span class="hm-badge '+rc+'">'+rl+'</span>';
         }
         // Warranty status indicator
         var wh='';
         if(p.warranty_status&&p.warranty_status!=='none'){
-            var wc=p.warranty_status==='expired'?'hm-badge-red':p.warranty_status==='expiring'?'hm-badge-amber':'hm-badge-green';
+            var wc=p.warranty_status==='expired'?'hm-badge--red':p.warranty_status==='expiring'?'hm-badge--amber':'hm-badge--green';
             var wl;
             if(p.warranty_status==='expired'){wl='<span class="hm-dot-red"></span> Warranty Expired';}
             else if(p.warranty_status==='expiring'){wl='<span class="hm-dot-amber"></span> Warranty '+fmtDaysRemaining(p.warranty_days);}
@@ -289,9 +289,9 @@ function initProfile(){
         }
         // Active/inactive indicator light
         var statusLight='<span class="hm-status-light '+(p.is_active?'hm-status-active':'hm-status-inactive')+'"></span>';
-         var ab='<button class="hm-btn hm-btn-outline hm-btn-sm hm-btn-icon-teal" id="hm-btn-book-appt">'+HM_ICONS.calendar+'<span>Book Appointment</span></button>'+
-             '<button class="hm-btn hm-btn-outline hm-btn-sm hm-btn-icon-teal" id="hm-btn-add-note">'+HM_ICONS.note+'<span>Add Note</span></button>';
-         if(p.can_export)ab+='<button class="hm-btn hm-btn-outline hm-btn-sm hm-btn-icon-teal" id="hm-btn-export-data">'+HM_ICONS.export+'<span>Export</span></button>';
+         var ab='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-btn-icon-teal" id="hm-btn-book-appt">'+HM_ICONS.calendar+'<span>Book Appointment</span></button>'+
+             '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-btn-icon-teal" id="hm-btn--add-note">'+HM_ICONS.note+'<span>Add Note</span></button>';
+         if(p.can_export)ab+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-btn-icon-teal" id="hm-btn-export-data">'+HM_ICONS.export+'<span>Export</span></button>';
         // Format phone for display (Irish format)
         var fmtPhone=function(ph){if(!ph)return'';ph=ph.replace(/\s+/g,'');if(ph.length===10&&ph[0]==='0')return ph.substr(0,3)+' '+ph.substr(3,3)+' '+ph.substr(6);if(ph.length===11&&ph.substr(0,3)==='+353')return'+353 '+ph.substr(3,2)+' '+ph.substr(5,3)+' '+ph.substr(8);return ph;};
 
@@ -303,7 +303,7 @@ function initProfile(){
                             '<div class="hm-patient-avatar">'+ini+'</div>'+
                             '<div class="hm-patient-header-info">'+
                                 '<div class="hm-patient-name-row"><h1>'+esc(p.name)+'</h1>'+statusLight+'<span class="hm-patient-num-badge">'+esc(p.patient_number)+'</span>'+
-                                (p.prsi_eligible?'<span class="hm-badge hm-badge-blue">PRSI</span>':'')+wh+rh+'</div>'+
+                                (p.prsi_eligible?'<span class="hm-badge hm-badge--blue">PRSI</span>':'')+wh+rh+'</div>'+
                                 '<div class="hm-patient-quick-info">'+
                                     (p.dob?'<span>'+HM_ICONS.calendar+fmtDate(p.dob)+(p.age?' ('+esc(p.age)+')':'')+'</span>':'')+
                                     (p.phone?'<span>'+HM_ICONS.phone+fmtPhone(p.phone)+'</span>':'')+
@@ -326,7 +326,7 @@ function initProfile(){
 
     $el.on('click','.hm-tab-btn',function(){activeTab=$(this).data('tab');$('.hm-tab-btn').removeClass('active');$(this).addClass('active');loadTab(activeTab);});
     $el.on('click','#hm-btn-book-appt',function(){window.location='/calendar/?patient_id='+pid;});
-    $el.on('click','#hm-btn-add-note',function(){activeTab='notes';$('.hm-tab-btn').removeClass('active').filter('[data-tab="notes"]').addClass('active');loadTab('notes');setTimeout(showNoteModal,300);});
+    $el.on('click','#hm-btn--add-note',function(){activeTab='notes';$('.hm-tab-btn').removeClass('active').filter('[data-tab="notes"]').addClass('active');loadTab('notes');setTimeout(showNoteModal,300);});
     $el.on('click','#hm-btn-export-data',showExportModal);
 
     function loadTab(tab){
@@ -389,7 +389,7 @@ function initProfile(){
                 return '<div class="hm-detail-card" data-section="'+section+'">'+
                     '<div class="hm-detail-card-title" style="display:flex;justify-content:space-between;align-items:center;">'+
                     '<span>'+esc(title)+'</span>'+
-                    '<button class="hm-btn hm-btn-link hm-btn-sm hm-section-edit" data-section="'+section+'">'+HM_ICONS.edit+'Edit</button>'+
+                    '<button class="hm-btn hm-btn-link hm-btn--sm hm-section-edit" data-section="'+section+'">'+HM_ICONS.edit+'Edit</button>'+
                     '</div>'+body+'</div>';
             }
             $c.html('<div class="hm-tab-section">'+
@@ -403,9 +403,9 @@ function initProfile(){
                     '<div class="hm-detail-card hm-detail-card-gdpr"><div class="hm-detail-card-title">GDPR &amp; Marketing</div><div class="hm-detail-gdpr-row">'+dr('GDPR consent',p.gdpr_consent?'Consented '+fmtDate(p.gdpr_consent_date)+' (v'+(p.gdpr_consent_version||'1.0')+')':'No consent')+'</div>'+
                     '<div class="hm-pref-wrap"><strong class="hm-pref-title">Marketing preferences</strong>'+
                     '<div class="hm-pref-list">'+mt('marketing_email','Email',p.marketing_email)+mt('marketing_sms','SMS',p.marketing_sms)+mt('marketing_phone','Phone',p.marketing_phone)+'</div>'+
-                    '<button class="hm-btn hm-btn-teal hm-btn-sm" id="hm-save-mkt">Update Preferences</button></div></div></div>'+
+                    '<button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-save-mkt">Update Preferences</button></div></div></div>'+
                 '</div>'+
-                (p.is_admin?'<div class="hm-card" style="margin-top:16px;border:1px solid #fecdd3;"><div class="hm-card-hd" style="color:#e53e3e;">'+HM_ICONS.warning+' GDPR — Right to Erasure</div><div class="hm-card-body"><p style="font-size:13px;color:#64748b;">Anonymises personal data. Clinical + financial records retained. Irreversible.</p><button class="hm-btn hm-btn-danger hm-btn-sm" id="hm-anonymise-btn">Anonymise Patient</button></div></div>':'')+
+                (p.is_admin?'<div class="hm-card" style="margin-top:16px;border:1px solid #fecdd3;"><div class="hm-card-hd" style="color:#e53e3e;">'+HM_ICONS.warning+' GDPR — Right to Erasure</div><div class="hm-card-body"><p style="font-size:13px;color:#64748b;">Anonymises personal data. Clinical + financial records retained. Irreversible.</p><button class="hm-btn hm-btn-danger hm-btn--sm" id="hm-anonymise-btn">Anonymise Patient</button></div></div>':'')+
             '</div>');
             $c.on('click','.hm-section-edit',function(){editSection($(this).data('section'));});
             $c.on('click','#hm-save-mkt',function(){
@@ -432,7 +432,7 @@ function initProfile(){
                     $.post(_hm.ajax,{action:'hm_get_staff_list',nonce:_hm.nonce},function(r){if(!r.success)return;r.data.forEach(function(d){$('#es-dispenser').append('<option value="'+d.id+'">'+esc(d.name)+'</option>');});$('#es-dispenser').val(p.assigned_dispenser_id||'');});
                 };
             }
-            $card.html('<div class="hm-detail-card-title" style="display:flex;justify-content:space-between;align-items:center;"><span>Editing</span></div>'+formHtml+'<div style="display:flex;gap:8px;margin-top:12px;"><button class="hm-btn hm-btn-teal hm-btn-sm hm-section-save" data-section="'+section+'">Save</button><button class="hm-btn hm-btn-outline hm-btn-sm hm-section-cancel">Cancel</button></div>');
+            $card.html('<div class="hm-detail-card-title" style="display:flex;justify-content:space-between;align-items:center;"><span>Editing</span></div>'+formHtml+'<div style="display:flex;gap:8px;margin-top:12px;"><button class="hm-btn hm-btn--primary hm-btn--sm hm-section-save" data-section="'+section+'">Save</button><button class="hm-btn hm-btn--secondary hm-btn--sm hm-section-cancel">Cancel</button></div>');
             if(afterRender)afterRender();
             $card.off('click','.hm-section-cancel').on('click','.hm-section-cancel',function(){renderView();});
             $card.off('click','.hm-section-save').on('click','.hm-section-save',function(){
@@ -475,15 +475,15 @@ function initProfile(){
     function loadAppointments($c){
         $.post(_hm.ajax,{action:'hm_get_patient_appointments',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
-            var a=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Appointments ('+a.length+')</h3><a href="/calendar/?patient_id='+pid+'" class="hm-btn hm-btn-teal hm-btn-sm">+ Book</a></div>';
+            var a=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Appointments ('+a.length+')</h3><a href="/calendar/?patient_id='+pid+'" class="hm-btn hm-btn--primary hm-btn--sm">+ Book</a></div>';
             if(!a.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.calendar+'</div><div class="hm-empty-text">No appointments</div></div>';
             else{h+='<table class="hm-table"><thead><tr><th>Date</th><th>Time</th><th>Type</th><th>Dispenser</th><th>Clinic</th><th>Status</th><th>Outcome</th></tr></thead><tbody>';
                 a.forEach(function(x){
-                    var sc=x.status==='Confirmed'?'hm-badge-green':x.status==='Cancelled'?'hm-badge-red':'hm-badge-gray';
+                    var sc=x.status==='Confirmed'?'hm-badge--green':x.status==='Cancelled'?'hm-badge--red':'hm-badge--grey';
                     var dot=x.service_colour?'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+esc(x.service_colour)+';margin-right:4px;"></span>':'';
                     h+='<tr><td>'+fmtDate(x.appointment_date)+'</td><td>'+(x.start_time?x.start_time.substr(0,5):'—')+'</td><td>'+dot+esc(x.service_name)+'</td><td>'+esc(x.dispenser_name)+'</td><td>'+esc(x.clinic_name)+'</td>'+
-                    '<td><span class="hm-badge hm-badge-sm '+sc+'">'+esc(x.status)+'</span></td>'+
-                    '<td>'+(x.outcome_name?'<span class="hm-badge hm-badge-sm" style="background:'+(x.outcome_banner_colour||'#e2e8f0')+';color:#fff;">'+esc(x.outcome_name)+'</span>':'—')+'</td></tr>';
+                    '<td><span class="hm-badge hm-badge--sm '+sc+'">'+esc(x.status)+'</span></td>'+
+                    '<td>'+(x.outcome_name?'<span class="hm-badge hm-badge--sm" style="background:'+(x.outcome_banner_colour||'#e2e8f0')+';color:#fff;">'+esc(x.outcome_name)+'</span>':'—')+'</td></tr>';
                     if(x.notes)h+='<tr><td colspan="7"><div class="hm-appt-note">'+esc(x.notes)+'</div></td></tr>';
                 });
                 h+='</tbody></table>';}
@@ -496,9 +496,9 @@ function initProfile(){
         $.post(_hm.ajax,{action:'hm_get_patient_notes',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
             var n=r.data,tc={clinical:'#0BB4C4',admin:'#64748b',cancellation:'#e53e3e',system:'#3b82f6','follow-up':'#d97706',manual:'#0BB4C4'};
-            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Notes ('+n.length+')</h3><button class="hm-btn hm-btn-teal hm-btn-sm" id="hm-add-note-btn">+ Add Note</button></div>';
+            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Notes ('+n.length+')</h3><button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-add-note-btn">+ Add Note</button></div>';
             if(!n.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.note+'</div><div class="hm-empty-text">No notes</div></div>';
-            else n.forEach(function(x){var c=tc[x.note_type.toLowerCase()]||'#0BB4C4';var pinCls=x.is_pinned?' hm-note-pinned':'';var pinIcon=x.is_pinned?'📌 ':'';h+='<div class="hm-note-card'+pinCls+'" style="border-left-color:'+c+';">'+(x.is_pinned?'<div class="hm-note-pin-badge">📌 Pinned</div>':'')+'<div class="hm-note-type"><span class="hm-badge hm-badge-sm" style="background:'+c+';color:#fff;">'+esc(x.note_type)+'</span></div><div class="hm-note-text">'+esc(x.note_text)+'</div><div style="display:flex;gap:16px;align-items:center;margin-top:8px;"><div class="hm-note-meta">By '+esc(x.created_by)+' at '+fmtDateTime(x.created_at)+'</div>'+(x.can_edit?'<a href="#" class="hm-pin-note" data-id="'+x._ID+'" data-pinned="'+(x.is_pinned?'1':'0')+'" style="font-size:12px;color:#d97706;">'+(x.is_pinned?'Unpin':'Pin')+'</a><a href="#" class="hm-edit-note" data-id="'+x._ID+'" data-text="'+esc(x.note_text)+'" data-type="'+esc(x.note_type)+'" style="font-size:12px;color:#0BB4C4;">Edit</a><a href="#" class="hm-delete-note" data-id="'+x._ID+'" style="font-size:12px;color:#e53e3e;">Delete</a>':'')+'</div></div>';});
+            else n.forEach(function(x){var c=tc[x.note_type.toLowerCase()]||'#0BB4C4';var pinCls=x.is_pinned?' hm-note-pinned':'';var pinIcon=x.is_pinned?'📌 ':'';h+='<div class="hm-note-card'+pinCls+'" style="border-left-color:'+c+';">'+(x.is_pinned?'<div class="hm-note-pin-badge">📌 Pinned</div>':'')+'<div class="hm-note-type"><span class="hm-badge hm-badge--sm" style="background:'+c+';color:#fff;">'+esc(x.note_type)+'</span></div><div class="hm-note-text">'+esc(x.note_text)+'</div><div style="display:flex;gap:16px;align-items:center;margin-top:8px;"><div class="hm-note-meta">By '+esc(x.created_by)+' at '+fmtDateTime(x.created_at)+'</div>'+(x.can_edit?'<a href="#" class="hm-pin-note" data-id="'+x._ID+'" data-pinned="'+(x.is_pinned?'1':'0')+'" style="font-size:12px;color:#d97706;">'+(x.is_pinned?'Unpin':'Pin')+'</a><a href="#" class="hm-edit-note" data-id="'+x._ID+'" data-text="'+esc(x.note_text)+'" data-type="'+esc(x.note_type)+'" style="font-size:12px;color:#0BB4C4;">Edit</a><a href="#" class="hm-delete-note" data-id="'+x._ID+'" style="font-size:12px;color:#e53e3e;">Delete</a>':'')+'</div></div>';});
             $c.html(h+'</div>');
         });
         $c.off('click','#hm-add-note-btn').on('click','#hm-add-note-btn',function(){showNoteModal();});
@@ -509,7 +509,7 @@ function initProfile(){
 
     function showNoteModal(id,text,type){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>'+(id?'Edit':'Add')+' Note</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Note type</label><select class="hm-dd" id="note-type">'+['Clinical','Admin','Follow-up','Cancellation','System','Manual'].map(function(t){return'<option'+(type&&type.toLowerCase()===t.toLowerCase()?' selected':'')+'>'+t+'</option>';}).join('')+'</select></div><div class="hm-form-group"><label class="hm-label">Note text</label><textarea class="hm-textarea" id="note-text" rows="6">'+esc(text||'')+'</textarea></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="note-save">Save</button></div></div></div>');
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>'+(id?'Edit':'Add')+' Note</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Note type</label><select class="hm-dd" id="note-type">'+['Clinical','Admin','Follow-up','Cancellation','System','Manual'].map(function(t){return'<option'+(type&&type.toLowerCase()===t.toLowerCase()?' selected':'')+'>'+t+'</option>';}).join('')+'</select></div><div class="hm-form-group"><label class="hm-label">Note text</label><textarea class="hm-textarea" id="note-text" rows="6">'+esc(text||'')+'</textarea></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="note-save">Save</button></div></div></div>');
         $('.hm-modal-x').on('click',closeModal);
         $('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#note-save').on('click',function(){
@@ -523,9 +523,9 @@ function initProfile(){
     function loadDocuments($c){
         $.post(_hm.ajax,{action:'hm_get_patient_documents',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
-            var d=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Documents ('+d.length+')</h3><button class="hm-btn hm-btn-teal hm-btn-sm" id="hm-upload-doc">+ Upload</button></div>';
+            var d=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Documents ('+d.length+')</h3><button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-upload-doc">+ Upload</button></div>';
             if(!d.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.form+'</div><div class="hm-empty-text">No documents</div></div>';
-            else{h+='<table class="hm-table"><thead><tr><th>File name</th><th>Type</th><th>Uploaded by</th><th>Date</th><th></th></tr></thead><tbody>';d.forEach(function(x){h+='<tr><td>'+esc(x.file_name)+'</td><td><span class="hm-badge hm-badge-sm hm-badge-gray">'+esc(x.document_type)+'</span></td><td>'+esc(x.created_by)+'</td><td>'+fmtDate((x.created_at||'').split(' ')[0])+'</td><td><a href="#" class="hm-download-doc hm-btn hm-btn-outline hm-btn-sm" data-id="'+x._ID+'" data-type="'+esc(x.document_type)+'" data-url="'+esc(x.download_url)+'">Download</a></td></tr>';});h+='</tbody></table>';}
+            else{h+='<table class="hm-table"><thead><tr><th>File name</th><th>Type</th><th>Uploaded by</th><th>Date</th><th></th></tr></thead><tbody>';d.forEach(function(x){h+='<tr><td>'+esc(x.file_name)+'</td><td><span class="hm-badge hm-badge--sm hm-badge--grey">'+esc(x.document_type)+'</span></td><td>'+esc(x.created_by)+'</td><td>'+fmtDate((x.created_at||'').split(' ')[0])+'</td><td><a href="#" class="hm-download-doc hm-btn hm-btn--secondary hm-btn--sm" data-id="'+x._ID+'" data-type="'+esc(x.document_type)+'" data-url="'+esc(x.download_url)+'">Download</a></td></tr>';});h+='</tbody></table>';}
             $c.html(h+'</div>');
         });
         $c.off('click','#hm-upload-doc').on('click','#hm-upload-doc',showUploadDocModal);
@@ -537,13 +537,13 @@ function initProfile(){
     }
     function showUploadDocModal(){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>Upload Document</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Document type</label><select class="hm-dd" id="doc-type"><option>Audiogram</option><option>Referral Letter</option><option>GP Letter</option><option>Insurance Document</option><option>Consent Form</option><option>Other</option></select></div><div class="hm-form-group"><label class="hm-label">File (PDF, JPG, PNG, DOCX — max 10MB)</label><input type="file" id="doc-file" accept=".pdf,.jpg,.jpeg,.png,.docx"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="doc-save">Upload</button></div></div></div>');
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>Upload Document</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Document type</label><select class="hm-dd" id="doc-type"><option>Audiogram</option><option>Referral Letter</option><option>GP Letter</option><option>Insurance Document</option><option>Consent Form</option><option>Other</option></select></div><div class="hm-form-group"><label class="hm-label">File (PDF, JPG, PNG, DOCX — max 10MB)</label><input type="file" id="doc-file" accept=".pdf,.jpg,.jpeg,.png,.docx"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="doc-save">Upload</button></div></div></div>');
         $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#doc-save').on('click',function(){var file=$('#doc-file')[0].files[0];if(!file){toast('Select a file','error');return;}$(this).prop('disabled',true).text('Uploading…');var fd=new FormData();fd.append('action','hm_upload_patient_document');fd.append('nonce',_hm.nonce);fd.append('patient_id',pid);fd.append('document_type',$('#doc-type').val());fd.append('file',file);$.ajax({url:_hm.ajax,type:'POST',data:fd,processData:false,contentType:false,success:function(r){closeModal();if(r.success){toast('Uploaded');loadDocuments($('#hm-tab-content'));}else toast(r.data||'Failed','error');}});});
     }
     function showDownloadConsent(txt,cb){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:460px;"><div class="hm-modal-hd"><span>Download Consent</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="dl-consent" style="margin-top:2px;flex-shrink:0;"><span>'+esc(txt)+'</span></label></div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="dl-confirm" disabled>Download</button></div></div></div>');
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:460px;"><div class="hm-modal-hd"><span>Download Consent</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="dl-consent" style="margin-top:2px;flex-shrink:0;"><span>'+esc(txt)+'</span></label></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="dl-confirm" disabled>Download</button></div></div></div>');
         $('#dl-consent').on('change',function(){$('#dl-confirm').prop('disabled',!this.checked);});$('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#dl-confirm').on('click',function(){closeModal();cb();});
     }
@@ -561,8 +561,8 @@ function initProfile(){
 
             var h='<div class="hm-tab-section">';
             h+='<div class="hm-section-header" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><h3 style="margin:0;">Hearing Aids</h3>';
-            if(act.length) h+='<button class="hm-btn hm-btn-outline hm-btn-sm hm-btn-icon-teal" id="hm-exchange-top-btn">'+HM_ICONS.returns+' Exchange</button>';
-            h+='<button class="hm-btn hm-btn-teal hm-btn-sm" id="hm-add-product-btn">+ Add Hearing Aid</button>';
+            if(act.length) h+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-btn-icon-teal" id="hm-exchange-top-btn">'+HM_ICONS.returns+' Exchange</button>';
+            h+='<button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-add-product-btn">+ Add Hearing Aid</button>';
             h+='</div>';
 
             if(!act.length&&!inact.length){
@@ -582,17 +582,17 @@ function initProfile(){
         });
 
         function buildDeviceCard(pr,isAct){
-            var sc={Active:'hm-badge-green',Inactive:'hm-badge-red',Lost:'hm-badge-red',Replaced:'hm-badge-amber'}[pr.status]||'hm-badge-gray';
+            var sc={Active:'hm-badge--green',Inactive:'hm-badge--red',Lost:'hm-badge--red',Replaced:'hm-badge--amber'}[pr.status]||'hm-badge--grey';
             // Warranty badge
             var wbadge='';
             if(pr.warranty_expiry){
                 var wexp=new Date(pr.warranty_expiry),now=new Date(),wdays=Math.ceil((wexp-now)/(1000*60*60*24));
-                if(wdays<0) wbadge='<span class="hm-badge hm-badge-sm hm-badge-red"><span class="hm-dot-red"></span> Warranty Expired</span>';
-                else if(wdays<=90) wbadge='<span class="hm-badge hm-badge-sm hm-badge-amber"><span class="hm-dot-amber"></span> Warranty '+fmtDaysRemaining(wdays)+'</span>';
-                else wbadge='<span class="hm-badge hm-badge-sm hm-badge-green"><span class="hm-dot-green"></span> In Warranty ('+fmtDaysRemaining(wdays)+')</span>';
+                if(wdays<0) wbadge='<span class="hm-badge hm-badge--sm hm-badge--red"><span class="hm-dot-red"></span> Warranty Expired</span>';
+                else if(wdays<=90) wbadge='<span class="hm-badge hm-badge--sm hm-badge--amber"><span class="hm-dot-amber"></span> Warranty '+fmtDaysRemaining(wdays)+'</span>';
+                else wbadge='<span class="hm-badge hm-badge--sm hm-badge--green"><span class="hm-dot-green"></span> In Warranty ('+fmtDaysRemaining(wdays)+')</span>';
             }
-            var inactiveDot=sc==='hm-badge-red'?'<span class="hm-dot-red"></span> ':'<span class="hm-dot-amber"></span> ';
-            var activeBadge=isAct?'<span class="hm-badge hm-badge-sm hm-badge-green"><span class="hm-dot-green"></span> Active</span>':'<span class="hm-badge hm-badge-sm '+sc+'">'+inactiveDot+esc(pr.status)+'</span>';
+            var inactiveDot=sc==='hm-badge--red'?'<span class="hm-dot-red"></span> ':'<span class="hm-dot-amber"></span> ';
+            var activeBadge=isAct?'<span class="hm-badge hm-badge--sm hm-badge--green"><span class="hm-dot-green"></span> Active</span>':'<span class="hm-badge hm-badge--sm '+sc+'">'+inactiveDot+esc(pr.status)+'</span>';
 
             var card='<div class="hm-ha-card'+(isAct?' hm-ha-card-active':'')+'" data-device-id="'+pr._ID+'">';
 
@@ -616,8 +616,8 @@ function initProfile(){
             card+='<div class="hm-ha-side-serial">'+(pr.serial_left?'<span class="hm-serial">'+esc(pr.serial_left)+'</span>':'<span style="color:#cbd5e1;font-size:12px;">No serial</span>')+'</div>';
             if(isAct){
                 card+='<div class="hm-ha-side-actions">';
-                card+='<button class="hm-btn hm-btn-outline hm-btn-xs hm-btn-icon-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_left||'')+'">'+HM_ICONS.repair+' Repair</button>';
-                card+='<button class="hm-btn hm-btn-outline hm-btn-xs hm-btn-danger-outline hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+' (Left)">Mark Inactive</button>';
+                card+='<button class="hm-btn hm-btn--secondary hm-btn-xs hm-btn-icon-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_left||'')+'">'+HM_ICONS.repair+' Repair</button>';
+                card+='<button class="hm-btn hm-btn--secondary hm-btn-xs hm-btn-danger-outline hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+' (Left)">Mark Inactive</button>';
                 card+='</div>';
             }
             card+='</div>';
@@ -629,8 +629,8 @@ function initProfile(){
             card+='<div class="hm-ha-side-serial">'+(pr.serial_right?'<span class="hm-serial">'+esc(pr.serial_right)+'</span>':'<span style="color:#cbd5e1;font-size:12px;">No serial</span>')+'</div>';
             if(isAct){
                 card+='<div class="hm-ha-side-actions">';
-                card+='<button class="hm-btn hm-btn-outline hm-btn-xs hm-btn-icon-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_right||'')+'">'+HM_ICONS.repair+' Repair</button>';
-                card+='<button class="hm-btn hm-btn-outline hm-btn-xs hm-btn-danger-outline hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+' (Right)">Mark Inactive</button>';
+                card+='<button class="hm-btn hm-btn--secondary hm-btn-xs hm-btn-icon-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_right||'')+'">'+HM_ICONS.repair+' Repair</button>';
+                card+='<button class="hm-btn hm-btn--secondary hm-btn-xs hm-btn-danger-outline hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+' (Right)">Mark Inactive</button>';
                 card+='</div>';
             }
             card+='</div>';
@@ -640,8 +640,8 @@ function initProfile(){
             // Both devices action row (only for active)
             if(isAct && (pr.serial_left || pr.serial_right)){
                 card+='<div class="hm-ha-both-row">';
-                card+='<button class="hm-btn hm-btn-outline hm-btn-xs hm-btn-icon-teal hm-log-repair" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+'" data-sl="'+esc(pr.serial_left||'')+'" data-sr="'+esc(pr.serial_right||'')+'">'+HM_ICONS.repair+' Repair Both</button>';
-                card+='<button class="hm-btn hm-btn-outline hm-btn-xs hm-btn-danger-outline hm-mark-inactive" data-id="'+pr._ID+'">Mark Both Inactive</button>';
+                card+='<button class="hm-btn hm-btn--secondary hm-btn-xs hm-btn-icon-teal hm-log-repair" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+'" data-sl="'+esc(pr.serial_left||'')+'" data-sr="'+esc(pr.serial_right||'')+'">'+HM_ICONS.repair+' Repair Both</button>';
+                card+='<button class="hm-btn hm-btn--secondary hm-btn-xs hm-btn-danger-outline hm-mark-inactive" data-id="'+pr._ID+'">Mark Both Inactive</button>';
                 card+='</div>';
             }
 
@@ -706,7 +706,7 @@ function initProfile(){
                         '<div><strong>'+esc(d.product_name)+'</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · No serial on file</div></div></label>';
                 }
             });
-            h+='</div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="exchange-next">Next →</button></div></div></div>';
+            h+='</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="exchange-next">Next →</button></div></div></div>';
             $('body').append(h);
             $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
             $('#exchange-next').on('click',function(){
@@ -721,7 +721,7 @@ function initProfile(){
     function showMarkInactiveModal(ppId,side,cb){
         if($('#hm-modal-overlay').length)return;
         var sideLabel=side?' ('+side.charAt(0).toUpperCase()+side.slice(1)+' side)':' (Both sides)';
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>Mark Inactive'+esc(sideLabel)+'</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Reason</label><select class="hm-dd" id="inactive-reason"><option>Lost</option><option>Bought New Aids</option><option>Returned</option><option>Other</option></select></div><div class="hm-form-group"><label class="hm-label">Notes (optional)</label><textarea class="hm-textarea" id="inactive-notes" rows="3"></textarea></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-danger" id="inactive-save">Mark Inactive</button></div></div></div>');
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>Mark Inactive'+esc(sideLabel)+'</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Reason</label><select class="hm-dd" id="inactive-reason"><option>Lost</option><option>Bought New Aids</option><option>Returned</option><option>Other</option></select></div><div class="hm-form-group"><label class="hm-label">Notes (optional)</label><textarea class="hm-textarea" id="inactive-notes" rows="3"></textarea></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn-danger" id="inactive-save">Mark Inactive</button></div></div></div>');
         $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#inactive-save').on('click',function(){$(this).prop('disabled',true).text('Saving…');$.post(_hm.ajax,{action:'hm_update_patient_product_status',nonce:_hm.nonce,_ID:ppId,status:'Inactive',reason:$('#inactive-reason').val()+($.trim($('#inactive-notes').val())?': '+$.trim($('#inactive-notes').val()):'')+(side?' ['+side+' only]':'')},function(r){closeModal();if(r.success){toast('Marked inactive');cb();}else toast('Error','error');});});
     }
@@ -737,7 +737,7 @@ function initProfile(){
             '<div id="repair-warranty-notice" style="display:none;margin-bottom:12px;padding:8px 12px;border-radius:6px;font-size:12px;"></div>'+
             '<div class="hm-form-group"><label class="hm-label">Reason for repair *</label><select class="hm-dd" id="repair-reason"><option value="">— Select —</option><option>Intermittent fault</option><option>No sound</option><option>Feedback / whistling</option><option>Physical damage</option><option>Moisture damage</option><option>Battery issue</option><option>Bluetooth issue</option><option>Receiver fault</option><option>Microphone fault</option><option>Custom shell re-make</option><option>Other</option></select></div>'+
             '<div class="hm-form-group"><label class="hm-label">Repair notes</label><textarea class="hm-textarea" id="repair-notes" rows="3" placeholder="Describe the issue…"></textarea></div>'+
-        '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="repair-save">Log Repair</button></div></div></div>');
+        '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="repair-save">Log Repair</button></div></div></div>');
         // Load manufacturers
         $.post(_hm.ajax,{action:'hm_get_manufacturers',nonce:_hm.nonce},function(r){
             var $sel=$('#repair-mfr');$sel.empty().append('<option value="">— Select manufacturer —</option>');
@@ -782,8 +782,8 @@ function initProfile(){
                 '<p style="font-size:14px;color:#334155;margin-bottom:4px;">Repair <strong>'+esc(repairNum||'')+'</strong> created successfully.</p>'+
                 '<p style="font-size:13px;color:#64748b;margin-bottom:20px;">Print a repair docket to send with the device to the manufacturer.</p>'+
                 '<div style="display:flex;gap:10px;justify-content:center;">'+
-                    '<button class="hm-btn hm-btn-outline hm-modal-x" style="min-width:80px;">Close</button>'+
-                    '<button class="hm-btn hm-btn-teal" id="hm-print-docket" style="min-width:140px;">🖨 Print Docket</button>'+
+                    '<button class="hm-btn hm-btn--secondary hm-modal-x" style="min-width:80px;">Close</button>'+
+                    '<button class="hm-btn hm-btn--primary" id="hm-print-docket" style="min-width:140px;">🖨 Print Docket</button>'+
                 '</div>'+
             '</div></div></div>'
         );
@@ -811,7 +811,7 @@ function initProfile(){
             '<div class="hm-form-group"><label class="hm-label">Credit amount (€)</label><input type="number" class="hm-inp" id="exch-amount" step="0.01" min="0" placeholder="0.00"></div>'+
             '<div class="hm-form-group"><label class="hm-label">Refund type</label><select class="hm-dd" id="exch-refund-type"><option value="credit">Credit towards new device</option><option value="cheque">Cheque refund</option></select></div>'+
             '<div class="hm-form-group"><label class="hm-label">Notes (optional)</label><textarea class="hm-textarea" id="exch-notes" rows="2"></textarea></div>'+
-        '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="exch-save">Process Exchange</button></div></div></div>');
+        '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="exch-save">Process Exchange</button></div></div></div>');
         $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#exch-save').on('click',function(){
             var reason=$('#exch-reason').val();if(!reason){toast('Select a reason','error');return;}
@@ -829,20 +829,20 @@ function initProfile(){
     function loadRepairs($c){
         $.post(_hm.ajax,{action:'hm_get_patient_repairs',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
-            var rr=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Repairs ('+rr.length+')</h3><button class="hm-btn hm-btn-teal hm-btn-sm" id="hm-log-repair-btn">+ Log Repair</button></div>';
+            var rr=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Repairs ('+rr.length+')</h3><button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-log-repair-btn">+ Log Repair</button></div>';
             if(!rr.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.repair+'</div><div class="hm-empty-text">No repairs</div></div>';
             else{h+='<table class="hm-table"><thead><tr><th>Repair #</th><th>Hearing aid</th><th>Reason</th><th>Booked</th><th>Status</th><th>Days</th><th>Warranty</th><th></th></tr></thead><tbody>';
             rr.forEach(function(x){
-                var sc=x.status==='Booked'?'hm-badge-amber':x.status==='Sent'?'hm-badge-blue':'hm-badge-green';
+                var sc=x.status==='Booked'?'hm-badge--amber':x.status==='Sent'?'hm-badge--blue':'hm-badge--green';
                 var rowClass='';
                 if(x.status!=='Received'&&x.days_open){
                     if(x.days_open>14)rowClass=' class="hm-repair-overdue"';
                     else if(x.days_open>10)rowClass=' class="hm-repair-warning"';
                 }
-                var actions='<button class="hm-btn hm-btn-outline hm-btn-sm hm-repair-print" data-id="'+x._ID+'" title="Print Docket">🖨</button> ';
-                if(x.status==='Booked')actions+='<button class="hm-btn hm-btn-outline hm-btn-sm hm-repair-send" data-id="'+x._ID+'">Mark Sent</button>';
-                else if(x.status==='Sent')actions+='<button class="hm-btn hm-btn-outline hm-btn-sm hm-repair-receive" data-id="'+x._ID+'">Received Back</button>';
-                h+='<tr'+rowClass+'><td><code class="hm-pt-hnum">'+esc(x.repair_number||'—')+'</code></td><td>'+esc(x.product_name)+(x.manufacturer_name?' <span style="color:#94a3b8;font-size:12px;">('+esc(x.manufacturer_name)+')</span>':'')+'</td><td style="font-size:13px;">'+esc(x.repair_reason||'—')+'</td><td>'+fmtDate(x.date_booked)+'</td><td><span class="hm-badge hm-badge-sm '+sc+'">'+esc(x.status)+'</span></td><td style="text-align:center;">'+(x.days_open||'—')+'</td><td>'+(x.under_warranty?'<span class="hm-badge hm-badge-sm hm-badge-green"><span class="hm-dot-green"></span> Yes</span>':'<span class="hm-badge hm-badge-sm hm-badge-red"><span class="hm-dot-red"></span> '+(x.warranty_status||'No')+'</span>')+'</td><td>'+actions+'</td></tr>'+
+                var actions='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-repair-print" data-id="'+x._ID+'" title="Print Docket">🖨</button> ';
+                if(x.status==='Booked')actions+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-repair-send" data-id="'+x._ID+'">Mark Sent</button>';
+                else if(x.status==='Sent')actions+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-repair-receive" data-id="'+x._ID+'">Received Back</button>';
+                h+='<tr'+rowClass+'><td><code class="hm-pt-hnum">'+esc(x.repair_number||'—')+'</code></td><td>'+esc(x.product_name)+(x.manufacturer_name?' <span style="color:#94a3b8;font-size:12px;">('+esc(x.manufacturer_name)+')</span>':'')+'</td><td style="font-size:13px;">'+esc(x.repair_reason||'—')+'</td><td>'+fmtDate(x.date_booked)+'</td><td><span class="hm-badge hm-badge--sm '+sc+'">'+esc(x.status)+'</span></td><td style="text-align:center;">'+(x.days_open||'—')+'</td><td>'+(x.under_warranty?'<span class="hm-badge hm-badge--sm hm-badge--green"><span class="hm-dot-green"></span> Yes</span>':'<span class="hm-badge hm-badge--sm hm-badge--red"><span class="hm-dot-red"></span> '+(x.warranty_status||'No')+'</span>')+'</td><td>'+actions+'</td></tr>'+
                 (x.repair_notes?'<tr'+rowClass+'><td colspan="8"><div class="hm-appt-note">'+esc(x.repair_notes)+'</div></td></tr>':'');
             });h+='</tbody></table>';}
             $c.html(h+'</div>');
@@ -870,14 +870,14 @@ function initProfile(){
             if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
             var ret=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Returns / Credit Notes ('+ret.length+')</h3></div>';
             if(!ret.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.returns+'</div><div class="hm-empty-text">No returns</div></div>';
-            else{h+='<table class="hm-table"><thead><tr><th>Hearing aid</th><th>Credit note #</th><th>Refund amount</th><th>Cheque status</th><th></th></tr></thead><tbody>';ret.forEach(function(x){var ch=x.cheque_sent?'<span class="hm-badge hm-badge-green">'+HM_ICONS.check+' Sent '+fmtDate(x.cheque_sent_date)+'</span>':'<span class="hm-badge hm-badge-red">'+HM_ICONS.x+' Cheque Outstanding</span>';h+='<tr><td>'+esc(x.product_name)+'</td><td><code>'+esc(x.credit_note_num)+'</code></td><td>'+euro(x.refund_amount)+'</td><td>'+ch+'</td><td>'+(!x.cheque_sent?'<button class="hm-btn hm-btn-outline hm-btn-sm hm-log-cheque" data-id="'+x._ID+'">Log Cheque Sent</button>':'')+'</td></tr>';});h+='</tbody></table>';}
+            else{h+='<table class="hm-table"><thead><tr><th>Hearing aid</th><th>Credit note #</th><th>Refund amount</th><th>Cheque status</th><th></th></tr></thead><tbody>';ret.forEach(function(x){var ch=x.cheque_sent?'<span class="hm-badge hm-badge--green">'+HM_ICONS.check+' Sent '+fmtDate(x.cheque_sent_date)+'</span>':'<span class="hm-badge hm-badge--red">'+HM_ICONS.x+' Cheque Outstanding</span>';h+='<tr><td>'+esc(x.product_name)+'</td><td><code>'+esc(x.credit_note_num)+'</code></td><td>'+euro(x.refund_amount)+'</td><td>'+ch+'</td><td>'+(!x.cheque_sent?'<button class="hm-btn hm-btn--secondary hm-btn--sm hm-log-cheque" data-id="'+x._ID+'">Log Cheque Sent</button>':'')+'</td></tr>';});h+='</tbody></table>';}
             $c.html(h+'</div>');
         });
         $c.off('click','.hm-log-cheque').on('click','.hm-log-cheque',function(){var id=$(this).data('id');showLogChequeModal(id,function(){loadReturns($c);});});
     }
     function showLogChequeModal(cnId,cb){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:380px;"><div class="hm-modal-hd"><span>Log Cheque Sent</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Date sent</label><input type="date" class="hm-inp" id="cheque-date" value="'+new Date().toISOString().split('T')[0]+'"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="cheque-save">Log</button></div></div></div>');
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:380px;"><div class="hm-modal-hd"><span>Log Cheque Sent</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Date sent</label><input type="date" class="hm-inp" id="cheque-date" value="'+new Date().toISOString().split('T')[0]+'"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="cheque-save">Log</button></div></div></div>');
         $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#cheque-save').on('click',function(){$.post(_hm.ajax,{action:'hm_log_cheque_sent',nonce:_hm.nonce,_ID:cnId,cheque_date:$('#cheque-date').val()},function(r){closeModal();if(r.success){toast('Cheque logged');cb();}else toast('Error','error');});});
     }
@@ -904,13 +904,13 @@ function initProfile(){
                 '<div class="hm-form-group"><label class="hm-label">Medical history relevant to hearing</label><textarea class="hm-textarea" id="ch-medical" rows="2"></textarea></div>'+
                 '<div class="hm-form-group"><label class="hm-label">Outcome / recommendations</label><textarea class="hm-textarea" id="ch-outcome" rows="2"></textarea></div>'+
                 '<div class="hm-form-group"><label class="hm-label">Follow-up plan</label><textarea class="hm-textarea" id="ch-followup" rows="2"></textarea></div>'+
-                '<button class="hm-btn hm-btn-teal" id="ch-save">Save Case History</button>'+
+                '<button class="hm-btn hm-btn--primary" id="ch-save">Save Case History</button>'+
             '</div></div>'+
             '<div class="hm-ai-notice"><div class="hm-ai-notice-icon">'+HM_ICONS.warning+'</div><div style="flex:1;">'+
                 '<strong>AI Processing Notice</strong>'+
                 '<p>This consultation will be processed by an AI system (OpenRouter via Make.com). The patient must be informed before recording begins.</p>'+
                 '<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin-top:10px;"><input type="checkbox" id="hm-ai-consent" style="margin-top:2px;flex-shrink:0;"><span>I confirm the patient has been informed that this consultation will be processed by AI.</span></label>'+
-                '<button class="hm-btn hm-btn-teal" id="hm-start-recording" disabled style="margin-top:12px;">'+HM_ICONS.mic+'<span>Start Recording</span></button>'+
+                '<button class="hm-btn hm-btn--primary" id="hm-start-recording" disabled style="margin-top:12px;">'+HM_ICONS.mic+'<span>Start Recording</span></button>'+
             '</div></div>'+
             '<div id="hm-rec-status" style="display:none;margin-top:12px;"></div>'+
             '<div id="hm-transcript-wrap" style="display:none;margin-top:16px;"></div>'+
@@ -938,11 +938,11 @@ function initProfile(){
                     reader.readAsDataURL(blob);
                 };
                 mr.start();
-                $('#hm-rec-status').html('<div style="display:flex;align-items:center;gap:10px;"><span style="width:10px;height:10px;background:#e53e3e;border-radius:50%;display:inline-block;"></span><span style="font-size:13px;color:#e53e3e;font-weight:500;">Recording…</span><button class="hm-btn hm-btn-outline hm-btn-sm" id="hm-stop-rec">Stop</button></div>').show();
+                $('#hm-rec-status').html('<div style="display:flex;align-items:center;gap:10px;"><span style="width:10px;height:10px;background:#e53e3e;border-radius:50%;display:inline-block;"></span><span style="font-size:13px;color:#e53e3e;font-weight:500;">Recording…</span><button class="hm-btn hm-btn--secondary hm-btn--sm" id="hm-stop-rec">Stop</button></div>').show();
             }).catch(function(){toast('Microphone access denied','error');});
         });
         $c.on('click','#hm-stop-rec',function(){if(mr&&mr.state!=='inactive')mr.stop();});
-        function showTx(txt){$('#hm-rec-status').hide();$('#hm-transcript-wrap').html('<div class="hm-card"><div class="hm-card-hd">Transcript — review before saving</div><div class="hm-card-body"><textarea class="hm-textarea" id="ai-tx-text" rows="8">'+esc(txt)+'</textarea><div style="margin-top:12px;display:flex;gap:10px;"><button class="hm-btn hm-btn-teal" id="ai-save-tx">Save to Case History</button><button class="hm-btn hm-btn-outline" id="ai-discard-tx">Discard</button></div></div></div>').show();}
+        function showTx(txt){$('#hm-rec-status').hide();$('#hm-transcript-wrap').html('<div class="hm-card"><div class="hm-card-hd">Transcript — review before saving</div><div class="hm-card-body"><textarea class="hm-textarea" id="ai-tx-text" rows="8">'+esc(txt)+'</textarea><div style="margin-top:12px;display:flex;gap:10px;"><button class="hm-btn hm-btn--primary" id="ai-save-tx">Save to Case History</button><button class="hm-btn hm-btn--secondary" id="ai-discard-tx">Discard</button></div></div></div>').show();}
         $c.on('click','#ai-save-tx',function(){var t=$.trim($('#ai-tx-text').val());if(!t){toast('Empty','error');return;}$(this).prop('disabled',true).text('Saving…');$.post(_hm.ajax,{action:'hm_save_ai_transcript',nonce:_hm.nonce,patient_id:pid,transcript:t},function(r){if(r.success){toast('Saved');$('#hm-transcript-wrap').hide();}else toast('Error','error');});});
         $c.on('click','#ai-discard-tx',function(){$('#hm-transcript-wrap').hide();});
     }
@@ -965,7 +965,7 @@ function initProfile(){
             function renderRows(items,cls){
                 var out='';
                 items.forEach(function(x){var det='';try{det=JSON.stringify(JSON.parse(x.details),null,0).replace(/[{}]/g,'').substr(0,80);}catch(e){det=x.details||'';}
-                    out+='<tr class="hm-audit-row'+(cls?' '+cls:'')+'"><td style="white-space:nowrap;font-size:12px;">'+fmtDateTime(x.created_at)+'</td><td style="font-size:13px;">'+esc(x.user)+'</td><td><span class="hm-badge hm-badge-sm '+(x.action.indexOf('ERASURE')!==-1?'hm-badge-red':'hm-badge-gray')+'">'+esc(x.action)+'</span></td><td style="font-size:13px;color:#64748b;">'+esc(x.entity_type)+(x.entity_id?' #'+x.entity_id:'')+'</td><td style="font-size:12px;color:#94a3b8;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(det)+'">'+esc(det)+'</td></tr>';
+                    out+='<tr class="hm-audit-row'+(cls?' '+cls:'')+'"><td style="white-space:nowrap;font-size:12px;">'+fmtDateTime(x.created_at)+'</td><td style="font-size:13px;">'+esc(x.user)+'</td><td><span class="hm-badge hm-badge--sm '+(x.action.indexOf('ERASURE')!==-1?'hm-badge--red':'hm-badge--grey')+'">'+esc(x.action)+'</span></td><td style="font-size:13px;color:#64748b;">'+esc(x.entity_type)+(x.entity_id?' #'+x.entity_id:'')+'</td><td style="font-size:12px;color:#94a3b8;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(det)+'">'+esc(det)+'</td></tr>';
                 });
                 return out;
             }
@@ -983,13 +983,13 @@ function initProfile(){
     /* ── MODALS: ANONYMISE + EXPORT ── */
     function showAnonymiseModal(){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:460px;"><div class="hm-modal-hd" style="background:#fef2f2;color:#e53e3e;"><span>'+HM_ICONS.warning+' Anonymise Patient — Irreversible</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><p style="font-size:13px;color:#334155;">Replaces all personal data with "ANONYMISED [date]". Clinical notes, financial records and audit logs are retained. This cannot be undone.</p><div class="hm-form-group"><label class="hm-label">Type CONFIRM ERASURE to proceed</label><input type="text" class="hm-inp" id="anon-confirm" placeholder="CONFIRM ERASURE"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-danger" id="anon-save" disabled>Anonymise Patient</button></div></div></div>');
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:460px;"><div class="hm-modal-hd" style="background:#fef2f2;color:#e53e3e;"><span>'+HM_ICONS.warning+' Anonymise Patient — Irreversible</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><p style="font-size:13px;color:#334155;">Replaces all personal data with "ANONYMISED [date]". Clinical notes, financial records and audit logs are retained. This cannot be undone.</p><div class="hm-form-group"><label class="hm-label">Type CONFIRM ERASURE to proceed</label><input type="text" class="hm-inp" id="anon-confirm" placeholder="CONFIRM ERASURE"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn-danger" id="anon-save" disabled>Anonymise Patient</button></div></div></div>');
         $('#anon-confirm').on('input',function(){$('#anon-save').prop('disabled',$(this).val()!=='CONFIRM ERASURE');});$('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#anon-save').on('click',function(){$(this).prop('disabled',true).text('Anonymising…');$.post(_hm.ajax,{action:'hm_anonymise_patient',nonce:_hm.nonce,patient_id:pid,confirm:'CONFIRM ERASURE'},function(r){closeModal();if(r.success){toast('Patient anonymised');window.location=PG;}else toast(r.data||'Error','error');});});
     }
     function showExportModal(){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:460px;"><div class="hm-modal-hd"><span>Export Patient Data — GDPR Article 20</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><p style="font-size:13px;color:#334155;">Exports all patient data. Identified by C-number only in filename (Tier 2 export).</p><label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;margin-top:12px;"><input type="checkbox" id="export-consent" style="margin-top:2px;flex-shrink:0;"><span>I confirm I am authorised to export this patient\'s data.</span></label></div><div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="export-confirm" disabled>Export Data</button></div></div></div>');
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:460px;"><div class="hm-modal-hd"><span>Export Patient Data — GDPR Article 20</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><p style="font-size:13px;color:#334155;">Exports all patient data. Identified by C-number only in filename (Tier 2 export).</p><label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;margin-top:12px;"><input type="checkbox" id="export-consent" style="margin-top:2px;flex-shrink:0;"><span>I confirm I am authorised to export this patient\'s data.</span></label></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="export-confirm" disabled>Export Data</button></div></div></div>');
         $('#export-consent').on('change',function(){$('#export-confirm').prop('disabled',!this.checked);});$('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#export-confirm').on('click',function(){$(this).prop('disabled',true).text('Exporting…');$.post(_hm.ajax,{action:'hm_export_patient_data',nonce:_hm.nonce,patient_id:pid},function(r){closeModal();if(r.success)toast(r.data.message||'Export logged');else toast(r.data||'Error','error');});});
     }
@@ -999,20 +999,20 @@ function initProfile(){
         $.post(_hm.ajax,{action:'hm_get_patient_orders',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.warning+'</div><div class="hm-empty-text">'+(r.data||'Error loading orders')+'</div></div>');return;}
             var d=r.data;
-            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Orders ('+d.length+')</h3><a href="/orders/?patient_id='+pid+'" class="hm-btn hm-btn-teal hm-btn-sm">+ Create Order</a></div>';
+            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Orders ('+d.length+')</h3><a href="/orders/?patient_id='+pid+'" class="hm-btn hm-btn--primary hm-btn--sm">+ Create Order</a></div>';
             if(!d.length){h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.order+'</div><div class="hm-empty-text">No orders for this patient</div></div>';}
             else{
-                var sc={Fitted:'hm-badge-green',Pending:'hm-badge-amber',Cancelled:'hm-badge-red',Refunded:'hm-badge-gray'};
+                var sc={Fitted:'hm-badge--green',Pending:'hm-badge--amber',Cancelled:'hm-badge--red',Refunded:'hm-badge--grey'};
                 h+='<table class="hm-table"><thead><tr><th>Order #</th><th>Date</th><th>Description</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>';
                 d.forEach(function(o){
-                    var bc=sc[o.status]||'hm-badge-gray';
+                    var bc=sc[o.status]||'hm-badge--grey';
                     h+='<tr>'+
                         '<td><code class="hm-pt-hnum">'+esc(o.order_number)+'</code></td>'+
                         '<td>'+fmtDate((o.created_at||'').split(' ')[0])+'</td>'+
                         '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:13px;">'+esc(o.description||'—')+'</td>'+
                         '<td style="font-weight:500;">'+euro(o.grand_total)+'</td>'+
-                        '<td><span class="hm-badge hm-badge-sm '+bc+'">'+esc(o.status)+'</span></td>'+
-                        '<td><a href="/orders/?view='+o._ID+'" class="hm-btn hm-btn-outline hm-btn-sm">View</a></td>'+
+                        '<td><span class="hm-badge hm-badge--sm '+bc+'">'+esc(o.status)+'</span></td>'+
+                        '<td><a href="/orders/?view='+o._ID+'" class="hm-btn hm-btn--secondary hm-btn--sm">View</a></td>'+
                     '</tr>';
                 });
                 h+='</tbody></table>';
@@ -1029,19 +1029,19 @@ function initProfile(){
             var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Invoices ('+d.length+')</h3></div>';
             if(!d.length){h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.invoice+'</div><div class="hm-empty-text">No invoices for this patient</div></div>';}
             else{
-                var sc={Paid:'hm-badge-green',Part:'hm-badge-amber',Unpaid:'hm-badge-red',Cancelled:'hm-badge-gray',Void:'hm-badge-gray'};
+                var sc={Paid:'hm-badge--green',Part:'hm-badge--amber',Unpaid:'hm-badge--red',Cancelled:'hm-badge--grey',Void:'hm-badge--grey'};
                 var showAmts=patient.has_finance;
                 h+='<table class="hm-table"><thead><tr><th>Invoice #</th><th>Date</th><th>Status</th>';
                 if(showAmts)h+='<th>Total</th><th>Balance</th>';
                 h+='<th></th></tr></thead><tbody>';
                 d.forEach(function(inv){
-                    var bc=sc[inv.status]||'hm-badge-gray';
+                    var bc=sc[inv.status]||'hm-badge--grey';
                     h+='<tr>'+
                         '<td><code class="hm-pt-hnum">'+esc(inv.invoice_number)+'</code></td>'+
                         '<td>'+fmtDate((inv.created_at||'').split(' ')[0])+'</td>'+
-                        '<td><span class="hm-badge hm-badge-sm '+bc+'">'+esc(inv.status)+'</span></td>';
+                        '<td><span class="hm-badge hm-badge--sm '+bc+'">'+esc(inv.status)+'</span></td>';
                     if(showAmts)h+='<td style="font-weight:500;">'+euro(inv.grand_total)+'</td><td style="color:'+(parseFloat(inv.balance||0)>0?'#e53e3e':'#10b981')+';font-weight:500;">'+euro(inv.balance)+'</td>';
-                    h+='<td><a href="#" class="hm-dl-invoice hm-btn hm-btn-outline hm-btn-sm" data-id="'+inv._ID+'" data-num="'+esc(inv.invoice_number)+'">Download</a></td></tr>';
+                    h+='<td><a href="#" class="hm-dl-invoice hm-btn hm-btn--secondary hm-btn--sm" data-id="'+inv._ID+'" data-num="'+esc(inv.invoice_number)+'">Download</a></td></tr>';
                 });
                 h+='</tbody></table>';
             }
@@ -1085,7 +1085,7 @@ function initProfile(){
                     '<div class="hm-form-hint" id="ap-war-hint" style="margin-top:-8px;margin-bottom:12px;font-size:12px;color:#64748b;"></div>'+
                     '<div id="ap-match-info" style="font-size:12px;color:#64748b;margin-bottom:8px;"></div>'+
                 '</div>'+
-                '<div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="ap-save">Add Hearing Aid</button></div>'+
+                '<div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="ap-save">Add Hearing Aid</button></div>'+
             '</div></div>'
         );
 
@@ -1259,8 +1259,8 @@ function initProfile(){
                 '<p style="font-size:14px;color:#334155;margin-bottom:4px;">Hearing aid <strong>'+esc(prodName)+'</strong> added successfully.</p>'+
                 '<p style="font-size:13px;color:#64748b;margin-bottom:20px;">Would you like to create an order for this device?</p>'+
                 '<div style="display:flex;gap:10px;justify-content:center;">'+
-                    '<button class="hm-btn hm-btn-outline hm-modal-x" style="min-width:100px;">Not Now</button>'+
-                    '<a href="/orders/?hm_action=create&patient_id='+pid+'&product_id='+(prodId||'')+'" class="hm-btn hm-btn-teal" style="min-width:140px;text-decoration:none;">Create Order →</a>'+
+                    '<button class="hm-btn hm-btn--secondary hm-modal-x" style="min-width:100px;">Not Now</button>'+
+                    '<a href="/orders/?hm_action=create&patient_id='+pid+'&product_id='+(prodId||'')+'" class="hm-btn hm-btn--primary" style="min-width:140px;text-decoration:none;">Create Order →</a>'+
                 '</div>'+
             '</div></div></div>'
         );
@@ -1273,7 +1273,7 @@ function initProfile(){
         $.post(_hm.ajax,{action:'hm_get_patient_forms',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
             var f=r.data;
-            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Forms ('+f.length+')</h3><button class="hm-btn hm-btn-teal hm-btn-sm" id="hm-add-form-btn">+ Add Form</button></div>';
+            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Forms ('+f.length+')</h3><button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-add-form-btn">+ Add Form</button></div>';
             if(!f.length){h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.form+'</div><div class="hm-empty-text">No forms completed yet</div></div>';}
             else{
                 h+='<table class="hm-table"><thead><tr><th>Form type</th><th>Date</th><th>GDPR</th><th>Signed</th><th></th></tr></thead><tbody>';
@@ -1281,9 +1281,9 @@ function initProfile(){
                     h+='<tr>'+
                         '<td>'+esc(x.form_type)+'</td>'+
                         '<td>'+fmtDateTime(x.created_at)+'</td>'+
-                        '<td>'+(x.gdpr_consent?'<span class="hm-badge hm-badge-green hm-badge-sm">'+HM_ICONS.check+' Yes</span>':'<span class="hm-badge hm-badge-gray hm-badge-sm">'+HM_ICONS.x+' No</span>')+'</td>'+
-                        '<td>'+(x.has_signature?'<span class="hm-badge hm-badge-green hm-badge-sm">'+HM_ICONS.check+' Signed</span>':'<span class="hm-badge hm-badge-gray hm-badge-sm">'+HM_ICONS.x+' No sig</span>')+'</td>'+
-                        '<td><a href="#" class="hm-dl-form hm-btn hm-btn-outline hm-btn-sm" data-id="'+x._ID+'">Download</a></td>'+
+                        '<td>'+(x.gdpr_consent?'<span class="hm-badge hm-badge--green hm-badge--sm">'+HM_ICONS.check+' Yes</span>':'<span class="hm-badge hm-badge--grey hm-badge--sm">'+HM_ICONS.x+' No</span>')+'</td>'+
+                        '<td>'+(x.has_signature?'<span class="hm-badge hm-badge--green hm-badge--sm">'+HM_ICONS.check+' Signed</span>':'<span class="hm-badge hm-badge--grey hm-badge--sm">'+HM_ICONS.x+' No sig</span>')+'</td>'+
+                        '<td><a href="#" class="hm-dl-form hm-btn hm-btn--secondary hm-btn--sm" data-id="'+x._ID+'">Download</a></td>'+
                     '</tr>';
                 });
                 h+='</tbody></table>';
@@ -1320,10 +1320,10 @@ function initProfile(){
                     '<div style="margin-top:20px;">'+
                         '<label class="hm-label">Patient signature</label>'+
                         '<canvas id="af-sig-pad" class="hm-sig-pad" width="480" height="160" style="touch-action:none;"></canvas>'+
-                        '<div class="hm-sig-controls"><button class="hm-btn hm-btn-outline hm-btn-sm" id="af-sig-clear">Clear</button></div>'+
+                        '<div class="hm-sig-controls"><button class="hm-btn hm-btn--secondary hm-btn--sm" id="af-sig-clear">Clear</button></div>'+
                     '</div>'+
                 '</div>'+
-                '<div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="af-save">Save Form</button></div>'+
+                '<div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="af-save">Save Form</button></div>'+
             '</div></div>'
         );
         // Load form templates
@@ -1373,7 +1373,7 @@ function initProfile(){
         var h='<div class="hm-card hm-notif-card" style="margin-top:20px;">'+
             '<div class="hm-notif-head">'+
                 '<span class="hm-notif-title">Notifications &amp; Reminders</span>'+
-                '<button class="hm-btn hm-btn-outline hm-btn-sm" id="hm-add-notif-btn">+ Add Reminder</button>'+
+                '<button class="hm-btn hm-btn--secondary hm-btn--sm" id="hm-add-notif-btn">+ Add Reminder</button>'+
             '</div>'+
             '<div class="hm-card-body hm-notif-body" id="hm-notif-list"><div class="hm-notif-loading">Loading…</div></div>'+
         '</div>';
@@ -1400,7 +1400,7 @@ function initProfile(){
                         '<div class="hm-form-group"><label class="hm-label">Assign to (dispenser)</label><select class="hm-dd" id="notif-assign"><option value="">— Myself —</option></select></div>'+
                     '</div>'+
                 '</div>'+
-                '<div class="hm-modal-ft"><button class="hm-btn hm-btn-outline hm-modal-x">Cancel</button><button class="hm-btn hm-btn-teal" id="notif-save">Save Reminder</button></div>'+
+                '<div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="notif-save">Save Reminder</button></div>'+
             '</div></div>'
         );
         $.post(_hm.ajax,{action:'hm_get_dispensers',nonce:_hm.nonce},function(r){if(r.success)r.data.forEach(function(d){$('#notif-assign').append('<option value="'+d.id+'">'+esc(d.name)+'</option>');});});

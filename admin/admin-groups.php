@@ -107,7 +107,7 @@ class HearMed_Admin_Groups {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Staff Groups</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmGroups.open()">+ Add Group</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmGroups.open()">+ Add Group</button>
             </div>
 
             <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">
@@ -142,14 +142,14 @@ class HearMed_Admin_Groups {
                         ?>
                             <tr>
                                 <td><strong><?php echo esc_html($g['group_name']); ?></strong></td>
-                                <td><?php echo $g['role_name'] ? '<span class="hm-badge hm-badge-blue">' . esc_html($g['role_name']) . '</span>' : '—'; ?></td>
+                                <td><?php echo $g['role_name'] ? '<span class="hm-badge hm-badge--blue">' . esc_html($g['role_name']) . '</span>' : '—'; ?></td>
                                 <td><?php echo esc_html($g['description'] ?: '—'); ?></td>
                                 <td class="hm-num"><?php echo (int) $g['member_count']; ?></td>
                                 <td style="font-size:12px;color:var(--hm-text-light);"><?php echo esc_html(implode(', ', $member_names) ?: '—'); ?></td>
-                                <td><?php echo $g['is_active'] ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
+                                <td><?php echo $g['is_active'] ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Inactive</span>'; ?></td>
                                 <td class="hm-table-acts">
-                                    <button class="hm-btn hm-btn-sm" onclick='hmGroups.open(<?php echo $row; ?>)'>Edit</button>
-                                    <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmGroups.del(<?php echo (int) $g['id']; ?>,'<?php echo esc_js($g['group_name']); ?>')">Delete</button>
+                                    <button class="hm-btn hm-btn--sm" onclick='hmGroups.open(<?php echo $row; ?>)'>Edit</button>
+                                    <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmGroups.del(<?php echo (int) $g['id']; ?>,'<?php echo esc_js($g['group_name']); ?>')">Delete</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -222,7 +222,7 @@ class HearMed_Admin_Groups {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmGroups.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmGroups.save()" id="hmg-save">Save</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmGroups.save()" id="hmg-save">Save</button>
                     </div>
                 </div>
             </div>

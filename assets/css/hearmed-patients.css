@@ -666,11 +666,11 @@
    ============================================================ */
 
 .hm-badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-.hm-badge-green { background: rgba(16,185,129,0.1); color: #059669; }
-.hm-badge-red   { background: rgba(239,68,68,0.1);  color: #dc2626; }
+.hm-badge--green { background: rgba(16,185,129,0.1); color: #059669; }
+.hm-badge--red   { background: rgba(239,68,68,0.1);  color: #dc2626; }
 .hm-badge-amber { background: rgba(245,158,11,0.1); color: #d97706; }
-.hm-badge-blue  { background: rgba(59,130,246,0.1); color: #2563eb; }
-.hm-badge-gray  { background: #f1f5f9; color: #64748b; }
+.hm-badge--blue  { background: rgba(59,130,246,0.1); color: #2563eb; }
+.hm-badge--grey  { background: #f1f5f9; color: #64748b; }
 .hm-badge-sm    { font-size: 11px; padding: 2px 7px; }
 
 
@@ -1155,7 +1155,7 @@
 }
 
 /* ── Blue badge ── */
-.hm-badge-blue {
+.hm-badge--blue {
   background: #dbeafe;
   color: #1e40af;
 }

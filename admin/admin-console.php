@@ -70,7 +70,7 @@ class HearMed_Admin_Console {
 
         ob_start(); ?>
         <div class="hm-sc">
-            <h2 class="hm-sc-title">Settings</h2>
+            <h2 class="hm-page-title">Settings</h2>
             <div class="hm-sc-grid">
                 <?php foreach ($sections as $s):
                     $icon = $this->icon($s[0]);

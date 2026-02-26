@@ -79,7 +79,7 @@ class HearMed_Admin_Taxonomies {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2><?php echo esc_html($cfg['title']); ?></h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmTax.open('<?php echo esc_attr($tag); ?>')">+ Add <?php echo esc_html($cfg['singular']); ?></button>
+                <button class="hm-btn hm-btn--primary" onclick="hmTax.open('<?php echo esc_attr($tag); ?>')">+ Add <?php echo esc_html($cfg['singular']); ?></button>
             </div>
 
             <?php if (empty($rows)): ?>
@@ -139,7 +139,7 @@ class HearMed_Admin_Taxonomies {
                                 <?php if (!empty($r->order_phone)): ?><br><small><?php echo esc_html($r->order_phone); ?></small><?php endif; ?>
                             </td>
                             <td><?php echo esc_html($r->account_number ?: '—'); ?></td>
-                            <td><?php echo $r->is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
+                            <td><?php echo $r->is_active ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Inactive</span>'; ?></td>
                         <?php elseif ($tag === 'hearmed_range_settings'): ?>
                             <td><strong><?php echo esc_html($r->range_name); ?></strong></td>
                             <?php
@@ -151,16 +151,16 @@ class HearMed_Admin_Taxonomies {
                             ?>
                             <td class="hm-num"><?php echo $clean_pt !== null && $clean_pt > 0 ? '€' . esc_html(number_format($clean_pt, 2)) : '—'; ?></td>
                             <td class="hm-num"><?php echo $clean_pe !== null && $clean_pe > 0 ? '€' . esc_html(number_format($clean_pe, 2)) : '—'; ?></td>
-                            <td><?php echo $r->is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
+                            <td><?php echo $r->is_active ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Inactive</span>'; ?></td>
                         <?php else: ?>
                             <td><strong><?php echo esc_html($r->source_name); ?></strong></td>
                             <td><?php echo esc_html($r->parent_name ?: '—'); ?></td>
                             <td class="hm-num"><?php echo esc_html((string) ($r->sort_order ?? '0')); ?></td>
-                            <td><?php echo $r->is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
+                            <td><?php echo $r->is_active ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Inactive</span>'; ?></td>
                         <?php endif; ?>
                         <td class="hm-table-acts">
-                            <button class="hm-btn hm-btn-sm" onclick='hmTax.open("<?php echo esc_attr($tag); ?>", <?php echo $payload; ?>)'>Edit</button>
-                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmTax.del('<?php echo esc_attr($tag); ?>',<?php echo (int) $r->id; ?>,'<?php echo esc_js($tag === 'hearmed_range_settings' ? $r->range_name : ($tag === 'hearmed_lead_types' ? $r->source_name : $r->name)); ?>')">Delete</button>
+                            <button class="hm-btn hm-btn--sm" onclick='hmTax.open("<?php echo esc_attr($tag); ?>", <?php echo $payload; ?>)'>Edit</button>
+                            <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmTax.del('<?php echo esc_attr($tag); ?>',<?php echo (int) $r->id; ?>,'<?php echo esc_js($tag === 'hearmed_range_settings' ? $r->range_name : ($tag === 'hearmed_lead_types' ? $r->source_name : $r->name)); ?>')">Delete</button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -289,7 +289,7 @@ class HearMed_Admin_Taxonomies {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmTax.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmTax.save()" id="hmt-save-btn">Save</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmTax.save()" id="hmt-save-btn">Save</button>
                     </div>
                 </div>
             </div>

@@ -29,11 +29,11 @@ function hm_render_approvals_page() {
 
     ob_start(); ?>
     <style>
-    .hma-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(15,23,42,.04);margin-bottom:12px;overflow:hidden;border:1px solid #f1f5f9;}
-    .hma-card-hd{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;cursor:pointer;transition:background .1s;}
-    .hma-card-hd:hover{background:#f8fafc;}
-    .hma-card-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-    .hma-card-right{display:flex;align-items:center;gap:12px;}
+    .hm-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(15,23,42,.04);margin-bottom:12px;overflow:hidden;border:1px solid #f1f5f9;}
+    .hm-card-hd{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;cursor:pointer;transition:background .1s;}
+    .hm-card-hd:hover{background:#f8fafc;}
+    .hm-card-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .hm-card-right{display:flex;align-items:center;gap:12px;}
     .hma-ord-num{font-weight:700;font-size:13px;color:#0f172a;}
     .hma-patient{font-size:12px;color:#475569;}
     .hma-total{font-weight:700;font-size:14px;color:#0f172a;}
@@ -141,9 +141,9 @@ function hm_render_approvals_page() {
             data.orders.forEach(function(o) {
                 var marginClass = o.margin_percent >= 25 ? 'hma-margin-good' : (o.margin_percent >= 15 ? 'hma-margin-warn' : 'hma-margin-bad');
 
-                html += '<div class="hma-card" data-order-id="' + o.id + '">';
-                html += '<div class="hma-card-hd" onclick="hmApprovals.toggle(' + o.id + ')">';
-                html += '<div class="hma-card-left">';
+                html += '<div class="hm-card" data-order-id="' + o.id + '">';
+                html += '<div class="hm-card-hd" onclick="hmApprovals.toggle(' + o.id + ')">';
+                html += '<div class="hm-card-left">';
                 html += '<span class="hma-ord-num">' + hmE(o.order_number) + '</span>';
                 html += '<span class="hma-patient">' + hmE(o.patient_name) + ' (' + hmE(o.patient_number) + ')</span>';
                 if (o.prsi_applicable) html += '<span class="hma-prsi">PRSI &#10004;</span>';
@@ -154,7 +154,7 @@ function hm_render_approvals_page() {
                     });
                 }
                 html += '</div>';
-                html += '<div class="hma-card-right">';
+                html += '<div class="hm-card-right">';
                 html += '<span style="font-size:11px;color:#64748b;">Cost: &euro;' + hmN(o.cost_total) + '</span>';
                 html += '<span class="hma-total">Retail: &euro;' + hmN(o.grand_total) + '</span>';
                 html += '<span class="hma-margin ' + marginClass + '">' + o.margin_percent.toFixed(1) + '%</span>';
@@ -209,7 +209,7 @@ function hm_render_approvals_page() {
 
                 html += '<div class="hma-acts">';
                 html += '<button class="hm-btn" style="background:#dc2626;color:#fff;" onclick="hmApprovals.deny(' + o.id + ')">Deny</button>';
-                html += '<button class="hm-btn hm-btn-teal" onclick="hmApprovals.approve(' + o.id + ')">Approve &#10004;</button>';
+                html += '<button class="hm-btn hm-btn--primary" onclick="hmApprovals.approve(' + o.id + ')">Approve &#10004;</button>';
                 html += '</div>';
 
                 html += '</div>';

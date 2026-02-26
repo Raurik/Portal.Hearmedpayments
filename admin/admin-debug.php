@@ -195,7 +195,7 @@ function hm_render_debug_page() {
                    class="hm-filter-select"
                    value="<?php echo esc_attr( $page_id ?: '' ); ?>"
                    placeholder="Page ID" style="width:120px;">
-            <button type="submit" class="hm-btn hm-btn-teal">Check Page</button>
+            <button type="submit" class="hm-btn hm-btn--primary">Check Page</button>
         </form>
 
         <details style="margin-bottom:24px;">
@@ -224,17 +224,17 @@ function hm_render_debug_page() {
         </div>
 
         <p style="margin-bottom:14px;">
-            <button id="hm-debug-run-all" class="hm-btn hm-btn-teal">▶ Run All Checks</button>
+            <button id="hm-debug-run-all" class="hm-btn hm-btn--primary">▶ Run All Checks</button>
         </p>
 
         <?php foreach ( $ajax_checks as $check ) : ?>
         <div class="hm-ajax-row" data-action="<?php echo esc_attr( $check['action'] ); ?>">
             <div class="hm-ajax-row-header">
-                <button class="hm-btn hm-btn-sm">Run</button>
+                <button class="hm-btn hm-btn--sm">Run</button>
                 <code><?php echo esc_html( $check['action'] ); ?></code>
                 <span class="hm-ajax-status"></span>
                 <?php if ( ! $check['registered'] ) : ?>
-                <span class="hm-badge hm-badge-yellow">Action not registered</span>
+                <span class="hm-badge hm-badge--amber">Action not registered</span>
                 <?php endif; ?>
             </div>
             <div class="hm-ajax-result"></div>
@@ -257,9 +257,9 @@ function hm_render_debug_page() {
                     <td><code><?php echo esc_html( $t['full_name'] ); ?></code></td>
                     <td>
                         <?php if ( $t['exists'] ) : ?>
-                            <span class="hm-badge hm-badge-green">Exists</span>
+                            <span class="hm-badge hm-badge--green">Exists</span>
                             <?php else : ?>
-                            <span class="hm-badge hm-badge-red">Missing</span>
+                            <span class="hm-badge hm-badge--red">Missing</span>
                         <?php endif; ?>
                     </td>
                     <td><?php echo $t['exists'] ? esc_html( number_format( (int) $t['count'] ) ) : '—'; ?></td>

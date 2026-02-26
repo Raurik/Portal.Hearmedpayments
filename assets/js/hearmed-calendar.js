@@ -107,7 +107,7 @@ var Cal={
             '<h3>Settings <button class="hm-cog-x" id="hm-cogX">'+IC.x+'</button></h3>'+ 
             '<div class="hm-cog-section"><div class="hm-cog-label">Mode</div><div class="hm-cog-tog" id="hm-cogMode"><button class="hm-cog-tog-btn" data-v="people">People</button><button class="hm-cog-tog-btn" data-v="clinics">Clinics</button></div></div>'+ 
             '<div class="hm-cog-section"><div class="hm-cog-label">Timeframe</div><div class="hm-cog-tog" id="hm-cogTime"><button class="hm-cog-tog-btn" data-v="day">Day</button><button class="hm-cog-tog-btn" data-v="week">Week</button></div></div>'+ 
-            '<div class="hm-cog-ft"><button class="hm-btn" id="hm-cogCancel">Cancel</button><button class="hm-btn hm-btn-teal" id="hm-cogSave">Save</button></div>'+ 
+            '<div class="hm-cog-ft"><button class="hm-btn" id="hm-cogCancel">Cancel</button><button class="hm-btn hm-btn--primary" id="hm-cogSave">Save</button></div>'+ 
         '</div>'
         );
     },
@@ -400,7 +400,7 @@ cfg.slotHpx = slotH;
             // Save area
             h+='<div class="hm-card">';
             h+='<div class="hm-card-body" style="display:flex;justify-content:flex-end;gap:8px">';
-            h+='<button class="hm-btn hm-btn-teal" id="hs-save">Save Changes</button>';
+            h+='<button class="hm-btn hm-btn--primary" id="hs-save">Save Changes</button>';
             h+='</div></div>';
 
             h+='</div>'; // end right
@@ -441,7 +441,7 @@ cfg.slotHpx = slotH;
                 '<div class="hm-fld"><label>Location</label><select class="hm-inp" id="hmn-loc"><option>Clinic</option><option>Home</option></select></div>'+
                 '<div class="hm-fld"><label>Notes</label><textarea class="hm-inp" id="hmn-notes" placeholder="Optional notes..."></textarea></div>'+
             '</div>'+
-            '<div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hm-new-close">Cancel</button><button class="hm-btn hm-btn-teal hm-new-save">Create Appointment</button></div></div>'+
+            '<div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hm-new-close">Cancel</button><button class="hm-btn hm-btn--primary hm-new-save">Create Appointment</button></div></div>'+
         '</div></div>';
         $('body').append(html);
 
@@ -622,7 +622,7 @@ var Settings={
         // Save area
         h+='<div class="hm-card">';
         h+='<div class="hm-card-body" style="display:flex;justify-content:flex-end;gap:8px">';
-        h+='<button class="hm-btn hm-btn-teal" id="hs-save">Save Changes</button>';
+        h+='<button class="hm-btn hm-btn--primary" id="hs-save">Save Changes</button>';
         h+='</div></div>';
 
         h+='</div>'; // end right
@@ -729,7 +729,7 @@ var Blockouts={
     },
     render:function(){
         var self=this;
-        var h='<div class="hm-admin"><div class="hm-admin-hd"><h2>Appointment Type Blockouts</h2><button class="hm-btn hm-btn-teal" id="hbl-add">+ Add Blockout</button></div>';
+        var h='<div class="hm-admin"><div class="hm-admin-hd"><h2>Appointment Type Blockouts</h2><button class="hm-btn hm-btn--primary" id="hbl-add">+ Add Blockout</button></div>';
         h+='<table class="hm-table"><thead><tr><th>Appointment Type</th><th>Assignee</th><th>Dates</th><th>Time</th><th style="width:80px"></th></tr></thead><tbody>';
         if(!this.data.length)h+='<tr><td colspan="5" class="hm-no-data">No blockouts configured</td></tr>';
         else this.data.forEach(function(b){
@@ -748,7 +748,7 @@ var Blockouts={
         h+='<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hblf-disp"><option value="0">All</option>'+self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(bo&&bo.dispenser_id==d.id?' selected':'')+'>'+esc(d.name)+'</option>';}).join('')+'</select></div>';
         h+='<div class="hm-row"><div class="hm-fld"><label>Start Date</label><input type="date" class="hm-inp" id="hblf-sd" value="'+(bo?bo.start_date:'')+'"></div><div class="hm-fld"><label>End Date</label><input type="date" class="hm-inp" id="hblf-ed" value="'+(bo?bo.end_date:'')+'"></div></div>';
         h+='<div class="hm-row"><div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hblf-st" value="'+(bo?bo.start_time:'09:00')+'"></div><div class="hm-fld"><label>End Time</label><input type="time" class="hm-inp" id="hblf-et" value="'+(bo?bo.end_time:'17:00')+'"></div></div>';
-        h+='</div><div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hbl-close">Cancel</button><button class="hm-btn hm-btn-teal hbl-save" data-id="'+(bo?bo._ID:0)+'">Save</button></div></div></div></div>';
+        h+='</div><div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hbl-close">Cancel</button><button class="hm-btn hm-btn--primary hbl-save" data-id="'+(bo?bo._ID:0)+'">Save</button></div></div></div></div>';
         $('body').append(h);
         $(document).on('click','.hbl-close',function(){$('.hm-modal-bg').remove();});
         $(document).on('click','.hbl-save',function(){
@@ -775,7 +775,7 @@ var Holidays={
     },
     render:function(){
         var self=this;
-        var h='<div class="hm-admin"><div class="hm-admin-hd"><h2>Holidays &amp; Unavailability</h2><button class="hm-btn hm-btn-teal" id="hhl-add">+ Add New</button></div>';
+        var h='<div class="hm-admin"><div class="hm-admin-hd"><h2>Holidays &amp; Unavailability</h2><button class="hm-btn hm-btn--primary" id="hhl-add">+ Add New</button></div>';
         h+='<div class="hm-filter-bar"><div class="hm-filter-row"><select class="hm-dd" id="hhl-dispF"><option value="">All Assignees</option>';
         this.dispensers.forEach(function(d){h+='<option value="'+d.id+'">'+esc(d.name)+'</option>';});
         h+='</select></div></div>';
@@ -804,7 +804,7 @@ var Holidays={
         h+='<div class="hm-row"><div class="hm-fld"><label>Start Date</label><input type="date" class="hm-inp" id="hhlf-sd" value="'+(ho?ho.start_date:'')+'"></div><div class="hm-fld"><label>End Date</label><input type="date" class="hm-inp" id="hhlf-ed" value="'+(ho?ho.end_date:'')+'"></div></div>';
         h+='<div class="hm-row"><div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hhlf-st" value="'+(ho?ho.start_time:'09:00')+'"></div><div class="hm-fld"><label>End Time</label><input type="time" class="hm-inp" id="hhlf-et" value="'+(ho?ho.end_time:'17:00')+'"></div></div>';
         h+='<div class="hm-fld"><label>Repeats</label><select class="hm-inp" id="hhlf-rep"><option value="no"'+(ho&&ho.repeats!=='no'?'':' selected')+'>No</option><option value="weekly"'+(ho&&ho.repeats==='weekly'?' selected':'')+'>Weekly</option><option value="monthly"'+(ho&&ho.repeats==='monthly'?' selected':'')+'>Monthly</option><option value="yearly"'+(ho&&ho.repeats==='yearly'?' selected':'')+'>Yearly</option></select></div>';
-        h+='</div><div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hhl-close">Cancel</button><button class="hm-btn hm-btn-teal hhl-save" data-id="'+(ho?ho._ID:0)+'">Save</button></div></div></div></div>';
+        h+='</div><div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hhl-close">Cancel</button><button class="hm-btn hm-btn--primary hhl-save" data-id="'+(ho?ho._ID:0)+'">Save</button></div></div></div></div>';
         $('body').append(h);
         $(document).on('click','.hhl-close',function(){$('.hm-modal-bg').remove();});
         $(document).on('click','.hhl-save',function(){

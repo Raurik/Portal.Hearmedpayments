@@ -188,7 +188,7 @@ class HearMed_Admin_Availability {
                                 <span style="color:#ef4444;font-size:12px;">On leave</span>
                             <?php elseif (!empty($r['today_clinics'])): ?>
                                 <?php foreach ($r['today_clinics'] as $cn): ?>
-                                    <span class="hm-badge hm-badge-blue" style="margin-right:4px;"><?php echo esc_html($cn); ?></span>
+                                    <span class="hm-badge hm-badge--blue" style="margin-right:4px;"><?php echo esc_html($cn); ?></span>
                                 <?php endforeach; ?>
                             <?php elseif ($r['has_schedule']): ?>
                                 <span style="color:var(--hm-text-light);font-size:12px;">Not scheduled today</span>
@@ -198,7 +198,7 @@ class HearMed_Admin_Availability {
                         </td>
                         <td>
                             <?php if ($r['on_leave']): ?>
-                                <span class="hm-badge hm-badge-red"><?php echo esc_html(ucfirst($r['leave_type'])); ?></span>
+                                <span class="hm-badge hm-badge--red"><?php echo esc_html(ucfirst($r['leave_type'])); ?></span>
                                 <span style="font-size:11px;color:var(--hm-text-light);margin-left:4px;">until <?php echo esc_html($r['leave_end']); ?></span>
                             <?php else: ?>
                                 <span style="color:var(--hm-text-light);font-size:12px;">—</span>
@@ -208,7 +208,7 @@ class HearMed_Admin_Availability {
                             <?php if (!empty($r['upcoming'])):
                                 foreach ($r['upcoming'] as $u): ?>
                                     <div style="margin-bottom:2px;">
-                                        <span class="hm-badge hm-badge-orange"><?php echo esc_html(ucfirst($u->absence_type ?: 'Holiday')); ?></span>
+                                        <span class="hm-badge hm-badge--orange"><?php echo esc_html(ucfirst($u->absence_type ?: 'Holiday')); ?></span>
                                         <span style="color:var(--hm-text-light);"><?php echo esc_html($u->start_date . ' → ' . $u->end_date); ?></span>
                                     </div>
                                 <?php endforeach;

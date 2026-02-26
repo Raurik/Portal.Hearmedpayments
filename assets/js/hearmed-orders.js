@@ -443,7 +443,7 @@
 
         // ── "Create Order" trigger from patient profile ───────────────────
         // Patient profile injects a button like:
-        // <button class="hm-btn hm-btn-teal hm-btn-sm hm-create-order"
+        // <button class="hm-btn hm-btn--primary hm-btn--sm hm-create-order"
         //         data-patient-id="123" data-patient-name="John Doe">
         //   + Create Order
         // </button>
@@ -482,13 +482,13 @@
 
     // Status → badge class mapping
     var STATUS_BADGE = {
-        'Awaiting Approval': 'hm-badge-amber',
+        'Awaiting Approval': 'hm-badge--amber',
         'Approved'         : 'hm-badge-teal',
         'Ordered'          : 'hm-badge-teal',
-        'Received'         : 'hm-badge-green',
+        'Received'         : 'hm-badge--green',
         'Fitting Scheduled': 'hm-badge-teal',
-        'Fitted'           : 'hm-badge-green',
-        'Cancelled'        : 'hm-badge-red',
+        'Fitted'           : 'hm-badge--green',
+        'Cancelled'        : 'hm-badge--red',
     };
 
     function eur(n) { return '€' + parseFloat(n || 0).toFixed(2); }
@@ -522,8 +522,8 @@
 
             var rows = '';
             orders.forEach(function (o) {
-                var badge   = '<span class="hm-badge ' + (STATUS_BADGE[o.status] || 'hm-badge-gray') + '">' + esc(o.status) + '</span>';
-                var dup     = o.duplicate_flag ? '<span class="hm-badge hm-badge-red" title="Possible duplicate" style="margin-left:4px;">⚠ DUP</span>' : '';
+                var badge   = '<span class="hm-badge ' + (STATUS_BADGE[o.status] || 'hm-badge--grey') + '">' + esc(o.status) + '</span>';
+                var dup     = o.duplicate_flag ? '<span class="hm-badge hm-badge--red" title="Possible duplicate" style="margin-left:4px;">⚠ DUP</span>' : '';
                 var actions = buildOrderActions(o);
                 rows += '<tr data-order-id="' + o.id + '">' +
                     '<td>' + esc(o.patient_name) + '</td>' +
@@ -563,13 +563,13 @@
         var isAdmin = HM.is_admin;
 
         if (o.status === 'Awaiting Approval' && isAdmin) {
-            out += '<a href="' + (window.HM.approvals_url || '#') + '" class="hm-btn hm-btn-outline hm-btn-sm">Go to Approvals</a> ';
+            out += '<a href="' + (window.HM.approvals_url || '#') + '" class="hm-btn hm-btn--secondary hm-btn--sm">Go to Approvals</a> ';
         }
         if (o.status === 'Approved' && isAdmin) {
-            out += '<button class="hm-btn hm-btn-teal hm-btn-sm hm-mark-ordered-btn" data-id="' + o.id + '" data-num="' + esc(o.order_number) + '">Mark Ordered</button> ';
+            out += '<button class="hm-btn hm-btn--primary hm-btn--sm hm-mark-ordered-btn" data-id="' + o.id + '" data-num="' + esc(o.order_number) + '">Mark Ordered</button> ';
         }
         if (o.status === 'Ordered') {
-            out += '<button class="hm-btn hm-btn-teal hm-btn-sm hm-mark-received-btn" data-id="' + o.id + '" data-num="' + esc(o.order_number) + '">Mark Received</button> ';
+            out += '<button class="hm-btn hm-btn--primary hm-btn--sm hm-mark-received-btn" data-id="' + o.id + '" data-num="' + esc(o.order_number) + '">Mark Received</button> ';
         }
         return out || '<span style="color:#94a3b8;font-size:.8rem;">—</span>';
     }
@@ -595,8 +595,8 @@
 
         // Status pills
         $(document).on('click', '.hm-status-pill', function () {
-            $('.hm-status-pill').removeClass('active hm-btn-teal').addClass('hm-btn-outline');
-            $(this).addClass('active hm-btn-teal').removeClass('hm-btn-outline');
+            $('.hm-status-pill').removeClass('active hm-btn--primary').addClass('hm-btn--secondary');
+            $(this).addClass('active hm-btn--primary').removeClass('hm-btn--secondary');
             OrdersPage.filters.status = $(this).data('status');
             OrdersPage.page = 1;
             loadOrders();
@@ -689,7 +689,7 @@
             function (r) {
                 if (!r.success) { $('#hm-order-detail-body').html('<p style="color:#dc2626;">Could not load order.</p>'); return; }
                 var o   = r.data;
-                var bad = '<span class="hm-badge ' + (STATUS_BADGE[o.status] || 'hm-badge-gray') + '">' + esc(o.status) + '</span>';
+                var bad = '<span class="hm-badge ' + (STATUS_BADGE[o.status] || 'hm-badge--grey') + '">' + esc(o.status) + '</span>';
                 var lines = (o.line_items || []).map(function(li) {
                     return '<tr><td>' + esc(li.product_name) + '</td><td>' + esc(li.ear) + '</td><td>' + (li.qty||1) + '</td>' +
                            '<td>' + eur(li.unit_price) + '</td><td>−' + eur(li.discount) + '</td><td>' + eur(li.line_total) + '</td></tr>';
@@ -798,7 +798,7 @@
         // Flags
         var flagHtml = '';
         (o.flags || []).forEach(function (f) {
-            var cls = f.level === 'red' ? 'hm-badge-red' : 'hm-badge-amber';
+            var cls = f.level === 'red' ? 'hm-badge--red' : 'hm-badge--amber';
             flagHtml += '<span class="hm-badge ' + cls + '" title="' + esc(f.msg) + '" style="font-size:.75rem;">' + esc(f.msg) + '</span> ';
         });
         $card.find('.hm-apc-flags').html(flagHtml);
@@ -999,7 +999,7 @@
                     '<td>' + eur(row.total_price) + '</td>' +
                     '<td>' + (row.prsi_applicable ? '<span class="hm-badge hm-badge-teal">−' + eur(row.prsi_amount) + '</span>' : '—') + '</td>' +
                     '<td>' + fittingCell + '</td>' +
-                    '<td><button class="hm-btn hm-btn-danger hm-btn-sm hm-prefit-cancel-btn" data-order-id="' + row.order_id + '">Pre-Fit Cancel</button></td>' +
+                    '<td><button class="hm-btn hm-btn-danger hm-btn--sm hm-prefit-cancel-btn" data-order-id="' + row.order_id + '">Pre-Fit Cancel</button></td>' +
                     '</tr>';
             });
             $('#hm-af-tbody').html(html);

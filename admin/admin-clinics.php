@@ -91,7 +91,7 @@ class HearMed_Admin_Clinics {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-page-hd">
                 <h1 class="hm-page-title">Clinics</h1>
-                <button class="hm-btn-add" type="button" onclick="hmClinic.open()">+ Add Clinic</button>
+                <button class="hm-btn--add" type="button" onclick="hmClinic.open()">+ Add Clinic</button>
             </div>
 
             <?php if (empty($clinics)): ?>
@@ -130,14 +130,14 @@ class HearMed_Admin_Clinics {
                                 <td><?php echo esc_html($c['eircode']); ?></td>
                                 <td>
                                     <?php if ($c['is_active'] === '1'): ?>
-                                        <span class="hm-badge hm-badge-green">Active</span>
+                                        <span class="hm-badge hm-badge--green">Active</span>
                                     <?php else: ?>
-                                        <span class="hm-badge hm-badge-red">Inactive</span>
+                                        <span class="hm-badge hm-badge--red">Inactive</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="hm-table-acts">
-                                    <button class="hm-btn hm-btn-sm" onclick='hmClinic.open(<?php echo json_encode($c); ?>)'>Edit</button>
-                                    <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmClinic.del(<?php echo $c['id']; ?>,'<?php echo esc_js($c['name']); ?>')">Delete</button>
+                                    <button class="hm-btn hm-btn--sm" onclick='hmClinic.open(<?php echo json_encode($c); ?>)'>Edit</button>
+                                    <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmClinic.del(<?php echo $c['id']; ?>,'<?php echo esc_js($c['name']); ?>')">Delete</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -209,7 +209,7 @@ class HearMed_Admin_Clinics {
                 </div>
                 <div class="hm-form-ft">
                     <button class="hm-btn" onclick="hmClinic.close()">Cancel</button>
-                    <button class="hm-btn hm-btn-teal" onclick="hmClinic.save()" id="hmc-save-btn">Save Clinic</button>
+                    <button class="hm-btn hm-btn--primary" onclick="hmClinic.save()" id="hmc-save-btn">Save Clinic</button>
                 </div>
             </div>
         </div>

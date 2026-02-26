@@ -78,14 +78,14 @@ class HearMed_Refunds {
 
                     <!-- Step 1: Patient + invoice search -->
                     <div id="hm-cn-step1">
-                        <div class="hm-form__field">
+                        <div class="hm-form-group">
                             <label class="hm-label">Patient <span class="hm-required">*</span></label>
                             <input type="text" id="hm-cn-patient-search" class="hm-input"
                                    placeholder="Type patient name…" autocomplete="off">
                             <div id="hm-cn-patient-results" class="hm-autocomplete" style="display:none;"></div>
                             <input type="hidden" id="hm-cn-patient-id">
                         </div>
-                        <div class="hm-form__field" style="margin-top:12px;" id="hm-cn-inv-wrap" style="display:none;">
+                        <div class="hm-form-group" style="margin-top:12px;" id="hm-cn-inv-wrap" style="display:none;">
                             <label class="hm-label">Invoice to Credit</label>
                             <select id="hm-cn-invoice-id" class="hm-input">
                                 <option value="">— Select an invoice —</option>
@@ -95,7 +95,7 @@ class HearMed_Refunds {
 
                     <!-- Step 2: Credit note details -->
                     <div id="hm-cn-step2" style="display:none;">
-                        <div class="hm-form__field">
+                        <div class="hm-form-group">
                             <label class="hm-label">Credit Note Type <span class="hm-required">*</span></label>
                             <div style="display:flex;gap:12px;margin-top:6px;">
                                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;
@@ -121,12 +121,12 @@ class HearMed_Refunds {
                             </div>
                         </div>
 
-                        <div class="hm-form__field" style="margin-top:14px;">
+                        <div class="hm-form-group" style="margin-top:14px;">
                             <label class="hm-label">Credit Amount (€) <span class="hm-required">*</span></label>
                             <input type="number" id="hm-cn-amount" class="hm-input" step="0.01" min="0.01" placeholder="0.00">
                         </div>
 
-                        <div class="hm-form__field" style="margin-top:14px;">
+                        <div class="hm-form-group" style="margin-top:14px;">
                             <label class="hm-label">Reason <span class="hm-required">*</span></label>
                             <textarea id="hm-cn-reason" class="hm-input hm-input--textarea" rows="2"
                                       placeholder="e.g. Patient returning Oticon More 1 — uncomfortable fit"></textarea>
@@ -171,11 +171,11 @@ class HearMed_Refunds {
                     <button class="hm-modal-x" id="hm-proc-close">&times;</button>
                 </div>
                 <div class="hm-modal-body">
-                    <div class="hm-form__field">
+                    <div class="hm-form-group">
                         <label class="hm-label">Cheque Number <span class="hm-required">*</span></label>
                         <input type="text" id="hm-proc-cheque" class="hm-input" placeholder="e.g. CHQ-001234">
                     </div>
-                    <div class="hm-form__field" style="margin-top:12px;">
+                    <div class="hm-form-group" style="margin-top:12px;">
                         <label class="hm-label">Date Sent</label>
                         <input type="date" id="hm-proc-date" class="hm-input"
                                value="<?php echo date('Y-m-d'); ?>">

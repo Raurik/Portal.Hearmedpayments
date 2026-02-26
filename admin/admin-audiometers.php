@@ -64,7 +64,7 @@ class HearMed_Admin_Audiometers {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Audiometers</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmAud.open()">+ Add Audiometer</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmAud.open()">+ Add Audiometer</button>
             </div>
 
             <?php if (empty($items)): ?>
@@ -85,14 +85,14 @@ class HearMed_Admin_Audiometers {
                     <td><?php echo esc_html($clinic_map[intval($a['clinic_id'] ?? 0)] ?? '—'); ?></td>
                     <td>
                         <?php if ($cal_date): ?>
-                            <span class="<?php echo $overdue ? 'hm-badge hm-badge-red' : ''; ?>"><?php echo esc_html(date('d M Y', strtotime($cal_date))); ?></span>
+                            <span class="<?php echo $overdue ? 'hm-badge hm-badge--red' : ''; ?>"><?php echo esc_html(date('d M Y', strtotime($cal_date))); ?></span>
                             <?php if ($overdue): ?> <small style="color:var(--hm-red)">⚠ Overdue</small><?php endif; ?>
                         <?php else: ?>—<?php endif; ?>
                     </td>
-                    <td><?php echo $a['is_active'] ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
+                    <td><?php echo $a['is_active'] ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Inactive</span>'; ?></td>
                     <td class="hm-table-acts">
-                        <button class="hm-btn hm-btn-sm" onclick='hmAud.open(<?php echo json_encode($a); ?>)'>Edit</button>
-                        <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmAud.del(<?php echo $a['id']; ?>,'<?php echo esc_js($a['name']); ?>')">Delete</button>
+                        <button class="hm-btn hm-btn--sm" onclick='hmAud.open(<?php echo json_encode($a); ?>)'>Edit</button>
+                        <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmAud.del(<?php echo $a['id']; ?>,'<?php echo esc_js($a['name']); ?>')">Delete</button>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -124,7 +124,7 @@ class HearMed_Admin_Audiometers {
                             <div class="hm-form-group"><label class="hm-toggle-label"><input type="checkbox" id="hma-active" checked> Active</label></div>
                         </div>
                     </div>
-                    <div class="hm-modal-ft"><button class="hm-btn" onclick="hmAud.close()">Cancel</button><button class="hm-btn hm-btn-teal" onclick="hmAud.save()" id="hma-save">Save</button></div>
+                    <div class="hm-modal-ft"><button class="hm-btn" onclick="hmAud.close()">Cancel</button><button class="hm-btn hm-btn--primary" onclick="hmAud.save()" id="hma-save">Save</button></div>
                 </div>
             </div>
         </div>

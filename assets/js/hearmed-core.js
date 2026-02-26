@@ -335,7 +335,7 @@
             '<div class="hm-modal-body" id="hm-qa-body"></div>' +
             '<div class="hm-modal-ft">' +
             '<button class="hm-btn" id="hm-qa-cancel">Cancel</button>' +
-            '<button class="hm-btn hm-btn-teal" id="hm-qa-save">Save</button>' +
+            '<button class="hm-btn hm-btn--primary" id="hm-qa-save">Save</button>' +
             '</div></div></div>';
         var div = document.createElement('div');
         div.innerHTML = html;
@@ -510,7 +510,7 @@
                     var $td = $(this).find('td').eq(ci);
                     if (!$td.length) return;
                     // Get text, strip badges/buttons, trim
-                    var txt = $td.clone().find('button,.hm-btn,.hm-btn-sm').remove().end().text().trim();
+                    var txt = $td.clone().find('button,.hm-btn,.hm-btn--sm').remove().end().text().trim();
                     if (txt && txt !== '—' && txt !== '-') {
                         if (!vals[txt]) count++;
                         vals[txt] = true;
@@ -640,7 +640,7 @@
                     for (var i = 0; i < colFiltersActive.length; i++) {
                         var cf = colFiltersActive[i];
                         var $td = $row.find('td').eq(cf.col);
-                        var cellText = $td.clone().find('button,.hm-btn,.hm-btn-sm').remove().end().text().trim();
+                        var cellText = $td.clone().find('button,.hm-btn,.hm-btn--sm').remove().end().text().trim();
                         if (cellText !== cf.val) return;
                     }
                     filteredRows.push(this);

@@ -63,30 +63,30 @@ function hm_render_order_status_page() {
     ob_start(); ?>
     <style>
     /* ── Order Status — hmos- namespace ── */
-    .hmos-stats{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
-    .hmos-stat{background:#fff;border-radius:10px;padding:14px 20px;flex:1;min-width:140px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(15,23,42,.03);}
-    .hmos-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;}
-    .hmos-stat-val{font-size:22px;font-weight:700;color:#0f172a;margin-top:2px;}
-    .hmos-stat-val.teal{color:#0BB4C4;}
-    .hmos-stat-val.blue{color:#2563eb;}
-    .hmos-stat-val.amber{color:#d97706;}
-    .hmos-stat-val.red{color:#dc2626;}
+    .hm-stats{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+    .hm-stat{background:#fff;border-radius:10px;padding:14px 20px;flex:1;min-width:140px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(15,23,42,.03);}
+    .hm-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;}
+    .hm-stat-val{font-size:22px;font-weight:700;color:#0f172a;margin-top:2px;}
+    .hm-stat-val.teal{color:#0BB4C4;}
+    .hm-stat-val.blue{color:#2563eb;}
+    .hm-stat-val.amber{color:#d97706;}
+    .hm-stat-val.red{color:#dc2626;}
 
     .hmos-section{margin-bottom:28px;}
     .hmos-section-title{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
     .hmos-section-badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;border-radius:11px;font-size:11px;font-weight:700;background:#e2e8f0;color:#475569;}
 
-    .hmos-tbl-wrap{background:#fff;border-radius:12px;border:1px solid #f1f5f9;box-shadow:0 2px 8px rgba(15,23,42,.04);overflow-x:auto;}
-    .hmos-tbl{width:100%;border-collapse:collapse;font-size:12px;}
-    .hmos-tbl th{text-align:left;padding:10px 14px;background:#f8fafc;color:#64748b;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
-    .hmos-tbl td{padding:10px 14px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:middle;}
-    .hmos-tbl tbody tr:hover{background:#f8fafc;}
-    .hmos-tbl tbody tr:last-child td{border-bottom:none;}
+    .hm-tbl-wrap{background:#fff;border-radius:12px;border:1px solid #f1f5f9;box-shadow:0 2px 8px rgba(15,23,42,.04);overflow-x:auto;}
+    .hm-table{width:100%;border-collapse:collapse;font-size:12px;}
+    .hm-table th{text-align:left;padding:10px 14px;background:#f8fafc;color:#64748b;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
+    .hm-table td{padding:10px 14px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:middle;}
+    .hm-table tbody tr:hover{background:#f8fafc;}
+    .hm-table tbody tr:last-child td{border-bottom:none;}
 
-    .hmos-tbl tbody tr.hmos-amber{background:#fffbeb;}
-    .hmos-tbl tbody tr.hmos-amber:hover{background:#fef3c7;}
-    .hmos-tbl tbody tr.hmos-red{background:#fef2f2;}
-    .hmos-tbl tbody tr.hmos-red:hover{background:#fee2e2;}
+    .hm-table tbody tr.hm-amber{background:#fffbeb;}
+    .hm-table tbody tr.hm-amber:hover{background:#fef3c7;}
+    .hm-table tbody tr.hm-red{background:#fef2f2;}
+    .hm-table tbody tr.hm-red:hover{background:#fee2e2;}
 
     .hmos-days{font-weight:700;font-size:12px;}
     .hmos-days.green{color:#059669;}
@@ -97,14 +97,14 @@ function hm_render_order_status_page() {
     .hmos-class-custom{background:#ede9fe;color:#6d28d9;}
     .hmos-class-ready{background:#dbeafe;color:#1e40af;}
 
-    .hmos-btn{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
-    .hmos-btn-order{background:#0BB4C4;color:#fff;}
-    .hmos-btn-order:hover{background:#0a9aa8;}
-    .hmos-btn-pdf{background:#fff;color:#475569;border:1px solid #e2e8f0;}
-    .hmos-btn-pdf:hover{background:#f8fafc;border-color:#0BB4C4;color:#0BB4C4;}
+    .hm-btn{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
+    .hm-btn-order{background:#0BB4C4;color:#fff;}
+    .hm-btn-order:hover{background:#0a9aa8;}
+    .hm-btn-pdf{background:#fff;color:#475569;border:1px solid #e2e8f0;}
+    .hm-btn-pdf:hover{background:#f8fafc;border-color:#0BB4C4;color:#0BB4C4;}
 
-    .hmos-empty{text-align:center;padding:40px 20px;color:#94a3b8;font-size:13px;}
-    .hmos-empty-icon{font-size:32px;margin-bottom:8px;}
+    .hm-empty{text-align:center;padding:40px 20px;color:#94a3b8;font-size:13px;}
+    .hm-empty-icon{font-size:32px;margin-bottom:8px;}
 
     .hmos-alert-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
     .hmos-alert-amber{background:#fef3cd;color:#92400e;}
@@ -119,22 +119,22 @@ function hm_render_order_status_page() {
             </div>
 
             <!-- Summary Boxes -->
-            <div class="hmos-stats">
-                <div class="hmos-stat">
-                    <div class="hmos-stat-label">Awaiting Order</div>
-                    <div class="hmos-stat-val teal"><?php echo $approved_count; ?></div>
+            <div class="hm-stats">
+                <div class="hm-stat">
+                    <div class="hm-stat-label">Awaiting Order</div>
+                    <div class="hm-stat-val teal"><?php echo $approved_count; ?></div>
                 </div>
-                <div class="hmos-stat">
-                    <div class="hmos-stat-label">Awaiting Delivery</div>
-                    <div class="hmos-stat-val blue"><?php echo $ordered_count; ?></div>
+                <div class="hm-stat">
+                    <div class="hm-stat-label">Awaiting Delivery</div>
+                    <div class="hm-stat-val blue"><?php echo $ordered_count; ?></div>
                 </div>
-                <div class="hmos-stat">
-                    <div class="hmos-stat-label">Amber Alerts</div>
-                    <div class="hmos-stat-val amber"><?php echo $amber_count; ?></div>
+                <div class="hm-stat">
+                    <div class="hm-stat-label">Amber Alerts</div>
+                    <div class="hm-stat-val amber"><?php echo $amber_count; ?></div>
                 </div>
-                <div class="hmos-stat">
-                    <div class="hmos-stat-label">Red Alerts</div>
-                    <div class="hmos-stat-val red"><?php echo $red_count; ?></div>
+                <div class="hm-stat">
+                    <div class="hm-stat-label">Red Alerts</div>
+                    <div class="hm-stat-val red"><?php echo $red_count; ?></div>
                 </div>
             </div>
 
@@ -182,7 +182,7 @@ function hm_render_order_status_page() {
                 if (r.success) {
                     hmOrderStatus.renderApproved(r.data.orders);
                 } else {
-                    el.innerHTML = '<div class="hmos-empty"><div class="hmos-empty-icon">&#9888;</div>Error loading data.</div>';
+                    el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#9888;</div>Error loading data.</div>';
                 }
             });
         },
@@ -190,11 +190,11 @@ function hm_render_order_status_page() {
         renderApproved: function(orders) {
             var el = document.getElementById('hmos-approved-content');
             if (!orders || orders.length === 0) {
-                el.innerHTML = '<div class="hmos-empty"><div class="hmos-empty-icon">&#10004;</div>No orders awaiting placement.</div>';
+                el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#10004;</div>No orders awaiting placement.</div>';
                 return;
             }
 
-            var html = '<div class="hmos-tbl-wrap"><table class="hmos-tbl"><thead><tr>';
+            var html = '<div class="hm-tbl-wrap"><table class="hm-table"><thead><tr>';
             html += '<th>Order #</th><th>H Number</th><th>Patient</th><th>Dispenser</th><th>Clinic</th>';
             html += '<th>Manufacturer</th><th>Product</th><th>Class</th><th>Date Approved</th>';
             html += '<th style="text-align:right">Actions</th>';
@@ -215,8 +215,8 @@ function hm_render_order_status_page() {
                 html += '<td>' + (o.hearing_aid_class ? '<span class="hmos-class-badge ' + clsClass + '">' + hmOsE(clsLabel) + '</span>' : '\u2014') + '</td>';
                 html += '<td>' + hmOsE(o.approved_date) + '</td>';
                 html += '<td style="text-align:right;white-space:nowrap;">';
-                html += '<button class="hmos-btn hmos-btn-pdf" onclick="hmOrderStatus.downloadPDF(' + o.id + ')" title="Download order sheet">&#128196; PDF</button> ';
-                html += '<button class="hmos-btn hmos-btn-order" onclick="hmOrderStatus.markOrdered(' + o.id + ')">Ordered &rarr;</button>';
+                html += '<button class="hm-btn hm-btn-pdf" onclick="hmOrderStatus.downloadPDF(' + o.id + ')" title="Download order sheet">&#128196; PDF</button> ';
+                html += '<button class="hm-btn hm-btn-order" onclick="hmOrderStatus.markOrdered(' + o.id + ')">Ordered &rarr;</button>';
                 html += '</td>';
                 html += '</tr>';
             });
@@ -236,7 +236,7 @@ function hm_render_order_status_page() {
                 if (r.success) {
                     hmOrderStatus.renderOrdered(r.data.orders);
                 } else {
-                    el.innerHTML = '<div class="hmos-empty"><div class="hmos-empty-icon">&#9888;</div>Error loading data.</div>';
+                    el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#9888;</div>Error loading data.</div>';
                 }
             });
         },
@@ -244,11 +244,11 @@ function hm_render_order_status_page() {
         renderOrdered: function(orders) {
             var el = document.getElementById('hmos-ordered-content');
             if (!orders || orders.length === 0) {
-                el.innerHTML = '<div class="hmos-empty"><div class="hmos-empty-icon">&#128230;</div>No orders out for delivery.</div>';
+                el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#128230;</div>No orders out for delivery.</div>';
                 return;
             }
 
-            var html = '<div class="hmos-tbl-wrap"><table class="hmos-tbl"><thead><tr>';
+            var html = '<div class="hm-tbl-wrap"><table class="hm-table"><thead><tr>';
             html += '<th>H Number</th><th>Patient #</th><th>Dispenser</th><th>Clinic</th>';
             html += '<th>Manufacturer</th><th>Name of Aids</th><th>Class</th>';
             html += '<th>Date Ordered</th><th>Fitting Appt</th><th>Days Since Order</th>';
@@ -258,10 +258,10 @@ function hm_render_order_status_page() {
                 var rowClass = '';
                 var alertBadge = '';
                 if (o.alert_level === 'red') {
-                    rowClass = ' class="hmos-red"';
+                    rowClass = ' class="hm-red"';
                     alertBadge = ' <span class="hmos-alert-badge hmos-alert-red">RED</span>';
                 } else if (o.alert_level === 'amber') {
-                    rowClass = ' class="hmos-amber"';
+                    rowClass = ' class="hm-amber"';
                     alertBadge = ' <span class="hmos-alert-badge hmos-alert-amber">AMBER</span>';
                 }
 

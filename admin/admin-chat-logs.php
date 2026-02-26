@@ -160,7 +160,7 @@ class HearMed_Admin_ChatLogs {
 
                     <div class="hm-filter-group hm-filter-actions">
                         <button type="submit" class="hm-btn hm-btn-primary">Filter</button>
-                        <a href="<?php echo esc_url( $current_url ); ?>" class="hm-btn hm-btn-outline">Clear</a>
+                        <a href="<?php echo esc_url( $current_url ); ?>" class="hm-btn hm-btn--secondary">Clear</a>
                     </div>
                 </div>
             </form>

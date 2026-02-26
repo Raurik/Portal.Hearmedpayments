@@ -141,7 +141,7 @@ class HearMed_Admin_Manage_Users {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Staff</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmUsers.open()">+ Add Staff</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmUsers.open()">+ Add Staff</button>
             </div>
 
             <?php if (empty($staff_payload)): ?>
@@ -168,10 +168,10 @@ class HearMed_Admin_Manage_Users {
                         <td><?php echo esc_html($u['role'] ?: '—'); ?></td>
                         <td><?php echo esc_html($u['email'] ?: '—'); ?></td>
                         <td><?php echo esc_html(!empty($u['clinic_labels']) ? implode(', ', $u['clinic_labels']) : '—'); ?></td>
-                        <td><?php echo $u['is_active'] ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
+                        <td><?php echo $u['is_active'] ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Inactive</span>'; ?></td>
                         <td class="hm-table-acts">
-                            <button class="hm-btn hm-btn-sm" onclick='hmUsers.open(<?php echo $payload; ?>)'>Edit</button>
-                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmUsers.del(<?php echo (int) $u['id']; ?>,'<?php echo esc_js($name); ?>')">Delete</button>
+                            <button class="hm-btn hm-btn--sm" onclick='hmUsers.open(<?php echo $payload; ?>)'>Edit</button>
+                            <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmUsers.del(<?php echo (int) $u['id']; ?>,'<?php echo esc_js($name); ?>')">Delete</button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -302,7 +302,7 @@ class HearMed_Admin_Manage_Users {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmUsers.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmUsers.save()" id="hmu-save">Save</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmUsers.save()" id="hmu-save">Save</button>
                     </div>
                 </div>
             </div>

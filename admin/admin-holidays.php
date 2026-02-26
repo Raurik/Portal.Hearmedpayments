@@ -56,7 +56,7 @@ class HearMed_Admin_Holidays {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Staff Holidays</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmHol.open()">+ Add Holiday</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmHol.open()">+ Add Holiday</button>
             </div>
 
             <!-- Status lights summary -->
@@ -115,22 +115,22 @@ class HearMed_Admin_Holidays {
                         <td><?php echo esc_html($h->start_date); ?></td>
                         <td><?php echo esc_html($h->end_date); ?></td>
                         <td class="hm-num"><?php echo $days; ?></td>
-                        <td><span class="hm-badge hm-badge-blue"><?php echo esc_html($h->absence_type ?: 'Holiday'); ?></span></td>
+                        <td><span class="hm-badge hm-badge--blue"><?php echo esc_html($h->absence_type ?: 'Holiday'); ?></span></td>
                         <td>
                             <?php if ($h->status === 'approved'): ?>
-                                <span class="hm-badge hm-badge-green">Approved</span>
+                                <span class="hm-badge hm-badge--green">Approved</span>
                             <?php elseif ($h->status === 'pending'): ?>
-                                <span class="hm-badge hm-badge-orange">Pending</span>
+                                <span class="hm-badge hm-badge--orange">Pending</span>
                             <?php elseif ($h->status === 'rejected'): ?>
-                                <span class="hm-badge hm-badge-red">Rejected</span>
+                                <span class="hm-badge hm-badge--red">Rejected</span>
                             <?php else: ?>
                                 <span class="hm-badge"><?php echo esc_html($h->status ?: '—'); ?></span>
                             <?php endif; ?>
                         </td>
                         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--hm-text-light);"><?php echo esc_html($h->notes ?: '—'); ?></td>
                         <td class="hm-table-acts">
-                            <button class="hm-btn hm-btn-sm" onclick='hmHol.open(<?php echo $row; ?>)'>Edit</button>
-                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmHol.del(<?php echo (int) $h->id; ?>)">Delete</button>
+                            <button class="hm-btn hm-btn--sm" onclick='hmHol.open(<?php echo $row; ?>)'>Edit</button>
+                            <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmHol.del(<?php echo (int) $h->id; ?>)">Delete</button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -200,7 +200,7 @@ class HearMed_Admin_Holidays {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmHol.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmHol.save()" id="hmh-save">Save</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmHol.save()" id="hmh-save">Save</button>
                     </div>
                 </div>
             </div>

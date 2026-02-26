@@ -76,7 +76,7 @@
    In admin context, teal buttons are text-only links,
    not filled. This overrides core's filled teal style.
    ═══════════════════════════════════════ */
-.hm-admin .hm-btn-teal {
+.hm-admin .hm-btn--primary {
     background: none !important;
     border: none !important;
     box-shadow: none !important;
@@ -85,21 +85,21 @@
     font-weight: 600 !important;
     padding: 6px 0 !important;
 }
-.hm-admin .hm-btn-teal:hover {
+.hm-admin .hm-btn--primary:hover {
     color: #0a9eac !important;
     transform: none !important;
     background: none !important;
 }
-.hm-admin .hm-btn-red {
+.hm-admin .hm-btn--danger {
     color: #dc2626 !important;
     border-color: transparent !important;
     background: none !important;
 }
-.hm-admin .hm-btn-red:hover {
+.hm-admin .hm-btn--danger:hover {
     color: #b91c1c !important;
     background: none !important;
 }
-.hm-admin .hm-btn-sm {
+.hm-admin .hm-btn--sm {
     padding: 4px 8px;
     font-size: 12.5px;
     font-weight: 500;
@@ -109,21 +109,21 @@
     display: inline-flex;
     white-space: nowrap;
 }
-.hm-admin .hm-btn-sm:hover { color: #0a9eac; background: none; }
-.hm-admin .hm-btn-sm.hm-btn-red,
-#hm-clinics-app .hm-btn-sm.hm-btn-red,
-#hm-clinics-app .hm-table-acts .hm-btn-red {
+.hm-admin .hm-btn--sm:hover { color: #0a9eac; background: none; }
+.hm-admin .hm-btn--sm.hm-btn--danger,
+#hm-clinics-app .hm-btn--sm.hm-btn--danger,
+#hm-clinics-app .hm-table-acts .hm-btn--danger {
     color: #dc2626 !important;
 }
-.hm-admin .hm-btn-sm.hm-btn-red:hover,
-#hm-clinics-app .hm-btn-sm.hm-btn-red:hover,
-#hm-clinics-app .hm-table-acts .hm-btn-red:hover {
+.hm-admin .hm-btn--sm.hm-btn--danger:hover,
+#hm-clinics-app .hm-btn--sm.hm-btn--danger:hover,
+#hm-clinics-app .hm-table-acts .hm-btn--danger:hover {
     color: #b91c1c !important;
     text-decoration: underline;
 }
 
 /* Modal actions keep same text-link button style */
-.hm-modal-ft .hm-btn-teal {
+.hm-modal-ft .hm-btn--primary {
     background: none !important;
     color: #0BB4C4 !important;
     border: none !important;
@@ -133,7 +133,7 @@
     font-weight: 600 !important;
     box-shadow: none !important;
 }
-.hm-modal-ft .hm-btn-teal:hover {
+.hm-modal-ft .hm-btn--primary:hover {
     background: none !important;
     color: #0a9eac !important;
     text-decoration: underline;
@@ -392,7 +392,7 @@
     letter-spacing: -0.01em;
 }
 
-.hm-btn-add {
+.hm-btn--add {
     background: none;
     border: none;
     font-size: 13px;
@@ -403,7 +403,7 @@
     transition: color 0.15s;
 }
 
-.hm-btn-add:hover {
+.hm-btn--add:hover {
     color: #0a9eac;
     text-decoration: underline;
 }
@@ -646,7 +646,7 @@
     accent-color: #0BB4C4;
 }
 
-#hm-clinics-app .hm-btn-teal,
+#hm-clinics-app .hm-btn--primary,
 #hm-clinics-app .hm-btn-primary {
     background: #0BB4C4;
     color: #fff;
@@ -660,7 +660,7 @@
     box-shadow: 0 1px 3px rgba(11, 180, 196, 0.25);
 }
 
-#hm-clinics-app .hm-btn-teal:hover,
+#hm-clinics-app .hm-btn--primary:hover,
 #hm-clinics-app .hm-btn-primary:hover {
     background: #0a9eac;
     box-shadow: 0 2px 6px rgba(11, 180, 196, 0.35);
@@ -694,27 +694,27 @@
     text-transform: uppercase;
 }
 
-.hm-admin .hm-badge-green,
-#hm-clinics-app .hm-badge-green {
+.hm-admin .hm-badge--green,
+#hm-clinics-app .hm-badge--green {
     background: rgba(16, 185, 129, 0.12);
     color: #059669;
     border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
-.hm-admin .hm-badge-red,
-#hm-clinics-app .hm-badge-red {
+.hm-admin .hm-badge--red,
+#hm-clinics-app .hm-badge--red {
     background: rgba(239, 68, 68, 0.12);
     color: #dc2626;
     border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
-.hm-admin .hm-badge-yellow {
+.hm-admin .hm-badge--amber {
     background: rgba(245, 158, 11, 0.12);
     color: #d97706;
     border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
-.hm-admin .hm-badge-blue {
+.hm-admin .hm-badge--blue {
     background: rgba(59, 130, 246, 0.12);
     color: #2563eb;
     border: 1px solid rgba(59, 130, 246, 0.2);
@@ -1079,7 +1079,7 @@
 /* ═══════════════════════════════════════
    DEBUG / STATUS BADGES (admin pattern)
    ═══════════════════════════════════════ */
-.hm-badge-yellow {
+.hm-badge--amber {
     background: #fef3c7;
     color: #92400e;
 }

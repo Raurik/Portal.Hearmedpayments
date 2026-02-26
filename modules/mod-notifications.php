@@ -297,30 +297,30 @@ function hm_notifications_render() {
         <!-- ═══════════ YOUR DAY TODAY ═══════════ -->
         <div class="hm-notif-day-panel" style="margin-bottom:24px;">
             <h2 class="hm-notif-day-title" style="font-size:15px;font-weight:700;color:#151B33;margin:0 0 12px 0;text-transform:uppercase;letter-spacing:.5px;">Your Day Today</h2>
-            <div class="hm-notif-day-tiles" id="hm-day-tiles" style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;">
-                <div class="hm-day-tile" data-tile="appointments" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
-                    <div class="hm-day-tile__val" id="tile-appointments" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
-                    <div class="hm-day-tile__lbl" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Appointments</div>
+            <div class="hm-stats" id="hm-stats" style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;">
+                <div class="hm-stat" data-tile="appointments" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
+                    <div class="hm-stat-val" id="tile-appointments" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
+                    <div class="hm-stat-label" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Appointments</div>
                 </div>
-                <div class="hm-day-tile" data-tile="tests" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
-                    <div class="hm-day-tile__val" id="tile-tests" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
-                    <div class="hm-day-tile__lbl" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Tests Scheduled</div>
+                <div class="hm-stat" data-tile="tests" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
+                    <div class="hm-stat-val" id="tile-tests" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
+                    <div class="hm-stat-label" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Tests Scheduled</div>
                 </div>
-                <div class="hm-day-tile" data-tile="calls" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
-                    <div class="hm-day-tile__val" id="tile-calls" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
-                    <div class="hm-day-tile__lbl" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Calls to Make</div>
+                <div class="hm-stat" data-tile="calls" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
+                    <div class="hm-stat-val" id="tile-calls" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
+                    <div class="hm-stat-label" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Calls to Make</div>
                 </div>
-                <div class="hm-day-tile" data-tile="repairs" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
-                    <div class="hm-day-tile__val" id="tile-repairs" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
-                    <div class="hm-day-tile__lbl" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Repairs Overdue</div>
+                <div class="hm-stat" data-tile="repairs" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
+                    <div class="hm-stat-val" id="tile-repairs" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
+                    <div class="hm-stat-label" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Repairs Overdue</div>
                 </div>
-                <div class="hm-day-tile" data-tile="fittings" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
-                    <div class="hm-day-tile__val" id="tile-fittings" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
-                    <div class="hm-day-tile__lbl" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Fittings Due</div>
+                <div class="hm-stat" data-tile="fittings" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
+                    <div class="hm-stat-val" id="tile-fittings" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
+                    <div class="hm-stat-label" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Fittings Due</div>
                 </div>
-                <div class="hm-day-tile" data-tile="ha_not_received" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
-                    <div class="hm-day-tile__val" id="tile-ha-not-received" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
-                    <div class="hm-day-tile__lbl" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">HAs Not Received</div>
+                <div class="hm-stat" data-tile="ha_not_received" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
+                    <div class="hm-stat-val" id="tile-ha-not-received" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
+                    <div class="hm-stat-label" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">HAs Not Received</div>
                 </div>
             </div>
         </div>

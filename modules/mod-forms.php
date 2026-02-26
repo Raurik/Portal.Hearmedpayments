@@ -191,13 +191,13 @@ class HearMed_Forms {
 
             <!-- Template Picker Modal -->
             <div id="hm-picker-modal" class="hm-modal hm-modal--sm" style="display:none;">
-                <div class="hm-modal__backdrop" onclick="hmForms.closePicker()"></div>
-                <div class="hm-modal__box">
-                    <div class="hm-modal__header">
+                <div class="hm-modal-bg" onclick="hmForms.closePicker()"></div>
+                <div class="hm-modal">
+                    <div class="hm-modal-hd">
                         <h3>Select Form</h3>
-                        <button class="hm-modal__close" onclick="hmForms.closePicker()">✕</button>
+                        <button class="hm-modal-x" onclick="hmForms.closePicker()">✕</button>
                     </div>
-                    <div class="hm-modal__body">
+                    <div class="hm-modal-body">
                         <?php if ( empty( $templates ) ) : ?>
                         <p class="hm-muted">No form templates configured. Add them in Admin → Form Templates.</p>
                         <?php else : ?>
@@ -221,16 +221,16 @@ class HearMed_Forms {
 
             <!-- Form Fill Modal -->
             <div id="hm-form-modal" class="hm-modal hm-modal--lg" style="display:none;">
-                <div class="hm-modal__backdrop"></div>
-                <div class="hm-modal__box">
-                    <div class="hm-modal__header">
+                <div class="hm-modal-bg"></div>
+                <div class="hm-modal">
+                    <div class="hm-modal-hd">
                         <h3 id="hm-form-modal-title">Loading…</h3>
-                        <button class="hm-modal__close" onclick="hmForms.closeForm()">✕</button>
+                        <button class="hm-modal-x" onclick="hmForms.closeForm()">✕</button>
                     </div>
-                    <div class="hm-modal__body" id="hm-form-modal-body">
+                    <div class="hm-modal-body" id="hm-form-modal-body">
                         <div class="hm-loading">Loading form…</div>
                     </div>
-                    <div class="hm-modal__footer" id="hm-form-modal-footer" style="display:none;">
+                    <div class="hm-modal-ft" id="hm-form-modal-footer" style="display:none;">
                         <button class="hm-btn hm-btn--ghost" onclick="hmForms.closeForm()">Cancel</button>
                         <button class="hm-btn hm-btn--primary" id="hm-submit-form-btn" disabled
                                 onclick="hmForms.submitForm()">
@@ -243,16 +243,16 @@ class HearMed_Forms {
 
             <!-- View Submitted Form Modal -->
             <div id="hm-view-modal" class="hm-modal hm-modal--lg" style="display:none;">
-                <div class="hm-modal__backdrop" onclick="hmForms.closeView()"></div>
-                <div class="hm-modal__box">
-                    <div class="hm-modal__header">
+                <div class="hm-modal-bg" onclick="hmForms.closeView()"></div>
+                <div class="hm-modal">
+                    <div class="hm-modal-hd">
                         <h3>Form Record</h3>
                         <div style="display:flex;gap:8px;">
                             <button class="hm-btn hm-btn--ghost hm-btn--sm" onclick="hmForms.printForm()">🖨 Print</button>
-                            <button class="hm-modal__close" onclick="hmForms.closeView()">✕</button>
+                            <button class="hm-modal-x" onclick="hmForms.closeView()">✕</button>
                         </div>
                     </div>
-                    <div class="hm-modal__body hm-document-view" id="hm-view-modal-body">
+                    <div class="hm-modal-body hm-document-view" id="hm-view-modal-body">
                         <div class="hm-loading">Loading…</div>
                     </div>
                 </div>

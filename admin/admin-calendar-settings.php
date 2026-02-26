@@ -128,7 +128,7 @@ class HearMed_Admin_Calendar_Settings {
                     </div>
                 </div>
                 <div style="text-align:right;margin-top:18px;">
-                    <button type="button" class="hm-btn hm-btn-teal" id="hm-settings-save">Save Settings</button>
+                    <button type="button" class="hm-btn hm-btn--primary" id="hm-settings-save">Save Settings</button>
                 </div>
                 </form>
             </div>

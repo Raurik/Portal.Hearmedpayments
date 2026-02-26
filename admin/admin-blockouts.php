@@ -68,7 +68,7 @@ class HearMed_Admin_Blockouts {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Calendar Blockouts</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmBlock.open()">+ Add Blockout Rule</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmBlock.open()">+ Add Blockout Rule</button>
             </div>
 
             <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">
@@ -102,7 +102,7 @@ class HearMed_Admin_Blockouts {
                         <td><strong><?php echo esc_html($b->rule_name ?: '—'); ?></strong></td>
                         <td><?php echo esc_html(ucfirst($b->day_of_week ?: 'All')); ?></td>
                         <td>
-                            <span class="hm-badge hm-badge-blue">
+                            <span class="hm-badge hm-badge--blue">
                                 <?php echo esc_html(($b->start_time ?: '??') . ' – ' . ($b->end_time ?: '??')); ?>
                             </span>
                         </td>
@@ -110,15 +110,15 @@ class HearMed_Admin_Blockouts {
                         <td><?php echo esc_html($b->clinic_name ?: 'All Clinics'); ?></td>
                         <td>
                             <?php if ($b->block_mode === 'only'): ?>
-                                <span class="hm-badge hm-badge-green">Only Allow</span>
+                                <span class="hm-badge hm-badge--green">Only Allow</span>
                             <?php else: ?>
-                                <span class="hm-badge hm-badge-red">Block</span>
+                                <span class="hm-badge hm-badge--red">Block</span>
                             <?php endif; ?>
                         </td>
-                        <td><?php echo $b->is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Off</span>'; ?></td>
+                        <td><?php echo $b->is_active ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Off</span>'; ?></td>
                         <td class="hm-table-acts">
-                            <button class="hm-btn hm-btn-sm" onclick='hmBlock.open(<?php echo $row; ?>)'>Edit</button>
-                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmBlock.del(<?php echo (int) $b->id; ?>,'<?php echo esc_js($b->rule_name ?: 'this rule'); ?>')">Delete</button>
+                            <button class="hm-btn hm-btn--sm" onclick='hmBlock.open(<?php echo $row; ?>)'>Edit</button>
+                            <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmBlock.del(<?php echo (int) $b->id; ?>,'<?php echo esc_js($b->rule_name ?: 'this rule'); ?>')">Delete</button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -198,7 +198,7 @@ class HearMed_Admin_Blockouts {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmBlock.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmBlock.save()" id="hmb-save">Save</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmBlock.save()" id="hmb-save">Save</button>
                     </div>
                 </div>
             </div>

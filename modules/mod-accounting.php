@@ -96,7 +96,7 @@ class HearMed_Accounting {
 
         <div class="hm-accounting-grid">
             <div class="hm-card">
-                <h2 class="hm-card__title">Monthly Revenue — Last 6 Months</h2>
+                <h2 class="hm-card-title">Monthly Revenue — Last 6 Months</h2>
                 <?php if (!empty($monthly)) : $max = max(array_map(fn($r) => floatval($r->total), $monthly)) ?: 1; ?>
                 <div class="hm-bar-chart">
                     <?php foreach ($monthly as $m) : $pct = round((floatval($m->total) / $max) * 100); ?>
@@ -113,7 +113,7 @@ class HearMed_Accounting {
                 <?php else : ?><p class="hm-muted">No payment data yet.</p><?php endif; ?>
             </div>
             <div class="hm-card">
-                <h2 class="hm-card__title">This Month by Clinic</h2>
+                <h2 class="hm-card-title">This Month by Clinic</h2>
                 <?php if (!empty($by_clinic)) : ?>
                 <table class="hm-table"><thead><tr><th>Clinic</th><th>Revenue</th></tr></thead><tbody>
                 <?php foreach ($by_clinic as $r) : ?>
@@ -126,7 +126,7 @@ class HearMed_Accounting {
 
         <div class="hm-card" style="margin-top:1.5rem;">
             <div class="hm-card__header">
-                <h2 class="hm-card__title">Recent Payments</h2>
+                <h2 class="hm-card-title">Recent Payments</h2>
                 <a href="<?php echo esc_url($base.'?hm_action=invoices'); ?>" class="hm-btn hm-btn--ghost hm-btn--sm">All Invoices →</a>
             </div>
             <table class="hm-table">
@@ -315,25 +315,25 @@ class HearMed_Accounting {
             <input type="hidden" name="action" value="hm_save_supplier_invoice">
             <input type="hidden" name="nonce"  value="<?php echo esc_attr($nonce); ?>">
             <div class="hm-form__row">
-                <div class="hm-form__field">
+                <div class="hm-form-group">
                     <label class="hm-label">Supplier Name <span class="hm-required">*</span></label>
                     <input type="text" name="supplier_name" class="hm-input" required placeholder="e.g. Phonak Ireland">
                 </div>
-                <div class="hm-form__field">
+                <div class="hm-form-group">
                     <label class="hm-label">Invoice Reference <span class="hm-required">*</span></label>
                     <input type="text" name="supplier_invoice_ref" class="hm-input" required placeholder="e.g. INV-2026-0042">
                 </div>
             </div>
             <div class="hm-form__row">
-                <div class="hm-form__field">
+                <div class="hm-form-group">
                     <label class="hm-label">Invoice Date</label>
                     <input type="date" name="invoice_date" class="hm-input" value="<?php echo date('Y-m-d'); ?>">
                 </div>
-                <div class="hm-form__field">
+                <div class="hm-form-group">
                     <label class="hm-label">Due Date</label>
                     <input type="date" name="due_date" class="hm-input" value="<?php echo date('Y-m-d', strtotime('+30 days')); ?>">
                 </div>
-                <div class="hm-form__field">
+                <div class="hm-form-group">
                     <label class="hm-label">Currency</label>
                     <select name="currency" class="hm-input">
                         <option value="EUR">EUR</option>
@@ -368,7 +368,7 @@ class HearMed_Accounting {
             <input type="hidden" name="subtotal"     id="hm-sub-h" value="0">
             <input type="hidden" name="vat_total"    id="hm-vat-h" value="0">
             <input type="hidden" name="total_amount" id="hm-tot-h" value="0">
-            <div class="hm-form__field" style="margin-top:1rem;">
+            <div class="hm-form-group" style="margin-top:1rem;">
                 <label class="hm-label">Notes</label>
                 <textarea name="notes" class="hm-input hm-input--textarea" rows="2"></textarea>
             </div>
@@ -605,7 +605,7 @@ class HearMed_Accounting {
         <?php echo self::render_batch_section($nonce); ?>
 
         <div class="hm-card" style="margin-top:1.5rem;">
-            <h2 class="hm-card__title">Sync Log</h2>
+            <h2 class="hm-card-title">Sync Log</h2>
             <table class="hm-table">
                 <thead><tr><th>Time</th><th>Type</th><th>Ref</th><th>Status</th><th>Message</th></tr></thead>
                 <tbody>
@@ -691,7 +691,7 @@ class HearMed_Accounting {
         ob_start(); ?>
         <div class="hm-card" style="margin-top:1.5rem;">
             <div class="hm-card__header" style="display:flex;justify-content:space-between;align-items:center;">
-                <h2 class="hm-card__title">QuickBooks Batch Sync Queue</h2>
+                <h2 class="hm-card-title">QuickBooks Batch Sync Queue</h2>
                 <div style="display:flex;gap:10px;align-items:center;">
                     <span class="hm-badge <?php echo $pending ? 'hm-badge--orange' : 'hm-badge--grey'; ?>">
                         <?php echo $pending; ?> pending

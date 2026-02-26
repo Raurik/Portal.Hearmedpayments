@@ -61,14 +61,14 @@ class HearMed_Admin_SMS_Templates {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>SMS Templates</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmSms.open()">+ Add Template</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmSms.open()">+ Add Template</button>
             </div>
 
             <div class="hm-sms-vars" style="margin-bottom:20px;">
                 <p style="font-size:13px;color:var(--hm-text-light);margin-bottom:8px;"><strong>Available Placeholders</strong> — click to copy:</p>
                 <div style="display:flex;flex-wrap:wrap;gap:6px;">
                     <?php foreach ($this->placeholders as $tag => $desc): ?>
-                        <span class="hm-badge hm-badge-blue" style="cursor:pointer;" onclick="navigator.clipboard.writeText('<?php echo esc_js($tag); ?>');this.textContent='Copied!';var el=this;setTimeout(function(){el.textContent='<?php echo esc_js($tag); ?>';},1000);" title="<?php echo esc_attr($desc); ?>"><?php echo esc_html($tag); ?></span>
+                        <span class="hm-badge hm-badge--blue" style="cursor:pointer;" onclick="navigator.clipboard.writeText('<?php echo esc_js($tag); ?>');this.textContent='Copied!';var el=this;setTimeout(function(){el.textContent='<?php echo esc_js($tag); ?>';},1000);" title="<?php echo esc_attr($desc); ?>"><?php echo esc_html($tag); ?></span>
                     <?php endforeach; ?>
                 </div>
             </div>
@@ -96,12 +96,12 @@ class HearMed_Admin_SMS_Templates {
                 ?>
                     <tr>
                         <td><strong><?php echo esc_html($t->template_name); ?></strong></td>
-                        <td><span class="hm-badge hm-badge-blue"><?php echo esc_html($cat_label); ?></span></td>
+                        <td><span class="hm-badge hm-badge--blue"><?php echo esc_html($cat_label); ?></span></td>
                         <td style="font-size:13px;color:var(--hm-text-light);"><?php echo esc_html($preview); ?></td>
-                        <td><?php echo $t->is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
+                        <td><?php echo $t->is_active ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Inactive</span>'; ?></td>
                         <td class="hm-table-acts">
-                            <button class="hm-btn hm-btn-sm" onclick='hmSms.open(<?php echo $payload; ?>)'>Edit</button>
-                            <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmSms.del(<?php echo (int) $t->id; ?>,'<?php echo esc_js($t->template_name); ?>')">Delete</button>
+                            <button class="hm-btn hm-btn--sm" onclick='hmSms.open(<?php echo $payload; ?>)'>Edit</button>
+                            <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmSms.del(<?php echo (int) $t->id; ?>,'<?php echo esc_js($t->template_name); ?>')">Delete</button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -158,7 +158,7 @@ class HearMed_Admin_SMS_Templates {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmSms.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmSms.save()" id="hmsms-save-btn">Save</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmSms.save()" id="hmsms-save-btn">Save</button>
                     </div>
                 </div>
             </div>

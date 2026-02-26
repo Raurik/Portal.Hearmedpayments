@@ -86,7 +86,7 @@ function hearmed_render_system_status_page() {
                 <?php foreach ( $checks['core'] as $check ): ?>
                 <tr>
                     <td><?php echo esc_html( $check['name'] ); ?></td>
-                    <td><?php echo $check['status'] ? '<span class="hm-badge hm-badge-green">OK</span>' : '<span class="hm-badge hm-badge-red">Failed</span>'; ?></td>
+                    <td><?php echo $check['status'] ? '<span class="hm-badge hm-badge--green">OK</span>' : '<span class="hm-badge hm-badge--red">Failed</span>'; ?></td>
                     <td><?php echo esc_html( $check['message'] ); ?></td>
                 </tr>
                 <?php endforeach; ?>
@@ -106,7 +106,7 @@ function hearmed_render_system_status_page() {
                 <?php foreach ( $checks['tables'] as $table ): ?>
                 <tr>
                     <td><code><?php echo esc_html( $table['name'] ); ?></code></td>
-                    <td><?php echo $table['exists'] ? '<span class="hm-badge hm-badge-green">Exists</span>' : '<span class="hm-badge hm-badge-red">Missing</span>'; ?></td>
+                    <td><?php echo $table['exists'] ? '<span class="hm-badge hm-badge--green">Exists</span>' : '<span class="hm-badge hm-badge--red">Missing</span>'; ?></td>
                     <td><?php echo $table['exists'] ? number_format( $table['count'] ) . ' rows' : '—'; ?></td>
                 </tr>
                 <?php endforeach; ?>
@@ -128,7 +128,7 @@ function hearmed_render_system_status_page() {
                 <tr>
                     <td><code><?php echo esc_html( $asset['name'] ); ?></code></td>
                     <td><?php echo esc_html( $asset['type'] ); ?></td>
-                    <td><?php echo $asset['exists'] ? '<span class="hm-badge hm-badge-green">Found</span>' : '<span class="hm-badge hm-badge-red">Missing</span>'; ?></td>
+                    <td><?php echo $asset['exists'] ? '<span class="hm-badge hm-badge--green">Found</span>' : '<span class="hm-badge hm-badge--red">Missing</span>'; ?></td>
                     <td><?php echo $asset['exists'] ? size_format( $asset['size'] ) : '—'; ?></td>
                 </tr>
                 <?php endforeach; ?>
@@ -149,7 +149,7 @@ function hearmed_render_system_status_page() {
                 <tr>
                     <td><?php echo esc_html( $module['name'] ); ?></td>
                     <td><code><?php echo esc_html( $module['file'] ); ?></code></td>
-                    <td><?php echo $module['loaded'] ? '<span class="hm-badge hm-badge-green">Loaded</span>' : '<span class="hm-badge hm-badge-yellow">Not loaded</span>'; ?></td>
+                    <td><?php echo $module['loaded'] ? '<span class="hm-badge hm-badge--green">Loaded</span>' : '<span class="hm-badge hm-badge--amber">Not loaded</span>'; ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -158,8 +158,8 @@ function hearmed_render_system_status_page() {
         <h3 class="hm-section-heading">Quick Actions</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <a href="<?php echo admin_url( 'admin.php?page=hearmed-system-status&action=clear_cache' ); ?>" class="hm-btn">Clear Plugin Cache</a>
-            <a href="<?php echo home_url( '/calendar/' ); ?>" class="hm-btn hm-btn-teal" target="_blank">Test Calendar Page</a>
-            <a href="<?php echo home_url( '/patients/' ); ?>" class="hm-btn hm-btn-teal" target="_blank">Test Patients Page</a>
+            <a href="<?php echo home_url( '/calendar/' ); ?>" class="hm-btn hm-btn--primary" target="_blank">Test Calendar Page</a>
+            <a href="<?php echo home_url( '/patients/' ); ?>" class="hm-btn hm-btn--primary" target="_blank">Test Patients Page</a>
         </div>
         
         <?php if ( isset( $_GET['action'] ) && $_GET['action'] === 'clear_cache' ): ?>

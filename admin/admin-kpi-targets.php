@@ -79,7 +79,7 @@ class HearMed_Admin_KPI_Targets {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>KPI Targets</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmKpi.saveAll()" id="hmk-save">Save Targets</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmKpi.saveAll()" id="hmk-save">Save Targets</button>
             </div>
 
             <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">
@@ -124,7 +124,7 @@ class HearMed_Admin_KPI_Targets {
                         <td>
                             <input type="number" class="hmk-val" data-key="<?php echo esc_attr($key); ?>" value="<?php echo esc_attr($value); ?>" step="1" min="0" style="width:120px;padding:6px 10px;border:1px solid var(--hm-border);border-radius:6px;font-size:13px;font-weight:400;">
                         </td>
-                        <td><span class="hm-badge hm-badge-blue"><?php echo esc_html($meta['unit']); ?></span></td>
+                        <td><span class="hm-badge hm-badge--blue"><?php echo esc_html($meta['unit']); ?></span></td>
                         <td>
                             <label class="hm-toggle-label">
                                 <input type="checkbox" class="hmk-active" data-key="<?php echo esc_attr($key); ?>" <?php checked($active); ?>>

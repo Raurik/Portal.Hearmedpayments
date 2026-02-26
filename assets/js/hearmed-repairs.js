@@ -127,15 +127,15 @@
             '</tr></thead><tbody>';
 
         filtered.forEach(function(x) {
-            var sc = x.status === 'Booked' ? 'hm-badge-amber' : x.status === 'Sent' ? 'hm-badge-blue' : 'hm-badge-green';
+            var sc = x.status === 'Booked' ? 'hm-badge--amber' : x.status === 'Sent' ? 'hm-badge--blue' : 'hm-badge--green';
             var rowClass = '';
             if (x.status !== 'Received' && x.days_open) {
                 if (x.days_open > 14) rowClass = ' class="hm-repair-overdue"';
                 else if (x.days_open > 10) rowClass = ' class="hm-repair-warning"';
             }
-            var actions = '<button class="hm-btn hm-btn-outline hm-btn-sm hm-r-docket" data-id="' + x._ID + '" title="Print Docket" style="padding:4px 8px;">🖨</button> ';
-            if (x.status === 'Booked') actions += '<button class="hm-btn hm-btn-outline hm-btn-sm hm-r-send" data-id="' + x._ID + '" data-name="' + esc(x.patient_name) + '">Mark Sent</button>';
-            else if (x.status === 'Sent') actions += '<button class="hm-btn hm-btn-outline hm-btn-sm hm-r-recv" data-id="' + x._ID + '">Received</button>';
+            var actions = '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-r-docket" data-id="' + x._ID + '" title="Print Docket" style="padding:4px 8px;">🖨</button> ';
+            if (x.status === 'Booked') actions += '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-r-send" data-id="' + x._ID + '" data-name="' + esc(x.patient_name) + '">Mark Sent</button>';
+            else if (x.status === 'Sent') actions += '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-r-recv" data-id="' + x._ID + '">Received</button>';
 
             h += '<tr' + rowClass + '>' +
                 '<td><code class="hm-pt-hnum">' + esc(x.repair_number || '—') + '</code></td>' +
@@ -146,9 +146,9 @@
                 '<td style="font-size:12px;font-family:monospace;">' + esc(x.serial_number || '—') + '</td>' +
                 '<td style="font-size:13px;">' + esc(x.repair_reason || '—') + '</td>' +
                 '<td>' + fmtDate(x.date_booked) + '</td>' +
-                '<td><span class="hm-badge hm-badge-sm ' + sc + '">' + esc(x.status) + '</span></td>' +
+                '<td><span class="hm-badge hm-badge--sm ' + sc + '">' + esc(x.status) + '</span></td>' +
                 '<td style="text-align:center;">' + (x.days_open != null ? x.days_open : '—') + '</td>' +
-                '<td>' + (x.under_warranty ? '<span class="hm-badge hm-badge-sm hm-badge-green">Yes</span>' : '<span class="hm-badge hm-badge-sm hm-badge-gray">' + (x.warranty_status || 'No') + '</span>') + '</td>' +
+                '<td>' + (x.under_warranty ? '<span class="hm-badge hm-badge--sm hm-badge--green">Yes</span>' : '<span class="hm-badge hm-badge--sm hm-badge--grey">' + (x.warranty_status || 'No') + '</span>') + '</td>' +
                 '<td style="font-size:12px;">' + esc(x.sent_to || '—') + '</td>' +
                 '<td style="font-size:12px;">' + esc(x.dispenser_name || '—') + '</td>' +
                 '<td style="white-space:nowrap;">' + actions + '</td>' +

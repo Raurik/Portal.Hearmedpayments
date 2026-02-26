@@ -32,7 +32,7 @@ class HearMed_Admin_Dispenser_Schedules {
                 <h2 style="margin:0;">Dispenser Schedule: <?php echo esc_html($staff_data['staff_name']); ?> <span style="font-size:16px;color:#64748b;">(<?php echo esc_html($staff_data['staff_role']); ?>)</span></h2>
             </div>
             <div style="margin:20px 0 30px 0;">
-                <button class="hm-btn hm-btn-teal" onclick="hmSchedEdit.open({staff_id:<?php echo (int)$staff_data['staff_id']; ?>})">+ Add Schedule</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmSchedEdit.open({staff_id:<?php echo (int)$staff_data['staff_id']; ?>})">+ Add Schedule</button>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:32px;">
                 <?php
@@ -65,7 +65,7 @@ class HearMed_Admin_Dispenser_Schedules {
                         </thead>
                         <tbody>
                         <?php foreach ($clinic['days'] as $d):
-                            $badge = $d['is_active'] ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>';
+                            $badge = $d['is_active'] ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Inactive</span>';
                             if ($d['rotation_weeks'] === 2) $rotation = 'Every 2 weeks (Week ' . $d['week_number'] . ')';
                             elseif ($d['rotation_weeks'] === 3) $rotation = 'Every 3 weeks';
                             elseif ($d['rotation_weeks'] === 4) $rotation = 'Once a month';
@@ -76,10 +76,10 @@ class HearMed_Admin_Dispenser_Schedules {
                                 <td><?php echo esc_html($rotation); ?></td>
                                 <td><?php echo $badge; ?></td>
                                 <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end;">
-                                    <button class="hm-btn hm-btn-sm" onclick='hmSchedEdit.open(<?php echo json_encode($d, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>)'>Edit</button>
+                                    <button class="hm-btn hm-btn--sm" onclick='hmSchedEdit.open(<?php echo json_encode($d, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>)'>Edit</button>
                                     <form method="post" style="display:inline;" onsubmit="return confirm('Delete this schedule?');">
                                         <input type="hidden" name="delete_schedule_id" value="<?php echo (int)$d['id']; ?>">
-                                        <button class="hm-btn hm-btn-sm hm-btn-red" type="submit">Delete</button>
+                                        <button class="hm-btn hm-btn--sm hm-btn--danger" type="submit">Delete</button>
                                     </form>
                                 </td>
                             </tr>
@@ -147,7 +147,7 @@ class HearMed_Admin_Dispenser_Schedules {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmSchedEdit.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmSchedEdit.save()" id="hmse-save">Save</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmSchedEdit.save()" id="hmse-save">Save</button>
                     </div>
                 </div>
             </div>
@@ -276,7 +276,7 @@ class HearMed_Admin_Dispenser_Schedules {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url('/admin-console/')); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Dispenser Schedules</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmSchedules.open()">+ Add Schedule</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmSchedules.open()">+ Add Schedule</button>
             </div>
 
             <?php if ( empty( $payload ) ): ?>
@@ -313,7 +313,7 @@ class HearMed_Admin_Dispenser_Schedules {
                         <td><strong><?php echo esc_html( $staff_data['staff_name'] ); ?></strong></td>
                         <td><?php echo esc_html( $staff_data['staff_role'] ?: '—' ); ?></td>
                         <td><?php echo esc_html( implode( ', ', $clinic_names ) ?: '—' ); ?></td>
-                        <td><?php echo $all_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?></td>
+                        <td><?php echo $all_active ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Inactive</span>'; ?></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -333,7 +333,7 @@ class HearMed_Admin_Dispenser_Schedules {
                         </div>
                     </div>
                     <div class="hm-modal-ft">
-                        <button class="hm-btn hm-btn-teal" onclick="hmSchedules.openAdd()">+ Add Schedule</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmSchedules.openAdd()">+ Add Schedule</button>
                         <button class="hm-btn" onclick="hmSchedules.closeDetail()">Close</button>
                     </div>
                 </div>
@@ -418,7 +418,7 @@ class HearMed_Admin_Dispenser_Schedules {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmSchedules.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmSchedules.save()" id="hms-save">Save</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmSchedules.save()" id="hms-save">Save</button>
                     </div>
                 </div>
             </div>

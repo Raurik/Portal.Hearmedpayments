@@ -80,7 +80,7 @@ class HearMed_Admin_Form_Templates {
             font-family: inherit;
             color: #151B33;
         }
-        #hm-ft-page .ft-back {
+        #hm-ft-page .hm-back {
             display: inline-flex;
             align-items: center;
             gap: 6px;
@@ -90,14 +90,14 @@ class HearMed_Admin_Form_Templates {
             margin-bottom: 20px;
             transition: color .15s;
         }
-        #hm-ft-page .ft-back:hover { color: #0BB4C4; }
+        #hm-ft-page .hm-back:hover { color: #0BB4C4; }
         .ft-page-hd {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 6px;
         }
-        .ft-page-title {
+        .hm-page-title {
             font-size: 22px;
             font-weight: 600;
             color: #151B33;
@@ -456,8 +456,8 @@ class HearMed_Admin_Form_Templates {
         }
 
         /* New modal form fields */
-        .ft-form-group { margin-bottom: 16px; }
-        .ft-form-group label {
+        .hm-form-group { margin-bottom: 16px; }
+        .hm-form-group label {
             display: block;
             font-size: 12px;
             font-weight: 600;
@@ -466,9 +466,9 @@ class HearMed_Admin_Form_Templates {
             text-transform: uppercase;
             letter-spacing: .04em;
         }
-        .ft-form-group input[type=text],
-        .ft-form-group input[type=number],
-        .ft-form-group select {
+        .hm-form-group input[type=text],
+        .hm-form-group input[type=number],
+        .hm-form-group select {
             width: 100%;
             padding: 9px 12px;
             border: 1px solid #e2e8f0;
@@ -477,8 +477,8 @@ class HearMed_Admin_Form_Templates {
             color: #151B33;
             outline: none;
         }
-        .ft-form-group input:focus,
-        .ft-form-group select:focus {
+        .hm-form-group input:focus,
+        .hm-form-group select:focus {
             border-color: #0BB4C4;
             box-shadow: 0 0 0 3px rgba(11,180,196,.08);
         }
@@ -495,14 +495,14 @@ class HearMed_Admin_Form_Templates {
         <!-- ═══ PAGE ═════════════════════════════════════════════════════ -->
         <div id="hm-ft-page">
 
-            <a href="<?php echo esc_url( home_url('/admin-console/') ); ?>" class="ft-back">
+            <a href="<?php echo esc_url( home_url('/admin-console/') ); ?>" class="hm-back">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
                 Back to Admin Console
             </a>
 
             <div class="ft-page-hd">
                 <div>
-                    <h2 class="ft-page-title">Form Templates</h2>
+                    <h2 class="hm-page-title">Form Templates</h2>
                     <p class="ft-page-sub">Click any card to edit its layout, HTML and fields</p>
                 </div>
                 <button class="ft-primary-btn" onclick="hmFT.openNew()">+ New Template</button>
@@ -656,11 +656,11 @@ class HearMed_Admin_Form_Templates {
                     <button class="hm-modal-x" onclick="hmFT.closeNew()">&times;</button>
                 </div>
                 <div class="hm-modal-body">
-                    <div class="ft-form-group">
+                    <div class="hm-form-group">
                         <label>Template Name *</label>
                         <input type="text" id="hm-ft-nw-name" placeholder="e.g. GDPR Consent Form">
                     </div>
-                    <div class="ft-form-group">
+                    <div class="hm-form-group">
                         <label>Type</label>
                         <select id="hm-ft-nw-type">
                             <option value="consent">Consent</option>
@@ -673,11 +673,11 @@ class HearMed_Admin_Form_Templates {
                             <option value="other">Other</option>
                         </select>
                     </div>
-                    <div class="ft-form-group">
+                    <div class="hm-form-group">
                         <label>Description <span style="font-weight:400;text-transform:none;">(shown in picker)</span></label>
                         <input type="text" id="hm-ft-nw-desc" placeholder="Short description for staff">
                     </div>
-                    <div class="ft-form-group">
+                    <div class="hm-form-group">
                         <label class="ft-check-row">
                             <input type="checkbox" id="hm-ft-nw-sig" checked>
                             Requires patient signature

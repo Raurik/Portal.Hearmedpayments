@@ -35,7 +35,7 @@ class HearMed_Admin_Exclusions {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Exclusion Types</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmExcl.open()">+ Add Exclusion Type</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmExcl.open()">+ Add Exclusion Type</button>
             </div>
 
             <p style="color:var(--hm-text-light);font-size:13px;margin-bottom:20px;">
@@ -57,12 +57,12 @@ class HearMed_Admin_Exclusions {
                             <span style="width:16px;height:16px;border-radius:4px;background:<?php echo esc_attr($color); ?>;display:inline-block;"></span>
                             <strong style="font-size:15px;"><?php echo esc_html($e->type_name); ?></strong>
                         </div>
-                        <?php echo $e->is_active ? '<span class="hm-badge hm-badge-green">Active</span>' : '<span class="hm-badge hm-badge-red">Inactive</span>'; ?>
+                        <?php echo $e->is_active ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Inactive</span>'; ?>
                     </div>
                     <p style="font-size:12px;color:var(--hm-text-light);margin:0 0 12px;"><?php echo esc_html($e->description ?: 'No description'); ?></p>
                     <div style="display:flex;gap:6px;">
-                        <button class="hm-btn hm-btn-sm" onclick='hmExcl.open(<?php echo $row; ?>)'>Edit</button>
-                        <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmExcl.del(<?php echo (int) $e->id; ?>,'<?php echo esc_js($e->type_name); ?>')">Delete</button>
+                        <button class="hm-btn hm-btn--sm" onclick='hmExcl.open(<?php echo $row; ?>)'>Edit</button>
+                        <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmExcl.del(<?php echo (int) $e->id; ?>,'<?php echo esc_js($e->type_name); ?>')">Delete</button>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -107,7 +107,7 @@ class HearMed_Admin_Exclusions {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmExcl.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmExcl.save()" id="hme-save">Save</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmExcl.save()" id="hme-save">Save</button>
                     </div>
                 </div>
             </div>

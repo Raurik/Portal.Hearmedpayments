@@ -195,8 +195,8 @@ class HearMed_Admin_AuditLog {
                         </div>
 
                         <div style="display:flex;gap:8px;margin-top:10px;">
-                            <button class="hm-btn hm-btn-teal hm-btn-sm" onclick="hmExport.exportData('json')">Export JSON</button>
-                            <button class="hm-btn hm-btn-sm" onclick="hmExport.exportData('csv')">Export CSV</button>
+                            <button class="hm-btn hm-btn--primary hm-btn--sm" onclick="hmExport.exportData('json')">Export JSON</button>
+                            <button class="hm-btn hm-btn--sm" onclick="hmExport.exportData('csv')">Export CSV</button>
                         </div>
                     </div>
                 </div>
@@ -205,7 +205,7 @@ class HearMed_Admin_AuditLog {
                 <div class="hm-settings-panel">
                     <h3 style="font-size:14px;margin-bottom:6px;">Patient Anonymisation (Right to Erasure)</h3>
                     <p style="color:var(--hm-text-light);font-size:12px;margin-bottom:10px;">Anonymises personal data while preserving financial and appointment records for Revenue/HSE compliance. This action cannot be undone.</p>
-                    <button class="hm-btn hm-btn-red hm-btn-sm" disabled>Anonymise Patient (Select patient first)</button>
+                    <button class="hm-btn hm-btn--danger hm-btn--sm" disabled>Anonymise Patient (Select patient first)</button>
                 </div>
             </div>
 
@@ -238,7 +238,7 @@ class HearMed_Admin_AuditLog {
                 </div>
 
                 <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
-                    <button class="hm-btn hm-btn-teal hm-btn-sm" onclick="hmExport.bulkExport()" id="hmde-bulk-btn">Export All Patients</button>
+                    <button class="hm-btn hm-btn--primary hm-btn--sm" onclick="hmExport.bulkExport()" id="hmde-bulk-btn">Export All Patients</button>
                     <span id="hmde-bulk-status" style="font-size:12px;color:var(--hm-text-light);"></span>
                 </div>
             </div>

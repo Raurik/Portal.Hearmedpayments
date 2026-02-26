@@ -144,7 +144,7 @@ class HearMed_Admin_Document_Templates {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
             <div class="hm-admin-hd">
                 <h2>Document Types & Templates</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmDocTypes.openAdd()">+ Add Document Type</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmDocTypes.openAdd()">+ Add Document Type</button>
             </div>
 
             <div class="hm-gdpr-note">
@@ -230,7 +230,7 @@ class HearMed_Admin_Document_Templates {
                 </div>
                 <div class="hm-modal-ft">
                     <button class="hm-btn" onclick="hmDocTypes.closeModal()">Cancel</button>
-                    <button class="hm-btn hm-btn-teal" onclick="hmDocTypes.save()" id="hm-dt-save-btn">Save</button>
+                    <button class="hm-btn hm-btn--primary" onclick="hmDocTypes.save()" id="hm-dt-save-btn">Save</button>
                 </div>
             </div>
         </div>
@@ -359,7 +359,7 @@ class HearMed_Admin_Document_Templates {
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/document-types/")); ?>" class="hm-btn">&larr; Back to Document Types</a></div>
             <div class="hm-admin-hd">
                 <h2>Template: <?php echo esc_html($doc->name); ?></h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmTemplateEditor.saveAll()" id="hm-te-save">Save Template</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmTemplateEditor.saveAll()" id="hm-te-save">Save Template</button>
             </div>
 
             <div style="display:flex;gap:6px;margin-bottom:16px;align-items:center;">
@@ -367,7 +367,7 @@ class HearMed_Admin_Document_Templates {
                     <span class="hm-badge hm-badge-purple">&#9733; AI Formatting</span>
                 <?php endif; ?>
                 <?php if ($doc->password_protect): ?>
-                    <span class="hm-badge hm-badge-gray">&#128274; Password Protected</span>
+                    <span class="hm-badge hm-badge--grey">&#128274; Password Protected</span>
                 <?php endif; ?>
                 <span style="font-size:12px;color:var(--hm-text-light);">Drag sections to reorder. Toggle sections on/off. Add AI keywords for auto-detection.</span>
             </div>
@@ -403,13 +403,13 @@ class HearMed_Admin_Document_Templates {
                         </div>
                         <div class="hm-te-kw-add">
                             <input type="text" placeholder="Add keyword..." id="hm-te-kw-input-<?php echo $idx; ?>" onkeydown="if(event.key==='Enter')hmTemplateEditor.addKeyword(<?php echo $idx; ?>)">
-                            <button class="hm-btn hm-btn-sm" onclick="hmTemplateEditor.addKeyword(<?php echo $idx; ?>)">+</button>
+                            <button class="hm-btn hm-btn--sm" onclick="hmTemplateEditor.addKeyword(<?php echo $idx; ?>)">+</button>
                         </div>
                         <?php elseif ($sec['type'] === 'ai_detect'): ?>
                         <div class="hm-te-keywords" id="hm-te-kw-<?php echo $idx; ?>"></div>
                         <div class="hm-te-kw-add">
                             <input type="text" placeholder="Add keyword..." id="hm-te-kw-input-<?php echo $idx; ?>" onkeydown="if(event.key==='Enter')hmTemplateEditor.addKeyword(<?php echo $idx; ?>)">
-                            <button class="hm-btn hm-btn-sm" onclick="hmTemplateEditor.addKeyword(<?php echo $idx; ?>)">+</button>
+                            <button class="hm-btn hm-btn--sm" onclick="hmTemplateEditor.addKeyword(<?php echo $idx; ?>)">+</button>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -444,7 +444,7 @@ class HearMed_Admin_Document_Templates {
                 </div>
                 <div class="hm-modal-ft">
                     <button class="hm-btn" onclick="document.getElementById('hm-te-add-modal').classList.remove('open')">Cancel</button>
-                    <button class="hm-btn hm-btn-teal" onclick="hmTemplateEditor.confirmAddSection()">Add Section</button>
+                    <button class="hm-btn hm-btn--primary" onclick="hmTemplateEditor.confirmAddSection()">Add Section</button>
                 </div>
             </div>
         </div>
@@ -466,7 +466,7 @@ class HearMed_Admin_Document_Templates {
                 </div>
                 <div class="hm-modal-ft">
                     <button class="hm-btn" onclick="hmGdprConsent.close()">Cancel</button>
-                    <button class="hm-btn hm-btn-teal" onclick="hmGdprConsent.proceed()" id="hm-gdpr-proceed-btn" disabled>Proceed</button>
+                    <button class="hm-btn hm-btn--primary" onclick="hmGdprConsent.proceed()" id="hm-gdpr-proceed-btn" disabled>Proceed</button>
                 </div>
             </div>
         </div>

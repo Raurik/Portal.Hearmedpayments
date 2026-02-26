@@ -51,20 +51,20 @@ function hm_render_fitting_page() {
     ob_start(); ?>
     <style>
     /* ── Awaiting Fitting — hmf- namespace ── */
-    .hmf-stats{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
-    .hmf-stat{background:#fff;border-radius:10px;padding:14px 20px;flex:1;min-width:140px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(15,23,42,.03);}
-    .hmf-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;}
-    .hmf-stat-val{font-size:22px;font-weight:700;color:#0f172a;margin-top:2px;}
-    .hmf-stat-val.teal{color:#0BB4C4;}
-    .hmf-stat-val.amber{color:#d97706;}
-    .hmf-stat-val.green{color:#059669;}
+    .hm-stats{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+    .hm-stat{background:#fff;border-radius:10px;padding:14px 20px;flex:1;min-width:140px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(15,23,42,.03);}
+    .hm-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;}
+    .hm-stat-val{font-size:22px;font-weight:700;color:#0f172a;margin-top:2px;}
+    .hm-stat-val.teal{color:#0BB4C4;}
+    .hm-stat-val.amber{color:#d97706;}
+    .hm-stat-val.green{color:#059669;}
 
-    .hmf-tbl-wrap{background:#fff;border-radius:12px;border:1px solid #f1f5f9;box-shadow:0 2px 8px rgba(15,23,42,.04);overflow-x:auto;}
-    .hmf-tbl{width:100%;border-collapse:collapse;font-size:12px;}
-    .hmf-tbl th{text-align:left;padding:10px 14px;background:#f8fafc;color:#64748b;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
-    .hmf-tbl td{padding:10px 14px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:middle;}
-    .hmf-tbl tbody tr:hover{background:#f8fafc;}
-    .hmf-tbl tbody tr:last-child td{border-bottom:none;}
+    .hm-tbl-wrap{background:#fff;border-radius:12px;border:1px solid #f1f5f9;box-shadow:0 2px 8px rgba(15,23,42,.04);overflow-x:auto;}
+    .hm-table{width:100%;border-collapse:collapse;font-size:12px;}
+    .hm-table th{text-align:left;padding:10px 14px;background:#f8fafc;color:#64748b;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
+    .hm-table td{padding:10px 14px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:middle;}
+    .hm-table tbody tr:hover{background:#f8fafc;}
+    .hm-table tbody tr:last-child td{border-bottom:none;}
 
     .hmf-patient-num{font-weight:700;color:#0f172a;font-size:12px;}
     .hmf-patient-name{font-size:12px;color:#334155;}
@@ -76,41 +76,41 @@ function hm_render_fitting_page() {
     .hmf-prsi-dot.green{background:#10b981;}
     .hmf-prsi-dot.red{background:#ef4444;}
 
-    .hmf-status{display:inline-flex;align-items:center;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;}
-    .hmf-status-awaiting-order{background:#fef3cd;color:#92400e;}
-    .hmf-status-awaiting-delivery{background:#dbeafe;color:#1e40af;}
-    .hmf-status-awaiting-fitting{background:#d1fae5;color:#065f46;}
+    .hm-status{display:inline-flex;align-items:center;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;}
+    .hm-status-awaiting-order{background:#fef3cd;color:#92400e;}
+    .hm-status-awaiting-delivery{background:#dbeafe;color:#1e40af;}
+    .hm-status-awaiting-fitting{background:#d1fae5;color:#065f46;}
 
     .hmf-fitting-date{font-size:12px;color:#334155;}
     .hmf-fitting-date.none{color:#94a3b8;font-style:italic;}
 
-    .hmf-btn{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
-    .hmf-btn-receive{background:#0BB4C4;color:#fff;}
-    .hmf-btn-receive:hover{background:#0a9aa8;}
-    .hmf-btn-fitted{background:#059669;color:#fff;}
-    .hmf-btn-fitted:hover{background:#047857;}
-    .hmf-btn-receipt{background:#fff;color:#475569;border:1px solid #e2e8f0;}
-    .hmf-btn-receipt:hover{background:#f8fafc;border-color:#0BB4C4;color:#0BB4C4;}
+    .hm-btn{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
+    .hm-btn-receive{background:#0BB4C4;color:#fff;}
+    .hm-btn-receive:hover{background:#0a9aa8;}
+    .hm-btn-fitted{background:#059669;color:#fff;}
+    .hm-btn-fitted:hover{background:#047857;}
+    .hm-btn-receipt{background:#fff;color:#475569;border:1px solid #e2e8f0;}
+    .hm-btn-receipt:hover{background:#f8fafc;border-color:#0BB4C4;color:#0BB4C4;}
 
-    .hmf-empty{text-align:center;padding:60px 20px;color:#94a3b8;font-size:13px;}
-    .hmf-empty-icon{font-size:32px;margin-bottom:8px;}
+    .hm-empty{text-align:center;padding:60px 20px;color:#94a3b8;font-size:13px;}
+    .hm-empty-icon{font-size:32px;margin-bottom:8px;}
 
     /* Modals */
-    .hmf-modal-bg{display:none;position:fixed;inset:0;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at top left,rgba(148,163,184,.45),rgba(15,23,42,.75));backdrop-filter:blur(8px);z-index:9000;}
-    .hmf-modal-bg.open{display:flex;}
-    .hmf-modal{background:#fff;border-radius:14px;box-shadow:0 25px 50px rgba(0,0,0,.15);width:100%;overflow:hidden;}
-    .hmf-modal-hd{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #f1f5f9;}
-    .hmf-modal-hd h3{margin:0;font-size:14px;font-weight:600;color:#0f172a;}
-    .hmf-modal-x{background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1;}
-    .hmf-modal-x:hover{color:#0f172a;}
-    .hmf-modal-body{padding:20px;}
-    .hmf-modal-ft{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid #f1f5f9;background:#f8fafc;}
+    .hm-modal-bg{display:none;position:fixed;inset:0;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at top left,rgba(148,163,184,.45),rgba(15,23,42,.75));backdrop-filter:blur(8px);z-index:9000;}
+    .hm-modal-bg.open{display:flex;}
+    .hm-modal{background:#fff;border-radius:14px;box-shadow:0 25px 50px rgba(0,0,0,.15);width:100%;overflow:hidden;}
+    .hm-modal-hd{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #f1f5f9;}
+    .hm-modal-hd h3{margin:0;font-size:14px;font-weight:600;color:#0f172a;}
+    .hm-modal-x{background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1;}
+    .hm-modal-x:hover{color:#0f172a;}
+    .hm-modal-body{padding:20px;}
+    .hm-modal-ft{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid #f1f5f9;background:#f8fafc;}
 
-    .hmf-form-group{margin-bottom:14px;}
-    .hmf-form-group label{display:block;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;}
-    .hmf-form-group input,.hmf-form-group select,.hmf-form-group textarea{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#1e293b;transition:border-color .15s;}
-    .hmf-form-group input:focus,.hmf-form-group select:focus{outline:none;border-color:#0BB4C4;box-shadow:0 0 0 3px rgba(11,180,196,.1);}
-    .hmf-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .hm-form-group{margin-bottom:14px;}
+    .hm-form-group label{display:block;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;}
+    .hm-form-group input,.hm-form-group select,.hm-form-group textarea{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#1e293b;transition:border-color .15s;}
+    .hm-form-group input:focus,.hm-form-group select:focus{outline:none;border-color:#0BB4C4;box-shadow:0 0 0 3px rgba(11,180,196,.1);}
+    .hm-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 
     .hmf-serial-item{background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:10px;border:1px solid #f1f5f9;}
     .hmf-serial-item-title{font-weight:600;font-size:12px;color:#0f172a;margin-bottom:8px;}
@@ -159,22 +159,22 @@ function hm_render_fitting_page() {
         <div class="hm-page">
 
             <!-- Stats -->
-            <div class="hmf-stats">
-                <div class="hmf-stat">
-                    <div class="hmf-stat-label">Awaiting Order</div>
-                    <div class="hmf-stat-val amber"><?php echo $count_map['Approved'] ?? 0; ?></div>
+            <div class="hm-stats">
+                <div class="hm-stat">
+                    <div class="hm-stat-label">Awaiting Order</div>
+                    <div class="hm-stat-val amber"><?php echo $count_map['Approved'] ?? 0; ?></div>
                 </div>
-                <div class="hmf-stat">
-                    <div class="hmf-stat-label">Awaiting Delivery</div>
-                    <div class="hmf-stat-val teal"><?php echo $count_map['Ordered'] ?? 0; ?></div>
+                <div class="hm-stat">
+                    <div class="hm-stat-label">Awaiting Delivery</div>
+                    <div class="hm-stat-val teal"><?php echo $count_map['Ordered'] ?? 0; ?></div>
                 </div>
-                <div class="hmf-stat">
-                    <div class="hmf-stat-label">Awaiting Fitting</div>
-                    <div class="hmf-stat-val green"><?php echo $count_map['Awaiting Fitting'] ?? 0; ?></div>
+                <div class="hm-stat">
+                    <div class="hm-stat-label">Awaiting Fitting</div>
+                    <div class="hm-stat-val green"><?php echo $count_map['Awaiting Fitting'] ?? 0; ?></div>
                 </div>
-                <div class="hmf-stat">
-                    <div class="hmf-stat-label">Total Pipeline</div>
-                    <div class="hmf-stat-val"><?php echo $total; ?></div>
+                <div class="hm-stat">
+                    <div class="hm-stat-label">Total Pipeline</div>
+                    <div class="hm-stat-val"><?php echo $total; ?></div>
                 </div>
             </div>
 
@@ -202,62 +202,62 @@ function hm_render_fitting_page() {
     </div>
 
     <!-- ═════════ SERIAL NUMBER MODAL ═════════ -->
-    <div id="hmf-serial-modal" class="hmf-modal-bg">
-        <div class="hmf-modal" style="max-width:520px;">
-            <div class="hmf-modal-hd">
+    <div id="hmf-serial-modal" class="hm-modal-bg">
+        <div class="hm-modal" style="max-width:520px;">
+            <div class="hm-modal-hd">
                 <h3>Receive in Branch — Enter Serial Numbers</h3>
-                <button class="hmf-modal-x" onclick="hmFitting.closeSerial()">&times;</button>
+                <button class="hm-modal-x" onclick="hmFitting.closeSerial()">&times;</button>
             </div>
-            <div class="hmf-modal-body">
+            <div class="hm-modal-body">
                 <input type="hidden" id="hmf-serial-order-id">
                 <div id="hmf-serial-items"><!-- JS populates --></div>
             </div>
-            <div class="hmf-modal-ft">
+            <div class="hm-modal-ft">
                 <button class="hm-btn" onclick="hmFitting.closeSerial()">Cancel</button>
-                <button class="hm-btn hm-btn-teal" id="hmf-serial-save" onclick="hmFitting.saveSerials()">Save &amp; Receive</button>
+                <button class="hm-btn hm-btn--primary" id="hmf-serial-save" onclick="hmFitting.saveSerials()">Save &amp; Receive</button>
             </div>
         </div>
     </div>
 
     <!-- ═════════ NO FITTING APPOINTMENT MODAL ═════════ -->
-    <div id="hmf-no-appt-modal" class="hmf-modal-bg">
-        <div class="hmf-modal" style="max-width:420px;">
-            <div class="hmf-modal-hd">
+    <div id="hmf-no-appt-modal" class="hm-modal-bg">
+        <div class="hm-modal" style="max-width:420px;">
+            <div class="hm-modal-hd">
                 <h3>No Fitting Appointment Found</h3>
-                <button class="hmf-modal-x" onclick="hmFitting.closeNoAppt()">&times;</button>
+                <button class="hm-modal-x" onclick="hmFitting.closeNoAppt()">&times;</button>
             </div>
-            <div class="hmf-modal-body">
+            <div class="hm-modal-body">
                 <div class="hmf-warning" style="margin:0 0 14px;">
                     &#9888; This patient does not have a <strong>Fitting</strong> appointment booked.
                 </div>
                 <input type="hidden" id="hmf-no-appt-order-id">
-                <div class="hmf-form-group">
+                <div class="hm-form-group">
                     <label>Why is there no fitting appointment? <span style="color:#dc2626;">*</span></label>
                     <textarea id="hmf-no-appt-reason" rows="3" placeholder="Please explain..."></textarea>
                 </div>
             </div>
-            <div class="hmf-modal-ft">
+            <div class="hm-modal-ft">
                 <button class="hm-btn" onclick="hmFitting.closeNoAppt()">Cancel</button>
-                <button class="hm-btn hm-btn-teal" onclick="hmFitting.saveNoApptReason()">Save Reason &amp; Continue</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmFitting.saveNoApptReason()">Save Reason &amp; Continue</button>
             </div>
         </div>
     </div>
 
     <!-- ═════════ PAYMENT / FITTED MODAL ═════════ -->
-    <div id="hmf-payment-modal" class="hmf-modal-bg">
-        <div class="hmf-modal" style="max-width:540px;">
-            <div class="hmf-modal-hd">
+    <div id="hmf-payment-modal" class="hm-modal-bg">
+        <div class="hm-modal" style="max-width:540px;">
+            <div class="hm-modal-hd">
                 <h3>Record Fitting &amp; Payment</h3>
-                <button class="hmf-modal-x" onclick="hmFitting.closePayment()">&times;</button>
+                <button class="hm-modal-x" onclick="hmFitting.closePayment()">&times;</button>
             </div>
-            <div class="hmf-modal-body">
+            <div class="hm-modal-body">
                 <input type="hidden" id="hmf-pay-order-id">
                 <input type="hidden" id="hmf-pay-invoice-id">
 
                 <div id="hmf-invoice-info"><!-- JS populates --></div>
 
-                <div class="hmf-form-row">
-                    <div class="hmf-form-group">
+                <div class="hm-form-row">
+                    <div class="hm-form-group">
                         <label>Payment Method</label>
                         <select id="hmf-pay-method">
                             <option value="Card">Card</option>
@@ -266,37 +266,37 @@ function hm_render_fitting_page() {
                             <option value="Bank Transfer">Bank Transfer</option>
                         </select>
                     </div>
-                    <div class="hmf-form-group">
+                    <div class="hm-form-group">
                         <label>Amount (€)</label>
                         <input type="number" id="hmf-pay-amount" step="0.01" min="0" placeholder="0.00">
                     </div>
                 </div>
                 <div id="hmf-pay-result"></div>
             </div>
-            <div class="hmf-modal-ft">
+            <div class="hm-modal-ft">
                 <button class="hm-btn" onclick="hmFitting.closePayment()">Cancel</button>
-                <button class="hm-btn hm-btn-teal" id="hmf-pay-save" onclick="hmFitting.recordPayment()">Record Payment</button>
+                <button class="hm-btn hm-btn--primary" id="hmf-pay-save" onclick="hmFitting.recordPayment()">Record Payment</button>
             </div>
         </div>
     </div>
 
     <!-- ═════════ RECEIPT SUCCESS MODAL ═════════ -->
-    <div id="hmf-receipt-modal" class="hmf-modal-bg">
-        <div class="hmf-modal" style="max-width:420px;">
-            <div class="hmf-modal-hd">
+    <div id="hmf-receipt-modal" class="hm-modal-bg">
+        <div class="hm-modal" style="max-width:420px;">
+            <div class="hm-modal-hd">
                 <h3>Payment Complete</h3>
-                <button class="hmf-modal-x" onclick="hmFitting.closeReceipt()">&times;</button>
+                <button class="hm-modal-x" onclick="hmFitting.closeReceipt()">&times;</button>
             </div>
-            <div class="hmf-modal-body" style="text-align:center;">
+            <div class="hm-modal-body" style="text-align:center;">
                 <div style="font-size:40px;margin-bottom:8px;">&#10004;</div>
                 <p style="font-size:14px;font-weight:600;color:#065f46;margin:0 0 6px;">Paid in Full</p>
                 <p style="font-size:12px;color:#64748b;margin:0 0 16px;" id="hmf-receipt-summary"></p>
-                <button class="hmf-btn hmf-btn-receipt" onclick="hmFitting.printReceipt()" style="padding:10px 24px;font-size:13px;">
+                <button class="hm-btn hm-btn-receipt" onclick="hmFitting.printReceipt()" style="padding:10px 24px;font-size:13px;">
                     &#128424; Print Receipt
                 </button>
             </div>
-            <div class="hmf-modal-ft">
-                <button class="hm-btn hm-btn-teal" onclick="hmFitting.closeReceipt()">Done</button>
+            <div class="hm-modal-ft">
+                <button class="hm-btn hm-btn--primary" onclick="hmFitting.closeReceipt()">Done</button>
             </div>
         </div>
     </div>
@@ -356,7 +356,7 @@ function hm_render_fitting_page() {
                     self.populateFilters();
                     self.applyFilters();
                 } else {
-                    el.innerHTML = '<div class="hmf-empty"><div class="hmf-empty-icon">&#9888;</div>Error loading data.</div>';
+                    el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#9888;</div>Error loading data.</div>';
                 }
             });
         },
@@ -411,12 +411,12 @@ function hm_render_fitting_page() {
             var orders = data.orders || [];
 
             if (!orders.length) {
-                el.innerHTML = '<div class="hmf-empty"><div class="hmf-empty-icon">&#128588;</div>No hearing aid orders in the pipeline — all clear!</div>';
+                el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#128588;</div>No hearing aid orders in the pipeline — all clear!</div>';
                 document.getElementById('hmf-totals').style.display = 'none';
                 return;
             }
 
-            var html = '<div class="hmf-tbl-wrap"><table class="hmf-tbl"><thead><tr>';
+            var html = '<div class="hm-tbl-wrap"><table class="hm-table"><thead><tr>';
             html += '<th>Patient #</th>';
             html += '<th>Patient Name</th>';
             html += '<th>Order #</th>';
@@ -433,13 +433,13 @@ function hm_render_fitting_page() {
                 var statusClass = '';
                 var statusLabel = '';
                 if (o.current_status === 'Approved') {
-                    statusClass = 'hmf-status-awaiting-order';
+                    statusClass = 'hm-status-awaiting-order';
                     statusLabel = 'Awaiting Order';
                 } else if (o.current_status === 'Ordered') {
-                    statusClass = 'hmf-status-awaiting-delivery';
+                    statusClass = 'hm-status-awaiting-delivery';
                     statusLabel = 'Awaiting Delivery';
                 } else {
-                    statusClass = 'hmf-status-awaiting-fitting';
+                    statusClass = 'hm-status-awaiting-fitting';
                     statusLabel = 'Awaiting Fitting';
                 }
 
@@ -453,9 +453,9 @@ function hm_render_fitting_page() {
 
                 var actions = '';
                 if (o.current_status === 'Ordered') {
-                    actions = '<button class="hmf-btn hmf-btn-receive" onclick="hmFitting.openSerial(' + o.id + ')">&#128230; Receive in Branch</button>';
+                    actions = '<button class="hm-btn hm-btn-receive" onclick="hmFitting.openSerial(' + o.id + ')">&#128230; Receive in Branch</button>';
                 } else if (o.current_status === 'Awaiting Fitting') {
-                    actions = '<button class="hmf-btn hmf-btn-fitted" onclick="hmFitting.openPayment(' + o.id + ')">&#9989; Fitted</button>';
+                    actions = '<button class="hm-btn hm-btn-fitted" onclick="hmFitting.openPayment(' + o.id + ')">&#9989; Fitted</button>';
                 } else {
                     actions = '<span style="color:#94a3b8;font-size:11px;">Awaiting finance</span>';
                 }
@@ -468,7 +468,7 @@ function hm_render_fitting_page() {
                 html += '<td>' + hmFE(o.clinic_name) + '</td>';
                 html += '<td>' + hmFE(o.dispenser_name) + '</td>';
                 html += '<td>' + prsiDot + '</td>';
-                html += '<td><span class="hmf-status ' + statusClass + '">' + statusLabel + '</span></td>';
+                html += '<td><span class="hm-status ' + statusClass + '">' + statusLabel + '</span></td>';
                 html += '<td>' + fittingDate + '</td>';
                 html += '<td>' + actions + '</td>';
                 html += '</tr>';
@@ -558,23 +558,23 @@ function hm_render_fitting_page() {
                     html += '<div class="hmf-serial-item-title">' + hmFE(it.product_name) + ' <span class="hmf-serial-ear ' + earClass + '">' + hmFE(earLabel) + '</span></div>';
 
                     if (earLabel === 'Left' || earLabel === 'Binaural') {
-                        html += '<div class="hmf-form-group">';
+                        html += '<div class="hm-form-group">';
                         html += '<label>Left Ear Serial Number</label>';
                         html += '<input type="text" class="hmf-serial-input" data-item-id="' + it.id + '" data-ear="left" data-product-id="' + it.product_id + '" placeholder="Enter serial number...">';
                         html += '</div>';
                     }
                     if (earLabel === 'Right' || earLabel === 'Binaural') {
-                        html += '<div class="hmf-form-group">';
+                        html += '<div class="hm-form-group">';
                         html += '<label>Right Ear Serial Number</label>';
                         html += '<input type="text" class="hmf-serial-input" data-item-id="' + it.id + '" data-ear="right" data-product-id="' + it.product_id + '" placeholder="Enter serial number...">';
                         html += '</div>';
                     }
                     // If ear_side not set, ask for serial + ear choice
                     if (!earLabel || earLabel === 'Unknown') {
-                        html += '<div class="hmf-form-row">';
-                        html += '<div class="hmf-form-group"><label>Serial Number</label>';
+                        html += '<div class="hm-form-row">';
+                        html += '<div class="hm-form-group"><label>Serial Number</label>';
                         html += '<input type="text" class="hmf-serial-input" data-item-id="' + it.id + '" data-ear="single" data-product-id="' + it.product_id + '" placeholder="Enter serial number..."></div>';
-                        html += '<div class="hmf-form-group"><label>Which Ear?</label>';
+                        html += '<div class="hm-form-group"><label>Which Ear?</label>';
                         html += '<select class="hmf-serial-ear-select" data-item-id="' + it.id + '"><option value="Left">Left</option><option value="Right">Right</option></select></div>';
                         html += '</div>';
                     }

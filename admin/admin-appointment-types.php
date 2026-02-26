@@ -42,7 +42,7 @@ class HearMed_Admin_Appointment_Types {
         <div class="hm-admin">
             <div class="hm-admin-hd">
                 <h2>Appointment Types</h2>
-                <button class="hm-btn hm-btn-teal" onclick="hmApptType.open()">+ Add Type</button>
+                <button class="hm-btn hm-btn--primary" onclick="hmApptType.open()">+ Add Type</button>
             </div>
             <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
 
@@ -101,9 +101,9 @@ class HearMed_Admin_Appointment_Types {
                         </td>
                         <td>
                             <div style="display:flex;gap:6px;align-items:center;">
-                                <a href="<?php echo esc_url(home_url('/appointment-type-detail/?id=' . (int)$t->id)); ?>" class="hm-btn hm-btn-sm" title="View Details" style="padding:4px 8px;font-size:14px;">👁</a>
-                                <button class="hm-btn hm-btn-sm" onclick='hmApptType.open(<?php echo $row; ?>)'>Edit</button>
-                                <button class="hm-btn hm-btn-sm hm-btn-red" onclick="hmApptType.del(<?php echo (int)$t->id; ?>,'<?php echo esc_js($t->service_name); ?>')">Delete</button>
+                                <a href="<?php echo esc_url(home_url('/appointment-type-detail/?id=' . (int)$t->id)); ?>" class="hm-btn hm-btn--sm" title="View Details" style="padding:4px 8px;font-size:14px;">👁</a>
+                                <button class="hm-btn hm-btn--sm" onclick='hmApptType.open(<?php echo $row; ?>)'>Edit</button>
+                                <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmApptType.del(<?php echo (int)$t->id; ?>,'<?php echo esc_js($t->service_name); ?>')">Delete</button>
                             </div>
                         </td>
                     </tr>
@@ -174,7 +174,7 @@ class HearMed_Admin_Appointment_Types {
                     </div>
                     <div class="hm-modal-ft">
                         <button class="hm-btn" onclick="hmApptType.close()">Cancel</button>
-                        <button class="hm-btn hm-btn-teal" onclick="hmApptType.save()" id="hma-save">Save</button>
+                        <button class="hm-btn hm-btn--primary" onclick="hmApptType.save()" id="hma-save">Save</button>
                     </div>
                 </div>
             </div>

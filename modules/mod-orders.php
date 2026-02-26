@@ -260,7 +260,7 @@ class HearMed_Orders {
                 <!-- PATIENT -->
                 <div class="hm-form__section">
                     <h2 class="hm-form__section-title">Patient</h2>
-                    <div class="hm-form__field hm-form__field--wide">
+                    <div class="hm-form-group hm-form-group--wide">
                         <label class="hm-label">Search Patient <span class="hm-required">*</span></label>
                         <input type="text" id="hm-patient-search" class="hm-input"
                                placeholder="Type patient name..." autocomplete="off">
@@ -365,13 +365,13 @@ class HearMed_Orders {
                     <h2 class="hm-form__section-title">Deposit <span class="hm-form__section-optional">— Optional</span></h2>
                     <p class="hm-form__hint">If the patient pays a deposit today, record it here. Balance will be collected at fitting.</p>
                     <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-                        <div class="hm-form__field" style="flex:0 0 160px;">
+                        <div class="hm-form-group" style="flex:0 0 160px;">
                             <label class="hm-label">Deposit Amount (€)</label>
                             <input type="number" name="deposit_amount" id="hm-deposit-amount"
                                    class="hm-input" step="0.01" min="0" value="0"
                                    placeholder="0.00" oninput="hmUpdateDepositBalance()">
                         </div>
-                        <div class="hm-form__field" style="flex:0 0 180px;">
+                        <div class="hm-form-group" style="flex:0 0 180px;">
                             <label class="hm-label">Deposit Method</label>
                             <select name="deposit_method" id="hm-deposit-method" class="hm-input">
                                 <option value="">— None —</option>
@@ -381,7 +381,7 @@ class HearMed_Orders {
                                 <option value="Cheque">Cheque</option>
                             </select>
                         </div>
-                        <div class="hm-form__field" style="flex:0 0 160px;">
+                        <div class="hm-form-group" style="flex:0 0 160px;">
                             <label class="hm-label">Date Paid</label>
                             <input type="date" name="deposit_paid_at" id="hm-deposit-date"
                                    class="hm-input" value="<?php echo date('Y-m-d'); ?>">
@@ -618,7 +618,7 @@ class HearMed_Orders {
                     <!-- STAGE 1→2: C-Level Approval -->
                     <?php if ($can_approve) : ?>
                     <div class="hm-card hm-card--action">
-                        <h3 class="hm-card__title">⏳ Awaiting Your Approval</h3>
+                        <h3 class="hm-card-title">⏳ Awaiting Your Approval</h3>
                         <p class="hm-form__hint">Review the order then approve or reject.</p>
                         <textarea id="hm-approval-note" class="hm-input hm-input--textarea" rows="2"
                                   placeholder="Optional note..."></textarea>
@@ -642,7 +642,7 @@ class HearMed_Orders {
                     <!-- STAGE 2→3: Admin places order -->
                     <?php if ($can_order) : ?>
                     <div class="hm-card hm-card--action">
-                        <h3 class="hm-card__title">📋 Place Order with Supplier</h3>
+                        <h3 class="hm-card-title">📋 Place Order with Supplier</h3>
                         <a href="<?php echo esc_url($base.'?hm_action=print&order_id='.$order_id); ?>"
                            target="_blank" class="hm-btn hm-btn--secondary hm-btn--block" style="margin-bottom:0.75rem;">
                             🖨 Print Order Sheet
@@ -660,7 +660,7 @@ class HearMed_Orders {
                     <!-- STAGE 3→4: Received in clinic -->
                     <?php if ($can_receive) : ?>
                     <div class="hm-card hm-card--action">
-                        <h3 class="hm-card__title">📦 Aids Arrived?</h3>
+                        <h3 class="hm-card-title">📦 Aids Arrived?</h3>
                         <p class="hm-form__hint">Mark received. Dispenser will be notified to enter serial numbers.</p>
                         <button class="hm-btn hm-btn--primary hm-btn--block hm-order-action"
                                 data-ajax="hm_mark_received" data-order-id="<?php echo $order_id; ?>"
@@ -674,7 +674,7 @@ class HearMed_Orders {
                     <!-- STAGE 4→5: Serial numbers -->
                     <?php if ($can_serials) : ?>
                     <div class="hm-card hm-card--action">
-                        <h3 class="hm-card__title">🔢 Enter Serial Numbers</h3>
+                        <h3 class="hm-card-title">🔢 Enter Serial Numbers</h3>
                         <p class="hm-form__hint">Record serials before the patient is fitted.</p>
                         <a href="<?php echo esc_url($base.'?hm_action=serials&order_id='.$order_id); ?>"
                            class="hm-btn hm-btn--primary hm-btn--block">
@@ -686,7 +686,7 @@ class HearMed_Orders {
                     <!-- STAGE 5→6: Fitting + Payment -->
                     <?php if ($can_complete) : ?>
                     <div class="hm-card hm-card--action">
-                        <h3 class="hm-card__title">🎉 Patient is Here — Fit + Pay</h3>
+                        <h3 class="hm-card-title">🎉 Patient is Here — Fit + Pay</h3>
                         <p class="hm-form__hint">
                             Finalises invoice as Paid, logs in patient file, fires to QuickBooks.
                         </p>
@@ -708,7 +708,7 @@ class HearMed_Orders {
 
                     <!-- Timeline -->
                     <div class="hm-card">
-                        <h3 class="hm-card__title">Timeline</h3>
+                        <h3 class="hm-card-title">Timeline</h3>
                         <div class="hm-timeline">
                             <?php
                             $stages = [
@@ -830,14 +830,14 @@ class HearMed_Orders {
                                value="<?php echo $item->product_id; ?>">
 
                         <?php if ($need_left) : ?>
-                        <div class="hm-form__field" style="margin-top:0.75rem;">
+                        <div class="hm-form-group" style="margin-top:0.75rem;">
                             <label class="hm-label">Left Ear Serial Number</label>
                             <input type="text" name="items[<?php echo $item->id; ?>][left]"
                                    class="hm-input hm-input--mono" placeholder="Serial number...">
                         </div>
                         <?php endif; ?>
                         <?php if ($need_right) : ?>
-                        <div class="hm-form__field" style="margin-top:0.5rem;">
+                        <div class="hm-form-group" style="margin-top:0.5rem;">
                             <label class="hm-label">Right Ear Serial Number</label>
                             <input type="text" name="items[<?php echo $item->id; ?>][right]"
                                    class="hm-input hm-input--mono" placeholder="Serial number...">
@@ -943,16 +943,16 @@ class HearMed_Orders {
 
                 <hr class="hm-divider">
 
-                <div class="hm-form__field">
+                <div class="hm-form-group">
                     <label class="hm-label">Fitting Date</label>
                     <input type="date" id="hm-fit-date" class="hm-input" value="<?php echo date('Y-m-d'); ?>">
                 </div>
-                <div class="hm-form__field" style="margin-top:1rem;">
+                <div class="hm-form-group" style="margin-top:1rem;">
                     <label class="hm-label">Amount Received (€)</label>
                     <input type="number" id="hm-fit-amount" class="hm-input" step="0.01"
                            value="<?php echo number_format($amount_due,2,'.',''); ?>">
                 </div>
-                <div class="hm-form__field" style="margin-top:1rem;">
+                <div class="hm-form-group" style="margin-top:1rem;">
                     <label class="hm-label">Fitting Notes (optional)</label>
                     <textarea id="hm-fit-notes" class="hm-input hm-input--textarea" rows="2"
                               placeholder="Clinical notes, adjustments made..."></textarea>
