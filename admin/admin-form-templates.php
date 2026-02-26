@@ -106,7 +106,7 @@ class HearMed_Admin_Form_Templates {
             border-left: 3px solid var(--hm-teal);
             line-height: 1.2;
         }
-        .ft-page-sub {
+        .hm-page-subtitle {
             font-size: 13px;
             color: #64748b;
             padding-left: 17px;
@@ -167,7 +167,7 @@ class HearMed_Admin_Form_Templates {
             gap: 6px;
             margin-bottom: 12px;
         }
-        .ft-badge {
+        .hm-badge {
             font-size: 11px;
             font-weight: 600;
             padding: 2px 9px;
@@ -182,7 +182,7 @@ class HearMed_Admin_Form_Templates {
         }
         .ft-card-stats { font-size: 11px; color: #94a3b8; }
         .ft-card-acts { display: flex; gap: 4px; }
-        .ft-icon-btn {
+        .hm-icon-btn {
             width: 28px;
             height: 28px;
             border-radius: 6px;
@@ -196,8 +196,8 @@ class HearMed_Admin_Form_Templates {
             font-size: 13px;
             transition: all .15s;
         }
-        .ft-icon-btn:hover { border-color: var(--hm-teal); color: var(--hm-teal); background: #f0fdfe; }
-        .ft-icon-btn.danger:hover { border-color: #fca5a5; color: #ef4444; background: #fff5f5; }
+        .hm-icon-btn:hover { border-color: var(--hm-teal); color: var(--hm-teal); background: #f0fdfe; }
+        .hm-icon-btn.hm-icon-btn--danger:hover { border-color: #fca5a5; color: #ef4444; background: #fff5f5; }
         .ft-add-card {
             background: #fafafa;
             border: 2px dashed #e2e8f0;
@@ -260,41 +260,15 @@ class HearMed_Admin_Form_Templates {
         .ft-ov-topbar-right { display: flex; align-items: center; gap: 10px; }
         .ft-saved-label { font-size: 12px; color: #059669; display: none; }
 
-        .ft-primary-btn {
-            background: var(--hm-teal);
-            color: #fff;
-            border: none;
-            padding: 8px 22px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background .15s;
-        }
-        .ft-primary-btn:hover { background: #0a9eac; }
-        .ft-primary-btn:disabled { background: #94a3b8; cursor: default; }
+        /* ft-primary-btn styles now in hearmed-core.css as .hm-btn--add */
 
-        .ft-ov-tabbar {
+        .hm-tab-bar {
             background: #fff;
             border-bottom: 1px solid #e2e8f0;
             padding: 0 24px;
             display: flex;
             flex-shrink: 0;
         }
-        .ft-ov-tab {
-            padding: 13px 20px;
-            font-size: 13px;
-            font-weight: 500;
-            color: #64748b;
-            cursor: pointer;
-            border: none;
-            background: none;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
-            transition: color .15s;
-        }
-        .ft-ov-tab:hover { color: #151B33; }
-        .ft-ov-tab.active { color: var(--hm-teal); border-bottom-color: var(--hm-teal); font-weight: 600; }
 
         .ft-ov-body { flex: 1; overflow-y: auto; padding: 28px; }
         .ft-pane { display: none; }
@@ -415,7 +389,7 @@ class HearMed_Admin_Form_Templates {
             border-color: var(--hm-teal);
             box-shadow: 0 0 0 3px rgba(11,180,196,.08);
         }
-        .ft-del-btn {
+        .hm-icon-btn--danger {
             width: 32px; height: 32px;
             border: 1px solid #e2e8f0;
             border-radius: 6px;
@@ -428,7 +402,7 @@ class HearMed_Admin_Form_Templates {
             justify-content: center;
             transition: all .15s;
         }
-        .ft-del-btn:hover { color: #ef4444; border-color: #fca5a5; background: #fff5f5; }
+        .hm-icon-btn--danger:hover { color: #ef4444; border-color: #fca5a5; background: #fff5f5; }
         .ft-add-field-btn {
             margin-top: 10px;
             width: 100%;
@@ -503,9 +477,9 @@ class HearMed_Admin_Form_Templates {
             <div class="ft-page-hd">
                 <div>
                     <h2 class="hm-page-title">Form Templates</h2>
-                    <p class="ft-page-sub">Click any card to edit its layout, HTML and fields</p>
+                    <p class="hm-page-subtitle">Click any card to edit its layout, HTML and fields</p>
                 </div>
-                <button class="ft-primary-btn" onclick="hmFT.openNew()">+ New Template</button>
+                <button class="hm-btn hm-btn--add" onclick="hmFT.openNew()">+ New Template</button>
             </div>
 
             <div class="ft-grid">
@@ -534,16 +508,16 @@ class HearMed_Admin_Form_Templates {
                         </div>
                     </div>
                     <div class="ft-card-badges">
-                        <span class="ft-badge" style="background:<?php echo esc_attr($bg); ?>;color:<?php echo esc_attr($color); ?>;"><?php echo esc_html($label); ?></span>
-                        <?php if ( $t->requires_signature ) : ?><span class="ft-badge" style="background:#fef3c7;color:#d97706;">✍ Signature</span><?php endif; ?>
-                        <?php if ( ! $t->is_active ) : ?><span class="ft-badge" style="background:#f1f5f9;color:#64748b;">Inactive</span><?php endif; ?>
+                        <span class="hm-badge" style="background:<?php echo esc_attr($bg); ?>;color:<?php echo esc_attr($color); ?>;"><?php echo esc_html($label); ?></span>
+                        <?php if ( $t->requires_signature ) : ?><span class="hm-badge" style="background:#fef3c7;color:#d97706;">✍ Signature</span><?php endif; ?>
+                        <?php if ( ! $t->is_active ) : ?><span class="hm-badge" style="background:#f1f5f9;color:#64748b;">Inactive</span><?php endif; ?>
                     </div>
                     <div class="ft-card-footer">
                         <span class="ft-card-stats"><?php echo $fields; ?> field<?php echo $fields !== 1 ? 's' : ''; ?> &nbsp;·&nbsp; <?php echo number_format($chars); ?> chars</span>
                         <div class="ft-card-acts" onclick="event.stopPropagation()">
-                            <button class="ft-icon-btn" onclick="hmFT.openEditor(<?php echo (int)$t->id; ?>)" title="Edit">✏</button>
-                            <button class="ft-icon-btn" onclick="hmFT.toggle(<?php echo (int)$t->id; ?>,<?php echo $t->is_active?'0':'1'; ?>)" title="Toggle"><?php echo $t->is_active ? '⏸' : '▶'; ?></button>
-                            <button class="ft-icon-btn danger" onclick="hmFT.del(<?php echo (int)$t->id; ?>,'<?php echo esc_js($t->name); ?>')" title="Delete">×</button>
+                            <button class="hm-icon-btn" onclick="hmFT.openEditor(<?php echo (int)$t->id; ?>)" title="Edit">✏</button>
+                            <button class="hm-icon-btn" onclick="hmFT.toggle(<?php echo (int)$t->id; ?>,<?php echo $t->is_active?'0':'1'; ?>)" title="Toggle"><?php echo $t->is_active ? '⏸' : '▶'; ?></button>
+                            <button class="hm-icon-btn hm-icon-btn--danger" onclick="hmFT.del(<?php echo (int)$t->id; ?>,'<?php echo esc_js($t->name); ?>')" title="Delete">×</button>
                         </div>
                     </div>
                 </div>
@@ -570,14 +544,14 @@ class HearMed_Admin_Form_Templates {
                 </div>
                 <div class="ft-ov-topbar-right">
                     <span class="ft-saved-label" id="hm-ft-saved-lbl">✓ Saved</span>
-                    <button class="ft-primary-btn" id="hm-ft-save-btn" onclick="hmFT.save()">Save Template</button>
+                    <button class="hm-btn hm-btn--add" id="hm-ft-save-btn" onclick="hmFT.save()">Save Template</button>
                 </div>
             </div>
 
-            <div class="ft-ov-tabbar">
-                <button class="ft-ov-tab active" onclick="hmFT.tab('html',this)">HTML Body</button>
-                <button class="ft-ov-tab" onclick="hmFT.tab('fields',this)">Fields</button>
-                <button class="ft-ov-tab" onclick="hmFT.tab('preview',this)">Preview</button>
+            <div class="hm-tab-bar">
+                <button class="hm-tab hm-tab--active" onclick="hmFT.tab('html',this)">HTML Body</button>
+                <button class="hm-tab" onclick="hmFT.tab('fields',this)">Fields</button>
+                <button class="hm-tab" onclick="hmFT.tab('preview',this)">Preview</button>
             </div>
 
             <div class="ft-ov-body">
@@ -686,7 +660,7 @@ class HearMed_Admin_Form_Templates {
                 </div>
                 <div class="hm-modal-ft">
                     <button class="hm-btn" onclick="hmFT.closeNew()">Cancel</button>
-                    <button class="ft-primary-btn" onclick="hmFT.createNew()" id="hm-ft-nw-btn">Create &amp; Edit →</button>
+                    <button class="hm-btn hm-btn--add" onclick="hmFT.createNew()" id="hm-ft-nw-btn">Create &amp; Edit →</button>
                 </div>
             </div>
         </div>
@@ -702,7 +676,7 @@ class HearMed_Admin_Form_Templates {
                 document.getElementById('hm-ft-ov-title').textContent = 'Loading…';
                 document.getElementById('hm-ft-overlay').classList.add('open');
                 document.body.style.overflow = 'hidden';
-                tab('html', document.querySelector('.ft-ov-tab'));
+                tab('html', document.querySelector('.hm-tab'));
 
                 jQuery.post(url, {action:'hm_ft_get',nonce:nonce,id:id}, function(r){
                     if (!r.success) { alert('Could not load: ' + r.data); return; }
@@ -722,9 +696,9 @@ class HearMed_Admin_Form_Templates {
 
             function tab(name, btn) {
                 document.querySelectorAll('.ft-pane').forEach(function(p){p.classList.remove('active');});
-                document.querySelectorAll('.ft-ov-tab').forEach(function(b){b.classList.remove('active');});
+                document.querySelectorAll('.hm-tab').forEach(function(b){b.classList.remove('hm-tab--active');});
                 document.getElementById('hm-ft-pane-'+name).classList.add('active');
-                if (btn) btn.classList.add('active');
+                if (btn) btn.classList.add('hm-tab--active');
                 if (name==='preview') renderPreview();
             }
 
@@ -784,7 +758,7 @@ class HearMed_Admin_Form_Templates {
                         '<input type="text" class="ffl" value="'+_e(f.label)+'" placeholder="Field label">' +
                         '<select class="fft">'+types.map(function(t){return '<option'+(f.type===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select>' +
                         '<select class="ffr"><option value="0"'+(!f.required?' selected':'')+'>Optional</option><option value="1"'+(f.required?' selected':'')+'>Required</option></select>' +
-                        '<button class="ft-del-btn" onclick="hmFT.removeField('+i+')">×</button>';
+                        '<button class="hm-icon-btn hm-icon-btn--danger" onclick="hmFT.removeField('+i+')">×</button>';
                     list.appendChild(row);
                 });
             }
