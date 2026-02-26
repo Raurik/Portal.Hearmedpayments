@@ -293,15 +293,7 @@ var Cal={
         var d=this.dispensers;
         if(this.selClinics.length)d=d.filter(function(x){return Cal.selClinics.indexOf(parseInt(x.clinic_id||x.clinicId))>-1;});
         if(this.selDisps.length)d=d.filter(function(x){return Cal.selDisps.indexOf(parseInt(x.id))>-1;});
-        // Sort by clinic for grouped display
-        d=d.slice().sort(function(a,b){return parseInt(a.clinic_id||a.clinicId||0)-parseInt(b.clinic_id||b.clinicId||0);});
         return d;
-    },
-    visClinics:function(){
-        var disps=this.visDisps();
-        var clinicIds=[];
-        disps.forEach(function(d){var cid=parseInt(d.clinic_id||d.clinicId);if(clinicIds.indexOf(cid)===-1)clinicIds.push(cid);});
-        return this.clinics.filter(function(c){return clinicIds.indexOf(c.id)>-1;});
     },
     updateDateLbl:function(dates){
         var s=dates[0],e=dates[dates.length-1];
@@ -321,70 +313,37 @@ var Cal={
 
         if(!disps.length){gw.innerHTML='<div style="text-align:center;padding:80px;color:var(--hm-text-faint);font-size:15px">No dispensers match your filters. Try changing the clinic or assignee filter.</div>';return;}
 
-        // Build clinic grouping info
-        var visClinics=Cal.visClinics();
-        var clinicDisps={};
-        visClinics.forEach(function(c){clinicDisps[c.id]=[];});
-        disps.forEach(function(d){var cid=parseInt(d.clinic_id||d.clinicId);if(clinicDisps[cid])clinicDisps[cid].push(d);});
-        var activeClinics=visClinics.filter(function(c){return clinicDisps[c.id].length>0;});
-        var multiClinic=activeClinics.length>1;
+        var colW=Math.max(80,Math.min(140,Math.floor(900/disps.length)));
+        var tc=disps.length*dates.length;
 
-        // Build list of sections: multi-clinic = one section per clinic, single = one section with all disps
-        var sections=[];
-        if(multiClinic){
-            activeClinics.forEach(function(c){sections.push({clinic:c,disps:clinicDisps[c.id]});});
-        } else {
-            sections.push({clinic:activeClinics[0]||null,disps:disps});
-        }
-
-        var wrapHtml='';
-        sections.forEach(function(sec){
-            var sDisps=sec.disps;
-            var colW=Math.max(80,Math.min(140,Math.floor(900/sDisps.length)));
-            var tc=sDisps.length*dates.length;
-
-            // Clinic section header (only when multi-clinic)
-            if(multiClinic&&sec.clinic){
-                wrapHtml+='<div class="hm-clinic-section-hd" style="border-left:4px solid '+(sec.clinic.color||'#94a3b8')+'">'+esc(sec.clinic.name)+'</div>';
-            }
-
-            wrapHtml+='<div class="hm-grid" style="grid-template-columns:44px repeat('+tc+',minmax('+colW+'px,1fr));--hm-cal-bg:'+(cfg.calBg||'#ffffff')+';--hm-cal-grid:'+(cfg.gridLineColor||'#e2e8f0')+';--hm-cal-today:'+(cfg.todayHighlight||'#e6f7f9')+'">';
-
-            // Day headers
-            wrapHtml+='<div class="hm-time-corner"></div>';
-            dates.forEach(function(d){
-                var td=isToday(d);
-                wrapHtml+='<div class="hm-day-hd'+(td?' today':'')+'" style="grid-column:span '+sDisps.length+(td?';background:'+cfg.todayHighlight:'')+'">';
-                wrapHtml+='<span class="hm-day-lbl">'+DAYS[d.getDay()]+'</span> <span class="hm-day-num">'+d.getDate()+'</span> <span class="hm-day-lbl">'+MO[d.getMonth()]+'</span>';
-                if(!multiClinic&&sec.clinic){
-                    wrapHtml+='<div class="hm-clinic-row"><div class="hm-clinic-hd" style="flex:1;border-bottom:3px solid '+(sec.clinic.color||'#94a3b8')+'">'+esc(sec.clinic.name)+'</div></div>';
-                }
-                wrapHtml+='<div class="hm-prov-row">';
-                sDisps.forEach(function(p){
-                    var lbl=Cal.cfg.displayFull?esc(p.name):esc(p.initials);
-                    wrapHtml+='<div class="hm-prov-cell"><div class="hm-prov-ini">'+lbl+'</div></div>';
-                });
-                wrapHtml+='</div></div>';
+        var h='<div class="hm-grid" style="grid-template-columns:44px repeat('+tc+',minmax('+colW+'px,1fr));--hm-cal-bg:'+(cfg.calBg||'#ffffff')+';--hm-cal-grid:'+(cfg.gridLineColor||'#e2e8f0')+';--hm-cal-today:'+(cfg.todayHighlight||'#e6f7f9')+'">';
+        h+='<div class="hm-time-corner"></div>';
+        dates.forEach(function(d){
+            var td=isToday(d);
+            h+='<div class="hm-day-hd'+(td?' today':'')+'" style="grid-column:span '+disps.length+(td?';background:'+cfg.todayHighlight:'')+'">';
+            h+='<span class="hm-day-lbl">'+DAYS[d.getDay()]+'</span> <span class="hm-day-num">'+d.getDate()+'</span> <span class="hm-day-lbl">'+MO[d.getMonth()]+'</span>';
+            h+='<div class="hm-prov-row">';
+            disps.forEach(function(p){
+                var lbl=Cal.cfg.displayFull?esc(p.name):esc(p.initials);
+                h+='<div class="hm-prov-cell"><div class="hm-prov-ini">'+lbl+'</div></div>';
             });
-
-            // Time slots
-            var secClinicId=sec.clinic?sec.clinic.id:0;
-            for(var s=0;s<cfg.totalSlots;s++){
-                var tm=cfg.startH*60+s*cfg.slotMin;
-                var hr=Math.floor(tm/60),mn=tm%60;
-                var isHr=mn===0;
-                wrapHtml+='<div class="hm-time-cell'+(isHr?' hr':'')+'">'+(isHr?pad(hr)+':00':'')+'</div>';
-                dates.forEach(function(d,di){
-                    sDisps.forEach(function(p,pi){
-                        var cls='hm-slot'+(isHr?' hr':'')+(pi===sDisps.length-1?' dl':'');
-                        wrapHtml+='<div class="'+cls+'" data-date="'+fmt(d)+'" data-time="'+pad(hr)+':'+pad(mn)+'" data-disp="'+p.id+'" data-clinic="'+secClinicId+'" data-day="'+di+'" data-slot="'+s+'" style="height:'+slotH+'px"></div>';
-                    });
-                });
-            }
-            wrapHtml+='</div>'; // close .hm-grid
+            h+='</div></div>';
         });
 
-        gw.innerHTML=wrapHtml;
+        for(var s=0;s<cfg.totalSlots;s++){
+            var tm=cfg.startH*60+s*cfg.slotMin;
+            var hr=Math.floor(tm/60),mn=tm%60;
+            var isHr=mn===0;
+            h+='<div class="hm-time-cell'+(isHr?' hr':'')+'">'+(isHr?pad(hr)+':00':'')+'</div>';
+            dates.forEach(function(d,di){
+                disps.forEach(function(p,pi){
+                    var cls='hm-slot'+(isHr?' hr':'')+(pi===disps.length-1?' dl':'');
+                    h+='<div class="'+cls+'" data-date="'+fmt(d)+'" data-time="'+pad(hr)+':'+pad(mn)+'" data-disp="'+p.id+'" data-day="'+di+'" data-slot="'+s+'" style="height:'+slotH+'px"></div>';
+                });
+            });
+        }
+        h+='</div>';
+        gw.innerHTML=h;
     },
 
     // ── APPOINTMENTS ──
@@ -416,8 +375,7 @@ var Cal={
             var dur=parseInt(a.duration)||30;
             var h=Math.max(slotH*0.7-2,(dur/cfg.slotMin)*slotH*0.7-2);
 
-            var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+a.dispenser_id+'"][data-clinic="'+(a.clinic_id||0)+'"]');
-            if(!$t.length)$t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+a.dispenser_id+'"]').first();
+            var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+a.dispenser_id+'"]');
             if(!$t.length)return;
 
             var col=a.service_colour||'#3B82F6';
