@@ -90,8 +90,8 @@ class HearMed_Staff_Login {
             </div>
 
             <?php if ( ! empty( $errors ) ): ?>
-                <div class="hm-alert hm-alert-error">
-                    <?php echo esc_html( implode( ' ', $errors ) ); ?>
+                <div class="hm-notice hm-notice--error">
+                    <div class="hm-notice-body"><span class="hm-notice-icon">✕</span> <?php echo esc_html( implode( ' ', $errors ) ); ?></div>
                 </div>
             <?php endif; ?>
 

@@ -22,7 +22,7 @@ class HearMed_Admin_ChatLogs {
 
         $auth = new HearMed_Auth();
         if ( ! $auth->is_admin() ) {
-            return '<div class="hm-alert hm-alert-error">Access restricted to administrators.</div>';
+            return '<div class="hm-notice hm-notice--error"><div class="hm-notice-body"><span class="hm-notice-icon">✕</span> Access restricted to administrators.</div></div>';
         }
 
         // ── Filters ──
@@ -235,7 +235,7 @@ class HearMed_Admin_ChatLogs {
                 <?php endif; ?>
             <?php endif; ?>
 
-            <div class="hm-gdpr-notice">
+            <div class="hm-notice hm-notice--info">
                 <strong>GDPR Notice:</strong> Access to employee communications is restricted to authorised administrators
                 and should only be reviewed when operationally necessary. All admin access to these logs is recorded in the
                 audit trail under <strong>Chat Log Access</strong>.
@@ -252,15 +252,6 @@ class HearMed_Admin_ChatLogs {
         .hm-chat-log-sender { font-weight: 600; color: #151B33; }
         .hm-chat-log-message { max-width: 480px; word-break: break-word; }
         .hm-chat-log-edited { color: #94a3b8; font-size: 12px; margin-left: 6px; }
-        .hm-gdpr-notice {
-            margin-top: 24px;
-            padding: 14px 18px;
-            background: #fff8e1;
-            border-left: 4px solid #f59e0b;
-            border-radius: 6px;
-            font-size: 13px;
-            color: #78350f;
-        }
         </style>
         <?php
         return ob_get_clean();

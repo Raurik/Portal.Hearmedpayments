@@ -169,7 +169,7 @@ function hm_render_debug_page() {
         if ( $page_id ) {
             $post = get_post( $page_id );
             if ( $post && 'page' === $post->post_type ) {
-                echo '<div class="hm-alert hm-alert-info"><strong>Shortcodes on page #' . esc_html( $page_id ) . ' — ' . esc_html( $post->post_title ) . ':</strong><ul style="margin:8px 0 0 18px;">';
+                echo '<div class="hm-notice hm-notice--info"><div class="hm-notice-body"><span class="hm-notice-icon">ℹ</span> <strong>Shortcodes on page #' . esc_html( $page_id ) . ' — ' . esc_html( $post->post_title ) . ':</strong><ul style="margin:8px 0 0 18px;">';
                 $found_any = false;
                 foreach ( $shortcode_map as $shortcode => $module ) {
                     if ( has_shortcode( $post->post_content, $shortcode ) ) {
@@ -180,9 +180,9 @@ function hm_render_debug_page() {
                 if ( ! $found_any ) {
                     echo '<li>No HearMed shortcodes found on this page.</li>';
                 }
-                echo '</ul></div>';
+                echo '</ul></div></div>';
             } else {
-                echo '<div class="hm-alert hm-alert-warning">Page ID ' . esc_html( $page_id ) . ' not found or is not a page.</div>';
+                echo '<div class="hm-notice hm-notice--warning"><div class="hm-notice-body"><span class="hm-notice-icon">⚠</span> Page ID ' . esc_html( $page_id ) . ' not found or is not a page.</div></div>';
             }
         }
         ?>

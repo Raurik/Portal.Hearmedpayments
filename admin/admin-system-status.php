@@ -165,7 +165,7 @@ function hearmed_render_system_status_page() {
         <?php if ( isset( $_GET['action'] ) && $_GET['action'] === 'clear_cache' ): ?>
             <?php
             delete_transient( 'hearmed_system_status' );
-            echo '<div class="hm-alert hm-alert-success" style="margin-top:16px;">Cache cleared successfully.</div>';
+            echo '<div class="hm-notice hm-notice--success" style="margin-top:16px;"><div class="hm-notice-body"><span class="hm-notice-icon">✓</span> Cache cleared successfully.</div></div>';
             ?>
         <?php endif; ?>
     </div>
