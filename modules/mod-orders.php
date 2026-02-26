@@ -405,7 +405,23 @@ class HearMed_Orders {
                     <div class="hm-order-totals__row"><span>VAT</span><span id="hm-vat-total">€0.00</span></div>
                     <div class="hm-order-totals__row hm-text--green"><span>PRSI Grant Deduction</span><span id="hm-prsi-deduction">−€0.00</span></div>
                     <div class="hm-order-totals__row hm-order-totals__row--total"><span>Patient Pays</span><span id="hm-grand-total">€0.00</span></div>
+                    <div class="hm-order-totals__row hm-text--teal" id="hm-deposit-row" style="display:none;"><span>Deposit Paid Today</span><span id="hm-deposit-display">−€0.00</span></div>
+                    <div class="hm-order-totals__row hm-order-totals__row--total" id="hm-balance-row" style="display:none;"><span>Balance at Fitting</span><span id="hm-balance-display">€0.00</span></div>
                 </div>
+
+                <script>
+                function hmUpdateDepositBalance() {
+                    var dep = parseFloat(document.getElementById('hm-deposit-amount').value) || 0;
+                    var grand = parseFloat(document.getElementById('hm-grand-total').textContent.replace(/[^0-9.]/g,'')) || 0;
+                    var bal = Math.max(0, grand - dep);
+                    document.getElementById('hm-deposit-row').style.display  = dep > 0 ? '' : 'none';
+                    document.getElementById('hm-balance-row').style.display  = dep > 0 ? '' : 'none';
+                    document.getElementById('hm-deposit-balance-row').style.display = dep > 0 ? '' : 'none';
+                    document.getElementById('hm-deposit-display').textContent  = '−€' + dep.toFixed(2);
+                    document.getElementById('hm-deposit-balance').textContent  = '€' + bal.toFixed(2);
+                    document.getElementById('hm-balance-display').textContent  = '€' + bal.toFixed(2);
+                }
+                </script>
 
                 <input type="hidden" name="items_json" id="hm-items-json" value="[]">
 
@@ -1111,16 +1127,19 @@ class HearMed_Orders {
         check_ajax_referer('hearmed_nonce','nonce');
         if (!HearMed_Auth::can('create_orders')) wp_send_json_error('Access denied.');
 
-        $patient_id     = intval($_POST['patient_id'] ?? 0);
-        $payment_method = sanitize_text_field($_POST['payment_method'] ?? '');
-        $notes          = sanitize_textarea_field($_POST['notes'] ?? '');
-        $prsi_left      = !empty($_POST['prsi_left']);
-        $prsi_right     = !empty($_POST['prsi_right']);
-        $items          = json_decode(sanitize_text_field($_POST['items_json'] ?? '[]'), true);
+        $payment_method  = sanitize_text_field($_POST['payment_method'] ?? '');
+        $notes           = sanitize_textarea_field($_POST['notes'] ?? '');
+        $prsi_left       = !empty($_POST['prsi_left']);
+        $prsi_right      = !empty($_POST['prsi_right']);
+        $items           = json_decode(sanitize_text_field($_POST['items_json'] ?? '[]'), true);
+        $deposit_amount  = floatval($_POST['deposit_amount'] ?? 0);
+        $deposit_method  = sanitize_text_field($_POST['deposit_method'] ?? '');
+        $deposit_paid_at = sanitize_text_field($_POST['deposit_paid_at'] ?? '');
 
         if (!$patient_id)     wp_send_json_error('Please select a patient.');
         if (!$payment_method) wp_send_json_error('Please select a payment method.');
         if (empty($items))    wp_send_json_error('Please add at least one item.');
+        if ($deposit_amount < 0) wp_send_json_error('Deposit cannot be negative.');
 
         $db     = HearMed_DB::instance();
         $clinic = HearMed_Auth::current_clinic();
@@ -1155,9 +1174,12 @@ class HearMed_Orders {
             'prsi_left'       => $prsi_left,
             'prsi_right'      => $prsi_right,
             'payment_method'  => $payment_method,
+            'deposit_amount'  => $deposit_amount > 0 ? $deposit_amount : 0,
+            'deposit_method'  => $deposit_amount > 0 ? $deposit_method : null,
+            'deposit_paid_at' => $deposit_amount > 0 && $deposit_paid_at ? $deposit_paid_at : null,
             'notes'           => $notes,
             'created_by'      => $user->id ?? null,
-        ]);
+        ]);;
 
         if (!$order_id) wp_send_json_error('Failed to save order. Please try again.');
 

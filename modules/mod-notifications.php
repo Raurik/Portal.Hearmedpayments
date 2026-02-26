@@ -279,7 +279,7 @@ function hm_notifications_render() {
     $role     = HearMed_Auth::current_role();
     $classes  = hm_notification_classes();
     ?>
-    <div id="hm-app" class="hearmed-notifications" style="display:flex;flex-direction:column;background:#fff;padding:24px;overflow-y:auto;min-height:100%;color:#334155;">
+    <div class="hearmed-notifications" style="display:flex;flex-direction:column;background:#fff;padding:24px;min-height:100%;color:#334155;">
 
         <!-- Page header -->
         <div class="hm-page-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid #e2e8f0;">
@@ -358,7 +358,7 @@ function hm_notifications_render() {
             </div>
         </div>
 
-    </div>
+    </div><!-- /.hearmed-notifications -->
 
     <script>
     /* Pass staff/role data to JS */

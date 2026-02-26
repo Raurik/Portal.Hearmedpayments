@@ -9,7 +9,8 @@
    WRAPPER — integrate with layout chain
    ============================================================================ */
 
-#hm-app.hearmed-notifications {
+#hm-app.hm-notifications,
+.hearmed-notifications {
     display: flex !important;
     flex-direction: column !important;
     height: 100% !important;
