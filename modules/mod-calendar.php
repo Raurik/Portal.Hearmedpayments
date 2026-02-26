@@ -252,18 +252,56 @@ function hm_ajax_get_dispensers() {
         // Parse PostgreSQL array string {1,2,3} into PHP array
         $cids = [];
         if ( ! empty( $p->clinic_ids ) && is_string( $p->clinic_ids ) ) {
-            $cids = array_map( 'intval', explode( ',', trim( $p->clinic_ids, '{}' ) ) );
+            $raw = array_map( 'trim', explode( ',', trim( $p->clinic_ids, '{}' ) ) );
+            foreach ( $raw as $rc ) {
+                if ( $rc !== '' && $rc !== 'NULL' && is_numeric( $rc ) ) {
+                    $cids[] = (int) $rc;
+                }
+            }
         }
-        $d[] = [
-            'id'             => (int) $p->id,
-            'name'           => $fname,
-            'initials'       => $initials,
-            'clinic_id'      => $clinic_id ?: ( ! empty( $cids ) ? $cids[0] : null ),
-            'calendar_order' => 99,
-            'role_type'      => $p->role,
-            'color'          => $p->staff_color ?: '#0BB4C4',
-            'staff_color'    => $p->staff_color ?: '#0BB4C4',
-        ];
+        
+        // If specific clinic requested, return one entry
+        if ( $clinic_id ) {
+            $d[] = [
+                'id'             => (int) $p->id,
+                'name'           => $fname,
+                'initials'       => $initials,
+                'clinic_id'      => $clinic_id,
+                'calendar_order' => 99,
+                'role_type'      => $p->role,
+                'color'          => $p->staff_color ?: '#0BB4C4',
+                'staff_color'    => $p->staff_color ?: '#0BB4C4',
+            ];
+        } else {
+            // No specific clinic — return one entry per clinic the staff belongs to
+            // so the calendar can split them into separate clinic sections
+            if ( ! empty( $cids ) ) {
+                foreach ( $cids as $cid ) {
+                    $d[] = [
+                        'id'             => (int) $p->id,
+                        'name'           => $fname,
+                        'initials'       => $initials,
+                        'clinic_id'      => $cid,
+                        'calendar_order' => 99,
+                        'role_type'      => $p->role,
+                        'color'          => $p->staff_color ?: '#0BB4C4',
+                        'staff_color'    => $p->staff_color ?: '#0BB4C4',
+                    ];
+                }
+            } else {
+                // No clinic assignment — show as unassigned
+                $d[] = [
+                    'id'             => (int) $p->id,
+                    'name'           => $fname,
+                    'initials'       => $initials,
+                    'clinic_id'      => null,
+                    'calendar_order' => 99,
+                    'role_type'      => $p->role,
+                    'color'          => $p->staff_color ?: '#0BB4C4',
+                    'staff_color'    => $p->staff_color ?: '#0BB4C4',
+                ];
+            }
+        }
     }
     wp_send_json_success( $d );
     } catch ( Throwable $e ) {
