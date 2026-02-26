@@ -585,5 +585,18 @@ function hm_calendar_render() {
         </div>
         <div id="hm-calendar-container"></div>
     </div>
+    <script>
+    console.log('[HM-DEBUG] Calendar render function fired');
+    console.log('[HM-DEBUG] jQuery:', typeof jQuery);
+    console.log('[HM-DEBUG] HM:', typeof HM, HM ? 'keys:' + Object.keys(HM).join(',') : 'undefined');
+    console.log('[HM-DEBUG] #hm-app:', document.getElementById('hm-app') ? 'found' : 'NOT FOUND');
+    console.log('[HM-DEBUG] data-view:', document.getElementById('hm-app')?.dataset?.view);
+    document.addEventListener('DOMContentLoaded', function(){
+        console.log('[HM-DEBUG] DOMContentLoaded fired');
+        console.log('[HM-DEBUG] hearmed-calendar.js loaded:', typeof window._hmCalLoaded);
+        var scripts = document.querySelectorAll('script[src*="hearmed"]');
+        scripts.forEach(function(s){ console.log('[HM-DEBUG] Script:', s.src); });
+    });
+    </script>
     <?php
 }

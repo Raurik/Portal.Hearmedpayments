@@ -16,6 +16,8 @@
  */
 (function($){
 'use strict';
+window._hmCalLoaded=true;
+console.log('[HM-DEBUG] hearmed-calendar.js executing');
 
 var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
