@@ -1,97 +1,133 @@
-// Dedicated JS for Calendar Settings page
+/**
+ * Calendar Settings v3.1
+ * Handles save, day-pill toggles, colour hex labels, radio pills, sortable list.
+ */
 (function($){
 'use strict';
 
 var SettingsPage = {
-    init: function(){
-        // Update preview on any input change
-        $(document).on('change', '#hm-settings-form input, #hm-settings-form select', this.updatePreview);
-        this.updatePreview();
-        // Save button AJAX
-        $('#hm-settings-save').on('click', this.saveSettings);
-    },
-    updatePreview: function(){
-        var start = $('#hs-start').val() || '09:00';
-        var fullName = $('#hs-fullName').prop('checked');
-        var name = fullName ? 'Piet Pompies' : 'Piet';
-        var outcome = $('input[name="outcome_style"]:checked').val() || 'default';
-        var bg = $('#hs-appt-bg').val() || 'var(--hm-teal)';
-        var font = $('#hs-appt-font').val() || '#ffffff';
-        var badge = $('#hs-appt-badge').val() || '#3b82f6';
-        var badgeFont = $('#hs-appt-badge-font').val() || '#ffffff';
-        var meta = $('#hs-appt-meta').val() || '#38bdf8';
 
-        var $card = $('#hs-preview-card');
-        if ($card.length) {
-            $card.css({background: bg});
-            $('#hs-preview-name').text(name).css('color', font);
-            $('#hs-preview-time').text(start).css('color', badge);
-            $('#hs-preview-meta').text('Follow up · Cosgrove\'s Pharmacy').css('color', meta);
-            $card.find('.hm-badge').css({'background': badge, 'color': badgeFont});
-            $card.removeClass('outcome-default outcome-small outcome-tag outcome-popover');
-            $card.addClass('outcome-' + outcome);
-        }
+    /* ─── Bootstrap ─── */
+    init: function(){
+        this.bindDayPills();
+        this.bindRadioPills();
+        this.bindColorHex();
+        this.initSortable();
+        $('#hm-settings-save').on('click', $.proxy(this.save, this));
     },
-    saveSettings: function(e){
+
+    /* ─── Day Pills ─── */
+    bindDayPills: function(){
+        $(document).on('change', '.hs-wd', function(){
+            $(this).closest('.hm-pill').toggleClass('on', this.checked);
+        });
+    },
+
+    /* ─── Radio Pills ─── */
+    bindRadioPills: function(){
+        $(document).on('change', '.hm-radio-pills input[type="radio"]', function(){
+            $(this).closest('.hm-radio-pills').find('.hm-pill').removeClass('on');
+            $(this).closest('.hm-pill').addClass('on');
+        });
+    },
+
+    /* ─── Colour hex labels ─── */
+    bindColorHex: function(){
+        $(document).on('input', '.hm-color-inp', function(){
+            var id = this.id;
+            var hex = $(this).val();
+            $('.hm-color-hex[data-for="'+id+'"]').text(hex);
+        });
+    },
+
+    /* ─── Sortable dispenser list ─── */
+    initSortable: function(){
+        var $list = $('#hs-sortList');
+        if (!$list.length) return;
+        // Use HTML5 drag-and-drop (no jQuery UI dependency)
+        $list.on('dragstart', '.hm-sort-item', function(e){
+            $(this).addClass('hm-sort-dragging');
+            e.originalEvent.dataTransfer.effectAllowed = 'move';
+            e.originalEvent.dataTransfer.setData('text/plain', '');
+        });
+        $list.on('dragend', '.hm-sort-item', function(){
+            $(this).removeClass('hm-sort-dragging');
+        });
+        $list.on('dragover', '.hm-sort-item', function(e){
+            e.preventDefault();
+            var $drag = $list.find('.hm-sort-dragging');
+            if ($drag[0] !== this) {
+                var rect = this.getBoundingClientRect();
+                var mid = rect.top + rect.height / 2;
+                if (e.originalEvent.clientY < mid) {
+                    $(this).before($drag);
+                } else {
+                    $(this).after($drag);
+                }
+            }
+        });
+        $list.find('.hm-sort-item').attr('draggable', true);
+    },
+
+    /* ─── Save ─── */
+    save: function(e){
         e.preventDefault();
         var $btn = $('#hm-settings-save');
-        $btn.prop('disabled', true).text('Saving...');
+        $btn.prop('disabled', true).text('Saving…');
 
+        // Build data from form (serialises text/select/hidden + checked checkboxes)
         var data = $('#hm-settings-form').serialize();
         data += '&action=hm_save_settings';
 
-        // Add nonce if available
+        // Working days — collect checked day pill values, join with comma
+        var days = [];
+        $('.hs-wd:checked').each(function(){ days.push($(this).val()); });
+        data += '&working_days=' + encodeURIComponent(days.join(','));
+
+        // Map numeric days → day names for backward compat (enabled_days)
+        var map = {'0':'sun','1':'mon','2':'tue','3':'wed','4':'thu','5':'fri','6':'sat'};
+        var names = days.map(function(d){ return map[d] || ''; }).filter(Boolean);
+        data += '&enabled_days=' + encodeURIComponent(names.join(','));
+
+        // Calendar order — collect dispenser IDs in DOM order
+        var order = [];
+        $('#hs-sortList .hm-sort-item').each(function(){ order.push($(this).data('id')); });
+        if (order.length) data += '&calendar_order=' + encodeURIComponent(order.join(','));
+
+        // Nonce
         if (window.HM && HM.nonce) {
             data += '&nonce=' + encodeURIComponent(HM.nonce);
-            console.log('✓ DEBUG: Using HM.nonce:', HM.nonce.substring(0,8) + '...');
-        } else if ($('input[name="_wpnonce"], input[name="nonce"]').length) {
-            // fallback for nonce field in form
-            data += '&nonce=' + encodeURIComponent($('input[name="_wpnonce"], input[name="nonce"]').val());
-            console.log('✓ DEBUG: Using fallback nonce from form');
-        } else {
-            console.warn('⚠ DEBUG: NO NONCE FOUND - this will likely fail');
         }
 
-        console.log('📤 DEBUG: Sending AJAX data:', data.substring(0, 200) + '...');
-        console.log('📤 DEBUG: AJAX URL:', (window.HM && HM.ajax_url) || '/wp-admin/admin-ajax.php');
-
-        // Perform AJAX request
         $.ajax({
             url: (window.HM && HM.ajax_url) || '/wp-admin/admin-ajax.php',
             method: 'POST',
             data: data,
-            success: function (resp) {
-                console.log('✅ DEBUG: AJAX Success response:', resp);
-                $btn.prop('disabled', false).text('Save Settings');
+            success: function(resp){
+                $btn.prop('disabled', false);
                 if (resp && resp.success) {
-                    console.log('✅ DEBUG: Save was successful!');
-                    $btn.text('Saved!');
-                    setTimeout(function () {
-                        $btn.text('Save Settings');
-                    }, 1200);
+                    $btn.text('✓ Saved');
+                    setTimeout(function(){ $btn.text('Save Settings'); }, 2000);
                 } else {
-                    let msg = (resp && resp.data && resp.data.message) ? resp.data.message : 'Failed to save settings. Please try again.';
-                    console.error('❌ DEBUG: Save returned success=false:', resp);
+                    var msg = (resp && resp.data && resp.data.message) ? resp.data.message : 'Save failed.';
                     alert(msg);
+                    $btn.text('Save Settings');
                 }
             },
-            error: function (xhr, status, error) {
-                console.error('❌ DEBUG: AJAX Error - status:', status, 'error:', error);
-                console.error('❌ DEBUG: xhr.responseText:', xhr.responseText);
-                console.error('❌ DEBUG: xhr.status:', xhr.status);
+            error: function(xhr){
                 $btn.prop('disabled', false).text('Save Settings');
-                let msg = 'An error occurred while saving settings. Please try again.';
+                var msg = 'Error saving settings.';
                 if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
                     msg = xhr.responseJSON.data.message;
                 }
                 alert(msg);
-            },
+            }
         });
     }
 };
 
 $(function(){
-    if($('#hm-settings-form').length) SettingsPage.init();
+    if ($('#hm-settings-form').length) SettingsPage.init();
 });
 
 })(jQuery);
