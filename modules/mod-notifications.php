@@ -417,7 +417,7 @@ function hm_notifications_bell_widget() {
                         container.style.position = 'relative';
                         /* Absolutely position bell below, centered */
                         bell.style.position = 'absolute';
-                        bell.style.top      = '100%';
+                        bell.style.top      = 'calc(100% + 4px)';
                         bell.style.left     = '50%';
                         bell.style.transform = 'translateX(-50%)';
                         container.appendChild(bell);
