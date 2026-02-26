@@ -109,6 +109,11 @@ class HearMed_Router {
         }
         
         // Load the module file
+        // Ensure CSS/JS for this module are enqueued even if enqueue_modules()
+        // missed the shortcode (e.g. shortcode placed via template, widget, or
+        // dynamic content rather than raw post_content).
+        $this->ensure_module_assets( $module );
+        
         return $this->load_module( $module, $view, $atts );
     }
     
@@ -206,5 +211,40 @@ class HearMed_Router {
      */
     public static function get_current_view() {
         return $GLOBALS['hm_current_view'] ?? null;
+    }
+
+    /**
+     * Ensure a module's CSS and JS are enqueued.
+     *
+     * Called at shortcode render time as a safety net — if enqueue_modules()
+     * already loaded the assets this is a no-op (wp_enqueue_* deduplicates).
+     *
+     * @param string $module Module slug (e.g. 'calendar', 'patients').
+     */
+    private function ensure_module_assets( $module ) {
+        $css_path = "assets/css/hearmed-{$module}.css";
+        if ( file_exists( HEARMED_PATH . $css_path ) && ! wp_style_is( "hearmed-{$module}", 'enqueued' ) ) {
+            wp_enqueue_style(
+                "hearmed-{$module}",
+                HEARMED_URL . $css_path,
+                [ 'hearmed-core' ],
+                filemtime( HEARMED_PATH . $css_path )
+            );
+        }
+
+        $js_path = "assets/js/hearmed-{$module}.js";
+        if ( file_exists( HEARMED_PATH . $js_path ) && ! wp_script_is( "hearmed-{$module}", 'enqueued' ) ) {
+            $deps = [ 'hearmed-core' ];
+            if ( $module === 'calendar' ) {
+                $deps[] = 'jquery-ui-sortable';
+            }
+            wp_enqueue_script(
+                "hearmed-{$module}",
+                HEARMED_URL . $js_path,
+                $deps,
+                filemtime( HEARMED_PATH . $js_path ),
+                true
+            );
+        }
     }
 }
