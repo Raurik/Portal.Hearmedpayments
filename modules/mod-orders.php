@@ -136,7 +136,7 @@ class HearMed_Orders {
                 <?php endif; ?>
             </div>
 
-            <div class="hm-tabs">
+            <div class="hm-tab-bar">
                 <?php
                 $tabs = [
                     'all'               => 'All',

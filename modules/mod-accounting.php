@@ -179,7 +179,7 @@ class HearMed_Accounting {
             <a href="<?php echo esc_url($base); ?>" class="hm-back">← Accounting</a>
             <h1 class="hm-page-title">Invoices</h1>
         </div>
-        <div class="hm-tabs">
+        <div class="hm-tab-bar">
             <?php foreach (['all' => 'All', 'unpaid' => 'Unpaid', 'Paid' => 'Paid', 'Partially Paid' => 'Part Paid'] as $k => $l) : ?>
             <a href="<?php echo esc_url($base.'?hm_action=invoices&status='.$k); ?>"
                class="hm-tab <?php echo $status === $k ? 'hm-tab--active' : ''; ?>">
