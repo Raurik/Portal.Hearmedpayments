@@ -151,6 +151,7 @@ var Cal={
                     '</div>'+
                 '</div>'+
             '</div>'+
+            '<div class="hm-clinic-bar" id="hm-clinicBar"></div>'+
             '<div class="hm-grid-wrap" id="hm-gridWrap"><div class="hm-grid" id="hm-grid"></div></div>'+
         '</div>'+
         '<div class="hm-pop" id="hm-pop"></div>'+
@@ -273,8 +274,8 @@ var Cal={
     },
 
     // ── Refresh ──
-    refresh:function(){var self=this;this.loadAppts().then(function(){self.renderGrid();self.renderAppts();self.renderNow();});},
-    refreshUI:function(){this.renderGrid();this.renderAppts();this.renderNow();this.updateViewBtns();},
+    refresh:function(){var self=this;this.loadAppts().then(function(){self.renderGrid();self.renderAppts();self.renderNow();self.updateClinicBar();});},
+    refreshUI:function(){this.renderGrid();this.renderAppts();this.renderNow();this.updateViewBtns();this.updateClinicBar();},
     updateViewBtns:function(){$('.hm-view-btn').removeClass('on');$('.hm-view-btn[data-v="'+this.mode+'"]').addClass('on');},
     nav:function(dir){this.date.setDate(this.date.getDate()+(this.mode==='week'?dir*7:dir));$('#hm-pop').removeClass('open');$('#hm-tooltip').hide();this.refresh();},
 
@@ -293,13 +294,35 @@ var Cal={
         var d=this.dispensers;
         if(this.selClinics.length)d=d.filter(function(x){return Cal.selClinics.indexOf(parseInt(x.clinic_id||x.clinicId))>-1;});
         if(this.selDisps.length)d=d.filter(function(x){return Cal.selDisps.indexOf(parseInt(x.id))>-1;});
+        // Sort by clinic for grouped display
+        d=d.slice().sort(function(a,b){return parseInt(a.clinic_id||a.clinicId||0)-parseInt(b.clinic_id||b.clinicId||0);});
         return d;
+    },
+    visClinics:function(){
+        var disps=this.visDisps();
+        var clinicIds=[];
+        disps.forEach(function(d){var cid=parseInt(d.clinic_id||d.clinicId);if(clinicIds.indexOf(cid)===-1)clinicIds.push(cid);});
+        return this.clinics.filter(function(c){return clinicIds.indexOf(c.id)>-1;});
     },
     updateDateLbl:function(dates){
         var s=dates[0],e=dates[dates.length-1];
         var txt=this.mode==='day'?DAYS[s.getDay()]+', '+s.getDate()+' '+MO[s.getMonth()]+' '+s.getFullYear():
             s.getDate()+' '+MO[s.getMonth()]+' – '+e.getDate()+' '+MO[e.getMonth()]+' '+e.getFullYear();
         $('#hm-dateLbl').text(txt);
+    },
+    updateClinicBar:function(){
+        var clinics=this.visClinics(),disps=this.visDisps();
+        var h='';
+        clinics.forEach(function(c){
+            var count=disps.filter(function(d){return parseInt(d.clinic_id||d.clinicId)===c.id;}).length;
+            if(count>0){
+                h+='<div class="hm-cb-tag" style="border-left:4px solid '+(c.color||'#94a3b8')+'">';
+                h+='<span class="hm-cb-name">'+esc(c.name)+'</span>';
+                h+='<span class="hm-cb-count">'+count+' staff</span></div>';
+            }
+        });
+        if(!h)h='<div class="hm-cb-tag"><span class="hm-cb-name">No clinics</span></div>';
+        $('#hm-clinicBar').html(h);
     },
 
     // ── GRID ──
@@ -321,11 +344,27 @@ var Cal={
         var tc=disps.length*dates.length;
         g.style.gridTemplateColumns='44px repeat('+tc+',minmax('+colW+'px,1fr))';
 
+        // Build clinic grouping info
+        var visClinics=Cal.visClinics();
+        var clinicDisps={};
+        visClinics.forEach(function(c){clinicDisps[c.id]=[];});
+        disps.forEach(function(d){var cid=parseInt(d.clinic_id||d.clinicId);if(clinicDisps[cid])clinicDisps[cid].push(d);});
+        var activeClinics=visClinics.filter(function(c){return clinicDisps[c.id].length>0;});
+        var multiClinic=activeClinics.length>1;
+
         var h='<div class="hm-time-corner"></div>';
         dates.forEach(function(d){
             var td=isToday(d);
             h+='<div class="hm-day-hd'+(td?' today':'')+'" style="grid-column:span '+disps.length+(td?';background:'+cfg.todayHighlight:'')+'">';
             h+='<span class="hm-day-lbl">'+DAYS[d.getDay()]+'</span> <span class="hm-day-num">'+d.getDate()+'</span> <span class="hm-day-lbl">'+MO[d.getMonth()]+'</span>';
+            if(multiClinic){
+                h+='<div class="hm-clinic-row">';
+                activeClinics.forEach(function(c){
+                    var cnt=clinicDisps[c.id].length;
+                    h+='<div class="hm-clinic-hd" style="flex:'+cnt+';border-bottom:3px solid '+(c.color||'#94a3b8')+'">'+esc(c.name)+'</div>';
+                });
+                h+='</div>';
+            }
             h+='<div class="hm-prov-row">';
             disps.forEach(function(p){
                 var lbl=Cal.cfg.displayFull?esc(p.name):esc(p.initials);
@@ -341,7 +380,8 @@ var Cal={
             h+='<div class="hm-time-cell'+(isHr?' hr':'')+'">'+(isHr?pad(hr)+':00':'')+'</div>';
             dates.forEach(function(d,di){
                 disps.forEach(function(p,pi){
-                    var cls='hm-slot'+(isHr?' hr':'')+(pi===disps.length-1?' dl':'');
+                    var isClinicLast=multiClinic&&pi<disps.length-1&&parseInt(disps[pi+1].clinic_id||disps[pi+1].clinicId)!==parseInt(p.clinic_id||p.clinicId);
+                    var cls='hm-slot'+(isHr?' hr':'')+(pi===disps.length-1?' dl':'')+(isClinicLast?' cl':'');
                     h+='<div class="'+cls+'" data-date="'+fmt(d)+'" data-time="'+pad(hr)+':'+pad(mn)+'" data-disp="'+p.id+'" data-day="'+di+'" data-slot="'+s+'" style="height:'+slotH+'px"></div>';
                 });
             });
