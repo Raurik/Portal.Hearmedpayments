@@ -80,12 +80,6 @@ class HearMed_Admin_Form_Templates {
             font-family: inherit;
             color: #151B33;
         }
-        .ft-page-hd {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 6px;
-        }
 
         /* ── Cards ── */
         .ft-grid {
@@ -375,7 +369,7 @@ class HearMed_Admin_Form_Templates {
                 Back to Admin Console
             </a>
 
-            <div class="ft-page-hd">
+            <div class="hm-page-header">
                 <div>
                     <h2 class="hm-page-title">Form Templates</h2>
                     <p class="hm-page-subtitle">Click any card to edit its layout, HTML and fields</p>

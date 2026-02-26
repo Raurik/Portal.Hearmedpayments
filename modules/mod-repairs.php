@@ -12,7 +12,7 @@ function hm_repairs_render() {
     if (!is_user_logged_in()) return;
     ?>
     <div id="hm-repairs-app" class="hm-page">
-        <div class="hm-page-hd">
+        <div class="hm-page-header">
             <h1 class="hm-page-title">Repairs</h1>
         </div>
 
