@@ -360,6 +360,38 @@ class HearMed_Orders {
                     </select>
                 </div>
 
+                <!-- DEPOSIT (optional — paid at order stage) -->
+                <div class="hm-form__section">
+                    <h2 class="hm-form__section-title">Deposit <span class="hm-form__section-optional">— Optional</span></h2>
+                    <p class="hm-form__hint">If the patient pays a deposit today, record it here. Balance will be collected at fitting.</p>
+                    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+                        <div class="hm-form__field" style="flex:0 0 160px;">
+                            <label class="hm-label">Deposit Amount (€)</label>
+                            <input type="number" name="deposit_amount" id="hm-deposit-amount"
+                                   class="hm-input" step="0.01" min="0" value="0"
+                                   placeholder="0.00" oninput="hmUpdateDepositBalance()">
+                        </div>
+                        <div class="hm-form__field" style="flex:0 0 180px;">
+                            <label class="hm-label">Deposit Method</label>
+                            <select name="deposit_method" id="hm-deposit-method" class="hm-input">
+                                <option value="">— None —</option>
+                                <option value="Card">Card</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Cheque">Cheque</option>
+                            </select>
+                        </div>
+                        <div class="hm-form__field" style="flex:0 0 160px;">
+                            <label class="hm-label">Date Paid</label>
+                            <input type="date" name="deposit_paid_at" id="hm-deposit-date"
+                                   class="hm-input" value="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                    </div>
+                    <div id="hm-deposit-balance-row" style="display:none;margin-top:10px;padding:10px 14px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px;font-size:13px;color:#0e7490;">
+                        Balance due at fitting: <strong id="hm-deposit-balance">€0.00</strong>
+                    </div>
+                </div>
+
                 <!-- NOTES -->
                 <div class="hm-form__section">
                     <h2 class="hm-form__section-title">Clinical Notes for Order</h2>

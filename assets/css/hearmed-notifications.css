@@ -10,18 +10,20 @@
    ============================================================================ */
 
 #hm-app.hearmed-notifications {
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
     height: 100% !important;
     min-height: 100% !important;
     width: 100% !important;
     max-width: 100% !important;
-    min-width: 0;
-    margin: 0;
-    align-self: stretch;
-    background: var(--hm-bg, #ffffff);
-    padding: 24px;
-    overflow-y: auto;
+    min-width: 0 !important;
+    margin: 0 !important;
+    align-self: stretch !important;
+    background: #ffffff !important;
+    padding: 24px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    color: #334155;
 }
 
 /* ============================================================================
