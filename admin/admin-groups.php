@@ -161,7 +161,7 @@ class HearMed_Admin_Groups {
 
             <!-- Modal -->
             <div class="hm-modal-bg" id="hm-group-modal">
-                <div class="hm-modal" style="width:640px">
+                <div class="hm-modal hm-modal--lg">
                     <div class="hm-modal-hd">
                         <h3 id="hm-group-title">Add Group</h3>
                         <button class="hm-modal-x" onclick="hmGroups.close()">&times;</button>

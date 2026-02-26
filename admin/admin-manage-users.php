@@ -180,7 +180,7 @@ class HearMed_Admin_Manage_Users {
             <?php endif; ?>
 
             <div class="hm-modal-bg" id="hm-user-modal">
-                <div class="hm-modal" style="width:640px">
+                <div class="hm-modal hm-modal--lg">
                     <div class="hm-modal-hd">
                         <h3 id="hm-user-title">Add Staff</h3>
                         <button class="hm-modal-x" onclick="hmUsers.close()">&times;</button>

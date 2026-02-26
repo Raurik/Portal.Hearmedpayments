@@ -140,7 +140,7 @@ class HearMed_Admin_Holidays {
 
             <!-- Modal -->
             <div class="hm-modal-bg" id="hm-hol-modal">
-                <div class="hm-modal" style="width:640px">
+                <div class="hm-modal hm-modal--lg">
                     <div class="hm-modal-hd">
                         <h3 id="hm-hol-title">Add Holiday</h3>
                         <button class="hm-modal-x" onclick="hmHol.close()">&times;</button>

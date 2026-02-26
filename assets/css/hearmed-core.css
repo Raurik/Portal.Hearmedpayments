@@ -153,6 +153,9 @@
 
 /* ── Section / Card Titles — grey background ── */
 #hm-app .hm-card-hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 12px 20px;
   border-bottom: 1px solid var(--hm-border);
   background: var(--hm-bg-alt);
@@ -433,7 +436,10 @@
   overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0,0,0,0.15);
 }
-#hm-app .hm-modal--lg { max-width: 800px; }
+#hm-app .hm-modal--sm  { max-width: 420px; }
+#hm-app .hm-modal--md  { max-width: 560px; }
+#hm-app .hm-modal--lg  { max-width: 800px; }
+#hm-app .hm-modal--xl  { max-width: 960px; }
 #hm-app .hm-modal-hd {
   padding: 16px 20px;
   border-bottom: 1px solid var(--hm-border);
@@ -1051,6 +1057,13 @@
   color: var(--hm-primary, #0066cc);
   font-weight: 700;
 }
+
+/* ── Text Color Utilities ── */
+#hm-app .hm-text--teal   { color: var(--hm-teal) !important; }
+#hm-app .hm-text--danger  { color: #dc2626 !important; }
+#hm-app .hm-text--success { color: #059669 !important; }
+#hm-app .hm-text--muted   { color: var(--hm-text-light) !important; }
+#hm-app .hm-text--navy    { color: var(--hm-navy) !important; }
 
 
 /* ── End of hearmed-core.css ── */

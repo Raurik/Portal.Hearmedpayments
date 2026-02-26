@@ -114,7 +114,7 @@ class HearMed_Admin_Appointment_Types {
 
             <!-- Modal -->
             <div class="hm-modal-bg" id="hm-appt-modal">
-                <div class="hm-modal" style="width:560px">
+                <div class="hm-modal hm-modal--md">
                     <div class="hm-modal-hd">
                         <h3 id="hm-appt-title">Add Appointment Type</h3>
                         <button class="hm-modal-x" onclick="hmApptType.close()">&times;</button>

@@ -92,7 +92,7 @@ class HearMed_Admin_Dispenser_Schedules {
 
             <!-- Edit Modal (detail page) -->
             <div class="hm-modal-bg" id="hm-sched-edit-modal">
-                <div class="hm-modal" style="width:520px">
+                <div class="hm-modal hm-modal--md">
                     <div class="hm-modal-hd">
                         <h3 id="hm-sched-edit-title">Edit Schedule</h3>
                         <button class="hm-modal-x" onclick="hmSchedEdit.close()">&times;</button>
@@ -322,7 +322,7 @@ class HearMed_Admin_Dispenser_Schedules {
 
             <!-- Detail View Modal -->
             <div class="hm-modal-bg" id="hm-schedule-detail-modal">
-                <div class="hm-modal" style="width:700px">
+                <div class="hm-modal hm-modal--lg">
                     <div class="hm-modal-hd">
                         <h3 id="hm-detail-title">Schedule Details</h3>
                         <button class="hm-modal-x" onclick="hmSchedules.closeDetail()">&times;</button>
@@ -340,7 +340,7 @@ class HearMed_Admin_Dispenser_Schedules {
             </div>
 
             <div class="hm-modal-bg" id="hm-schedule-modal">
-                <div class="hm-modal" style="width:640px">
+                <div class="hm-modal hm-modal--lg">
                     <div class="hm-modal-hd">
                         <h3 id="hm-schedule-title">Add Schedule</h3>
                         <button class="hm-modal-x" onclick="hmSchedules.close()">&times;</button>

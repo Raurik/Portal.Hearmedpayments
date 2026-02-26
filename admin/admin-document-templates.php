@@ -193,7 +193,7 @@ class HearMed_Admin_Document_Templates {
 
         <!-- Add/Edit Modal -->
         <div class="hm-modal-bg" id="hm-dt-modal">
-            <div class="hm-modal" style="width:480px">
+            <div class="hm-modal hm-modal--md">
                 <div class="hm-modal-hd">
                     <h3 id="hm-dt-modal-title">Add Document Type</h3>
                     <button class="hm-modal-x" onclick="hmDocTypes.closeModal()">&times;</button>
@@ -423,7 +423,7 @@ class HearMed_Admin_Document_Templates {
 
         <!-- Add Section Modal -->
         <div class="hm-modal-bg" id="hm-te-add-modal">
-            <div class="hm-modal" style="width:440px">
+            <div class="hm-modal hm-modal--sm">
                 <div class="hm-modal-hd">
                     <h3>Add Section</h3>
                     <button class="hm-modal-x" onclick="document.getElementById('hm-te-add-modal').classList.remove('open')">&times;</button>
@@ -451,7 +451,7 @@ class HearMed_Admin_Document_Templates {
 
         <!-- GDPR Consent Download Modal (reusable component) -->
         <div class="hm-modal-bg" id="hm-gdpr-consent-modal">
-            <div class="hm-modal" style="width:440px">
+            <div class="hm-modal hm-modal--sm">
                 <div class="hm-modal-hd">
                     <h3>GDPR Consent Required</h3>
                     <button class="hm-modal-x" onclick="hmGdprConsent.close()">&times;</button>

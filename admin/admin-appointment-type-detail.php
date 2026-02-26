@@ -170,7 +170,7 @@ class HearMed_Admin_Appointment_Type_Detail {
 
                 <!-- Card 1: Details -->
                 <div class="hm-card">
-                    <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
+                    <div class="hm-card-hd">
                         Details
                         <button type="button" class="hm-btn hm-btn--primary" id="hm-svc-save-details">Save Details</button>
                     </div>
@@ -201,7 +201,7 @@ class HearMed_Admin_Appointment_Type_Detail {
 
                 <!-- Card 2: Colours -->
                 <div class="hm-card">
-                    <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">Colours</div>
+                    <div class="hm-card-hd">Colours</div>
                     <div class="hm-card-body">
                         <div class="hm-srow hm-color-row">
                             <span class="hm-slbl">Block colour</span>
@@ -216,7 +216,7 @@ class HearMed_Admin_Appointment_Type_Detail {
 
                 <!-- Card 3: Preview -->
                 <div class="hm-card">
-                    <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">Appointment Preview</div>
+                    <div class="hm-card-hd">Appointment Preview</div>
                     <div class="hm-card-body">
                         <div class="hm-appt-preview-wrap">
                         <div class="hm-appt-preview-card" id="hm-svc-preview" style="background:<?php echo esc_attr($colour); ?>;color:<?php echo esc_attr($text_colour); ?>;">
@@ -236,7 +236,7 @@ class HearMed_Admin_Appointment_Type_Detail {
 
             <!-- ═══ ROW 2: Outcomes ═══ -->
             <div class="hm-card" style="margin-bottom:16px;">
-                <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
+                <div class="hm-card-hd">
                     Outcomes
                     <button class="hm-btn hm-btn--primary" id="hm-add-outcome">+ Add Outcome</button>
                 </div>
@@ -262,10 +262,10 @@ class HearMed_Admin_Appointment_Type_Detail {
                                     <span class="hm-badge hm-badge--sm hm-badge--green">Follow-up</span>
                                 <?php endif; ?>
                                 <?php if (!empty($o->triggers_reminder) && $o->triggers_reminder): ?>
-                                    <span class="hm-badge hm-badge--sm" style="background:#a855f7;color:#fff;">SMS</span>
+                                    <span class="hm-badge hm-badge--sm hm-badge--purple">SMS</span>
                                 <?php endif; ?>
                                 <?php if (!empty($o->triggers_followup_call) && $o->triggers_followup_call): ?>
-                                    <span class="hm-badge hm-badge--sm" style="background:#f97316;color:#fff;">Call <?php echo intval($o->followup_call_days ?? 7); ?>d</span>
+                                    <span class="hm-badge hm-badge--sm hm-badge--orange">Call <?php echo intval($o->followup_call_days ?? 7); ?>d</span>
                                 <?php endif; ?>
                                 <button class="hm-btn hm-btn--sm hm-outcome-edit" data-row='<?php echo json_encode([
                                     'id'                    => (int)$o->id,
@@ -292,7 +292,7 @@ class HearMed_Admin_Appointment_Type_Detail {
 
                 <!-- Assignable Staff -->
                 <div class="hm-card">
-                    <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">
+                    <div class="hm-card-hd">
                         Assignable Staff
                         <button class="hm-btn hm-btn--primary" id="hm-save-staff">Save</button>
                     </div>
@@ -316,7 +316,7 @@ class HearMed_Admin_Appointment_Type_Detail {
 
                 <!-- Reminders -->
                 <div class="hm-card">
-                    <div class="hm-card-hd" style="display:flex;justify-content:space-between;align-items:center;">Confirmation &amp; Reminders</div>
+                    <div class="hm-card-hd">Confirmation &amp; Reminders</div>
                     <div class="hm-card-body">
                         <div class="hm-srow">
                             <label class="hm-day-check">
@@ -345,7 +345,7 @@ class HearMed_Admin_Appointment_Type_Detail {
 
             <!-- ═══ Outcome Modal ═══ -->
             <div class="hm-modal-bg" id="hm-outcome-modal">
-                <div class="hm-modal" style="width:560px;">
+                <div class="hm-modal hm-modal--md">
                     <div class="hm-modal-hd">
                         <h3 id="hm-outcome-title">Add Outcome</h3>
                         <button class="hm-modal-x" onclick="hmOutcome.close()">&times;</button>

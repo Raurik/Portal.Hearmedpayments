@@ -11,7 +11,7 @@ function hm_stock_render() {
     if (!is_user_logged_in()) return;
     ?>
     <div id="hm-stock-app" class="hm-content">
-        <div class="hm-page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div class="hm-page-header">
             <h1 class="hm-page-title">Stock &amp; Inventory</h1>
             <div style="display:flex;gap:10px;align-items:center;">
                 <select id="hm-stock-mfr" class="hm-dd" style="width:auto;min-width:160px;">
@@ -119,7 +119,7 @@ function hm_stock_render() {
         $(document).on('click','.hm-stock-transfer',function(){
             var sid=$(this).data('id');
             if($('#hm-modal-overlay').length)return;
-            $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal" style="max-width:400px;"><div class="hm-modal-hd"><span>Transfer Stock</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body">'+
+            $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--sm"><div class="hm-modal-hd"><span>Transfer Stock</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body">'+
                 '<div class="hm-form-group"><label class="hm-label">Transfer to clinic *</label><select class="hm-dd" id="transfer-clinic"><option value="">— Select clinic —</option></select></div>'+
                 '<div class="hm-form-group"><label class="hm-label">Quantity</label><input type="number" class="hm-inp" id="transfer-qty" value="1" min="1"></div>'+
                 '<div class="hm-form-group"><label class="hm-label">Notes</label><textarea class="hm-textarea" id="transfer-notes" rows="2"></textarea></div>'+

@@ -422,7 +422,7 @@ cfg.slotHpx = slotH;
 
     openNewApptModal:function(date,time,dispId){
         var self=this;
-        var html='<div class="hm-modal-bg open"><div class="hm-modal" style="width:540px">'+
+        var html='<div class="hm-modal-bg open"><div class="hm-modal hm-modal--md">'+
             '<div class="hm-modal-hd"><h3>New Appointment</h3><button class="hm-modal-x hm-new-close">'+IC.x+'</button></div>'+
             '<div class="hm-modal-body">'+
                 '<div class="hm-fld"><label>Patient search</label><input class="hm-inp" id="hmn-ptsearch" placeholder="Search by name..." autocomplete="off"><div class="hm-pt-results" id="hmn-ptresults"></div><input type="hidden" id="hmn-patientid" value="0"></div>'+

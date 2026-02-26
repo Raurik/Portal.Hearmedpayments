@@ -114,7 +114,7 @@ function hm_render_order_status_page() {
     <div id="hm-app" class="hm-calendar" data-module="admin" data-view="order-status">
         <div class="hm-page">
             <div class="hm-page-header">
-                <h1 class="hm-page-title" style="font-size:22px;font-weight:700;color:#0f172a;margin:0;">Order Status</h1>
+                <h1 class="hm-page-title">Order Status</h1>
                 <div style="color:#94a3b8;font-size:12px;margin-top:4px;">Track approved orders through to delivery.</div>
             </div>
 

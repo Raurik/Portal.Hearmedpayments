@@ -329,7 +329,7 @@
     function ensureModal() {
         if (document.getElementById('hm-quickadd-modal')) return;
         var html = '<div class="hm-modal-bg" id="hm-quickadd-modal">' +
-            '<div class="hm-modal" style="width:460px">' +
+            '<div class="hm-modal hm-modal--md">' +
             '<div class="hm-modal-hd"><h3 id="hm-qa-title">Add New</h3>' +
             '<button class="hm-modal-x" id="hm-qa-close">&times;</button></div>' +
             '<div class="hm-modal-body" id="hm-qa-body"></div>' +

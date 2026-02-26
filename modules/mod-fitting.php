@@ -203,7 +203,7 @@ function hm_render_fitting_page() {
 
     <!-- ═════════ SERIAL NUMBER MODAL ═════════ -->
     <div id="hmf-serial-modal" class="hm-modal-bg">
-        <div class="hm-modal" style="max-width:520px;">
+        <div class="hm-modal hm-modal--md">
             <div class="hm-modal-hd">
                 <h3>Receive in Branch — Enter Serial Numbers</h3>
                 <button class="hm-modal-x" onclick="hmFitting.closeSerial()">&times;</button>
@@ -221,7 +221,7 @@ function hm_render_fitting_page() {
 
     <!-- ═════════ NO FITTING APPOINTMENT MODAL ═════════ -->
     <div id="hmf-no-appt-modal" class="hm-modal-bg">
-        <div class="hm-modal" style="max-width:420px;">
+        <div class="hm-modal hm-modal--sm">
             <div class="hm-modal-hd">
                 <h3>No Fitting Appointment Found</h3>
                 <button class="hm-modal-x" onclick="hmFitting.closeNoAppt()">&times;</button>
@@ -232,7 +232,7 @@ function hm_render_fitting_page() {
                 </div>
                 <input type="hidden" id="hmf-no-appt-order-id">
                 <div class="hm-form-group">
-                    <label>Why is there no fitting appointment? <span style="color:#dc2626;">*</span></label>
+                    <label>Why is there no fitting appointment? <span class="hm-text--danger">*</span></label>
                     <textarea id="hmf-no-appt-reason" rows="3" placeholder="Please explain..."></textarea>
                 </div>
             </div>
@@ -245,7 +245,7 @@ function hm_render_fitting_page() {
 
     <!-- ═════════ PAYMENT / FITTED MODAL ═════════ -->
     <div id="hmf-payment-modal" class="hm-modal-bg">
-        <div class="hm-modal" style="max-width:540px;">
+        <div class="hm-modal hm-modal--md">
             <div class="hm-modal-hd">
                 <h3>Record Fitting &amp; Payment</h3>
                 <button class="hm-modal-x" onclick="hmFitting.closePayment()">&times;</button>
@@ -282,7 +282,7 @@ function hm_render_fitting_page() {
 
     <!-- ═════════ RECEIPT SUCCESS MODAL ═════════ -->
     <div id="hmf-receipt-modal" class="hm-modal-bg">
-        <div class="hm-modal" style="max-width:420px;">
+        <div class="hm-modal hm-modal--sm">
             <div class="hm-modal-hd">
                 <h3>Payment Complete</h3>
                 <button class="hm-modal-x" onclick="hmFitting.closeReceipt()">&times;</button>
@@ -706,11 +706,11 @@ function hm_render_fitting_page() {
             html += '<div class="hmf-invoice-row"><span>Order</span><span>' + hmFE(data.order_number) + '</span></div>';
             html += '<div class="hmf-invoice-row"><span>Subtotal</span><span>&euro;' + hmFN(data.subtotal) + '</span></div>';
             if (data.discount_total > 0) {
-                html += '<div class="hmf-invoice-row"><span>Discount</span><span style="color:#dc2626;">-&euro;' + hmFN(data.discount_total) + '</span></div>';
+                html += '<div class="hmf-invoice-row"><span>Discount</span><span class="hm-text--danger">-&euro;' + hmFN(data.discount_total) + '</span></div>';
             }
             html += '<div class="hmf-invoice-row"><span>VAT</span><span>&euro;' + hmFN(data.vat_total) + '</span></div>';
             if (data.prsi_applicable) {
-                html += '<div class="hmf-invoice-row"><span>PRSI Grant</span><span style="color:#0BB4C4;">-&euro;' + hmFN(data.prsi_amount) + '</span></div>';
+                html += '<div class="hmf-invoice-row"><span>PRSI Grant</span><span class="hm-text--teal">-&euro;' + hmFN(data.prsi_amount) + '</span></div>';
             }
             html += '<div class="hmf-invoice-row hmf-invoice-total"><span>Grand Total</span><span>&euro;' + hmFN(data.grand_total) + '</span></div>';
             html += '<div class="hmf-invoice-row hmf-invoice-total"><span>Balance Remaining</span><span>&euro;' + hmFN(data.balance_remaining) + '</span></div>';
@@ -1426,7 +1426,7 @@ tfoot tr:last-child td { font-size: 14px; color: #0BB4C4; border-top: 2px solid 
             <?php endif; ?>
             <tr><td colspan="4" class="money">VAT</td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->vat_total : $order->vat_total), 2); ?></td></tr>
             <?php if ($order->prsi_applicable): ?>
-            <tr style="color:#0BB4C4;"><td colspan="4" class="money">PRSI Grant</td><td class="money">-€<?php echo number_format((float)($order->prsi_amount ?? 0), 2); ?></td></tr>
+            <tr class="hm-text--teal"><td colspan="4" class="money">PRSI Grant</td><td class="money">-€<?php echo number_format((float)($order->prsi_amount ?? 0), 2); ?></td></tr>
             <?php endif; ?>
             <tr><td colspan="4" class="money">Total Paid</td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->grand_total : $order->grand_total), 2); ?></td></tr>
         </tfoot>

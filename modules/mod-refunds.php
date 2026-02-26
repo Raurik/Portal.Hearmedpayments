@@ -69,7 +69,7 @@ class HearMed_Refunds {
 
         <!-- ══ NEW CREDIT NOTE MODAL ══════════════════════════════════════════ -->
         <div class="hm-modal-bg" id="hm-cn-modal" style="display:none;">
-            <div class="hm-modal" style="width:540px;max-width:96vw;">
+            <div class="hm-modal hm-modal--md">
                 <div class="hm-modal-hd">
                     <h3 id="hm-cn-modal-title">New Credit Note</h3>
                     <button class="hm-modal-x" id="hm-cn-close">&times;</button>
@@ -165,7 +165,7 @@ class HearMed_Refunds {
 
         <!-- ══ PROCESS CHEQUE REFUND MODAL ═══════════════════════════════════ -->
         <div class="hm-modal-bg" id="hm-process-modal" style="display:none;">
-            <div class="hm-modal" style="width:400px;">
+            <div class="hm-modal hm-modal--sm">
                 <div class="hm-modal-hd">
                     <h3>Process Cheque Refund</h3>
                     <button class="hm-modal-x" id="hm-proc-close">&times;</button>

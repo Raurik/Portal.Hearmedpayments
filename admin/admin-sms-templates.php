@@ -111,7 +111,7 @@ class HearMed_Admin_SMS_Templates {
 
             <!-- Modal -->
             <div class="hm-modal-bg" id="hm-sms-modal">
-                <div class="hm-modal" style="width:600px">
+                <div class="hm-modal hm-modal--lg">
                     <div class="hm-modal-hd">
                         <h3 id="hm-sms-modal-title">Add SMS Template</h3>
                         <button class="hm-modal-x" onclick="hmSms.close()">&times;</button>

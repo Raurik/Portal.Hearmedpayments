@@ -170,7 +170,7 @@ class HearMed_Admin_Taxonomies {
 
             <!-- Modal -->
             <div class="hm-modal-bg" id="hm-tax-modal">
-                <div class="hm-modal" style="width:520px">
+                <div class="hm-modal hm-modal--md">
                     <div class="hm-modal-hd">
                         <h3 id="hm-tax-modal-title">Add <?php echo esc_html($cfg['singular']); ?></h3>
                         <button class="hm-modal-x" onclick="hmTax.close()">&times;</button>

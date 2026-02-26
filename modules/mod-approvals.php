@@ -90,7 +90,7 @@ function hm_render_approvals_page() {
 
     <!-- Deny modal -->
     <div id="hma-deny-modal" class="hm-modal-bg">
-        <div class="hm-modal" style="max-width:480px;">
+        <div class="hm-modal hm-modal--md">
             <div class="hm-modal-hd">
                 <h3 style="margin:0;font-size:14px;font-weight:600;">Deny Order</h3>
                 <button class="hm-modal-x" onclick="hmApprovals.closeDeny()">&times;</button>
@@ -99,7 +99,7 @@ function hm_render_approvals_page() {
                 <p style="color:#475569;font-size:12px;margin:0 0 12px;">The dispenser will be notified with your reason.</p>
                 <input type="hidden" id="hma-deny-id">
                 <div class="hm-form-group">
-                    <label>Reason <span style="color:#dc2626;">*</span></label>
+                    <label>Reason <span class="hm-text--danger">*</span></label>
                     <textarea id="hma-deny-reason" rows="3" placeholder="Required..." style="width:100%;"></textarea>
                 </div>
             </div>
@@ -196,9 +196,9 @@ function hm_render_approvals_page() {
                 html += '<div class="hma-totals"><div class="hma-totals-box">';
                 html += '<div class="hma-totals-row"><span>Cost Total</span><span>&euro;' + hmN(o.cost_total) + '</span></div>';
                 html += '<div class="hma-totals-row"><span>Retail Subtotal</span><span>&euro;' + hmN(o.subtotal) + '</span></div>';
-                if (o.discount_total > 0) html += '<div class="hma-totals-row"><span>Discount</span><span style="color:#dc2626;">-&euro;' + hmN(o.discount_total) + '</span></div>';
+                if (o.discount_total > 0) html += '<div class="hma-totals-row"><span>Discount</span><span class="hm-text--danger">-&euro;' + hmN(o.discount_total) + '</span></div>';
                 html += '<div class="hma-totals-row"><span>VAT</span><span>&euro;' + hmN(o.vat_total) + '</span></div>';
-                if (o.prsi_applicable) html += '<div class="hma-totals-row"><span>PRSI</span><span style="color:#0BB4C4;">-&euro;' + hmN(o.prsi_amount) + '</span></div>';
+                if (o.prsi_applicable) html += '<div class="hma-totals-row"><span>PRSI</span><span class="hm-text--teal">-&euro;' + hmN(o.prsi_amount) + '</span></div>';
                 html += '<div class="hma-totals-row hma-totals-total"><span>Grand Total</span><span>&euro;' + hmN(o.grand_total) + '</span></div>';
                 html += '<div class="hma-totals-row"><span>Overall Margin</span><span class="' + marginClass + '" style="padding:2px 6px;border-radius:4px;">' + o.margin_percent.toFixed(1) + '%</span></div>';
                 html += '</div></div>';

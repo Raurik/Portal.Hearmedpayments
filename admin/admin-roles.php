@@ -101,9 +101,9 @@ class HearMed_Admin_Roles {
         <div id="hm-app" class="hm-calendar" data-module="admin" data-view="roles">
             <div class="hm-page">
                 <div style="margin-bottom:16px;"><a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-btn">&larr; Back</a></div>
-                <div class="hm-page-header" style="display:flex;justify-content:space-between;align-items:center;">
+                <div class="hm-page-header">
                     <div>
-                        <h1 class="hm-page-title" style="font-size:22px;font-weight:700;color:#0f172a;margin:0;">Roles &amp; Permissions</h1>
+                        <h1 class="hm-page-title">Roles &amp; Permissions</h1>
                         <div style="color:#94a3b8;font-size:12px;margin-top:4px;">Define roles and their permissions. Each staff member is assigned a role that controls what they can see and do.</div>
                     </div>
                     <button class="hm-btn hm-btn--primary" onclick="hmRoles.open()">+ Add Role</button>
@@ -169,7 +169,7 @@ class HearMed_Admin_Roles {
 
         <!-- Modal – outside #hm-app so it only shows on open -->
         <div class="hm-modal-bg" id="hm-role-modal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at top left,rgba(148,163,184,.45),rgba(15,23,42,.75));backdrop-filter:blur(8px);z-index:9000;">
-            <div class="hm-modal" style="width:640px">
+            <div class="hm-modal hm-modal--lg">
                 <div class="hm-modal-hd">
                     <h3 id="hm-role-title">Add Role</h3>
                     <button class="hm-modal-x" onclick="hmRoles.close()">&times;</button>
