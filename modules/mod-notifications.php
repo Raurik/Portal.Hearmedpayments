@@ -339,7 +339,7 @@ function hm_notifications_render() {
                     <span class="hm-notif-section__chevron">▾</span>
                 </div>
                 <div class="hm-notif-section__body" id="section-<?php echo esc_attr( $key ); ?>">
-                    <div class="hm-notif-empty">No notifications</div>
+                    <div class="hm-empty hm-empty-text">No notifications</div>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -354,7 +354,7 @@ function hm_notifications_render() {
                 </button>
             </div>
             <div class="hm-notif-log__body" id="hm-notif-log-body">
-                <div class="hm-notif-empty">No cleared notifications</div>
+                <div class="hm-empty hm-empty-text">No cleared notifications</div>
             </div>
         </div>
 

@@ -184,7 +184,7 @@ class HearMed_Orders {
                     </thead>
                     <tbody>
                     <?php if ( empty($orders) ) : ?>
-                        <tr><td colspan="9" class="hm-table__empty">No orders found.</td></tr>
+                        <tr><td colspan="9" class="hm-empty hm-empty-text">No orders found.</td></tr>
                     <?php else : ?>
                         <?php foreach ( $orders as $o ) : ?>
                         <tr>
@@ -273,7 +273,7 @@ class HearMed_Orders {
                 <!-- LINE ITEMS -->
                 <div class="hm-form__section">
                     <h2 class="hm-form__section-title">Items</h2>
-                    <div id="hm-items-empty" class="hm-order-items__empty">No items added yet.</div>
+                    <div id="hm-items-empty" class="hm-empty hm-empty-text">No items added yet.</div>
                     <table class="hm-table hm-order-items__table" id="hm-items-table" style="display:none;">
                         <thead>
                             <tr>

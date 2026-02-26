@@ -133,7 +133,7 @@ class HearMed_Accounting {
                 <thead><tr><th>Date</th><th>Patient</th><th>Invoice</th><th>Clinic</th><th>Method</th><th>Amount</th></tr></thead>
                 <tbody>
                 <?php if (empty($recent)) : ?>
-                <tr><td colspan="6" class="hm-table__empty">No payments yet.</td></tr>
+                <tr><td colspan="6" class="hm-empty hm-empty-text">No payments yet.</td></tr>
                 <?php else : foreach ($recent as $p) : ?>
                 <tr>
                     <td class="hm-muted"><?php echo date('d M Y', strtotime($p->payment_date)); ?></td>
@@ -191,7 +191,7 @@ class HearMed_Accounting {
             <thead><tr><th>Invoice #</th><th>Order #</th><th>Patient</th><th>Clinic</th><th>Date</th><th>Total</th><th>Balance</th><th>Status</th><th>QBO</th></tr></thead>
             <tbody>
             <?php if (empty($invoices)) : ?>
-            <tr><td colspan="9" class="hm-table__empty">No invoices found.</td></tr>
+            <tr><td colspan="9" class="hm-empty hm-empty-text">No invoices found.</td></tr>
             <?php else : foreach ($invoices as $inv) : ?>
             <tr>
                 <td class="hm-mono"><?php echo esc_html($inv->invoice_number); ?></td>
@@ -260,7 +260,7 @@ class HearMed_Accounting {
             <thead><tr><th>Ref</th><th>Supplier</th><th>Date</th><th>Due</th><th>Total</th><th>Paid?</th><th>QBO</th></tr></thead>
             <tbody>
             <?php if (empty($bills)) : ?>
-            <tr><td colspan="7" class="hm-table__empty">No supplier invoices yet.</td></tr>
+            <tr><td colspan="7" class="hm-empty hm-empty-text">No supplier invoices yet.</td></tr>
             <?php else : foreach ($bills as $b) : $od = strtotime($b->due_date) < time() && ($b->payment_status ?? '') !== 'paid'; ?>
             <tr>
                 <td class="hm-mono"><?php echo esc_html($b->supplier_invoice_ref); ?></td>
@@ -610,7 +610,7 @@ class HearMed_Accounting {
                 <thead><tr><th>Time</th><th>Type</th><th>Ref</th><th>Status</th><th>Message</th></tr></thead>
                 <tbody>
                 <?php if (empty($log)) : ?>
-                <tr><td colspan="5" class="hm-table__empty">No sync activity yet.</td></tr>
+                <tr><td colspan="5" class="hm-empty hm-empty-text">No sync activity yet.</td></tr>
                 <?php else : foreach ($log as $l) :
                     $bc = match($l->status) { 'success' => 'hm-badge--green', 'failed', 'error' => 'hm-badge--red', default => 'hm-badge--grey' };
                 ?>

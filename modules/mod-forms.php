@@ -144,7 +144,7 @@ class HearMed_Forms {
             <!-- Forms history table -->
             <div class="hm-forms-list">
                 <?php if ( empty( $forms ) ) : ?>
-                <div class="hm-forms-empty">
+                <div class="hm-empty">
                     <p>No forms on file yet. Click <strong>+ New Form / Consent</strong> to begin.</p>
                 </div>
                 <?php else : ?>
