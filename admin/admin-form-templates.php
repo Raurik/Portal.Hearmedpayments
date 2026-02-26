@@ -260,8 +260,6 @@ class HearMed_Admin_Form_Templates {
         .ft-ov-topbar-right { display: flex; align-items: center; gap: 10px; }
         .ft-saved-label { font-size: 12px; color: #059669; display: none; }
 
-        /* ft-primary-btn styles now in hearmed-core.css as .hm-btn--add */
-
         .hm-tab-bar {
             background: #fff;
             border-bottom: 1px solid #e2e8f0;

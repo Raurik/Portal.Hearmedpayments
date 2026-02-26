@@ -57,7 +57,7 @@ class HearMed_TeamChat {
 
     public static function render( $atts = [] ): string {
         if ( ! is_user_logged_in() ) {
-            return '<div class="hm-notice hm-notice--error"><div class="hm-notice-body"><span class="hm-notice-icon">✕</span> Please log in to access Team Chat.</div></div>';
+            return '<div class="hm-notice hm-notice--error"><div class="hm-notice-body"><span class="hm-notice-icon">×</span> Please log in to access Team Chat.</div></div>';
         }
 
         $user    = wp_get_current_user();

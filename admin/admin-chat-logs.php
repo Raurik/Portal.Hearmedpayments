@@ -22,7 +22,7 @@ class HearMed_Admin_ChatLogs {
 
         $auth = new HearMed_Auth();
         if ( ! $auth->is_admin() ) {
-            return '<div class="hm-notice hm-notice--error"><div class="hm-notice-body"><span class="hm-notice-icon">✕</span> Access restricted to administrators.</div></div>';
+            return '<div class="hm-notice hm-notice--error"><div class="hm-notice-body"><span class="hm-notice-icon">×</span> Access restricted to administrators.</div></div>';
         }
 
         // ── Filters ──
