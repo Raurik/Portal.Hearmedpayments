@@ -64,9 +64,9 @@ function hm_stock_render() {
                 var cn=x.clinic_name||'Unassigned';
                 clinics[cn]=(clinics[cn]||0)+parseInt(x.quantity||0);
             });
-            var statsHtml='<div class="hm-stat-card"><div class="hm-stat-val">'+total+'</div><div class="hm-stat-label">Total Units</div></div>';
+            var statsHtml='<div class="hm-stat"><div class="hm-stat-val">'+total+'</div><div class="hm-stat-label">Total Units</div></div>';
             Object.keys(clinics).forEach(function(cn){
-                statsHtml+='<div class="hm-stat-card"><div class="hm-stat-val">'+clinics[cn]+'</div><div class="hm-stat-label">'+esc(cn)+'</div></div>';
+                statsHtml+='<div class="hm-stat"><div class="hm-stat-val">'+clinics[cn]+'</div><div class="hm-stat-label">'+esc(cn)+'</div></div>';
             });
             $('#hm-stock-stats').html(statsHtml);
         }
@@ -159,11 +159,6 @@ function hm_stock_render() {
         loadStock();
     })(jQuery);
     </script>
-    <style>
-    .hm-stat-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 24px;min-width:120px;text-align:center;}
-    .hm-stat-val{font-size:28px;font-weight:700;color:#151B33;line-height:1.2;}
-    .hm-stat-label{font-size:12px;color:#94a3b8;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;}
-    </style>
     <?php
 }
 

@@ -33,10 +33,6 @@ class HearMed_Refunds {
         ob_start(); ?>
 
         <style>
-        .hm-cn-stats { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:20px; }
-        .hm-cn-stat  { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:14px 22px; min-width:120px; text-align:center; }
-        .hm-cn-stat__val   { font-size:26px; font-weight:700; color:#151B33; line-height:1.2; }
-        .hm-cn-stat__label { font-size:11px; color:#94a3b8; margin-top:3px; text-transform:uppercase; letter-spacing:.05em; }
         .hm-cn-type-cheque   { background:#eff6ff; color:#2563eb; }
         .hm-cn-type-exchange { background:#f0fdf4; color:#16a34a; }
         </style>
@@ -60,7 +56,7 @@ class HearMed_Refunds {
                 </div>
             </div>
 
-            <div class="hm-cn-stats" id="hm-cn-stats"></div>
+            <div class="hm-stats" id="hm-stats"></div>
 
             <div id="hm-cn-table">
                 <div class="hm-empty"><div class="hm-empty-text">Loading…</div></div>
@@ -221,7 +217,7 @@ class HearMed_Refunds {
                         else { done++; doneAmt+=amt; }
                     }
                 });
-                $('#hm-cn-stats').html(
+                $('#hm-stats').html(
                     stat(pCheque,  'Cheques Outstanding', '#dc2626') +
                     stat('€'+pChequeAmt.toFixed(2), 'Pending Amount', '#dc2626') +
                     stat(pExch,    'Exchanges Pending',  '#ea580c') +
@@ -230,7 +226,7 @@ class HearMed_Refunds {
             }
 
             function stat(v,l,c){
-                return '<div class="hm-cn-stat"><div class="hm-cn-stat__val" style="color:'+c+';">'+v+'</div><div class="hm-cn-stat__label">'+l+'</div></div>';
+                return '<div class="hm-stat"><div class="hm-stat-val" style="color:'+c+';">'+v+'</div><div class="hm-stat-label">'+l+'</div></div>';
             }
 
             // ── Table ─────────────────────────────────────────────────────────
