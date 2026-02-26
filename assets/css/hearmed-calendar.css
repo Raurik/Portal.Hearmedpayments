@@ -350,3 +350,83 @@
 #hm-app.hm-calendar .hm-pop-act--red:hover {
   background: #fef2f2;
 }
+/* ═══════════════════════════════════════
+   CALENDAR v3.1 — Settings + Card Styles
+   Append to hearmed-calendar.css AFTER v3 additions
+   ═══════════════════════════════════════ */
+
+/* ── Colour Picker Row ── */
+.hm-color-pick{display:flex;align-items:center;gap:8px}
+.hm-color-inp{
+    -webkit-appearance:none;appearance:none;
+    width:34px;height:34px;border:2px solid var(--hm-border,#e2e8f0);
+    border-radius:8px;padding:2px;cursor:pointer;background:none;
+}
+.hm-color-inp::-webkit-color-swatch-wrapper{padding:0}
+.hm-color-inp::-webkit-color-swatch{border:none;border-radius:5px}
+.hm-color-inp::-moz-color-swatch{border:none;border-radius:5px}
+.hm-color-hex{
+    font-family:'Source Sans 3',sans-serif;font-size:12px;
+    color:var(--hm-text-muted,#94a3b8);letter-spacing:0.3px;
+    min-width:60px;
+}
+
+/* ── Working Days Checkboxes ── */
+.hm-day-checks{display:flex;gap:6px;flex-wrap:wrap}
+.hm-day-checks label{
+    display:flex;align-items:center;gap:5px;
+    font-size:12px;color:var(--hm-text,#151B33);
+    padding:5px 10px;border-radius:8px;cursor:pointer;
+    border:1.5px solid var(--hm-border,#e2e8f0);
+    transition:all .15s;user-select:none;
+}
+.hm-day-checks label:has(input:checked){
+    background:#0BB4C4;color:#fff;border-color:#0BB4C4;
+}
+.hm-day-checks input{display:none}
+
+/* ── Radio Group ── */
+.hm-radio-grp{display:flex;gap:6px;flex-wrap:wrap}
+.hm-radio-grp label{
+    display:flex;align-items:center;gap:5px;
+    font-size:12px;color:var(--hm-text,#151B33);
+    padding:5px 12px;border-radius:8px;cursor:pointer;
+    border:1.5px solid var(--hm-border,#e2e8f0);
+    transition:all .15s;user-select:none;
+}
+.hm-radio-grp label:has(input:checked){
+    background:#0BB4C4;color:#fff;border-color:#0BB4C4;
+}
+.hm-radio-grp input{display:none}
+
+/* ── Card Style Variants ── */
+.hm-appt--tinted{
+    backdrop-filter:none;
+    border-left-width:3.5px!important;border-left-style:solid!important;
+}
+.hm-appt--outline{
+    border-width:1.5px!important;border-style:solid!important;
+    border-left-width:3.5px!important;
+}
+.hm-appt--minimal{
+    border-left-width:3px!important;border-left-style:solid!important;
+    background:transparent!important;
+}
+
+/* ── Calendar Theme CSS Custom Properties ── */
+.hm-grid{
+    background:var(--hm-cal-bg,#ffffff);
+}
+.hm-slot{
+    border-color:var(--hm-cal-grid,#e2e8f0);
+}
+.hm-day-hd.today{
+    background:var(--hm-cal-today,#e6f7f9);
+}
+
+/* ── Settings Layout Tweaks ── */
+.hs-right .hm-card+.hm-card{margin-top:12px}
+.hs-left .hm-card+.hm-card{margin-top:12px}
+
+/* ── Save Button Confirmed State ── */
+#hs-save{min-width:120px;transition:all .2s}

@@ -89,6 +89,8 @@ function hm_ajax_save_settings() {
             'start_time', 'end_time', 'slot_height', 'default_view', 'default_mode',
             'outcome_style', 'enabled_days', 'calendar_order', 'appointment_statuses',
             'appt_bg_color', 'appt_font_color', 'appt_badge_color', 'appt_badge_font_color', 'appt_meta_color',
+            'card_style', 'color_source', 'indicator_color', 'today_highlight_color',
+            'grid_line_color', 'cal_bg_color', 'working_days',
         ];
         
         // Checkbox fields (need explicit false when not in POST)
@@ -97,6 +99,7 @@ function hm_ajax_save_settings() {
             'hide_cancelled', 'require_reschedule_note', 'apply_clinic_colour', 'display_full_name',
             'prevent_location_mismatch', 'double_booking_warning', 'show_patient',
             'show_service', 'show_initials', 'show_status',
+            'show_clinic', 'show_time', 'show_dispenser_initials', 'show_status_badge', 'show_appointment_type',
         ];
         
         $data = [];
@@ -113,7 +116,12 @@ function hm_ajax_save_settings() {
         }
         
         foreach ( $checkbox_fields as $f ) {
-            $data[ $f ] = isset( $_POST[ $f ] ) ? true : false;
+            if ( isset( $_POST[ $f ] ) ) {
+                $val = $_POST[ $f ];
+                $data[ $f ] = ( $val === '1' || $val === 'yes' || $val === true || $val === 'true' );
+            } else {
+                $data[ $f ] = false;
+            }
         }
         
         // Check if record exists
@@ -217,7 +225,7 @@ function hm_ajax_get_dispensers() {
     }
     $sql = "SELECT s.id, s.first_name, s.last_name,
                    (s.first_name || ' ' || s.last_name) AS full_name,
-                   s.role, s.is_active,
+                   s.role, s.is_active, s.staff_color,
                    ARRAY_AGG(sc.clinic_id) as clinic_ids
             FROM hearmed_reference.staff s
             LEFT JOIN hearmed_reference.staff_clinics sc ON s.id = sc.staff_id
@@ -229,7 +237,7 @@ function hm_ajax_get_dispensers() {
     if ( ! empty( $scheduled_ids ) ) {
         $sql .= " AND s.id IN (" . implode( ',', array_map( 'intval', $scheduled_ids ) ) . ")";
     }
-    $sql .= " GROUP BY s.id, s.first_name, s.last_name, s.role, s.is_active ORDER BY s.first_name, s.last_name";
+    $sql .= " GROUP BY s.id, s.first_name, s.last_name, s.role, s.is_active, s.staff_color ORDER BY s.first_name, s.last_name";
     $ps = HearMed_DB::get_results( $sql );
     $d = [];
     foreach ( $ps as $p ) {
@@ -585,18 +593,5 @@ function hm_calendar_render() {
         </div>
         <div id="hm-calendar-container"></div>
     </div>
-    <script>
-    console.log('[HM-DEBUG] Calendar render function fired');
-    console.log('[HM-DEBUG] jQuery:', typeof jQuery);
-    console.log('[HM-DEBUG] HM:', typeof HM, HM ? 'keys:' + Object.keys(HM).join(',') : 'undefined');
-    console.log('[HM-DEBUG] #hm-app:', document.getElementById('hm-app') ? 'found' : 'NOT FOUND');
-    console.log('[HM-DEBUG] data-view:', document.getElementById('hm-app')?.dataset?.view);
-    document.addEventListener('DOMContentLoaded', function(){
-        console.log('[HM-DEBUG] DOMContentLoaded fired');
-        console.log('[HM-DEBUG] hearmed-calendar.js loaded:', typeof window._hmCalLoaded);
-        var scripts = document.querySelectorAll('script[src*="hearmed"]');
-        scripts.forEach(function(s){ console.log('[HM-DEBUG] Script:', s.src); });
-    });
-    </script>
     <?php
 }

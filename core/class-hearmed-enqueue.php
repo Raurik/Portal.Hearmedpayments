@@ -211,12 +211,12 @@ class HearMed_Enqueue {
             'hearmed_appointment_types',
             'hearmed_appointment_type_detail',
             'hearmed_patients',
-            'hearmed_order_status', 'hearmed_approvals', 'hearmed_awaiting_fitting', 'hearmed_orders',
+            'hearmed_order_status', 'hearmed_approvals', 'hearmed_fitting', 'hearmed_awaiting_fitting', 'hearmed_orders',
             'hearmed_accounting', 'hearmed_invoices', 'hearmed_payments',
             'hearmed_credit_notes', 'hearmed_prsi',
             'hearmed_reporting', 'hearmed_my_stats', 'hearmed_report_revenue', 'hearmed_report_gp',
             'hearmed_reports',
-            'hearmed_repairs',
+            'hearmed_repairs', 'hearmed_stock', 'hearmed_refunds',
             'hearmed_notifications', 'hearmed_team_chat',
             'hearmed_kpi', 'hearmed_kpi_tracking',
             'hearmed_commissions',
@@ -229,7 +229,7 @@ class HearMed_Enqueue {
             'hearmed_admin_groups', 'hearmed_admin_resources',
             'hearmed_dispenser_schedules', 'hearmed_staff_login',
             // Calendar admin sub-pages
-            'hearmed_admin_blockouts', 'hearmed_admin_holidays', 'hearmed_admin_exclusions',
+            'hearmed_admin_blockouts', 'hearmed_admin_availability', 'hearmed_admin_holidays', 'hearmed_admin_exclusions',
             // Settings sub-pages
             'hearmed_finance_settings', 'hearmed_comms_settings', 'hearmed_document_types',
             'hearmed_form_settings', 'hearmed_cash_settings', 'hearmed_ai_settings',
@@ -241,6 +241,10 @@ class HearMed_Enqueue {
             'hearmed_document_template_editor',
             // Form templates
             'hearmed_form_templates',
+            'hearmed_fitting',
+            'hearmed_stock',
+            'hearmed_refunds',
+            'hearmed_admin_availability',
         ];
 
         foreach ( $portal_shortcodes as $shortcode ) {
@@ -289,7 +293,7 @@ class HearMed_Enqueue {
         $this->detect_and_load( 'orders', $content, [
             'hearmed_order_status',
             'hearmed_approvals',
-            'hearmed_awaiting_fitting',
+            'hearmed_fitting', 'hearmed_awaiting_fitting',
             'hearmed_orders',
         ]);
         
@@ -310,7 +314,7 @@ class HearMed_Enqueue {
         ]);
         
         $this->detect_and_load( 'repairs', $content, [
-            'hearmed_repairs',
+            'hearmed_repairs', 'hearmed_stock', 'hearmed_refunds',
         ]);
         
         $this->detect_and_load( 'notifications', $content, [
@@ -359,7 +363,7 @@ class HearMed_Enqueue {
             // Calendar-related admin pages that use hm-admin layout
             'hearmed_calendar_settings',
             'hearmed_appointment_types',
-            'hearmed_admin_blockouts',
+            'hearmed_admin_blockouts', 'hearmed_admin_availability',
             'hearmed_admin_holidays',
             'hearmed_admin_exclusions',
             // Settings sub-pages (admin-settings.php)
