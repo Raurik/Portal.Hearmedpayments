@@ -128,9 +128,6 @@ function hm_render_fitting_page() {
     .hmf-prev-payments h4{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;margin:0 0 6px;}
     .hmf-prev-pay-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f1f5f9;}
 
-    .hmf-success{background:#d1fae5;color:#065f46;padding:12px 16px;border-radius:8px;font-size:12px;font-weight:500;margin-top:10px;text-align:center;}
-    .hmf-warning{background:#fef3cd;color:#92400e;padding:12px 16px;border-radius:8px;font-size:12px;font-weight:500;margin-top:10px;}
-
     /* Filter bar — integrated toolbar */
     .hmf-toolbar{display:flex;align-items:center;gap:16px;padding:10px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:16px;}
     .hmf-toolbar-label{font-size:11px;font-weight:600;color:#475569;white-space:nowrap;}
@@ -225,9 +222,9 @@ function hm_render_fitting_page() {
                 <button class="hm-close" onclick="hmFitting.closeNoAppt()">&times;</button>
             </div>
             <div class="hm-modal-body">
-                <div class="hmf-warning" style="margin:0 0 14px;">
-                    &#9888; This patient does not have a <strong>Fitting</strong> appointment booked.
-                </div>
+                <div class="hm-notice hm-notice--warning" style="margin:0 0 14px;"><div class="hm-notice-body"><span class="hm-notice-icon">⚠</span>
+                    This patient does not have a <strong>Fitting</strong> appointment booked.
+                </div></div>
                 <input type="hidden" id="hmf-no-appt-order-id">
                 <div class="hm-form-group">
                     <label>Why is there no fitting appointment? <span class="hm-text--danger">*</span></label>
@@ -691,7 +688,7 @@ function hm_render_fitting_page() {
                 if (r.success) {
                     self.renderInvoiceInfo(r.data);
                 } else {
-                    document.getElementById('hmf-invoice-info').innerHTML = '<div class="hmf-warning">Could not load invoice details.</div>';
+                    document.getElementById('hmf-invoice-info').innerHTML = '<div class="hm-notice hm-notice--warning"><div class="hm-notice-body"><span class="hm-notice-icon">⚠</span> Could not load invoice details.</div></div>';
                 }
             });
         },
@@ -769,14 +766,14 @@ function hm_render_fitting_page() {
                     } else {
                         // Partial payment — update the invoice info
                         document.getElementById('hmf-pay-result').innerHTML =
-                            '<div class="hmf-success">Payment of &euro;' + hmFN(amount) +
-                            ' recorded. Balance remaining: &euro;' + hmFN(r.data.balance_remaining) + '</div>';
+                            '<div class="hm-notice hm-notice--success"><div class="hm-notice-body"><span class="hm-notice-icon">✓</span> Payment of &euro;' + hmFN(amount) +
+                            ' recorded. Balance remaining: &euro;' + hmFN(r.data.balance_remaining) + '</div></div>';
                         // Refresh invoice info
                         self.openPayment(orderId);
                     }
                 } else {
                     document.getElementById('hmf-pay-result').innerHTML =
-                        '<div class="hmf-warning">' + (r.data && r.data.msg ? hmFE(r.data.msg) : 'Error recording payment') + '</div>';
+                        '<div class="hm-notice hm-notice--warning"><div class="hm-notice-body"><span class="hm-notice-icon">⚠</span> ' + (r.data && r.data.msg ? hmFE(r.data.msg) : 'Error recording payment') + '</div></div>';
                 }
             });
         },
