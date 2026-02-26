@@ -1,22 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" fill="none" stroke="#4DD0E1" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-  <!-- BTE hearing aid – LEFT ear (wire exits left) -->
-  <!-- Main body / shell -->
-  <path d="M270 60 C330 60, 370 100, 370 170 L370 310 C370 360, 340 400, 290 410 C260 416, 240 400, 240 370 L240 200 C240 140, 250 100, 270 60z"/>
-  <!-- Inner shell detail -->
-  <path d="M280 80 C325 80, 355 115, 355 172 L355 305 C355 345, 332 380, 292 388 C270 392, 256 380, 256 358 L256 200 C256 148, 264 112, 280 80z"/>
-  <!-- Hook / ear hook -->
-  <path d="M270 60 C260 40, 230 25, 200 30 C170 35, 150 55, 145 85 C140 110, 142 130, 145 155"/>
-  <!-- Tubing down from hook -->
-  <path d="M145 155 C142 200, 130 260, 120 310 C112 350, 105 380, 100 400"/>
-  <!-- Ear dome / tip -->
-  <ellipse cx="88" cy="418" rx="22" ry="18"/>
-  <ellipse cx="70" cy="430" rx="15" ry="12"/>
-  <!-- Small connector nub -->
-  <circle cx="100" cy="403" r="6"/>
-  <!-- Button on shell -->
-  <rect x="365" y="180" width="14" height="30" rx="5"/>
-  <!-- Volume rocker -->
-  <rect x="365" y="250" width="14" height="45" rx="5"/>
-  <!-- Battery door line -->
-  <path d="M240 280 L370 280" stroke-dasharray="4 6"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <!-- RIC hearing aid – LEFT ear (blue, wire exits right to receiver on left) -->
+  <defs>
+    <linearGradient id="bodyL" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0055d4"/>
+      <stop offset="45%" stop-color="#2979ff"/>
+      <stop offset="100%" stop-color="#64b5f6"/>
+    </linearGradient>
+  </defs>
+  <!-- Main body -->
+  <path d="M200 55 C245 50, 280 75, 285 120 L290 310 C292 365, 270 410, 230 425 C200 435, 175 415, 172 385 L168 160 C165 110, 175 70, 200 55z"
+        fill="url(#bodyL)" stroke="#1a1a2e" stroke-width="3"/>
+  <!-- Inner highlight -->
+  <path d="M210 75 C240 72, 265 90, 268 125 L272 305 C273 348, 258 385, 232 395 C212 402, 195 390, 193 370 L189 165 C187 122, 194 88, 210 75z"
+        fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2"/>
+  <!-- Top detail dots -->
+  <circle cx="215" cy="100" r="4" fill="rgba(255,255,255,0.3)"/>
+  <circle cx="230" cy="120" r="3" fill="rgba(255,255,255,0.2)"/>
+  <!-- Button -->
+  <rect x="160" y="260" width="16" height="50" rx="6" fill="#3a3a4a" stroke="#1a1a2e" stroke-width="2"/>
+  <!-- Wire from top curving right and down -->
+  <path d="M225 58 C230 30, 260 10, 310 15 C370 22, 395 65, 390 120 C385 180, 370 250, 358 310 C350 355, 345 390, 340 415"
+        fill="none" stroke="#c0c0c0" stroke-width="4" stroke-linecap="round"/>
+  <!-- Wire inner highlight -->
+  <path d="M225 58 C230 30, 260 10, 310 15 C370 22, 395 65, 390 120 C385 180, 370 250, 358 310 C350 355, 345 390, 340 415"
+        fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Receiver / speaker unit -->
+  <ellipse cx="345" cy="432" rx="18" ry="16" fill="#3a3a4a" stroke="#1a1a2e" stroke-width="2.5"/>
+  <ellipse cx="345" cy="435" rx="10" ry="9" fill="#2a2a38"/>
+  <!-- Dome connector band -->
+  <rect x="336" y="412" width="18" height="6" rx="3" fill="#2979ff" stroke="#1a1a2e" stroke-width="1.5"/>
 </svg>
