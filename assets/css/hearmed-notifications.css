@@ -6,6 +6,25 @@
    ============================================================================ */
 
 /* ============================================================================
+   WRAPPER — integrate with layout chain
+   ============================================================================ */
+
+#hm-app.hearmed-notifications {
+    display: flex;
+    flex-direction: column;
+    height: 100% !important;
+    min-height: 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0;
+    margin: 0;
+    align-self: stretch;
+    background: var(--hm-bg, #ffffff);
+    padding: 24px;
+    overflow-y: auto;
+}
+
+/* ============================================================================
    PAGE HEADER
    ============================================================================ */
 
