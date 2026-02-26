@@ -587,36 +587,22 @@ function hm_ajax_save_dispenser_order() {
 // ================================================================
 function hm_calendar_render() {
     ?>
+    <script>
+    /* Ensure data-view is set — Elementor shortcode widgets may strip data attributes from the router wrapper */
+    (function(){
+        var app = document.getElementById('hm-app');
+        if(app) {
+            if(!app.getAttribute('data-view'))  app.setAttribute('data-view',  'calendar');
+            if(!app.getAttribute('data-module'))app.setAttribute('data-module', 'calendar');
+            if(!app.classList.contains('hm-calendar')) app.classList.add('hm-calendar');
+        }
+    })();
+    </script>
     <div class="hm-content">
         <div class="hm-page-header">
             <h1 class="hm-page-title">Calendar</h1>
         </div>
         <div id="hm-calendar-container"></div>
     </div>
-    <script>
-    /* HearMed Calendar Diagnostics — remove after debugging */
-    (function(){
-        var diag = [];
-        diag.push('HM defined: ' + (typeof HM !== 'undefined'));
-        diag.push('jQuery defined: ' + (typeof jQuery !== 'undefined'));
-        diag.push('#hm-app exists: ' + (document.getElementById('hm-app') !== null));
-        var app = document.getElementById('hm-app');
-        if(app) diag.push('data-view: ' + app.getAttribute('data-view'));
-        console.log('[HM Diag] Inline check:\n' + diag.join('\n'));
-        window.addEventListener('load', function(){
-            var scripts = document.querySelectorAll('script[src*="hearmed-calendar"]');
-            console.log('[HM Diag] Calendar <script> tags found: ' + scripts.length);
-            for(var i=0;i<scripts.length;i++) console.log('[HM Diag]   src: ' + scripts[i].src);
-            console.log('[HM Diag] typeof App: ' + (typeof App));
-            console.log('[HM Diag] typeof Cal: ' + (typeof Cal));
-            console.log('[HM Diag] HM.settings keys: ' + (typeof HM!=='undefined' && HM.settings ? Object.keys(HM.settings).join(',') : 'NONE'));
-            var container = document.getElementById('hm-calendar-container');
-            var calWrap = document.querySelector('.hm-cal-wrap');
-            console.log('[HM Diag] #hm-calendar-container in DOM: ' + (container !== null));
-            console.log('[HM Diag] .hm-cal-wrap in DOM: ' + (calWrap !== null));
-            console.log('[HM Diag] #hm-app innerHTML length: ' + (app ? app.innerHTML.length : 0));
-        });
-    })();
-    </script>
     <?php
 }

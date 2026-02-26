@@ -56,7 +56,9 @@ var App={
     init:function(){
         var $el=$('#hm-app');
         if(!$el.length)return;
-        var v=$el.data('view')||'';
+        var v=$el.data('view')||$el.attr('data-view')||'';
+        // Fallback: if #hm-calendar-container exists, this is the calendar page
+        if(!v && $('#hm-calendar-container').length) v='calendar';
         if(v==='calendar')Cal.init($el);
         else if(v==='settings')Settings.init($el);
         else if(v==='blockouts')Blockouts.init($el);
