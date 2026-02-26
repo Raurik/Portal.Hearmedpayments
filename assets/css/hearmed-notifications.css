@@ -604,8 +604,10 @@
 #hm-bell-widget {
     position: relative;
     display: inline-flex;
-    align-items: center;
-    margin-left: 12px;
+    align-items: flex-end;
+    margin-left: 8px;
+    align-self: flex-end;
+    padding-bottom: 2px;
 }
 
 #hm-bell-link {

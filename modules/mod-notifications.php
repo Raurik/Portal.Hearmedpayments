@@ -401,25 +401,47 @@ function hm_notifications_bell_widget() {
 
     <script>
     (function(){
-        /* Position bell inside .hm-topbar if it exists, otherwise near header */
+        /* Position bell next to "Quick Till Check" link in .hm-topbar */
         function placeBell(){
             var bell = document.getElementById('hm-bell-widget');
             if(!bell) return;
 
+            /* Find the Quick Till Check link by its text content */
+            var placed = false;
             var topbar = document.querySelector('.hm-topbar');
             if(topbar){
-                topbar.style.position = 'relative';
-                topbar.appendChild(bell);
-                bell.style.display = '';
-                return;
+                var links = topbar.querySelectorAll('a');
+                for(var i = 0; i < links.length; i++){
+                    if(links[i].textContent.trim().toLowerCase().indexOf('quick till') !== -1){
+                        /* Insert bell right after this link's widget container */
+                        var container = links[i].closest('.elementor-widget') || links[i].parentElement;
+                        container.style.position = 'relative';
+                        container.style.display  = 'inline-flex';
+                        container.style.alignItems = 'flex-end';
+                        container.style.gap = '10px';
+                        container.appendChild(bell);
+                        bell.style.display = '';
+                        placed = true;
+                        break;
+                    }
+                }
+                /* Fallback: append to topbar */
+                if(!placed){
+                    topbar.style.position = 'relative';
+                    topbar.appendChild(bell);
+                    bell.style.display = '';
+                    placed = true;
+                }
             }
 
-            /* Fallback: attach to Elementor header container */
-            var header = document.querySelector('header, .elementor-location-header, [data-elementor-type="header"]');
-            if(header){
-                header.style.position = 'relative';
-                header.appendChild(bell);
-                bell.style.display = '';
+            /* Last resort: attach to header */
+            if(!placed){
+                var header = document.querySelector('header, .elementor-location-header, [data-elementor-type="header"]');
+                if(header){
+                    header.style.position = 'relative';
+                    header.appendChild(bell);
+                    bell.style.display = '';
+                }
             }
         }
 
