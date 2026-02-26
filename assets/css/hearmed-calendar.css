@@ -16,8 +16,6 @@
 .hm-cal-wrap {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 80px);
-  min-height: 500px;
   background: var(--hm-bg, #ffffff);
   border-radius: 12px;
   overflow: hidden;
@@ -254,8 +252,7 @@
    ═══════════════════════════════════════ */
 
 .hm-grid-wrap {
-  flex: 1;
-  overflow: auto;
+  overflow-x: auto;
   position: relative;
 }
 
