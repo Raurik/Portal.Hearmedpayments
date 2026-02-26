@@ -196,7 +196,7 @@ class HearMed_Admin_Document_Templates {
             <div class="hm-modal hm-modal--md">
                 <div class="hm-modal-hd">
                     <h3 id="hm-dt-modal-title">Add Document Type</h3>
-                    <button class="hm-modal-x" onclick="hmDocTypes.closeModal()">&times;</button>
+                    <button class="hm-close" onclick="hmDocTypes.closeModal()">&times;</button>
                 </div>
                 <div class="hm-modal-body">
                     <input type="hidden" id="hm-dt-id" value="">
@@ -426,7 +426,7 @@ class HearMed_Admin_Document_Templates {
             <div class="hm-modal hm-modal--sm">
                 <div class="hm-modal-hd">
                     <h3>Add Section</h3>
-                    <button class="hm-modal-x" onclick="document.getElementById('hm-te-add-modal').classList.remove('open')">&times;</button>
+                    <button class="hm-close" onclick="document.getElementById('hm-te-add-modal').classList.remove('open')">&times;</button>
                 </div>
                 <div class="hm-modal-body">
                     <div class="hm-form-group">
@@ -454,7 +454,7 @@ class HearMed_Admin_Document_Templates {
             <div class="hm-modal hm-modal--sm">
                 <div class="hm-modal-hd">
                     <h3>GDPR Consent Required</h3>
-                    <button class="hm-modal-x" onclick="hmGdprConsent.close()">&times;</button>
+                    <button class="hm-close" onclick="hmGdprConsent.close()">&times;</button>
                 </div>
                 <div class="hm-modal-body">
                     <p style="font-size:13px;margin-bottom:12px;">Before downloading or generating this document, you must confirm GDPR compliance.</p>

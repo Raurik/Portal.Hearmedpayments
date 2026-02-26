@@ -183,7 +183,7 @@ class HearMed_Admin_Manage_Users {
                 <div class="hm-modal hm-modal--lg">
                     <div class="hm-modal-hd">
                         <h3 id="hm-user-title">Add Staff</h3>
-                        <button class="hm-modal-x" onclick="hmUsers.close()">&times;</button>
+                        <button class="hm-close" onclick="hmUsers.close()">&times;</button>
                     </div>
                     <div class="hm-modal-body">
                         <input type="hidden" id="hmu-id">

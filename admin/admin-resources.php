@@ -192,7 +192,7 @@ class HearMed_Admin_Resources {
                 <div class="hm-modal hm-modal--md">
                     <div class="hm-modal-hd">
                         <h3 id="hm-room-title">Add Room</h3>
-                        <button class="hm-modal-x" onclick="hmRes.closeRoom()">&times;</button>
+                        <button class="hm-close" onclick="hmRes.closeRoom()">&times;</button>
                     </div>
                     <div class="hm-modal-body">
                         <input type="hidden" id="hmr-room-id">
@@ -223,7 +223,7 @@ class HearMed_Admin_Resources {
                 <div class="hm-modal hm-modal--lg">
                     <div class="hm-modal-hd">
                         <h3 id="hm-equip-title">Add Equipment</h3>
-                        <button class="hm-modal-x" onclick="hmRes.closeEquip()">&times;</button>
+                        <button class="hm-close" onclick="hmRes.closeEquip()">&times;</button>
                     </div>
                     <div class="hm-modal-body">
                         <input type="hidden" id="hmr-equip-id">

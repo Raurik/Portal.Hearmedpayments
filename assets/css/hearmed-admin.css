@@ -773,7 +773,7 @@
     border-top: 1px solid #e2e8f0;
 }
 
-.hm-modal-x {
+.hm-close {
     border: none;
     background: none;
     font-size: 18px;
@@ -785,7 +785,7 @@
     transition: background 0.12s, color 0.12s;
 }
 
-.hm-modal-x:hover {
+.hm-close:hover {
     background: rgba(148, 163, 184, 0.12);
     color: #64748b;
 }

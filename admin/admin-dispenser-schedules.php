@@ -95,7 +95,7 @@ class HearMed_Admin_Dispenser_Schedules {
                 <div class="hm-modal hm-modal--md">
                     <div class="hm-modal-hd">
                         <h3 id="hm-sched-edit-title">Edit Schedule</h3>
-                        <button class="hm-modal-x" onclick="hmSchedEdit.close()">&times;</button>
+                        <button class="hm-close" onclick="hmSchedEdit.close()">&times;</button>
                     </div>
                     <div class="hm-modal-body">
                         <input type="hidden" id="hmse-id">
@@ -325,7 +325,7 @@ class HearMed_Admin_Dispenser_Schedules {
                 <div class="hm-modal hm-modal--lg">
                     <div class="hm-modal-hd">
                         <h3 id="hm-detail-title">Schedule Details</h3>
-                        <button class="hm-modal-x" onclick="hmSchedules.closeDetail()">&times;</button>
+                        <button class="hm-close" onclick="hmSchedules.closeDetail()">&times;</button>
                     </div>
                     <div class="hm-modal-body">
                         <div id="hm-detail-content" style="max-height:500px;overflow-y:auto;">
@@ -343,7 +343,7 @@ class HearMed_Admin_Dispenser_Schedules {
                 <div class="hm-modal hm-modal--lg">
                     <div class="hm-modal-hd">
                         <h3 id="hm-schedule-title">Add Schedule</h3>
-                        <button class="hm-modal-x" onclick="hmSchedules.close()">&times;</button>
+                        <button class="hm-close" onclick="hmSchedules.close()">&times;</button>
                     </div>
                     <div class="hm-modal-body">
                         <input type="hidden" id="hms-id">

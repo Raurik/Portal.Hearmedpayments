@@ -653,7 +653,7 @@ class HearMed_Admin_Form_Templates {
             <div class="hm-modal hm-modal--md">
                 <div class="hm-modal-hd">
                     <h3>New Form Template</h3>
-                    <button class="hm-modal-x" onclick="hmFT.closeNew()">&times;</button>
+                    <button class="hm-close" onclick="hmFT.closeNew()">&times;</button>
                 </div>
                 <div class="hm-modal-body">
                     <div class="hm-form-group">

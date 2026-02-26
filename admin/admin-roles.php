@@ -172,7 +172,7 @@ class HearMed_Admin_Roles {
             <div class="hm-modal hm-modal--lg">
                 <div class="hm-modal-hd">
                     <h3 id="hm-role-title">Add Role</h3>
-                    <button class="hm-modal-x" onclick="hmRoles.close()">&times;</button>
+                    <button class="hm-close" onclick="hmRoles.close()">&times;</button>
                 </div>
                 <div class="hm-modal-body">
                     <input type="hidden" id="hmrl-id">

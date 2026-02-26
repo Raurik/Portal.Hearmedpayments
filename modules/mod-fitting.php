@@ -101,8 +101,6 @@ function hm_render_fitting_page() {
     .hm-modal{background:#fff;border-radius:14px;box-shadow:0 25px 50px rgba(0,0,0,.15);width:100%;overflow:hidden;}
     .hm-modal-hd{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #f1f5f9;}
     .hm-modal-hd h3{margin:0;font-size:14px;font-weight:600;color:#0f172a;}
-    .hm-modal-x{background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1;}
-    .hm-modal-x:hover{color:#0f172a;}
     .hm-modal-body{padding:20px;}
     .hm-modal-ft{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid #f1f5f9;background:#f8fafc;}
 
@@ -206,7 +204,7 @@ function hm_render_fitting_page() {
         <div class="hm-modal hm-modal--md">
             <div class="hm-modal-hd">
                 <h3>Receive in Branch — Enter Serial Numbers</h3>
-                <button class="hm-modal-x" onclick="hmFitting.closeSerial()">&times;</button>
+                <button class="hm-close" onclick="hmFitting.closeSerial()">&times;</button>
             </div>
             <div class="hm-modal-body">
                 <input type="hidden" id="hmf-serial-order-id">
@@ -224,7 +222,7 @@ function hm_render_fitting_page() {
         <div class="hm-modal hm-modal--sm">
             <div class="hm-modal-hd">
                 <h3>No Fitting Appointment Found</h3>
-                <button class="hm-modal-x" onclick="hmFitting.closeNoAppt()">&times;</button>
+                <button class="hm-close" onclick="hmFitting.closeNoAppt()">&times;</button>
             </div>
             <div class="hm-modal-body">
                 <div class="hmf-warning" style="margin:0 0 14px;">
@@ -248,7 +246,7 @@ function hm_render_fitting_page() {
         <div class="hm-modal hm-modal--md">
             <div class="hm-modal-hd">
                 <h3>Record Fitting &amp; Payment</h3>
-                <button class="hm-modal-x" onclick="hmFitting.closePayment()">&times;</button>
+                <button class="hm-close" onclick="hmFitting.closePayment()">&times;</button>
             </div>
             <div class="hm-modal-body">
                 <input type="hidden" id="hmf-pay-order-id">
@@ -285,7 +283,7 @@ function hm_render_fitting_page() {
         <div class="hm-modal hm-modal--sm">
             <div class="hm-modal-hd">
                 <h3>Payment Complete</h3>
-                <button class="hm-modal-x" onclick="hmFitting.closeReceipt()">&times;</button>
+                <button class="hm-close" onclick="hmFitting.closeReceipt()">&times;</button>
             </div>
             <div class="hm-modal-body" style="text-align:center;">
                 <div style="font-size:40px;margin-bottom:8px;">&#10004;</div>

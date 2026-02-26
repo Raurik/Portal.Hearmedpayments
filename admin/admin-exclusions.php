@@ -74,7 +74,7 @@ class HearMed_Admin_Exclusions {
                 <div class="hm-modal hm-modal--md">
                     <div class="hm-modal-hd">
                         <h3 id="hm-excl-title">Add Exclusion Type</h3>
-                        <button class="hm-modal-x" onclick="hmExcl.close()">&times;</button>
+                        <button class="hm-close" onclick="hmExcl.close()">&times;</button>
                     </div>
                     <div class="hm-modal-body">
                         <input type="hidden" id="hme-id">

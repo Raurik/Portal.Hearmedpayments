@@ -185,7 +185,7 @@ function showCreateModal(){
     $('body').append(
         '<div id="hm-modal-overlay" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,0.65);backdrop-filter:blur(6px);z-index:9999;">'+
         '<div class="hm-modal" style="position:relative;max-width:620px;width:100%;background:rgba(248,250,252,0.98);border-radius:14px;box-shadow:0 30px 80px rgba(15,23,42,0.55);overflow:hidden;">'+
-            '<div class="hm-modal-hd" style="display:flex;align-items:center;justify-content:space-between;padding:14px 22px 10px;font-size:15px;font-weight:600;color:#0f172a;border-bottom:1px solid #e2e8f0;"><span>New Patient</span><button class="hm-modal-x" style="background:none;border:none;font-size:22px;cursor:pointer;color:#94a3b8;line-height:1;">&times;</button></div>'+
+            '<div class="hm-modal-hd" style="display:flex;align-items:center;justify-content:space-between;padding:14px 22px 10px;font-size:15px;font-weight:600;color:#0f172a;border-bottom:1px solid #e2e8f0;"><span>New Patient</span><button class="hm-close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#94a3b8;line-height:1;">&times;</button></div>'+
             '<div class="hm-modal-body" style="padding:20px 24px;max-height:75vh;overflow-y:auto;">'+
                 '<div class="hm-form-row">'+
                     '<div class="hm-form-group" style="flex:0 0 100px;"><label class="hm-label">Title</label><select class="hm-dd" id="cp-title"><option value="">—</option><option>Mr</option><option>Mrs</option><option>Ms</option><option>Miss</option><option>Dr</option><option>Other</option></select></div>'+
@@ -231,7 +231,7 @@ function showCreateModal(){
     $.post(_hm.ajax,{action:'hm_get_staff_list',nonce:_hm.nonce},function(r){if(r.success)r.data.forEach(function(d){$('#cp-dispenser').append('<option value="'+d.id+'">'+esc(d.name)+'</option>');});});
     $.post(_hm.ajax,{action:'hm_get_clinics',nonce:_hm.nonce},function(r){if(r.success)r.data.forEach(function(c){$('#cp-clinic').append('<option value="'+c.id+'">'+esc(c.name)+'</option>');});});
     $.post(_hm.ajax,{action:'hm_get_referral_sources',nonce:_hm.nonce},function(r){if(r.success)r.data.forEach(function(s){$('#cp-ref').append('<option value="'+s.id+'">'+esc(s.name)+'</option>');});});
-    $('#cp-cancel,.hm-modal-x').on('click',closeModal);
+    $('#cp-cancel,.hm-close').on('click',closeModal);
     $('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
     $('#cp-save').on('click',function(){
         var fn=$.trim($('#cp-fn').val()),ln=$.trim($('#cp-ln').val());
@@ -509,8 +509,8 @@ function initProfile(){
 
     function showNoteModal(id,text,type){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>'+(id?'Edit':'Add')+' Note</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Note type</label><select class="hm-dd" id="note-type">'+['Clinical','Admin','Follow-up','Cancellation','System','Manual'].map(function(t){return'<option'+(type&&type.toLowerCase()===t.toLowerCase()?' selected':'')+'>'+t+'</option>';}).join('')+'</select></div><div class="hm-form-group"><label class="hm-label">Note text</label><textarea class="hm-textarea" id="note-text" rows="6">'+esc(text||'')+'</textarea></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="note-save">Save</button></div></div></div>');
-        $('.hm-modal-x').on('click',closeModal);
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>'+(id?'Edit':'Add')+' Note</span><button class="hm-close">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Note type</label><select class="hm-dd" id="note-type">'+['Clinical','Admin','Follow-up','Cancellation','System','Manual'].map(function(t){return'<option'+(type&&type.toLowerCase()===t.toLowerCase()?' selected':'')+'>'+t+'</option>';}).join('')+'</select></div><div class="hm-form-group"><label class="hm-label">Note text</label><textarea class="hm-textarea" id="note-text" rows="6">'+esc(text||'')+'</textarea></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="note-save">Save</button></div></div></div>');
+        $('.hm-close').on('click',closeModal);
         $('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#note-save').on('click',function(){
             var txt=$.trim($('#note-text').val());if(!txt){toast('Note text required','error');return;}
@@ -537,14 +537,14 @@ function initProfile(){
     }
     function showUploadDocModal(){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>Upload Document</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Document type</label><select class="hm-dd" id="doc-type"><option>Audiogram</option><option>Referral Letter</option><option>GP Letter</option><option>Insurance Document</option><option>Consent Form</option><option>Other</option></select></div><div class="hm-form-group"><label class="hm-label">File (PDF, JPG, PNG, DOCX — max 10MB)</label><input type="file" id="doc-file" accept=".pdf,.jpg,.jpeg,.png,.docx"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="doc-save">Upload</button></div></div></div>');
-        $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>Upload Document</span><button class="hm-close">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Document type</label><select class="hm-dd" id="doc-type"><option>Audiogram</option><option>Referral Letter</option><option>GP Letter</option><option>Insurance Document</option><option>Consent Form</option><option>Other</option></select></div><div class="hm-form-group"><label class="hm-label">File (PDF, JPG, PNG, DOCX — max 10MB)</label><input type="file" id="doc-file" accept=".pdf,.jpg,.jpeg,.png,.docx"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="doc-save">Upload</button></div></div></div>');
+        $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#doc-save').on('click',function(){var file=$('#doc-file')[0].files[0];if(!file){toast('Select a file','error');return;}$(this).prop('disabled',true).text('Uploading…');var fd=new FormData();fd.append('action','hm_upload_patient_document');fd.append('nonce',_hm.nonce);fd.append('patient_id',pid);fd.append('document_type',$('#doc-type').val());fd.append('file',file);$.ajax({url:_hm.ajax,type:'POST',data:fd,processData:false,contentType:false,success:function(r){closeModal();if(r.success){toast('Uploaded');loadDocuments($('#hm-tab-content'));}else toast(r.data||'Failed','error');}});});
     }
     function showDownloadConsent(txt,cb){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Download Consent</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="dl-consent" style="margin-top:2px;flex-shrink:0;"><span>'+esc(txt)+'</span></label></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="dl-confirm" disabled>Download</button></div></div></div>');
-        $('#dl-consent').on('change',function(){$('#dl-confirm').prop('disabled',!this.checked);});$('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Download Consent</span><button class="hm-close">&times;</button></div><div class="hm-modal-body"><label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="dl-consent" style="margin-top:2px;flex-shrink:0;"><span>'+esc(txt)+'</span></label></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="dl-confirm" disabled>Download</button></div></div></div>');
+        $('#dl-consent').on('change',function(){$('#dl-confirm').prop('disabled',!this.checked);});$('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#dl-confirm').on('click',function(){closeModal();cb();});
     }
 
@@ -679,7 +679,7 @@ function initProfile(){
             var act=(r&&r.success?r.data:[]).filter(function(p){return p.status==='Active';});
             if(!act.length){toast('No active devices to exchange','error');return;}
             var h='<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md">'+
-                '<div class="hm-modal-hd"><span>Exchange — Select Device</span><button class="hm-modal-x">&times;</button></div>'+
+                '<div class="hm-modal-hd"><span>Exchange — Select Device</span><button class="hm-close">&times;</button></div>'+
                 '<div class="hm-modal-body"><p style="font-size:13px;color:#64748b;margin-bottom:12px;">Choose which device to exchange:</p>';
             act.forEach(function(d){
                 // Show each side as its own selectable option
@@ -706,9 +706,9 @@ function initProfile(){
                         '<div><strong>'+esc(d.product_name)+'</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · No serial on file</div></div></label>';
                 }
             });
-            h+='</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="exchange-next">Next →</button></div></div></div>';
+            h+='</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="exchange-next">Next →</button></div></div></div>';
             $('body').append(h);
-            $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+            $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
             $('#exchange-next').on('click',function(){
                 var $sel=$('.hm-exchange-radio:checked');
                 if(!$sel.length){toast('Select a device to exchange','error');return;}
@@ -721,13 +721,13 @@ function initProfile(){
     function showMarkInactiveModal(ppId,side,cb){
         if($('#hm-modal-overlay').length)return;
         var sideLabel=side?' ('+side.charAt(0).toUpperCase()+side.slice(1)+' side)':' (Both sides)';
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>Mark Inactive'+esc(sideLabel)+'</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Reason</label><select class="hm-dd" id="inactive-reason"><option>Lost</option><option>Bought New Aids</option><option>Returned</option><option>Other</option></select></div><div class="hm-form-group"><label class="hm-label">Notes (optional)</label><textarea class="hm-textarea" id="inactive-notes" rows="3"></textarea></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn-danger" id="inactive-save">Mark Inactive</button></div></div></div>');
-        $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>Mark Inactive'+esc(sideLabel)+'</span><button class="hm-close">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Reason</label><select class="hm-dd" id="inactive-reason"><option>Lost</option><option>Bought New Aids</option><option>Returned</option><option>Other</option></select></div><div class="hm-form-group"><label class="hm-label">Notes (optional)</label><textarea class="hm-textarea" id="inactive-notes" rows="3"></textarea></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn-danger" id="inactive-save">Mark Inactive</button></div></div></div>');
+        $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#inactive-save').on('click',function(){$(this).prop('disabled',true).text('Saving…');$.post(_hm.ajax,{action:'hm_update_patient_product_status',nonce:_hm.nonce,_ID:ppId,status:'Inactive',reason:$('#inactive-reason').val()+($.trim($('#inactive-notes').val())?': '+$.trim($('#inactive-notes').val()):'')+(side?' ['+side+' only]':'')},function(r){closeModal();if(r.success){toast('Marked inactive');cb();}else toast('Error','error');});});
     }
     function showLogRepairModal(ppId,name,sl,sr,cb){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>Log Repair</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body">'+
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>Log Repair</span><button class="hm-close">&times;</button></div><div class="hm-modal-body">'+
             '<div class="hm-form-group"><label class="hm-label">Product</label><input class="hm-inp" value="'+esc(name||'Select on Hearing Aids tab')+'" readonly></div>'+
             '<div class="hm-form-group"><label class="hm-label">Manufacturer</label><select class="hm-dd" id="repair-mfr"><option value="">Loading…</option></select></div>'+
             '<div class="hm-form-row">'+
@@ -737,7 +737,7 @@ function initProfile(){
             '<div id="repair-warranty-notice" style="display:none;margin-bottom:12px;padding:8px 12px;border-radius:6px;font-size:12px;"></div>'+
             '<div class="hm-form-group"><label class="hm-label">Reason for repair *</label><select class="hm-dd" id="repair-reason"><option value="">— Select —</option><option>Intermittent fault</option><option>No sound</option><option>Feedback / whistling</option><option>Physical damage</option><option>Moisture damage</option><option>Battery issue</option><option>Bluetooth issue</option><option>Receiver fault</option><option>Microphone fault</option><option>Custom shell re-make</option><option>Other</option></select></div>'+
             '<div class="hm-form-group"><label class="hm-label">Repair notes</label><textarea class="hm-textarea" id="repair-notes" rows="3" placeholder="Describe the issue…"></textarea></div>'+
-        '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="repair-save">Log Repair</button></div></div></div>');
+        '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="repair-save">Log Repair</button></div></div></div>');
         // Load manufacturers
         $.post(_hm.ajax,{action:'hm_get_manufacturers',nonce:_hm.nonce},function(r){
             var $sel=$('#repair-mfr');$sel.empty().append('<option value="">— Select manufacturer —</option>');
@@ -757,7 +757,7 @@ function initProfile(){
                 }
             });
         }
-        $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+        $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#repair-save').on('click',function(){
             var reason=$('#repair-reason').val();
             if(!reason){toast('Please select a reason for repair','error');return;}
@@ -776,18 +776,18 @@ function initProfile(){
         if($('#hm-modal-overlay').length)return;
         $('body').append(
             '<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--sm">'+
-            '<div class="hm-modal-hd"><span>Repair Logged</span><button class="hm-modal-x">&times;</button></div>'+
+            '<div class="hm-modal-hd"><span>Repair Logged</span><button class="hm-close">&times;</button></div>'+
             '<div class="hm-modal-body" style="text-align:center;padding:24px 20px;">'+
                 '<div style="font-size:40px;margin-bottom:12px;">🔧</div>'+
                 '<p style="font-size:14px;color:#334155;margin-bottom:4px;">Repair <strong>'+esc(repairNum||'')+'</strong> created successfully.</p>'+
                 '<p style="font-size:13px;color:#64748b;margin-bottom:20px;">Print a repair docket to send with the device to the manufacturer.</p>'+
                 '<div style="display:flex;gap:10px;justify-content:center;">'+
-                    '<button class="hm-btn hm-btn--secondary hm-modal-x" style="min-width:80px;">Close</button>'+
+                    '<button class="hm-btn hm-btn--secondary hm-close" style="min-width:80px;">Close</button>'+
                     '<button class="hm-btn hm-btn--primary" id="hm-print-docket" style="min-width:140px;">🖨 Print Docket</button>'+
                 '</div>'+
             '</div></div></div>'
         );
-        $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+        $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#hm-print-docket').on('click',function(){
             printRepairDocket(repairId);
         });
@@ -805,14 +805,14 @@ function initProfile(){
     function showExchangeModal(ppId,productName,cb,side){
         if($('#hm-modal-overlay').length)return;
         var sideNote=side&&side!=='both'?' ('+side.charAt(0).toUpperCase()+side.slice(1)+' side only)':'';
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Exchange Hearing Aid</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body">'+
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Exchange Hearing Aid</span><button class="hm-close">&times;</button></div><div class="hm-modal-body">'+
             '<p style="font-size:13px;color:#64748b;margin-bottom:16px;">This will mark <strong>'+esc(productName)+'</strong>'+esc(sideNote)+' as "Replaced" and create a credit note.</p>'+
             '<div class="hm-form-group"><label class="hm-label">Reason for exchange *</label><select class="hm-dd" id="exch-reason"><option value="">— Select —</option><option>Upgrade</option><option>Downgrade</option><option>Manufacturer recall</option><option>Repeated faults</option><option>Patient dissatisfaction</option><option>Style change</option><option>Other</option></select></div>'+
             '<div class="hm-form-group"><label class="hm-label">Credit amount (€)</label><input type="number" class="hm-inp" id="exch-amount" step="0.01" min="0" placeholder="0.00"></div>'+
             '<div class="hm-form-group"><label class="hm-label">Refund type</label><select class="hm-dd" id="exch-refund-type"><option value="credit">Credit towards new device</option><option value="cheque">Cheque refund</option></select></div>'+
             '<div class="hm-form-group"><label class="hm-label">Notes (optional)</label><textarea class="hm-textarea" id="exch-notes" rows="2"></textarea></div>'+
-        '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="exch-save">Process Exchange</button></div></div></div>');
-        $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+        '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="exch-save">Process Exchange</button></div></div></div>');
+        $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#exch-save').on('click',function(){
             var reason=$('#exch-reason').val();if(!reason){toast('Select a reason','error');return;}
             var amt=parseFloat($('#exch-amount').val())||0;
@@ -877,8 +877,8 @@ function initProfile(){
     }
     function showLogChequeModal(cnId,cb){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--sm"><div class="hm-modal-hd"><span>Log Cheque Sent</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Date sent</label><input type="date" class="hm-inp" id="cheque-date" value="'+new Date().toISOString().split('T')[0]+'"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="cheque-save">Log</button></div></div></div>');
-        $('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--sm"><div class="hm-modal-hd"><span>Log Cheque Sent</span><button class="hm-close">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Date sent</label><input type="date" class="hm-inp" id="cheque-date" value="'+new Date().toISOString().split('T')[0]+'"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="cheque-save">Log</button></div></div></div>');
+        $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#cheque-save').on('click',function(){$.post(_hm.ajax,{action:'hm_log_cheque_sent',nonce:_hm.nonce,_ID:cnId,cheque_date:$('#cheque-date').val()},function(r){closeModal();if(r.success){toast('Cheque logged');cb();}else toast('Error','error');});});
     }
 
@@ -983,14 +983,14 @@ function initProfile(){
     /* ── MODALS: ANONYMISE + EXPORT ── */
     function showAnonymiseModal(){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd" style="background:#fef2f2;color:#e53e3e;"><span>'+HM_ICONS.warning+' Anonymise Patient — Irreversible</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><p style="font-size:13px;color:#334155;">Replaces all personal data with "ANONYMISED [date]". Clinical notes, financial records and audit logs are retained. This cannot be undone.</p><div class="hm-form-group"><label class="hm-label">Type CONFIRM ERASURE to proceed</label><input type="text" class="hm-inp" id="anon-confirm" placeholder="CONFIRM ERASURE"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn-danger" id="anon-save" disabled>Anonymise Patient</button></div></div></div>');
-        $('#anon-confirm').on('input',function(){$('#anon-save').prop('disabled',$(this).val()!=='CONFIRM ERASURE');});$('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd" style="background:#fef2f2;color:#e53e3e;"><span>'+HM_ICONS.warning+' Anonymise Patient — Irreversible</span><button class="hm-close">&times;</button></div><div class="hm-modal-body"><p style="font-size:13px;color:#334155;">Replaces all personal data with "ANONYMISED [date]". Clinical notes, financial records and audit logs are retained. This cannot be undone.</p><div class="hm-form-group"><label class="hm-label">Type CONFIRM ERASURE to proceed</label><input type="text" class="hm-inp" id="anon-confirm" placeholder="CONFIRM ERASURE"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn-danger" id="anon-save" disabled>Anonymise Patient</button></div></div></div>');
+        $('#anon-confirm').on('input',function(){$('#anon-save').prop('disabled',$(this).val()!=='CONFIRM ERASURE');});$('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#anon-save').on('click',function(){$(this).prop('disabled',true).text('Anonymising…');$.post(_hm.ajax,{action:'hm_anonymise_patient',nonce:_hm.nonce,patient_id:pid,confirm:'CONFIRM ERASURE'},function(r){closeModal();if(r.success){toast('Patient anonymised');window.location=PG;}else toast(r.data||'Error','error');});});
     }
     function showExportModal(){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Export Patient Data — GDPR Article 20</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body"><p style="font-size:13px;color:#334155;">Exports all patient data. Identified by C-number only in filename (Tier 2 export).</p><label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;margin-top:12px;"><input type="checkbox" id="export-consent" style="margin-top:2px;flex-shrink:0;"><span>I confirm I am authorised to export this patient\'s data.</span></label></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="export-confirm" disabled>Export Data</button></div></div></div>');
-        $('#export-consent').on('change',function(){$('#export-confirm').prop('disabled',!this.checked);});$('.hm-modal-x').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Export Patient Data — GDPR Article 20</span><button class="hm-close">&times;</button></div><div class="hm-modal-body"><p style="font-size:13px;color:#334155;">Exports all patient data. Identified by C-number only in filename (Tier 2 export).</p><label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;margin-top:12px;"><input type="checkbox" id="export-consent" style="margin-top:2px;flex-shrink:0;"><span>I confirm I am authorised to export this patient\'s data.</span></label></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="export-confirm" disabled>Export Data</button></div></div></div>');
+        $('#export-consent').on('change',function(){$('#export-confirm').prop('disabled',!this.checked);});$('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#export-confirm').on('click',function(){$(this).prop('disabled',true).text('Exporting…');$.post(_hm.ajax,{action:'hm_export_patient_data',nonce:_hm.nonce,patient_id:pid},function(r){closeModal();if(r.success)toast(r.data.message||'Export logged');else toast(r.data||'Error','error');});});
     }
 
@@ -1062,7 +1062,7 @@ function initProfile(){
         $('body').append(
             '<div id="hm-modal-overlay" class="hm-modal-bg">'+
             '<div class="hm-modal hm-modal--md">'+
-                '<div class="hm-modal-hd"><span>Add Hearing Aid</span><button class="hm-modal-x">&times;</button></div>'+
+                '<div class="hm-modal-hd"><span>Add Hearing Aid</span><button class="hm-close">&times;</button></div>'+
                 '<div class="hm-modal-body">'+
                     '<div class="hm-form-group"><label class="hm-label">Manufacturer *</label>'+
                     '<select class="hm-dd" id="ap-mfr"><option value="">Loading…</option></select></div>'+
@@ -1085,7 +1085,7 @@ function initProfile(){
                     '<div class="hm-form-hint" id="ap-war-hint" style="margin-top:-8px;margin-bottom:12px;font-size:12px;color:#64748b;"></div>'+
                     '<div id="ap-match-info" style="font-size:12px;color:#64748b;margin-bottom:8px;"></div>'+
                 '</div>'+
-                '<div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="ap-save">Add Hearing Aid</button></div>'+
+                '<div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="ap-save">Add Hearing Aid</button></div>'+
             '</div></div>'
         );
 
@@ -1222,7 +1222,7 @@ function initProfile(){
         // Auto-calc on load (default 4 years)
         (function(){var fit=new Date($('#ap-fit').val());fit.setFullYear(fit.getFullYear()+4);$('#ap-war').val(fit.toISOString().split('T')[0]);$('#ap-war-hint').text('Default 4-year warranty');})();
 
-        $('.hm-modal-x').on('click',closeModal);
+        $('.hm-close').on('click',closeModal);
         $('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#ap-save').on('click',function(){
             var fit=$('#ap-fit').val();if(!fit){toast('Fitting date required','error');return;}
@@ -1253,18 +1253,18 @@ function initProfile(){
         var earLabel=earDesc.length===2?'Binaural':earDesc[0]||'';
         $('body').append(
             '<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--sm">'+
-            '<div class="hm-modal-hd"><span>Create Order?</span><button class="hm-modal-x">&times;</button></div>'+
+            '<div class="hm-modal-hd"><span>Create Order?</span><button class="hm-close">&times;</button></div>'+
             '<div class="hm-modal-body" style="text-align:center;padding:24px 20px;">'+
                 '<div style="font-size:40px;margin-bottom:12px;">📋</div>'+
                 '<p style="font-size:14px;color:#334155;margin-bottom:4px;">Hearing aid <strong>'+esc(prodName)+'</strong> added successfully.</p>'+
                 '<p style="font-size:13px;color:#64748b;margin-bottom:20px;">Would you like to create an order for this device?</p>'+
                 '<div style="display:flex;gap:10px;justify-content:center;">'+
-                    '<button class="hm-btn hm-btn--secondary hm-modal-x" style="min-width:100px;">Not Now</button>'+
+                    '<button class="hm-btn hm-btn--secondary hm-close" style="min-width:100px;">Not Now</button>'+
                     '<a href="/orders/?hm_action=create&patient_id='+pid+'&product_id='+(prodId||'')+'" class="hm-btn hm-btn--primary" style="min-width:140px;text-decoration:none;">Create Order →</a>'+
                 '</div>'+
             '</div></div></div>'
         );
-        $('.hm-modal-x').on('click',closeModal);
+        $('.hm-close').on('click',closeModal);
         $('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
     }
 
@@ -1304,7 +1304,7 @@ function initProfile(){
         $('body').append(
             '<div id="hm-modal-overlay" class="hm-modal-bg">'+
             '<div class="hm-modal hm-modal--md">'+
-                '<div class="hm-modal-hd"><span>Add Form</span><button class="hm-modal-x">&times;</button></div>'+
+                '<div class="hm-modal-hd"><span>Add Form</span><button class="hm-close">&times;</button></div>'+
                 '<div class="hm-modal-body">'+
                     '<div class="hm-form-group"><label class="hm-label">Form type</label><select class="hm-dd" id="af-type"><option value="">Loading…</option></select></div>'+
                     '<div id="af-fields" style="margin-top:16px;"></div>'+
@@ -1323,7 +1323,7 @@ function initProfile(){
                         '<div class="hm-sig-controls"><button class="hm-btn hm-btn--secondary hm-btn--sm" id="af-sig-clear">Clear</button></div>'+
                     '</div>'+
                 '</div>'+
-                '<div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="af-save">Save Form</button></div>'+
+                '<div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="af-save">Save Form</button></div>'+
             '</div></div>'
         );
         // Load form templates
@@ -1344,7 +1344,7 @@ function initProfile(){
         sigPad.addEventListener('touchmove',function(e){e.preventDefault();if(!drawing)return;var p=getPos(e);ctx.lineTo(p.x,p.y);ctx.stroke();hasSig=true;});
         sigPad.addEventListener('touchend',function(){drawing=false;});
         $('#af-sig-clear').on('click',function(){ctx.clearRect(0,0,sigPad.width,sigPad.height);hasSig=false;});
-        $('.hm-modal-x').on('click',closeModal);
+        $('.hm-close').on('click',closeModal);
         $('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#af-save').on('click',function(){
             var typeval=$('#af-type').val();if(!typeval){toast('Select a form type','error');return;}
@@ -1386,7 +1386,7 @@ function initProfile(){
         $('body').append(
             '<div id="hm-modal-overlay" class="hm-modal-bg">'+
             '<div class="hm-modal hm-modal--md">'+
-                '<div class="hm-modal-hd"><span>Add Reminder</span><button class="hm-modal-x">&times;</button></div>'+
+                '<div class="hm-modal-hd"><span>Add Reminder</span><button class="hm-close">&times;</button></div>'+
                 '<div class="hm-modal-body">'+
                     '<div class="hm-form-row">'+
                         '<div class="hm-form-group"><label class="hm-label">Type</label>'+
@@ -1400,11 +1400,11 @@ function initProfile(){
                         '<div class="hm-form-group"><label class="hm-label">Assign to (dispenser)</label><select class="hm-dd" id="notif-assign"><option value="">— Myself —</option></select></div>'+
                     '</div>'+
                 '</div>'+
-                '<div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="notif-save">Save Reminder</button></div>'+
+                '<div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="notif-save">Save Reminder</button></div>'+
             '</div></div>'
         );
         $.post(_hm.ajax,{action:'hm_get_dispensers',nonce:_hm.nonce},function(r){if(r.success)r.data.forEach(function(d){$('#notif-assign').append('<option value="'+d.id+'">'+esc(d.name)+'</option>');});});
-        $('.hm-modal-x').on('click',closeModal);
+        $('.hm-close').on('click',closeModal);
         $('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#notif-save').on('click',function(){
             var msg=$.trim($('#notif-msg').val());if(!msg){toast('Message required','error');return;}

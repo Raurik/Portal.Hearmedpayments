@@ -131,7 +131,7 @@ class HearMed_Admin_Blockouts {
                 <div class="hm-modal hm-modal--lg">
                     <div class="hm-modal-hd">
                         <h3 id="hm-block-title">Add Blockout Rule</h3>
-                        <button class="hm-modal-x" onclick="hmBlock.close()">&times;</button>
+                        <button class="hm-close" onclick="hmBlock.close()">&times;</button>
                     </div>
                     <div class="hm-modal-body">
                         <input type="hidden" id="hmb-id">

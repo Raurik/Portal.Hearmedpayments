@@ -423,7 +423,7 @@ cfg.slotHpx = slotH;
     openNewApptModal:function(date,time,dispId){
         var self=this;
         var html='<div class="hm-modal-bg open"><div class="hm-modal hm-modal--md">'+
-            '<div class="hm-modal-hd"><h3>New Appointment</h3><button class="hm-modal-x hm-new-close">'+IC.x+'</button></div>'+
+            '<div class="hm-modal-hd"><h3>New Appointment</h3><button class="hm-close hm-new-close">'+IC.x+'</button></div>'+
             '<div class="hm-modal-body">'+
                 '<div class="hm-fld"><label>Patient search</label><input class="hm-inp" id="hmn-ptsearch" placeholder="Search by name..." autocomplete="off"><div class="hm-pt-results" id="hmn-ptresults"></div><input type="hidden" id="hmn-patientid" value="0"></div>'+
                 '<div class="hm-row">'+
@@ -743,7 +743,7 @@ var Blockouts={
     },
     openForm:function(bo){
         var isEdit=!!bo,self=this;
-        var h='<div class="hm-modal-bg open"><div class="hm-modal"><div class="hm-modal-hd"><h3>'+(isEdit?'Edit':'New')+' Blockout</h3><button class="hm-modal-x hbl-close">'+IC.x+'</button></div><div class="hm-modal-body">';
+        var h='<div class="hm-modal-bg open"><div class="hm-modal"><div class="hm-modal-hd"><h3>'+(isEdit?'Edit':'New')+' Blockout</h3><button class="hm-close hbl-close">'+IC.x+'</button></div><div class="hm-modal-body">';
         h+='<div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hblf-svc">'+self.services.map(function(s){return'<option value="'+s.id+'"'+(bo&&bo.service_id==s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>';
         h+='<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hblf-disp"><option value="0">All</option>'+self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(bo&&bo.dispenser_id==d.id?' selected':'')+'>'+esc(d.name)+'</option>';}).join('')+'</select></div>';
         h+='<div class="hm-row"><div class="hm-fld"><label>Start Date</label><input type="date" class="hm-inp" id="hblf-sd" value="'+(bo?bo.start_date:'')+'"></div><div class="hm-fld"><label>End Date</label><input type="date" class="hm-inp" id="hblf-ed" value="'+(bo?bo.end_date:'')+'"></div></div>';
@@ -796,7 +796,7 @@ var Holidays={
     },
     openForm:function(ho){
         var isEdit=!!ho,self=this;
-        var h='<div class="hm-modal-bg open"><div class="hm-modal"><div class="hm-modal-hd"><h3>'+(isEdit?'Edit':'New')+' Holiday / Unavailability</h3><button class="hm-modal-x hhl-close">'+IC.x+'</button></div><div class="hm-modal-body">';
+        var h='<div class="hm-modal-bg open"><div class="hm-modal"><div class="hm-modal-hd"><h3>'+(isEdit?'Edit':'New')+' Holiday / Unavailability</h3><button class="hm-close hhl-close">'+IC.x+'</button></div><div class="hm-modal-body">';
         h+='<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hhlf-disp"><option value="">Select...</option>';
         this.dispensers.forEach(function(d){h+='<option value="'+d.id+'"'+(ho&&ho.dispenser_id==d.id?' selected':'')+'>'+esc(d.name)+'</option>';});
         h+='</select></div>';

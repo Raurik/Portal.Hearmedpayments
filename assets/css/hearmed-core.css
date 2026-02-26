@@ -462,7 +462,6 @@
   justify-content: flex-end;
   gap: 8px;
 }
-#hm-app .hm-modal-x,
 #hm-app .hm-close {
   width: 28px;
   height: 28px;
@@ -477,7 +476,6 @@
   font-size: 16px;
   transition: var(--hm-transition);
 }
-#hm-app .hm-modal-x:hover,
 #hm-app .hm-close:hover { background: var(--hm-border); color: var(--hm-red); }
 /* Legacy modal aliases */
 #hm-app .hm-modal-overlay {
@@ -905,22 +903,6 @@
 #hm-app .hm-icon-btn--edit   { color: var(--hm-teal); }
 #hm-app .hm-icon-btn--warn   { color: #f59e0b; }
 #hm-app .hm-icon-btn--danger { color: var(--hm-red); }
-
-/* ── Close buttons — circle bg ── */
-#hm-app .hm-close {
-  width: 28px; height: 28px;
-  border-radius: 14px;
-  border: none;
-  background: var(--hm-bg-hover);
-  color: var(--hm-text-muted);
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: var(--hm-transition);
-}
-#hm-app .hm-close:hover { background: var(--hm-border); color: var(--hm-red); }
 
 /* ── Loading overlay ── */
 #hm-app .hm-loading-overlay {

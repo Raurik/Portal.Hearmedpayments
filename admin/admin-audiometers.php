@@ -102,7 +102,7 @@ class HearMed_Admin_Audiometers {
 
             <div class="hm-modal-bg" id="hm-aud-modal">
                 <div class="hm-modal hm-modal--md">
-                    <div class="hm-modal-hd"><h3 id="hm-aud-title">Add Audiometer</h3><button class="hm-modal-x" onclick="hmAud.close()">&times;</button></div>
+                    <div class="hm-modal-hd"><h3 id="hm-aud-title">Add Audiometer</h3><button class="hm-close" onclick="hmAud.close()">&times;</button></div>
                     <div class="hm-modal-body">
                         <input type="hidden" id="hma-id">
                         <div class="hm-form-group"><label>Name *</label><input type="text" id="hma-name" placeholder="e.g. Main Audiometer"></div>

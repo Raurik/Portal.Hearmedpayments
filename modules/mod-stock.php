@@ -119,16 +119,16 @@ function hm_stock_render() {
         $(document).on('click','.hm-stock-transfer',function(){
             var sid=$(this).data('id');
             if($('#hm-modal-overlay').length)return;
-            $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--sm"><div class="hm-modal-hd"><span>Transfer Stock</span><button class="hm-modal-x">&times;</button></div><div class="hm-modal-body">'+
+            $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--sm"><div class="hm-modal-hd"><span>Transfer Stock</span><button class="hm-close">&times;</button></div><div class="hm-modal-body">'+
                 '<div class="hm-form-group"><label class="hm-label">Transfer to clinic *</label><select class="hm-dd" id="transfer-clinic"><option value="">— Select clinic —</option></select></div>'+
                 '<div class="hm-form-group"><label class="hm-label">Quantity</label><input type="number" class="hm-inp" id="transfer-qty" value="1" min="1"></div>'+
                 '<div class="hm-form-group"><label class="hm-label">Notes</label><textarea class="hm-textarea" id="transfer-notes" rows="2"></textarea></div>'+
-            '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-modal-x">Cancel</button><button class="hm-btn hm-btn--primary" id="transfer-save">Transfer</button></div></div></div>');
+            '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="transfer-save">Transfer</button></div></div></div>');
             // Load clinics into transfer dropdown
             $.post(_hm.ajax,{action:'hm_get_clinics',nonce:_hm.nonce},function(r){
                 if(r&&r.success&&r.data){r.data.forEach(function(c){$('#transfer-clinic').append('<option value="'+c._ID+'">'+esc(c.name)+'</option>');});}
             });
-            $('.hm-modal-x').on('click',function(){$('#hm-modal-overlay').remove();});
+            $('.hm-close').on('click',function(){$('#hm-modal-overlay').remove();});
             $('#hm-modal-overlay').on('click',function(e){if(e.target===this)$(this).remove();});
             $('#transfer-save').on('click',function(){
                 var toClinic=$('#transfer-clinic').val();

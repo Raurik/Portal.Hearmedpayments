@@ -392,7 +392,7 @@ class HearMed_Admin_Products {
                 <div class="hm-modal hm-modal--lg">
                     <div class="hm-modal-hd">
                         <h3 id="hm-prod-modal-title">Add Item</h3>
-                        <button class="hm-modal-x" onclick="hmProd.close()">&times;</button>
+                        <button class="hm-close" onclick="hmProd.close()">&times;</button>
                     </div>
                     <div class="hm-modal-body">
                         <input type="hidden" id="hmp-id">
@@ -715,7 +715,7 @@ class HearMed_Admin_Products {
                 <div class="hm-modal hm-modal--md">
                     <div class="hm-modal-hd">
                         <h3>Import from CSV</h3>
-                        <button class="hm-modal-x" onclick="document.getElementById('hm-import-modal').classList.remove('open')">&times;</button>
+                        <button class="hm-close" onclick="document.getElementById('hm-import-modal').classList.remove('open')">&times;</button>
                     </div>
                     <div class="hm-modal-body">
                         <p style="font-size:13px;color:var(--hm-text-light);margin-bottom:12px;">

@@ -93,7 +93,7 @@ function hm_render_approvals_page() {
         <div class="hm-modal hm-modal--md">
             <div class="hm-modal-hd">
                 <h3 style="margin:0;font-size:14px;font-weight:600;">Deny Order</h3>
-                <button class="hm-modal-x" onclick="hmApprovals.closeDeny()">&times;</button>
+                <button class="hm-close" onclick="hmApprovals.closeDeny()">&times;</button>
             </div>
             <div class="hm-modal-body">
                 <p style="color:#475569;font-size:12px;margin:0 0 12px;">The dispenser will be notified with your reason.</p>

@@ -195,7 +195,7 @@ class HearMed_Forms {
                 <div class="hm-modal">
                     <div class="hm-modal-hd">
                         <h3>Select Form</h3>
-                        <button class="hm-modal-x" onclick="hmForms.closePicker()">✕</button>
+                        <button class="hm-close" onclick="hmForms.closePicker()">✕</button>
                     </div>
                     <div class="hm-modal-body">
                         <?php if ( empty( $templates ) ) : ?>
@@ -225,7 +225,7 @@ class HearMed_Forms {
                 <div class="hm-modal">
                     <div class="hm-modal-hd">
                         <h3 id="hm-form-modal-title">Loading…</h3>
-                        <button class="hm-modal-x" onclick="hmForms.closeForm()">✕</button>
+                        <button class="hm-close" onclick="hmForms.closeForm()">✕</button>
                     </div>
                     <div class="hm-modal-body" id="hm-form-modal-body">
                         <div class="hm-loading">Loading form…</div>
@@ -249,7 +249,7 @@ class HearMed_Forms {
                         <h3>Form Record</h3>
                         <div style="display:flex;gap:8px;">
                             <button class="hm-btn hm-btn--ghost hm-btn--sm" onclick="hmForms.printForm()">🖨 Print</button>
-                            <button class="hm-modal-x" onclick="hmForms.closeView()">✕</button>
+                            <button class="hm-close" onclick="hmForms.closeView()">✕</button>
                         </div>
                     </div>
                     <div class="hm-modal-body hm-document-view" id="hm-view-modal-body">

@@ -72,7 +72,7 @@ class HearMed_Refunds {
             <div class="hm-modal hm-modal--md">
                 <div class="hm-modal-hd">
                     <h3 id="hm-cn-modal-title">New Credit Note</h3>
-                    <button class="hm-modal-x" id="hm-cn-close">&times;</button>
+                    <button class="hm-close" id="hm-cn-close">&times;</button>
                 </div>
                 <div class="hm-modal-body">
 
@@ -168,7 +168,7 @@ class HearMed_Refunds {
             <div class="hm-modal hm-modal--sm">
                 <div class="hm-modal-hd">
                     <h3>Process Cheque Refund</h3>
-                    <button class="hm-modal-x" id="hm-proc-close">&times;</button>
+                    <button class="hm-close" id="hm-proc-close">&times;</button>
                 </div>
                 <div class="hm-modal-body">
                     <div class="hm-form-group">

@@ -151,7 +151,6 @@ class HearMed_Admin_Appointment_Type_Detail {
         .hm-modal                { background:#fff; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.18); max-height:90vh; overflow-y:auto; }
         .hm-modal-hd             { display:flex; justify-content:space-between; align-items:center; padding:14px 24px; border-bottom:1px solid #e2e8f0; }
         .hm-modal-hd h3          { margin:0; font-size:15px; font-weight:700; color:#0f172a; }
-        .hm-modal-x              { background:none; border:none; font-size:22px; color:#94a3b8; cursor:pointer; line-height:1; }
         .hm-modal-ft             { display:flex; justify-content:flex-end; gap:10px; padding:12px 24px; border-top:1px solid #e2e8f0; }
         .hm-days-grid            { display:flex; flex-wrap:wrap; gap:8px; }
         </style>
@@ -348,7 +347,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                 <div class="hm-modal hm-modal--md">
                     <div class="hm-modal-hd">
                         <h3 id="hm-outcome-title">Add Outcome</h3>
-                        <button class="hm-modal-x" onclick="hmOutcome.close()">&times;</button>
+                        <button class="hm-close" onclick="hmOutcome.close()">&times;</button>
                     </div>
                     <div class="hm-modal-body" style="padding:20px 24px;">
                         <input type="hidden" id="hmo-id">
