@@ -113,119 +113,828 @@
 }
 
 
-/* ============================================================
-   BUBBLE VISUAL (NO HEIGHT / NO SCROLL)
+/* ══════════════════════════════════════════
+   HEARMED DESIGN SYSTEM — COMPONENT LIBRARY
+   Do NOT duplicate these in other CSS files.
+   ══════════════════════════════════════════ */
 
-   CHANGED from v3.0:
-   - Removed max-width: 98% → now 100% (no centering math)
-   - Removed margin: 0 auto (centering is parent's job via align-items:stretch)
-   - padding stays — it's cosmetic, not structural
-   ============================================================ */
+/* ── Base typography ── */
+#hm-app { font-family: var(--hm-font); font-size: var(--hm-font-size-base); color: var(--hm-text); }
 
 #hm-app {
   width: 100%;          /* fill .hm-content fully */
 }
 
-#hm-app.hm-bubble-tight {
-  /* Page-level/module-level CSS may define compact spacing when needed */
-}
-
-
-/* ============================================================
-   PAGE HEADER
-   ============================================================ */
-
+/* ── Page Titles — teal underline ── */
 #hm-app .hm-page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--hm-teal);
+  margin-bottom: var(--hm-space-lg);
 }
-
 #hm-app .hm-page-title {
-  font-size: 20px;
-  font-weight: 600;
+  font-family: var(--hm-font-title);
+  font-size: 26px;
+  font-weight: 700;
   color: var(--hm-navy);
   margin: 0;
-  padding-left: 14px;
-  border-left: 3px solid var(--hm-teal);
+  letter-spacing: -0.3px;
+  line-height: 1.2;
 }
-
 #hm-app .hm-page-subtitle {
-  font-size: 13px;
-  color: var(--hm-text-muted);
-  margin-top: 3px;
-  padding-left: 14px;
+  font-family: var(--hm-font-sub);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--hm-text-light);
+  margin: 6px 0 0;
 }
 
+/* ── Section / Card Titles — grey background ── */
+#hm-app .hm-card-hd {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--hm-border);
+  background: var(--hm-bg-alt);
+}
+#hm-app .hm-card-title {
+  font-family: var(--hm-font-sub);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--hm-navy);
+  margin: 0;
+}
 
-/* ============================================================
-   CARDS (OPTIONAL INTERNAL SCROLL ALLOWED)
-   ============================================================ */
-
+/* ── Cards — teal accent top ── */
 #hm-app .hm-card {
-  background: var(--hm-bg-card);
+  background: var(--hm-bg);
   border: 1px solid var(--hm-border);
   border-radius: var(--hm-radius-lg);
-  box-shadow: var(--hm-shadow);
-  margin-bottom: 16px;
-  transition: box-shadow 0.15s ease;
+  border-top: 3px solid var(--hm-teal);
+  overflow: hidden;
 }
-
+#hm-app .hm-card-body {
+  padding: 20px;
+}
+#hm-app .hm-card-body-flush {
+  padding: 0;
+}
 #hm-app .hm-card-scroll {
   min-height: 0;
   overflow: auto;
 }
-
-#hm-app .hm-card:hover {
-  box-shadow: var(--hm-shadow-md);
-}
-
+/* Legacy alias */
 #hm-app .hm-card-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--hm-border-light);
+  background: var(--hm-bg-alt);
 }
-
-#hm-app .hm-card-body {
+#hm-app .hm-card-footer {
   padding: 16px 20px;
+  border-top: 1px solid var(--hm-border-light);
+  background: var(--hm-bg-alt);
+  border-radius: 0 0 var(--hm-radius-lg) var(--hm-radius-lg);
 }
 
-#hm-app .hm-card-body-flush {
+/* ── Buttons — sharp 4px, uppercase ── */
+#hm-app .hm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--hm-radius-sm);
+  font-family: var(--hm-font-btn);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid var(--hm-border);
+  background: var(--hm-bg);
+  color: var(--hm-text);
+  transition: var(--hm-transition);
+  text-decoration: none;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+#hm-app .hm-btn:hover {
+  background: var(--hm-bg-hover);
+  border-color: var(--hm-text-muted);
+  color: var(--hm-navy);
+  text-decoration: none;
+}
+#hm-app .hm-btn--primary,
+#hm-app .hm-btn-teal {
+  background: var(--hm-teal);
+  color: #fff;
+  border-color: var(--hm-teal);
+}
+#hm-app .hm-btn--primary:hover,
+#hm-app .hm-btn-teal:hover {
+  background: var(--hm-teal-hover);
+  border-color: var(--hm-teal-hover);
+  color: #fff;
+}
+#hm-app .hm-btn--danger,
+#hm-app .hm-btn-red {
+  background: var(--hm-red);
+  color: #fff;
+  border-color: var(--hm-red);
+}
+#hm-app .hm-btn--danger:hover,
+#hm-app .hm-btn-red:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+#hm-app .hm-btn--secondary {
+  background: #fff;
+  color: var(--hm-text);
+  border-color: var(--hm-border);
+}
+#hm-app .hm-btn--secondary:hover {
+  background: var(--hm-bg-hover);
+}
+#hm-app .hm-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--hm-teal);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+#hm-app .hm-btn--ghost:hover {
+  background: var(--hm-teal-light);
+  color: var(--hm-teal-hover);
+}
+#hm-app .hm-btn--sm,
+#hm-app .hm-btn-sm {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+#hm-app .hm-btn--xs {
+  padding: 2px 8px;
+  font-size: 10px;
+}
+#hm-app .hm-btn--block {
+  display: flex;
+  width: 100%;
+}
+#hm-app .hm-btn-add,
+#hm-app .hm-btn--add {
+  background: transparent;
+  color: var(--hm-teal);
+  border: none;
+}
+#hm-app .hm-btn-add:hover,
+#hm-app .hm-btn--add:hover {
+  background: var(--hm-teal-light);
+  color: var(--hm-teal-hover);
+}
+#hm-app .hm-btn-group {
+  display: flex;
+  gap: 8px;
+}
+/* Legacy button aliases */
+#hm-app .hm-btn-primary {
+  background: var(--hm-teal);
+  color: #fff;
+  border-color: var(--hm-teal);
+}
+#hm-app .hm-btn-primary:hover {
+  background: var(--hm-teal-hover);
+  border-color: var(--hm-teal-hover);
+  color: #fff;
+}
+#hm-app .hm-btn-outline {
+  background: transparent;
+  color: var(--hm-teal);
+  border-color: var(--hm-teal);
+}
+#hm-app .hm-btn-outline:hover {
+  background: var(--hm-teal-light);
+  color: var(--hm-teal-hover);
+}
+#hm-app .hm-btn-danger {
+  background: var(--hm-red);
+  color: #fff;
+  border-color: var(--hm-red);
+}
+#hm-app .hm-btn-danger:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+#hm-app .hm-btn.hm-btn-link {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--hm-teal);
   padding: 0;
+  text-decoration: none;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+#hm-app .hm-btn.hm-btn-link:hover {
+  background: transparent;
+  color: var(--hm-teal-hover);
+  text-decoration: underline;
+}
+#hm-app .hm-btn-success {
+  background: var(--hm-green);
+  color: #fff;
+  border-color: var(--hm-green);
+}
+#hm-app .hm-btn-error {
+  background: var(--hm-red);
+  color: #fff;
+  border-color: var(--hm-red);
+}
+#hm-app .hm-btn-lg {
+  padding: 12px 24px;
+  font-size: var(--hm-font-size-base);
 }
 
+/* ── Badges — soft fill + border ── */
+#hm-app .hm-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--hm-radius-full);
+  font-family: var(--hm-font);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+#hm-app .hm-badge--green  { background: rgba(16,185,129,0.08); color: #059669; border: 1px solid rgba(16,185,129,0.25); }
+#hm-app .hm-badge--red    { background: rgba(239,68,68,0.08);  color: #dc2626; border: 1px solid rgba(239,68,68,0.25); }
+#hm-app .hm-badge--amber  { background: rgba(245,158,11,0.08); color: #92400e; border: 1px solid rgba(245,158,11,0.25); }
+#hm-app .hm-badge--blue   { background: rgba(59,130,246,0.08); color: #1e40af; border: 1px solid rgba(59,130,246,0.25); }
+#hm-app .hm-badge--grey   { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+#hm-app .hm-badge--orange { background: rgba(249,115,22,0.08); color: #c2410c; border: 1px solid rgba(249,115,22,0.25); }
+#hm-app .hm-badge--purple { background: rgba(139,92,246,0.08); color: #6d28d9; border: 1px solid rgba(139,92,246,0.25); }
+/* Legacy badge aliases */
+#hm-app .hm-badge-green,
+#hm-app .hm-badge-success { background: rgba(16,185,129,0.08); color: #059669; border: 1px solid rgba(16,185,129,0.25); }
+#hm-app .hm-badge-red,
+#hm-app .hm-badge-error   { background: rgba(239,68,68,0.08);  color: #dc2626; border: 1px solid rgba(239,68,68,0.25); }
+#hm-app .hm-badge-yellow,
+#hm-app .hm-badge-amber,
+#hm-app .hm-badge-warning { background: rgba(245,158,11,0.08); color: #92400e; border: 1px solid rgba(245,158,11,0.25); }
+#hm-app .hm-badge-blue   { background: rgba(59,130,246,0.08); color: #1e40af; border: 1px solid rgba(59,130,246,0.25); }
+#hm-app .hm-badge-gray,
+#hm-app .hm-badge-grey   { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+#hm-app .hm-badge-orange  { background: rgba(249,115,22,0.08); color: #c2410c; border: 1px solid rgba(249,115,22,0.25); }
 
-/* ============================================================
-   TABLES
-   ============================================================ */
+/* ── Dot indicators — inline status ── */
+#hm-app .hm-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hm-text);
+}
+#hm-app .hm-dot::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+#hm-app .hm-dot--green::before  { background: #10b981; }
+#hm-app .hm-dot--red::before    { background: #ef4444; }
+#hm-app .hm-dot--amber::before  { background: #f59e0b; }
+#hm-app .hm-dot--blue::before   { background: #3b82f6; }
+#hm-app .hm-dot--grey::before   { background: #94a3b8; }
 
+/* ── Modals — teal accent bar ── */
+#hm-app .hm-modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+#hm-app .hm-modal-bg.open { display: flex; }
+#hm-app .hm-modal {
+  background: var(--hm-bg);
+  border-radius: var(--hm-radius-lg);
+  border-top: 3px solid var(--hm-teal);
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+}
+#hm-app .hm-modal--lg { max-width: 800px; }
+#hm-app .hm-modal-hd {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--hm-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#hm-app .hm-modal-hd h3 {
+  font-family: var(--hm-font-sub);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--hm-navy);
+  margin: 0;
+}
+#hm-app .hm-modal-body { padding: 20px; }
+#hm-app .hm-modal-ft {
+  padding: 12px 20px;
+  border-top: 1px solid var(--hm-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+#hm-app .hm-modal-x,
+#hm-app .hm-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--hm-radius);
+  background: var(--hm-bg-hover);
+  color: var(--hm-text-muted);
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  transition: var(--hm-transition);
+}
+#hm-app .hm-modal-x:hover,
+#hm-app .hm-close:hover { background: var(--hm-border); color: var(--hm-red); }
+/* Legacy modal aliases */
+.hm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 24px;
+}
+
+/* ── Form Inputs — teal focus ring ── */
+#hm-app .hm-form-group { margin-bottom: var(--hm-space-md); }
+#hm-app .hm-form-group:last-child { margin-bottom: 0; }
+#hm-app .hm-form-group label {
+  display: block;
+  font-size: var(--hm-font-size-sm);
+  font-weight: 600;
+  color: var(--hm-text);
+  margin-bottom: 4px;
+}
+#hm-app .hm-form-group input,
+#hm-app .hm-form-group select,
+#hm-app .hm-form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--hm-border);
+  border-radius: var(--hm-radius-md);
+  font-family: var(--hm-font);
+  font-size: var(--hm-font-size-base);
+  color: var(--hm-text);
+  background: var(--hm-bg-input);
+  transition: var(--hm-transition);
+  box-sizing: border-box;
+}
+#hm-app .hm-form-group input:focus,
+#hm-app .hm-form-group select:focus,
+#hm-app .hm-form-group textarea:focus {
+  border: 2px solid var(--hm-teal);
+  box-shadow: 0 0 0 3px rgba(11,180,196,0.13);
+  outline: none;
+  padding: 7px 11px; /* compensate for 2px border */
+}
+/* Global input focus (outside form-group) */
+#hm-app input,
+#hm-app select,
+#hm-app textarea {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 13px;
+  background: var(--hm-bg-input);
+  border: 1px solid var(--hm-border);
+  border-radius: var(--hm-radius-md);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+#hm-app input:focus,
+#hm-app select:focus,
+#hm-app textarea:focus {
+  border-color: var(--hm-teal);
+  box-shadow: 0 0 0 2px rgba(11, 180, 196, 0.15);
+  outline: none;
+}
+#hm-app .hm-form-row {
+  display: flex;
+  gap: var(--hm-space-md);
+}
+#hm-app .hm-form-row > .hm-form-group { flex: 1; }
+/* Legacy label alias */
+#hm-app .hm-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: var(--hm-font-size-sm);
+  font-weight: 500;
+  color: var(--hm-text);
+}
+
+/* ── Tables — zebra rows ── */
 #hm-app .hm-table-wrap {
   overflow-x: auto;
 }
-
 #hm-app .hm-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--hm-font-size-sm);
 }
-
 #hm-app .hm-table th {
-  background: #f8fafc;
-  font-size: 11.5px;
-  text-transform: uppercase;
   padding: 10px 14px;
-  border-bottom: 2px solid var(--hm-border);
+  text-align: left;
+  font-weight: 600;
   color: var(--hm-text-light);
+  font-size: var(--hm-font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--hm-bg-alt);
+  border-bottom: 1px solid var(--hm-border);
 }
-
 #hm-app .hm-table td {
   padding: 10px 14px;
+  color: var(--hm-text);
   border-bottom: 1px solid var(--hm-border-light);
 }
-
+#hm-app .hm-table tbody tr:nth-child(even) {
+  background: var(--hm-bg-alt);
+}
+#hm-app .hm-table tbody tr:last-child td {
+  border-bottom: none;
+}
 #hm-app .hm-table tbody tr:hover td {
   background: #fafbfc;
 }
+#hm-app .hm-table-acts {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  white-space: nowrap;
+  align-items: center;
+}
+
+/* ── Tab bars — underline active ── */
+#hm-app .hm-tab-bar,
+#hm-app .hm-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--hm-border);
+  margin-bottom: var(--hm-space-lg);
+  overflow-x: auto;
+}
+#hm-app .hm-tab {
+  font-family: var(--hm-font);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 16px;
+  color: var(--hm-text-light);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: var(--hm-transition);
+  white-space: nowrap;
+}
+#hm-app .hm-tab:hover { color: var(--hm-text); }
+#hm-app .hm-tab--active,
+#hm-app .hm-tab.active {
+  font-weight: 700;
+  color: var(--hm-teal);
+  border-bottom-color: var(--hm-teal);
+}
+#hm-app .hm-tab__badge {
+  margin-left: 6px;
+  background: #fee2e2;
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+/* ── Toggle switches — iOS slider ── */
+#hm-app .hm-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--hm-text);
+}
+#hm-app .hm-toggle-track {
+  width: 40px; height: 22px;
+  border-radius: 11px;
+  background: #cbd5e1;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+#hm-app .hm-toggle-track::after {
+  content: '';
+  width: 18px; height: 18px;
+  border-radius: 9px;
+  background: #fff;
+  position: absolute;
+  top: 2px; left: 2px;
+  transition: left 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+#hm-app .hm-toggle input { display: none; }
+#hm-app .hm-toggle input:checked + .hm-toggle-track { background: var(--hm-teal); }
+#hm-app .hm-toggle input:checked + .hm-toggle-track::after { left: 20px; }
+/* Legacy toggle alias */
+#hm-app .hm-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--hm-text);
+}
+
+/* ── Back links — text link with arrow ── */
+#hm-app .hm-back,
+#hm-app .hm-back-btn,
+.hm-admin .hm-back-btn,
+.hm-page .hm-back-btn,
+.hm-sc .hm-back-btn {
+  font-family: var(--hm-font);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hm-teal);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: var(--hm-space-md);
+}
+#hm-app .hm-back:hover,
+#hm-app .hm-back-btn:hover,
+.hm-admin .hm-back-btn:hover,
+.hm-page .hm-back-btn:hover,
+.hm-sc .hm-back-btn:hover {
+  color: var(--hm-teal-hover);
+  text-decoration: underline;
+}
+
+/* ── Page header layout — flex with actions ── */
+#hm-app .hm-page-header__actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* ── Icons ── */
+#hm-app .hm-icon {
+  font-size: 15px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+#hm-app .hm-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  stroke: currentColor;
+}
+#hm-app .hm-icon-teal { color: var(--hm-teal); }
+#hm-app .hm-icon-success { color: var(--hm-green); }
+#hm-app .hm-icon-danger { color: var(--hm-red); }
+#hm-app .hm-icon-muted { color: var(--hm-text-muted); }
+
+/* ── Utility classes ── */
+#hm-app .hm-flex       { display: flex; }
+#hm-app .hm-flex-col   { display: flex; flex-direction: column; }
+#hm-app .hm-flex-center { display: flex; align-items: center; }
+#hm-app .hm-flex-between { display: flex; justify-content: space-between; align-items: center; }
+#hm-app .hm-gap-xs  { gap: var(--hm-space-xs); }
+#hm-app .hm-gap-sm  { gap: var(--hm-space-sm); }
+#hm-app .hm-gap-md  { gap: var(--hm-space-md); }
+#hm-app .hm-gap-lg  { gap: var(--hm-space-lg); }
+#hm-app .hm-text-xs    { font-size: var(--hm-font-size-xs); }
+#hm-app .hm-text-sm    { font-size: var(--hm-font-size-sm); }
+#hm-app .hm-text-lg    { font-size: var(--hm-font-size-lg); }
+#hm-app .hm-text-muted { color: var(--hm-text-muted); }
+#hm-app .hm-text-light { color: var(--hm-text-light); }
+#hm-app .hm-text-teal  { color: var(--hm-teal); }
+#hm-app .hm-text-green { color: var(--hm-green); }
+#hm-app .hm-text-red   { color: var(--hm-red); }
+#hm-app .hm-text-center { text-align: center; }
+#hm-app .hm-fw-600  { font-weight: 600; }
+#hm-app .hm-fw-700  { font-weight: 700; }
+#hm-app .hm-mb-sm   { margin-bottom: var(--hm-space-sm); }
+#hm-app .hm-mb-md   { margin-bottom: var(--hm-space-md); }
+#hm-app .hm-mb-lg   { margin-bottom: var(--hm-space-lg); }
+#hm-app .hm-mb-16   { margin-bottom: 16px; }
+#hm-app .hm-mt-sm   { margin-top: var(--hm-space-sm); }
+#hm-app .hm-mt-md   { margin-top: var(--hm-space-md); }
+#hm-app .hm-mt-lg   { margin-top: var(--hm-space-lg); }
+#hm-app .hm-mt-16   { margin-top: 16px; }
+#hm-app .hm-p-md    { padding: var(--hm-space-md); }
+#hm-app .hm-hidden  { display: none; }
+#hm-app .hm-muted   { color: var(--hm-text-muted); font-size: var(--hm-font-size-sm); }
+#hm-app .hm-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Empty states — checkmark minimal ── */
+#hm-app .hm-empty {
+  text-align: center;
+  padding: 40px 20px;
+  background: #fff;
+  border: 1px solid var(--hm-border);
+  border-radius: var(--hm-radius-lg);
+}
+#hm-app .hm-empty-icon { font-size: 40px; color: var(--hm-green); margin-bottom: 8px; }
+#hm-app .hm-empty-text { font-size: 14px; color: var(--hm-text-muted); }
+/* Legacy alias */
+#hm-app .hm-empty-state { text-align: center; padding: 40px 20px; color: var(--hm-text-muted); }
+#hm-app .hm-empty-icon .hm-icon { width: 20px; height: 20px; }
+
+/* ── Notices — teal left stripe ── */
+#hm-app .hm-notice {
+  display: flex;
+  align-items: stretch;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--hm-border);
+  margin-bottom: var(--hm-space-md);
+}
+#hm-app .hm-notice::before {
+  content: '';
+  width: 4px;
+  flex-shrink: 0;
+  background: var(--hm-teal);
+}
+#hm-app .hm-notice-body {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--hm-text);
+}
+#hm-app .hm-notice-icon { font-weight: 700; font-size: 16px; flex-shrink: 0; }
+#hm-app .hm-notice--success .hm-notice-icon { color: var(--hm-green); }
+#hm-app .hm-notice--error .hm-notice-icon   { color: var(--hm-red); }
+#hm-app .hm-notice--warning .hm-notice-icon { color: #f59e0b; }
+#hm-app .hm-notice--info .hm-notice-icon    { color: #3b82f6; }
+
+/* ── Alerts (legacy compat — prefer hm-notice) ── */
+#hm-app .hm-alert {
+  padding: 12px 16px;
+  border-radius: var(--hm-radius-md);
+  font-size: var(--hm-font-size-sm);
+  margin-bottom: var(--hm-space-md);
+}
+#hm-app .hm-alert--success,
+#hm-app .hm-alert-success { background: rgba(16,185,129,0.08); color: #059669; border: 1px solid rgba(16,185,129,0.25); }
+#hm-app .hm-alert--warning,
+#hm-app .hm-alert-warning { background: rgba(245,158,11,0.08); color: #92400e; border: 1px solid rgba(245,158,11,0.25); }
+#hm-app .hm-alert--error,
+#hm-app .hm-alert-error   { background: rgba(239,68,68,0.08);  color: #dc2626; border: 1px solid rgba(239,68,68,0.25); }
+#hm-app .hm-alert--info,
+#hm-app .hm-alert-info    { background: rgba(59,130,246,0.08); color: #1e40af; border: 1px solid rgba(59,130,246,0.25); }
+
+/* ── Loading — three dots pulse ── */
+#hm-app .hm-loading { text-align: center; padding: 30px; }
+#hm-app .hm-loading-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 12px; }
+#hm-app .hm-loading-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--hm-teal);
+  animation: hm-dot-pulse 1.2s ease-in-out infinite;
+}
+#hm-app .hm-loading-dot:nth-child(2) { animation-delay: 0.15s; }
+#hm-app .hm-loading-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes hm-dot-pulse {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+#hm-app .hm-loading-text { font-size: 13px; color: var(--hm-text-muted); }
+/* Keep legacy spinner for transition period */
+#hm-app .hm-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--hm-border);
+  border-top-color: var(--hm-teal);
+  border-radius: 50%;
+  animation: hm-spin 0.8s linear infinite;
+  margin: 0 auto;
+}
+@keyframes hm-spin { to { transform: rotate(360deg); } }
+
+/* ── Stat cards — teal accent top with icons ── */
+#hm-app .hm-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: var(--hm-space-lg);
+}
+#hm-app .hm-stat {
+  background: #fff;
+  border-top: 3px solid var(--hm-teal);
+  border-radius: 8px;
+  padding: 14px 12px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(15,23,42,.04);
+}
+#hm-app .hm-stat-icon { font-size: 20px; color: var(--hm-teal); opacity: 0.7; margin-bottom: 4px; }
+#hm-app .hm-stat-val { font-size: 26px; font-weight: 800; color: var(--hm-navy); line-height: 1.1; }
+#hm-app .hm-stat-val--teal  { color: var(--hm-teal); }
+#hm-app .hm-stat-val--amber { color: #d97706; }
+#hm-app .hm-stat-val--red   { color: var(--hm-red); }
+#hm-app .hm-stat-val--green { color: var(--hm-green); }
+#hm-app .hm-stat-label {
+  font-size: 10px; font-weight: 600;
+  color: var(--hm-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+/* ── Status dots — circle with glow ── */
+#hm-app .hm-status-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+#hm-app .hm-status-dot--green { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
+#hm-app .hm-status-dot--red   { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.2); }
+#hm-app .hm-status-dot--amber { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.2); }
+#hm-app .hm-status-dot--blue  { background: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+#hm-app .hm-status-dot--grey  { background: #94a3b8; box-shadow: 0 0 0 3px rgba(148,163,184,0.2); }
+
+/* ── Money — tabular nums, navy total ── */
+#hm-app .hm-money { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--hm-navy); }
+#hm-app .hm-money--green { color: var(--hm-green); }
+#hm-app .hm-money--red   { color: var(--hm-red); }
+#hm-app .hm-totals-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--hm-border-light); font-size: 13px; }
+#hm-app .hm-totals-row--total { border-top: 2px solid var(--hm-border); border-bottom: none; font-weight: 800; font-size: 15px; padding-top: 10px; }
+
+/* ── Icon buttons — coloured text only ── */
+#hm-app .hm-icon-btn {
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 2px;
+  transition: var(--hm-transition);
+}
+#hm-app .hm-icon-btn:hover { opacity: 0.7; }
+#hm-app .hm-icon-btn--edit   { color: var(--hm-teal); }
+#hm-app .hm-icon-btn--warn   { color: #f59e0b; }
+#hm-app .hm-icon-btn--danger { color: var(--hm-red); }
+
+/* ── Close buttons — circle bg ── */
+#hm-app .hm-close {
+  width: 28px; height: 28px;
+  border-radius: 14px;
+  border: none;
+  background: var(--hm-bg-hover);
+  color: var(--hm-text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--hm-transition);
+}
+#hm-app .hm-close:hover { background: var(--hm-border); color: var(--hm-red); }
+
+/* ── Loading overlay ── */
+.hm-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
 
 /* ============================================================
    TABLE FILTER BAR & PAGINATION
@@ -344,260 +1053,4 @@
 }
 
 
-/* ============================================================
-   BUTTONS
-   ============================================================ */
-
-#hm-app .hm-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 0;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: var(--hm-radius);
-  border: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  background: transparent;
-  color: var(--hm-teal);
-  text-decoration: none;
-}
-
-#hm-app .hm-btn:hover {
-  background: transparent;
-  color: var(--hm-teal-hover);
-  text-decoration: underline;
-}
-
-#hm-app .hm-btn-outline,
-#hm-app .hm-btn-teal {
-  background: transparent;
-  color: var(--hm-teal);
-  box-shadow: none;
-}
-
-#hm-app .hm-btn-outline:hover,
-#hm-app .hm-btn-teal:hover {
-  background: transparent;
-  color: var(--hm-teal-hover);
-}
-
-#hm-app .hm-btn-danger,
-#hm-app .hm-btn-red {
-  background: transparent;
-  color: #dc2626;
-}
-
-#hm-app .hm-btn-danger:hover,
-#hm-app .hm-btn-red:hover {
-  background: transparent;
-  color: #b91c1c;
-}
-
-#hm-app .hm-btn-primary {
-  background: var(--hm-teal);
-  color: #fff;
-}
-
-#hm-app .hm-btn-primary:hover {
-  background: var(--hm-teal-hover);
-}
-
-#hm-app .hm-btn.hm-btn-link {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  color: var(--hm-teal);
-  padding: 0;
-  text-decoration: none;
-}
-
-#hm-app .hm-btn.hm-btn-link:hover {
-  background: transparent;
-  color: var(--hm-teal-hover);
-  text-decoration: underline;
-}
-
-#hm-app .hm-back-btn,
-.hm-admin .hm-back-btn,
-.hm-page .hm-back-btn,
-.hm-sc .hm-back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #0BB4C4;
-  font-size: 12.5px;
-  font-weight: 600;
-  text-decoration: none;
-  margin: 0 0 10px;
-}
-
-#hm-app .hm-back-btn:hover,
-.hm-admin .hm-back-btn:hover,
-.hm-page .hm-back-btn:hover,
-.hm-sc .hm-back-btn:hover {
-  color: #0a9eac;
-  text-decoration: underline;
-}
-
-
-/* ============================================================
-   FORMS
-   ============================================================ */
-
-#hm-app input,
-#hm-app select,
-#hm-app textarea {
-  width: 100%;
-  padding: 9px 12px;
-  font-size: 13px;
-  background: var(--hm-bg-input);
-  border: 1px solid var(--hm-border);
-  border-radius: var(--hm-radius-md);
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-#hm-app input:focus,
-#hm-app select:focus,
-#hm-app textarea:focus {
-  border-color: var(--hm-teal);
-  box-shadow: 0 0 0 2px rgba(11, 180, 196, 0.15);
-}
-
-
-/* ============================================================
-   TABS
-   ============================================================ */
-
-#hm-app .hm-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--hm-border);
-  margin-bottom: 20px;
-  overflow-x: auto;
-}
-
-#hm-app .hm-tab {
-  padding: 10px 18px;
-  background: none;
-  border: none;
-  font-size: 13px;
-  color: var(--hm-text-muted);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-}
-
-#hm-app .hm-tab.active {
-  color: var(--hm-teal);
-  border-bottom-color: var(--hm-teal);
-  font-weight: 600;
-}
-
-
-/* ============================================================
-   BADGES
-   ============================================================ */
-
-#hm-app .hm-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 3px 9px;
-  border-radius: 20px;
-}
-
-/* Badge colour variants */
-#hm-app .hm-badge-green  { background: rgba(16,185,129,0.1);  color: #059669; }
-#hm-app .hm-badge-red    { background: rgba(239,68,68,0.1);   color: #dc2626; }
-#hm-app .hm-badge-amber  { background: #fef3c7;               color: #92400e; }
-#hm-app .hm-badge-blue   { background: #dbeafe;               color: #1e40af; }
-#hm-app .hm-badge-gray   { background: #f1f5f9;               color: #64748b; }
-
-
-/* ============================================================
-   MODALS (ALLOWED INTERNAL SCROLL)
-   ============================================================ */
-
-.hm-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  padding: 24px;
-}
-
-.hm-modal {
-  background: var(--hm-bg-card);
-  border-radius: var(--hm-radius-lg);
-  box-shadow: var(--hm-shadow-lg);
-  width: 100%;
-  max-width: 520px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: auto;
-}
-
-
-/* ============================================================
-   UTILITIES
-   ============================================================ */
-
-#hm-app .hm-text-muted { color: var(--hm-text-muted); }
-#hm-app .hm-text-teal { color: var(--hm-teal); }
-
-#hm-app .hm-flex { display: flex; }
-#hm-app .hm-flex-between { display: flex; justify-content: space-between; align-items: center; }
-
-#hm-app .hm-mb-16 { margin-bottom: 16px; }
-#hm-app .hm-mt-16 { margin-top: 16px; }
-
-#hm-app .hm-hidden { display: none; }
-#hm-app .hm-truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-#hm-app .hm-icon {
-  width: 14px;
-  height: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  vertical-align: middle;
-  color: currentColor;
-  flex-shrink: 0;
-}
-
-#hm-app .hm-icon svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  stroke: currentColor;
-}
-
-#hm-app .hm-icon-teal { color: var(--hm-teal); }
-#hm-app .hm-icon-success { color: var(--hm-green); }
-#hm-app .hm-icon-danger { color: var(--hm-red); }
-#hm-app .hm-icon-muted { color: var(--hm-text-muted); }
-
-#hm-app .hm-empty-icon .hm-icon {
-  width: 20px;
-  height: 20px;
-}
-
-
-/* ============================================================
-   ANIMATIONS Are Really Fun
-   ============================================================ */
-
-@keyframes hmSpin {
-  to { transform: rotate(360deg); }
-}
+/* ── End of hearmed-core.css ── */
