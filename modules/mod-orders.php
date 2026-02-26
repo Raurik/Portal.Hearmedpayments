@@ -1434,20 +1434,31 @@ class HearMed_Orders {
         // 7. Status history log
         self::log_status_change($order_id, 'Awaiting Fitting', 'Complete', $user->id ?? null, 'Fitted and paid');
 
-        // Create proper invoice with VAT breakdown and payment record
+// Create proper invoice with VAT breakdown
         $payment_data = [
             'amount'         => $amount,
             'payment_date'   => $fit_date,
             'payment_method' => $order->payment_method ?? 'Card',
-            'received_by'    => $user->ID ?? null,
+            'received_by'    => $user->id ?? null,
         ];
         if (class_exists('HearMed_Invoice')) {
             HearMed_Invoice::create_from_order($order_id, $payment_data);
         }
 
+        // Queue invoice for end-of-week QBO batch sync
+        $updated_order = $db->get_row("SELECT invoice_id FROM hearmed_core.orders WHERE id = \$1", [$order_id]);
+        if ($updated_order && $updated_order->invoice_id) {
+            $db->insert('hearmed_admin.qbo_batch_queue', [
+                'entity_type' => 'invoice',
+                'entity_id'   => $updated_order->invoice_id,
+                'status'      => 'pending',
+                'queued_at'   => date('Y-m-d H:i:s'),
+                'created_by'  => $user->id ?? null,
+            ]);
+        }
 
         wp_send_json_success([
-            'message'  => 'Fitting complete. Invoice finalised and sent to QuickBooks.',
+            'message'  => 'Fitting complete. Invoice queued for end-of-week QuickBooks sync.',
             'order_id' => $order_id,
             'redirect' => HearMed_Utils::page_url('orders').'?hm_action=view&order_id='.$order_id,
         ]);

@@ -490,6 +490,122 @@ class HearMed_QBO {
     }
 
     // =========================================================================
+    // BATCH SYNC — processes all queued invoices, called weekly via WP-Cron
+    // or manually from the Accounting → QuickBooks page
+    // =========================================================================
+
+    public static function run_batch_sync() {
+        if ( ! self::is_connected() ) {
+            error_log('[HearMed QBO] Batch sync skipped — not connected.');
+            return [ 'synced' => 0, 'failed' => 0 ];
+        }
+
+        $db    = HearMed_DB::instance();
+        $queue = $db->get_results(
+            "SELECT q.id AS queue_id, q.entity_type, q.entity_id, q.attempts
+             FROM hearmed_admin.qbo_batch_queue q
+             WHERE q.status = 'pending' AND q.attempts < 3
+             ORDER BY q.queued_at ASC
+             LIMIT 50",
+            []
+        );
+
+        $synced = $failed = 0;
+
+        foreach ( $queue as $item ) {
+            $queue_id = (int) $item->queue_id;
+            $attempts = (int) $item->attempts + 1;
+            $ok       = false;
+
+            if ( $item->entity_type === 'invoice' ) {
+                $order = $db->get_row(
+                    "SELECT id FROM hearmed_core.orders WHERE invoice_id = \$1",
+                    [ (int) $item->entity_id ]
+                );
+                if ( $order ) {
+                    $cid = self::sync_customer( $order->id );
+                    if ( $cid ) $ok = self::push_invoice( $order->id, $cid );
+                }
+            } elseif ( $item->entity_type === 'credit_note' ) {
+                $ok = self::push_credit_note( (int) $item->entity_id );
+            }
+
+            $db->update( 'hearmed_admin.qbo_batch_queue', [
+                'status'    => $ok ? 'synced' : ( $attempts >= 3 ? 'failed' : 'pending' ),
+                'attempts'  => $attempts,
+                'synced_at' => $ok ? date('Y-m-d H:i:s') : null,
+            ], [ 'id' => $queue_id ] );
+
+            $ok ? $synced++ : $failed++;
+
+            usleep( 300000 ); // 0.3s pause — avoids QBO rate limits
+        }
+
+        error_log( "[HearMed QBO] Batch complete. Synced: {$synced}  Failed: {$failed}" );
+        return [ 'synced' => $synced, 'failed' => $failed ];
+    }
+
+    // =========================================================================
+    // PUSH — CREDIT NOTE (called from batch sync)
+    // =========================================================================
+
+    public static function push_credit_note( $credit_note_id ) {
+        $db = HearMed_DB::instance();
+        $cn = $db->get_row(
+            "SELECT cn.*, p.first_name, p.last_name, p.qbo_customer_id, p.id AS patient_id
+             FROM hearmed_core.credit_notes cn
+             JOIN hearmed_core.patients p ON p.id = cn.patient_id
+             WHERE cn.id = \$1",
+            [ $credit_note_id ]
+        );
+        if ( ! $cn ) return false;
+
+        // Ensure customer exists in QBO
+        $qbo_customer_id = $cn->qbo_customer_id;
+        if ( ! $qbo_customer_id ) {
+            $name = $cn->first_name . ' ' . $cn->last_name;
+            $s    = self::api('GET', '/query', null, ['query' => "SELECT * FROM Customer WHERE DisplayName = '{$name}'"]);
+            if ( ! empty($s['QueryResponse']['Customer'][0]['Id']) ) {
+                $qbo_customer_id = $s['QueryResponse']['Customer'][0]['Id'];
+                $db->query(
+                    "UPDATE hearmed_core.patients SET qbo_customer_id = \$1 WHERE id = \$2",
+                    [ $qbo_customer_id, $cn->patient_id ]
+                );
+            }
+        }
+        if ( ! $qbo_customer_id ) return false;
+
+        $result = self::api('POST', '/creditmemo', [
+            'CustomerRef' => ['value' => $qbo_customer_id],
+            'DocNumber'   => $cn->credit_note_number,
+            'TxnDate'     => $cn->credit_date ?? date('Y-m-d'),
+            'CurrencyRef' => ['value' => 'EUR'],
+            'Line'        => [[
+                'Amount'      => floatval( $cn->amount ),
+                'DetailType'  => 'SalesItemLineDetail',
+                'Description' => $cn->reason ?? 'Credit Note',
+                'SalesItemLineDetail' => [
+                    'Qty'        => 1,
+                    'UnitPrice'  => floatval( $cn->amount ),
+                    'TaxCodeRef' => ['value' => 'NON'],
+                ],
+            ]],
+        ]);
+
+        if ( ! empty($result['CreditMemo']['Id']) ) {
+            $db->update( 'hearmed_core.credit_notes',
+                [ 'quickbooks_id' => $result['CreditMemo']['Id'] ],
+                [ 'id' => $credit_note_id ]
+            );
+            self::log_sync( $credit_note_id, 'credit_note', 'success', 'QBO CreditMemo ID: ' . $result['CreditMemo']['Id'] );
+            return true;
+        }
+
+        self::log_sync( $credit_note_id, 'credit_note', 'failed', $result['error'] ?? 'Unknown' );
+        return false;
+    }
+
+    // =========================================================================
     // SYNC LOG
     // =========================================================================
 

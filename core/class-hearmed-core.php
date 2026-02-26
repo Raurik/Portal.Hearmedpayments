@@ -158,6 +158,9 @@ class HearMed_Core {
         
         // System ready hook
         add_action( 'init', [ $this, 'system_ready' ], 10 );
+
+        // One-time repair: fix corrupted Elementor page settings (serialized string instead of array)
+        add_action( 'admin_init', [ $this, 'repair_elementor_page_settings' ], 1 );
     }
     
     /**
@@ -166,6 +169,46 @@ class HearMed_Core {
     public function system_ready() {
         // Hook for when system is fully initialized
         do_action( 'hearmed_system_ready' );
+    }
+
+    /**
+     * One-time repair for corrupted _elementor_page_settings meta.
+     *
+     * Elementor 3.35 expects an array but some portal pages ended up with a
+     * serialised string in post-meta, causing a fatal TypeError in
+     * Controls_Stack::sanitize_settings().
+     *
+     * Runs once then sets an option flag so it never runs again.
+     */
+    public function repair_elementor_page_settings() {
+        if ( get_option( 'hm_elementor_meta_repaired_v1' ) ) {
+            return;
+        }
+
+        // Pages that may have corrupted meta
+        $page_ids = [ 765 ];
+
+        foreach ( $page_ids as $pid ) {
+            $raw = get_post_meta( $pid, '_elementor_page_settings', true );
+
+            if ( is_string( $raw ) && '' !== $raw ) {
+                $unserialized = maybe_unserialize( $raw );
+
+                if ( is_array( $unserialized ) ) {
+                    // It was double-serialised — store the real array
+                    delete_post_meta( $pid, '_elementor_page_settings' );
+                    update_post_meta( $pid, '_elementor_page_settings', $unserialized );
+                } else {
+                    // Completely garbled — reset to safe default
+                    delete_post_meta( $pid, '_elementor_page_settings' );
+                    update_post_meta( $pid, '_elementor_page_settings', [
+                        'template' => 'elementor_canvas',
+                    ] );
+                }
+            }
+        }
+
+        update_option( 'hm_elementor_meta_repaired_v1', 1 );
     }
     
     /**
