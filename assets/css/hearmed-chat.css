@@ -1,6 +1,6 @@
 /* =============================================================================
    HearMed Team Chat Styles
-   Brand: #151B33 navy · #0BB4C4 teal · Sahitya font
+   Brand: var(--hm-navy, #151B33) navy · #0BB4C4 teal · Sahitya font
    ============================================================================= */
 
 #hm-chat-app {
@@ -10,7 +10,7 @@
     max-height: 800px;
     background: #fff;
     border-radius: 12px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--hm-border, #e2e8f0);
     overflow: hidden;
     font-family: 'Sahitya', Georgia, serif;
     box-shadow: 0 4px 24px rgba(21, 27, 51, 0.08);
@@ -39,7 +39,7 @@
 }
 
 .hm-chat-logo {
-    color: #151B33;
+    color: var(--hm-navy, #151B33);
     font-size: 16px;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -102,7 +102,7 @@
     border-radius: 9px;
     cursor: pointer;
     transition: all 0.12s;
-    color: #151B33;
+    color: var(--hm-navy, #151B33);
     position: relative;
     margin-bottom: 1px;
 }
@@ -155,7 +155,7 @@
 
 .hm-chat-ch-preview {
     font-size: 11px;
-    color: #94a3b8;
+    color: var(--hm-text-muted, #94a3b8);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -190,7 +190,7 @@
     justify-content: space-between;
     padding: 16px 20px;
     background: #fff;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--hm-border, #e2e8f0);
     flex-shrink: 0;
 }
 
@@ -203,12 +203,12 @@
 .hm-chat-channel-title {
     font-size: 16px;
     font-weight: 700;
-    color: #151B33;
+    color: var(--hm-navy, #151B33);
 }
 
 .hm-chat-channel-meta {
     font-size: 12px;
-    color: #64748b;
+    color: var(--hm-text-light, #64748b);
 }
 
 .hm-chat-online-badge {
@@ -234,7 +234,7 @@
 .hm-chat-welcome {
     margin: auto;
     text-align: center;
-    color: #94a3b8;
+    color: var(--hm-text-muted, #94a3b8);
 }
 
 .hm-chat-welcome-icon {
@@ -249,7 +249,7 @@
     align-items: center;
     gap: 10px;
     margin: 12px 0 6px;
-    color: #94a3b8;
+    color: var(--hm-text-muted, #94a3b8);
     font-size: 12px;
 }
 
@@ -258,7 +258,7 @@
     content: '';
     flex: 1;
     height: 1px;
-    background: #e2e8f0;
+    background: var(--hm-border);
 }
 
 /* Message groups */
@@ -292,7 +292,7 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #151B33;
+    background: var(--hm-navy, #151B33);
     color: #0BB4C4;
     display: flex;
     align-items: center;
@@ -322,7 +322,7 @@
 .hm-chat-msg-sender {
     font-size: 13px;
     font-weight: 700;
-    color: #151B33;
+    color: var(--hm-navy, #151B33);
 }
 
 .hm-chat-msg-sender.is-mine {
@@ -331,7 +331,7 @@
 
 .hm-chat-msg-time {
     font-size: 11px;
-    color: #94a3b8;
+    color: var(--hm-text-muted, #94a3b8);
 }
 
 .hm-chat-msg-text {
@@ -344,13 +344,13 @@
 
 .hm-chat-msg-edited {
     font-size: 11px;
-    color: #94a3b8;
+    color: var(--hm-text-muted, #94a3b8);
     margin-left: 4px;
 }
 
 .hm-chat-msg-deleted {
     font-style: italic;
-    color: #94a3b8;
+    color: var(--hm-text-muted, #94a3b8);
 }
 
 /* Actions (delete) */
@@ -363,7 +363,7 @@
     display: flex;
     gap: 4px;
     background: #fff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--hm-border, #e2e8f0);
     border-radius: 6px;
     padding: 3px 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -375,7 +375,7 @@
     border: none;
     cursor: pointer;
     font-size: 12px;
-    color: #ef4444;
+    color: var(--hm-red, #ef4444);
     padding: 0 2px;
 }
 
@@ -389,11 +389,11 @@
 
 .hm-chat-load-more-btn {
     background: none;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--hm-border, #e2e8f0);
     border-radius: 20px;
     padding: 5px 14px;
     font-size: 12px;
-    color: #64748b;
+    color: var(--hm-text-light, #64748b);
     cursor: pointer;
     transition: all 0.15s;
 }
@@ -408,13 +408,13 @@
 .hm-chat-input-area {
     padding: 12px 16px 10px;
     background: #fff;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--hm-border, #e2e8f0);
     flex-shrink: 0;
 }
 
 .hm-chat-typing-indicator {
     font-size: 12px;
-    color: #94a3b8;
+    color: var(--hm-text-muted, #94a3b8);
     min-height: 16px;
     margin-bottom: 6px;
     font-style: italic;
@@ -429,12 +429,12 @@
 .hm-chat-input {
     flex: 1;
     resize: none;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--hm-border, #e2e8f0);
     border-radius: 10px;
     padding: 10px 14px;
     font-family: 'Sahitya', Georgia, serif;
     font-size: 14px;
-    color: #151B33;
+    color: var(--hm-navy, #151B33);
     background: #f8fafc;
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
@@ -469,7 +469,7 @@
 
 .hm-chat-input-hint {
     font-size: 11px;
-    color: #94a3b8;
+    color: var(--hm-text-muted, #94a3b8);
     margin-top: 5px;
     text-align: right;
 }
@@ -487,14 +487,14 @@
 }
 
 .hm-chat-modal-box {
-    background: #fff;
-    border-radius: 12px;
+    background: var(--hm-bg, #fff);
+    border-radius: var(--hm-radius-lg, 12px);
     width: 380px;
     max-height: 480px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 60px rgba(21,27,51,0.25);
+    box-shadow: var(--hm-shadow-xl, 0 20px 60px rgba(21,27,51,0.25));
 }
 
 .hm-chat-modal-header {
@@ -502,13 +502,13 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 18px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--hm-border);
 }
 
 .hm-chat-modal-header h3 {
     margin: 0;
     font-size: 16px;
-    color: #151B33;
+    color: var(--hm-navy);
     font-weight: 700;
 }
 
@@ -517,23 +517,23 @@
     border: none;
     font-size: 16px;
     cursor: pointer;
-    color: #94a3b8;
+    color: var(--hm-text-muted);
     padding: 0;
     line-height: 1;
 }
 
-.hm-chat-modal-close:hover { color: #ef4444; }
+.hm-chat-modal-close:hover { color: var(--hm-red); }
 
 .hm-chat-dm-search {
     border: none;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--hm-border);
     padding: 12px 18px;
     font-size: 14px;
     font-family: 'Sahitya', Georgia, serif;
     outline: none;
     width: 100%;
     box-sizing: border-box;
-    color: #151B33;
+    color: var(--hm-navy);
 }
 
 .hm-chat-dm-results {
@@ -553,14 +553,14 @@
 }
 
 .hm-chat-dm-result-item:hover {
-    background: #f1f5f9;
+    background: var(--hm-bg-hover);
 }
 
 .hm-chat-dm-avatar {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: #151B33;
+    background: var(--hm-navy, #151B33);
     color: #0BB4C4;
     display: flex;
     align-items: center;
@@ -573,12 +573,12 @@
 .hm-chat-dm-user-name {
     font-size: 14px;
     font-weight: 600;
-    color: #151B33;
+    color: var(--hm-navy, #151B33);
 }
 
 .hm-chat-dm-user-role {
     font-size: 12px;
-    color: #64748b;
+    color: var(--hm-text-light, #64748b);
 }
 
 /* ── LOADING STATE ───────────────────────────────────────────────────── */
