@@ -118,12 +118,8 @@ function hm_ajax_save_settings() {
         }
         
         foreach ( $checkbox_fields as $f ) {
-            if ( isset( $_POST[ $f ] ) ) {
-                $val = $_POST[ $f ];
-                $data[ $f ] = ( $val === '1' || $val === 'yes' || $val === true || $val === 'true' );
-            } else {
-                $data[ $f ] = false;
-            }
+            $val = isset( $_POST[ $f ] ) ? $_POST[ $f ] : null;
+            $data[ $f ] = ( $val === '1' || $val === 1 || $val === 'yes' || $val === true || $val === 'true' || $val === 't' );
         }
         
         // Check if record exists
@@ -266,6 +262,7 @@ function hm_ajax_get_dispensers() {
             'calendar_order' => 99,
             'role_type'      => $p->role,
             'color'          => $p->staff_color ?: '#0BB4C4',
+            'staff_color'    => $p->staff_color ?: '#0BB4C4',
         ];
     }
     wp_send_json_success( $d );

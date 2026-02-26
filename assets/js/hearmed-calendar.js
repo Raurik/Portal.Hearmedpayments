@@ -1,5 +1,5 @@
 /**
- * HearMed Calendar v3.0
+ * HearMed Calendar v3.1
  * ─────────────────────────────────────────────────────
  * Renders views based on #hm-app[data-view]
  *   calendar  → Cal
@@ -67,7 +67,7 @@ var App={
 };
 
 // ═══════════════════════════════════════════════════════
-// CALENDAR VIEW — v3.0
+// CALENDAR VIEW — v3.1
 // ═══════════════════════════════════════════════════════
 var Cal={
     $el:null,date:new Date(),mode:'week',viewMode:'people',
@@ -423,7 +423,7 @@ var Cal={
             if(cfg.colorSource==='clinic'){col=a.clinic_colour||col;}
             else if(cfg.colorSource==='dispenser'){
                 var dd=Cal.dispensers.find(function(x){return parseInt(x.id)===parseInt(a.dispenser_id);});
-                col=(dd&&dd.staff_color)?dd.staff_color:col;
+                col=(dd&&(dd.staff_color||dd.color))?(dd.staff_color||dd.color):col;
             }else if(cfg.colorSource==='global'){col=cfg.apptBg||'#0BB4C4';}
             // else appointment_type — already set from service_colour
 
