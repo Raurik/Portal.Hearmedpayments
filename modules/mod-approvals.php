@@ -49,10 +49,6 @@ function hm_render_approvals_page() {
     .hma-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:14px 0;font-size:12px;}
     .hma-meta-label{color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
     .hma-meta-val{color:#1e293b;font-weight:500;margin-top:2px;}
-    .hma-tbl{width:100%;border-collapse:collapse;font-size:12px;margin:12px 0;}
-    .hma-tbl th{text-align:left;padding:8px 10px;background:#f8fafc;color:#64748b;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e2e8f0;}
-    .hma-tbl td{padding:8px 10px;border-bottom:1px solid #f1f5f9;color:#334155;}
-    .hma-tbl tr:last-child td{border-bottom:none;}
     .hma-acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9;}
     .hma-notes{margin-top:10px;padding:8px 12px;background:#f8fafc;border-radius:8px;font-size:12px;color:#475569;}
     .hma-totals{display:flex;justify-content:flex-end;margin:8px 0;}
@@ -60,8 +56,6 @@ function hm_render_approvals_page() {
     .hma-totals-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f1f5f9;}
     .hma-totals-row span:first-child{color:#64748b;}
     .hma-totals-total{font-weight:700;font-size:14px;border-bottom:none;padding-top:6px;}
-    .hma-empty{text-align:center;padding:40px 20px;color:#94a3b8;font-size:13px;}
-    .hma-empty-icon{font-size:32px;margin-bottom:8px;}
     .hma-flag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;}
     .hma-flag-red{background:#fee2e2;color:#991b1b;}
     .hma-flag-amber{background:#fef3cd;color:#92400e;}
@@ -125,7 +119,7 @@ function hm_render_approvals_page() {
                 if (r.success) {
                     self.render(r.data);
                 } else {
-                    el.innerHTML = '<div class="hma-empty"><div class="hma-empty-icon">&#9888;</div>Error loading data.</div>';
+                    el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#9888;</div>Error loading data.</div>';
                 }
             });
         },
@@ -133,7 +127,7 @@ function hm_render_approvals_page() {
         render: function(data) {
             var el = document.getElementById('hma-content');
             if (!data.orders || data.orders.length === 0) {
-                el.innerHTML = '<div class="hma-empty"><div class="hma-empty-icon">&#10004;</div>No orders awaiting approval &mdash; all clear!</div>';
+                el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#10004;</div>No orders awaiting approval &mdash; all clear!</div>';
                 return;
             }
 
@@ -171,7 +165,7 @@ function hm_render_approvals_page() {
                 html += '</div>';
 
                 // Line items table with margins
-                html += '<table class="hma-tbl"><thead><tr>';
+                html += '<table class="hm-table"><thead><tr>';
                 html += '<th>Product</th><th>Manufacturer</th><th>Model / Style</th><th>Tech Level</th><th>Class</th><th>Ear</th><th>Qty</th>';
                 html += '<th>Cost</th><th>Retail</th><th>Margin</th>';
                 html += '</tr></thead><tbody>';
