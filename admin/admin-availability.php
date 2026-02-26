@@ -146,18 +146,18 @@ class HearMed_Admin_Availability {
             </p>
 
             <!-- Summary bar -->
-            <div style="display:flex;gap:16px;margin-bottom:24px;">
-                <div class="hm-settings-panel" style="flex:1;text-align:center;padding:16px;">
-                    <div style="font-size:28px;font-weight:700;color:#22c55e;"><?php echo $available_count; ?></div>
-                    <div style="font-size:12px;color:var(--hm-text-light);">Available</div>
+            <div class="hm-stats">
+                <div class="hm-stat">
+                    <span class="hm-stat-val" style="color:var(--hm-green,#22c55e);"><?php echo $available_count; ?></span>
+                    <span class="hm-stat-label">Available</span>
                 </div>
-                <div class="hm-settings-panel" style="flex:1;text-align:center;padding:16px;">
-                    <div style="font-size:28px;font-weight:700;color:#ef4444;"><?php echo $away_count; ?></div>
-                    <div style="font-size:12px;color:var(--hm-text-light);">On Leave</div>
+                <div class="hm-stat">
+                    <span class="hm-stat-val" style="color:var(--hm-red,#ef4444);"><?php echo $away_count; ?></span>
+                    <span class="hm-stat-label">On Leave</span>
                 </div>
-                <div class="hm-settings-panel" style="flex:1;text-align:center;padding:16px;">
-                    <div style="font-size:28px;font-weight:700;color:var(--hm-navy);"><?php echo count($rows); ?></div>
-                    <div style="font-size:12px;color:var(--hm-text-light);">Total Staff</div>
+                <div class="hm-stat">
+                    <span class="hm-stat-val" style="color:var(--hm-navy);"><?php echo count($rows); ?></span>
+                    <span class="hm-stat-label">Total Staff</span>
                 </div>
             </div>
 
