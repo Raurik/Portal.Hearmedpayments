@@ -188,7 +188,7 @@ function hm_render_fitting_page() {
 
             <!-- Table loaded via AJAX -->
             <div id="hmf-content">
-                <div style="text-align:center;padding:40px;color:#94a3b8;"><div class="hm-spinner"></div></div>
+                <div class="hm-loading"><div class="hm-loading-dots"><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div></div><div class="hm-loading-text">Loading&hellip;</div></div>
             </div>
 
             <!-- Summary (populated by JS) -->
@@ -340,7 +340,7 @@ function hm_render_fitting_page() {
         // ── LOAD TABLE ──
         load: function() {
             var el = document.getElementById('hmf-content');
-            el.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;"><div class="hm-spinner"></div></div>';
+            el.innerHTML = '<div class="hm-loading"><div class="hm-loading-dots"><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div></div><div class="hm-loading-text">Loading&hellip;</div></div>';
             var self = this;
             jQuery.post(HM.ajax_url, {
                 action: 'hm_fitting_load',
@@ -676,7 +676,7 @@ function hm_render_fitting_page() {
             document.getElementById('hmf-pay-order-id').value = orderId;
             document.getElementById('hmf-pay-result').innerHTML = '';
             document.getElementById('hmf-pay-save').style.display = '';
-            document.getElementById('hmf-invoice-info').innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;"><div class="hm-spinner"></div></div>';
+            document.getElementById('hmf-invoice-info').innerHTML = '<div class="hm-loading"><div class="hm-loading-dots"><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div></div><div class="hm-loading-text">Loading&hellip;</div></div>';
             document.getElementById('hmf-payment-modal').classList.add('open');
 
             var self = this;

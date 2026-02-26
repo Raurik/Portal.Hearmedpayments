@@ -683,7 +683,7 @@
         $(document).on('click', '.hm-order-detail-link', function (e) {
             e.preventDefault();
             var id = $(this).data('id');
-            $('#hm-order-detail-body').html('<div class="hm-loading"><div class="hm-spinner"></div></div>');
+            $('#hm-order-detail-body').html('<div class="hm-loading"><div class="hm-loading-dots"><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div></div><div class="hm-loading-text">Loading…</div></div>');
             $('#hm-order-detail-modal-bg').fadeIn(150);
             $.post(HM.ajax_url, { action: 'hm_get_order_detail', nonce: HM.nonce, order_id: id },
             function (r) {

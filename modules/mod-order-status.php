@@ -145,7 +145,7 @@ function hm_render_order_status_page() {
                     <span class="hmos-section-badge" id="hmos-approved-badge"><?php echo $approved_count; ?></span>
                 </div>
                 <div id="hmos-approved-content">
-                    <div style="text-align:center;padding:30px;color:#94a3b8;"><div class="hm-spinner"></div></div>
+                    <div class="hm-loading"><div class="hm-loading-dots"><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div></div><div class="hm-loading-text">Loading&hellip;</div></div>
                 </div>
             </div>
 
@@ -156,7 +156,7 @@ function hm_render_order_status_page() {
                     <span class="hmos-section-badge" id="hmos-ordered-badge"><?php echo $ordered_count; ?></span>
                 </div>
                 <div id="hmos-ordered-content">
-                    <div style="text-align:center;padding:30px;color:#94a3b8;"><div class="hm-spinner"></div></div>
+                    <div class="hm-loading"><div class="hm-loading-dots"><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div></div><div class="hm-loading-text">Loading&hellip;</div></div>
                 </div>
             </div>
 

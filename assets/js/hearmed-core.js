@@ -177,7 +177,7 @@
      */
     HM.showLoading = function(element) {
         element = element || $('#hm-app');
-        element.append('<div class="hm-loading-overlay"><div class="hm-spinner"></div></div>');
+        element.append('<div class="hm-loading-overlay"><div class="hm-loading-dots"><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div></div></div>');
     };
     
     HM.hideLoading = function(element) {

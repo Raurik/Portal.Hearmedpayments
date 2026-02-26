@@ -77,7 +77,7 @@ function hm_render_approvals_page() {
             </div>
 
             <div id="hma-content">
-                <div style="text-align:center;padding:40px;color:#94a3b8;"><div class="hm-spinner"></div></div>
+                <div class="hm-loading"><div class="hm-loading-dots"><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div></div><div class="hm-loading-text">Loading&hellip;</div></div>
             </div>
         </div>
     </div>
@@ -109,7 +109,7 @@ function hm_render_approvals_page() {
 
         load: function() {
             var el = document.getElementById('hma-content');
-            el.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;"><div class="hm-spinner"></div></div>';
+            el.innerHTML = '<div class="hm-loading"><div class="hm-loading-dots"><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div></div><div class="hm-loading-text">Loading&hellip;</div></div>';
             var self = this;
             jQuery.post(HM.ajax_url, {
                 action: 'hm_approvals_load',
