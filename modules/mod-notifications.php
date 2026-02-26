@@ -401,24 +401,25 @@ function hm_notifications_bell_widget() {
 
     <script>
     (function(){
-        /* Position bell next to "Quick Till Check" link in .hm-topbar */
+        /* Position bell centered below "Quick Till Check" link in .hm-topbar */
         function placeBell(){
             var bell = document.getElementById('hm-bell-widget');
             if(!bell) return;
 
-            /* Find the Quick Till Check link by its text content */
             var placed = false;
             var topbar = document.querySelector('.hm-topbar');
             if(topbar){
                 var links = topbar.querySelectorAll('a');
                 for(var i = 0; i < links.length; i++){
                     if(links[i].textContent.trim().toLowerCase().indexOf('quick till') !== -1){
-                        /* Insert bell right after this link's widget container */
+                        /* Use the Elementor widget container as the anchor */
                         var container = links[i].closest('.elementor-widget') || links[i].parentElement;
                         container.style.position = 'relative';
-                        container.style.display  = 'inline-flex';
-                        container.style.alignItems = 'flex-end';
-                        container.style.gap = '10px';
+                        /* Absolutely position bell below, centered */
+                        bell.style.position = 'absolute';
+                        bell.style.bottom   = '-2px';
+                        bell.style.left     = '50%';
+                        bell.style.transform = 'translateX(-50%)';
                         container.appendChild(bell);
                         bell.style.display = '';
                         placed = true;
