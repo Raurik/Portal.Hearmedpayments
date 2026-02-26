@@ -75,10 +75,9 @@ class HearMed_Admin_Roles {
 
         ob_start(); ?>
         <style>
+        /* ── Roles — page-specific ── */
         .hmr-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
         @media(max-width:900px){.hmr-grid{grid-template-columns:1fr;}}
-        .hm-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(15,23,42,.04);}
-        .hm-card-hd{font-size:15px;font-weight:600;color:#0f172a;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(15,23,42,.04);}
         .hmr-role-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;}
         .hmr-role-row:last-child{border-bottom:none;}
         .hmr-role-info{flex:1;min-width:0;}

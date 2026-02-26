@@ -29,9 +29,7 @@ function hm_render_approvals_page() {
 
     ob_start(); ?>
     <style>
-    .hm-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(15,23,42,.04);margin-bottom:12px;overflow:hidden;border:1px solid #f1f5f9;}
-    .hm-card-hd{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;cursor:pointer;transition:background .1s;}
-    .hm-card-hd:hover{background:#f8fafc;}
+    /* ── Order Approvals — page-specific ── */
     .hm-card-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
     .hm-card-right{display:flex;align-items:center;gap:12px;}
     .hma-ord-num{font-weight:700;font-size:13px;color:#0f172a;}

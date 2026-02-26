@@ -62,31 +62,12 @@ function hm_render_order_status_page() {
 
     ob_start(); ?>
     <style>
-    /* ── Order Status — hmos- namespace ── */
-    .hm-stats{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
-    .hm-stat{background:#fff;border-radius:10px;padding:14px 20px;flex:1;min-width:140px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(15,23,42,.03);}
-    .hm-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;}
-    .hm-stat-val{font-size:22px;font-weight:700;color:#0f172a;margin-top:2px;}
-    .hm-stat-val.teal{color:var(--hm-teal);}
-    .hm-stat-val.blue{color:#2563eb;}
-    .hm-stat-val.amber{color:#d97706;}
-    .hm-stat-val.red{color:#dc2626;}
-
+    /* ── Order Status — page-specific ── */
     .hmos-section{margin-bottom:28px;}
     .hmos-section-title{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
     .hmos-section-badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;border-radius:11px;font-size:11px;font-weight:700;background:#e2e8f0;color:#475569;}
 
     .hm-tbl-wrap{background:#fff;border-radius:12px;border:1px solid #f1f5f9;box-shadow:0 2px 8px rgba(15,23,42,.04);overflow-x:auto;}
-    .hm-table{width:100%;border-collapse:collapse;font-size:12px;}
-    .hm-table th{text-align:left;padding:10px 14px;background:#f8fafc;color:#64748b;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
-    .hm-table td{padding:10px 14px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:middle;}
-    .hm-table tbody tr:hover{background:#f8fafc;}
-    .hm-table tbody tr:last-child td{border-bottom:none;}
-
-    .hm-table tbody tr.hm-amber{background:#fffbeb;}
-    .hm-table tbody tr.hm-amber:hover{background:#fef3c7;}
-    .hm-table tbody tr.hm-red{background:#fef2f2;}
-    .hm-table tbody tr.hm-red:hover{background:#fee2e2;}
 
     .hmos-days{font-weight:700;font-size:12px;}
     .hmos-days.green{color:#059669;}
@@ -97,14 +78,10 @@ function hm_render_order_status_page() {
     .hmos-class-custom{background:#ede9fe;color:#6d28d9;}
     .hmos-class-ready{background:#dbeafe;color:#1e40af;}
 
-    .hm-btn{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
     .hm-btn-order{background:var(--hm-teal);color:#fff;}
     .hm-btn-order:hover{background:#0a9aa8;}
     .hm-btn-pdf{background:#fff;color:#475569;border:1px solid #e2e8f0;}
     .hm-btn-pdf:hover{background:#f8fafc;border-color:var(--hm-teal);color:var(--hm-teal);}
-
-    .hm-empty{text-align:center;padding:40px 20px;color:#94a3b8;font-size:13px;}
-    .hm-empty-icon{font-size:32px;margin-bottom:8px;}
 
     .hmos-alert-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
     .hmos-alert-amber{background:#fef3cd;color:#92400e;}

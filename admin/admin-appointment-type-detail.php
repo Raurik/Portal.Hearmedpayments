@@ -78,32 +78,20 @@ class HearMed_Admin_Appointment_Type_Detail {
         ob_start();
         ?>
         <style>
-        /* ── Appointment-type-detail ── */
-        #hm-app .hm-page-header   { margin-bottom:18px; }
-        #hm-app .hm-page-title    { font-size:20px; font-weight:800; color:#0f172a; margin:0 0 2px; }
-        #hm-app .hm-page-subtitle { font-size:12px; color:#64748b; }
-
-        /* Cards compact */
-        #hm-app .hm-card           { background:#fff; border-radius:12px; padding:16px 20px; box-shadow:0 1px 4px rgba(15,23,42,.06); }
-        #hm-app .hm-card-hd        { font-size:14px; font-weight:700; color:#0f172a; margin-bottom:14px; }
-        #hm-app .hm-card-body      { }
+        /* ── Appointment-type-detail — page-specific ── */
         #hm-app .hm-card-grid      { display:grid; gap:16px; margin-bottom:16px; }
         #hm-app .hm-card-grid--3   { grid-template-columns:1fr 1fr 1fr; }
-
         /* Settings rows */
         #hm-app .hm-srow  { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
         #hm-app .hm-slbl  { font-size:13px; color:#334155; flex:1; }
         #hm-app .hm-sval  { width:150px; flex-shrink:0; }
-
         /* Inputs */
         #hm-app .hm-inp,
         #hm-app .hm-dd    { width:100%; padding:5px 8px; font-size:12px; border:1px solid #e2e8f0; border-radius:5px; color:#0f172a; background:#fff; box-sizing:border-box; }
-
         /* Colour picker */
         #hm-app .hm-color-box         { width:44px; height:28px; border:1px solid #e2e8f0; border-radius:5px; padding:1px; cursor:pointer; }
         #hm-app .hm-color-row .hm-sval { width:auto; }
-
-        /* Checkboxes — hide native input, show custom hm-check box */
+        /* Checkboxes */
         #hm-app .hm-day-check       { display:inline-flex; align-items:center; gap:8px; font-size:13px; color:#334155; cursor:pointer; }
         #hm-app .hm-day-check input  { display:none !important; }
         #hm-app .hm-check            { width:16px; height:16px; border-radius:4px; border:1.5px solid #cbd5e1; background:#fff; position:relative; flex-shrink:0; transition:all .15s ease; }
@@ -113,22 +101,7 @@ class HearMed_Admin_Appointment_Type_Detail {
             content:"" !important; display:block !important; position:absolute; left:4px; top:1px; width:5px; height:9px;
             border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
         }
-
-        /* Badges */
-        #hm-app .hm-badge       { display:inline-block; padding:2px 7px; border-radius:4px; font-size:10px; font-weight:600; line-height:1.4; }
-        #hm-app .hm-badge--amber { background:#fef3c7; color:#92400e; }
-        #hm-app .hm-badge--blue  { background:#dbeafe; color:#1e40af; }
-        #hm-app .hm-badge--green { background:#dcfce7; color:#166534; }
-
-        /* Buttons */
-        #hm-app .hm-btn         { background:none; border:none; font-size:13px; font-weight:600; color:#64748b; cursor:pointer; padding:0; }
-        #hm-app .hm-btn--primary    { color:var(--hm-teal); }
-        #hm-app .hm-btn--primary:hover { color:#0a9eac; }
-        #hm-app .hm-btn--sm      { font-size:12px; }
-        #hm-app .hm-btn--danger     { color:#ef4444; }
-
-        /* Preview bar */
-        /* Appointment preview card — matches calendar-settings preview */
+        /* Appointment preview */
         #hm-app .hm-appt-preview-wrap { display:flex; align-items:center; justify-content:center; padding:8px 0; }
         #hm-app .hm-appt-preview-card { width:100%; max-width:280px; border-radius:8px; overflow:hidden; box-shadow:0 2px 12px rgba(15,23,42,.08); display:flex; flex-direction:column; }
         #hm-app .hm-appt-outcome-banner { padding:8px 14px; font-size:13px; font-weight:600; color:#fff; background:#22c55e; transition:background .2s; }
@@ -141,17 +114,9 @@ class HearMed_Admin_Appointment_Type_Detail {
         #hm-app .hm-badge-v { background:#8b5cf6; }
         #hm-app .hm-appt-time { font-size:13px; font-weight:600; color:#0ea5a4; }
         #hm-app .hm-appt-meta { font-size:12px; color:#64748b; }
-        /* Outcome row hover hint */
+        /* Outcome row hover */
         #hm-app .hm-outcome-row { cursor:pointer; transition:background .15s; }
         #hm-app .hm-outcome-row:hover { background:#f8fafc; }
-
-        /* Modal */
-        .hm-modal-bg             { display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:9999; align-items:center; justify-content:center; }
-        .hm-modal-bg.open        { display:flex; }
-        .hm-modal                { background:#fff; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.18); max-height:90vh; overflow-y:auto; }
-        .hm-modal-hd             { display:flex; justify-content:space-between; align-items:center; padding:14px 24px; border-bottom:1px solid #e2e8f0; }
-        .hm-modal-hd h3          { margin:0; font-size:15px; font-weight:700; color:#0f172a; }
-        .hm-modal-ft             { display:flex; justify-content:flex-end; gap:10px; padding:12px 24px; border-top:1px solid #e2e8f0; }
         .hm-days-grid            { display:flex; flex-wrap:wrap; gap:8px; }
         </style>
         <div id="hm-app" class="hm-calendar" data-module="calendar" data-view="settings">

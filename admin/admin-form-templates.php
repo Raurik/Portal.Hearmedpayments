@@ -73,47 +73,21 @@ class HearMed_Admin_Form_Templates {
         ob_start(); ?>
 
         <style>
-        /* ── Page chrome ─────────────────────────────────────────────────── */
+        /* ── Form Templates — page-specific ── */
         #hm-ft-page {
             padding: 24px 28px;
             max-width: 100%;
             font-family: inherit;
             color: #151B33;
         }
-        #hm-ft-page .hm-back {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
-            color: #64748b;
-            text-decoration: none;
-            margin-bottom: 20px;
-            transition: color .15s;
-        }
-        #hm-ft-page .hm-back:hover { color: var(--hm-teal); }
         .ft-page-hd {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 6px;
         }
-        .hm-page-title {
-            font-size: 22px;
-            font-weight: 600;
-            color: #151B33;
-            margin: 0;
-            padding-left: 14px;
-            border-left: 3px solid var(--hm-teal);
-            line-height: 1.2;
-        }
-        .hm-page-subtitle {
-            font-size: 13px;
-            color: #64748b;
-            padding-left: 17px;
-            margin: 4px 0 24px;
-        }
 
-        /* ── Cards ───────────────────────────────────────────────────────── */
+        /* ── Cards ── */
         .ft-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -167,12 +141,6 @@ class HearMed_Admin_Form_Templates {
             gap: 6px;
             margin-bottom: 12px;
         }
-        .hm-badge {
-            font-size: 11px;
-            font-weight: 600;
-            padding: 2px 9px;
-            border-radius: 20px;
-        }
         .ft-card-footer {
             display: flex;
             justify-content: space-between;
@@ -182,22 +150,6 @@ class HearMed_Admin_Form_Templates {
         }
         .ft-card-stats { font-size: 11px; color: #94a3b8; }
         .ft-card-acts { display: flex; gap: 4px; }
-        .hm-icon-btn {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            border: 1px solid #e2e8f0;
-            background: #fff;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #64748b;
-            font-size: 13px;
-            transition: all .15s;
-        }
-        .hm-icon-btn:hover { border-color: var(--hm-teal); color: var(--hm-teal); background: #f0fdfe; }
-        .hm-icon-btn.hm-icon-btn--danger:hover { border-color: #fca5a5; color: #ef4444; background: #fff5f5; }
         .ft-add-card {
             background: #fafafa;
             border: 2px dashed #e2e8f0;
@@ -217,7 +169,7 @@ class HearMed_Admin_Form_Templates {
         .ft-add-card:hover { border-color: var(--hm-teal); color: var(--hm-teal); background: #f0fdfe; }
         .ft-add-card .plus { font-size: 30px; line-height: 1; }
 
-        /* ── Full-page overlay ───────────────────────────────────────────── */
+        /* ── Full-page overlay ── */
         #hm-ft-overlay {
             display: none;
             position: fixed;
@@ -259,14 +211,6 @@ class HearMed_Admin_Form_Templates {
         .ft-ov-title { font-size: 16px; font-weight: 600; color: #151B33; }
         .ft-ov-topbar-right { display: flex; align-items: center; gap: 10px; }
         .ft-saved-label { font-size: 12px; color: #059669; display: none; }
-
-        .hm-tab-bar {
-            background: #fff;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 0 24px;
-            display: flex;
-            flex-shrink: 0;
-        }
 
         .ft-ov-body { flex: 1; overflow-y: auto; padding: 28px; }
         .ft-pane { display: none; }
@@ -387,20 +331,6 @@ class HearMed_Admin_Form_Templates {
             border-color: var(--hm-teal);
             box-shadow: 0 0 0 3px rgba(11,180,196,.08);
         }
-        .hm-icon-btn--danger {
-            width: 32px; height: 32px;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            background: none;
-            cursor: pointer;
-            color: #94a3b8;
-            font-size: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all .15s;
-        }
-        .hm-icon-btn--danger:hover { color: #ef4444; border-color: #fca5a5; background: #fff5f5; }
         .ft-add-field-btn {
             margin-top: 10px;
             width: 100%;
@@ -427,33 +357,6 @@ class HearMed_Admin_Form_Templates {
             min-height: 400px;
         }
 
-        /* New modal form fields */
-        .hm-form-group { margin-bottom: 16px; }
-        .hm-form-group label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: #475569;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-        }
-        .hm-form-group input[type=text],
-        .hm-form-group input[type=number],
-        .hm-form-group select {
-            width: 100%;
-            padding: 9px 12px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 13px;
-            color: #151B33;
-            outline: none;
-        }
-        .hm-form-group input:focus,
-        .hm-form-group select:focus {
-            border-color: var(--hm-teal);
-            box-shadow: 0 0 0 3px rgba(11,180,196,.08);
-        }
         .ft-check-row {
             display: flex;
             align-items: center;

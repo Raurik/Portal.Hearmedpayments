@@ -50,21 +50,8 @@ function hm_render_fitting_page() {
 
     ob_start(); ?>
     <style>
-    /* ── Awaiting Fitting — hmf- namespace ── */
-    .hm-stats{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
-    .hm-stat{background:#fff;border-radius:10px;padding:14px 20px;flex:1;min-width:140px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(15,23,42,.03);}
-    .hm-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;font-weight:600;}
-    .hm-stat-val{font-size:22px;font-weight:700;color:#0f172a;margin-top:2px;}
-    .hm-stat-val.teal{color:var(--hm-teal);}
-    .hm-stat-val.amber{color:#d97706;}
-    .hm-stat-val.green{color:#059669;}
-
+    /* ── Awaiting Fitting — page-specific ── */
     .hm-tbl-wrap{background:#fff;border-radius:12px;border:1px solid #f1f5f9;box-shadow:0 2px 8px rgba(15,23,42,.04);overflow-x:auto;}
-    .hm-table{width:100%;border-collapse:collapse;font-size:12px;}
-    .hm-table th{text-align:left;padding:10px 14px;background:#f8fafc;color:#64748b;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
-    .hm-table td{padding:10px 14px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:middle;}
-    .hm-table tbody tr:hover{background:#f8fafc;}
-    .hm-table tbody tr:last-child td{border-bottom:none;}
 
     .hmf-patient-num{font-weight:700;color:#0f172a;font-size:12px;}
     .hmf-patient-name{font-size:12px;color:#334155;}
@@ -76,7 +63,6 @@ function hm_render_fitting_page() {
     .hmf-prsi-dot.green{background:#10b981;}
     .hmf-prsi-dot.red{background:#ef4444;}
 
-    .hm-status{display:inline-flex;align-items:center;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;}
     .hm-status-awaiting-order{background:#fef3cd;color:#92400e;}
     .hm-status-awaiting-delivery{background:#dbeafe;color:#1e40af;}
     .hm-status-awaiting-fitting{background:#d1fae5;color:#065f46;}
@@ -84,31 +70,12 @@ function hm_render_fitting_page() {
     .hmf-fitting-date{font-size:12px;color:#334155;}
     .hmf-fitting-date.none{color:#94a3b8;font-style:italic;}
 
-    .hm-btn{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
     .hm-btn-receive{background:var(--hm-teal);color:#fff;}
     .hm-btn-receive:hover{background:#0a9aa8;}
     .hm-btn-fitted{background:#059669;color:#fff;}
     .hm-btn-fitted:hover{background:#047857;}
     .hm-btn-receipt{background:#fff;color:#475569;border:1px solid #e2e8f0;}
     .hm-btn-receipt:hover{background:#f8fafc;border-color:var(--hm-teal);color:var(--hm-teal);}
-
-    .hm-empty{text-align:center;padding:60px 20px;color:#94a3b8;font-size:13px;}
-    .hm-empty-icon{font-size:32px;margin-bottom:8px;}
-
-    /* Modals */
-    .hm-modal-bg{display:none;position:fixed;inset:0;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at top left,rgba(148,163,184,.45),rgba(15,23,42,.75));backdrop-filter:blur(8px);z-index:9000;}
-    .hm-modal-bg.open{display:flex;}
-    .hm-modal{background:#fff;border-radius:14px;box-shadow:0 25px 50px rgba(0,0,0,.15);width:100%;overflow:hidden;}
-    .hm-modal-hd{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #f1f5f9;}
-    .hm-modal-hd h3{margin:0;font-size:14px;font-weight:600;color:#0f172a;}
-    .hm-modal-body{padding:20px;}
-    .hm-modal-ft{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid #f1f5f9;background:#f8fafc;}
-
-    .hm-form-group{margin-bottom:14px;}
-    .hm-form-group label{display:block;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;}
-    .hm-form-group input,.hm-form-group select,.hm-form-group textarea{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#1e293b;transition:border-color .15s;}
-    .hm-form-group input:focus,.hm-form-group select:focus{outline:none;border-color:var(--hm-teal);box-shadow:0 0 0 3px rgba(11,180,196,.1);}
-    .hm-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 
     .hmf-serial-item{background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:10px;border:1px solid #f1f5f9;}
     .hmf-serial-item-title{font-weight:600;font-size:12px;color:#0f172a;margin-bottom:8px;}
@@ -128,7 +95,7 @@ function hm_render_fitting_page() {
     .hmf-prev-payments h4{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;margin:0 0 6px;}
     .hmf-prev-pay-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f1f5f9;}
 
-    /* Filter bar — integrated toolbar */
+    /* Filter bar */
     .hmf-toolbar{display:flex;align-items:center;gap:16px;padding:10px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:16px;}
     .hmf-toolbar-label{font-size:11px;font-weight:600;color:#475569;white-space:nowrap;}
     .hmf-toolbar select{padding:7px 30px 7px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;color:#1e293b;background:#fff;min-width:170px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color .15s;}
@@ -137,7 +104,7 @@ function hm_render_fitting_page() {
     .hmf-toolbar-reset{padding:6px 14px;border:none;border-radius:6px;font-size:11px;font-weight:600;color:#64748b;background:#e2e8f0;cursor:pointer;transition:all .15s;}
     .hmf-toolbar-reset:hover{background:var(--hm-teal);color:#fff;}
 
-    /* Totals footer — clean summary strip */
+    /* Totals footer */
     .hmf-summary{margin-top:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;}
     .hmf-summary-row{display:flex;align-items:center;}
     .hmf-summary-cell{flex:1;padding:14px 20px;text-align:center;position:relative;}
