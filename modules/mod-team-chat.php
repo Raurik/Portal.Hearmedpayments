@@ -149,7 +149,7 @@ class HearMed_TeamChat {
                 <div class="hm-chat-modal-box">
                     <div class="hm-chat-modal-header">
                         <h3>New Direct Message</h3>
-                        <button class="hm-close">✕</button>
+                        <button class="hm-close">×</button>
                     </div>
                     <input type="text"
                            id="hm-chat-dm-search"

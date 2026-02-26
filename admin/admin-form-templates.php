@@ -543,7 +543,7 @@ class HearMed_Admin_Form_Templates {
                         <div class="ft-card-acts" onclick="event.stopPropagation()">
                             <button class="ft-icon-btn" onclick="hmFT.openEditor(<?php echo (int)$t->id; ?>)" title="Edit">✏</button>
                             <button class="ft-icon-btn" onclick="hmFT.toggle(<?php echo (int)$t->id; ?>,<?php echo $t->is_active?'0':'1'; ?>)" title="Toggle"><?php echo $t->is_active ? '⏸' : '▶'; ?></button>
-                            <button class="ft-icon-btn danger" onclick="hmFT.del(<?php echo (int)$t->id; ?>,'<?php echo esc_js($t->name); ?>')" title="Delete">✕</button>
+                            <button class="ft-icon-btn danger" onclick="hmFT.del(<?php echo (int)$t->id; ?>,'<?php echo esc_js($t->name); ?>')" title="Delete">×</button>
                         </div>
                     </div>
                 </div>
@@ -784,7 +784,7 @@ class HearMed_Admin_Form_Templates {
                         '<input type="text" class="ffl" value="'+_e(f.label)+'" placeholder="Field label">' +
                         '<select class="fft">'+types.map(function(t){return '<option'+(f.type===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select>' +
                         '<select class="ffr"><option value="0"'+(!f.required?' selected':'')+'>Optional</option><option value="1"'+(f.required?' selected':'')+'>Required</option></select>' +
-                        '<button class="ft-del-btn" onclick="hmFT.removeField('+i+')">✕</button>';
+                        '<button class="ft-del-btn" onclick="hmFT.removeField('+i+')">×</button>';
                     list.appendChild(row);
                 });
             }

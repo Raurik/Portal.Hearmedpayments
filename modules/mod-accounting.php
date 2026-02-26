@@ -353,7 +353,7 @@ class HearMed_Accounting {
                         <td><input type="number" name="items[0][unit_price]" class="hm-input hm-input--sm sup-price" step="0.01" value="0.00"></td>
                         <td><input type="number" name="items[0][vat_rate]" class="hm-input hm-input--sm sup-vat" step="0.1" value="23"></td>
                         <td class="hm-money sup-line-total">€0.00</td>
-                        <td><button type="button" class="hm-btn hm-btn--sm hm-btn--danger hm-remove-sup">✕</button></td>
+                        <td><button type="button" class="hm-btn hm-btn--sm hm-btn--danger hm-remove-sup">×</button></td>
                     </tr>
                 </tbody>
             </table>
@@ -393,7 +393,7 @@ class HearMed_Accounting {
                     <td><input type="number" name="items[${idx}][unit_price]" class="hm-input hm-input--sm sup-price" step="0.01" value="0.00"></td>
                     <td><input type="number" name="items[${idx}][vat_rate]" class="hm-input hm-input--sm sup-vat" step="0.1" value="23"></td>
                     <td class="hm-money sup-line-total">€0.00</td>
-                    <td><button type="button" class="hm-btn hm-btn--sm hm-btn--danger hm-remove-sup">✕</button></td>`;
+                    <td><button type="button" class="hm-btn hm-btn--sm hm-btn--danger hm-remove-sup">×</button></td>`;
                 idx++;
                 body.appendChild(tr);
                 bind(tr);

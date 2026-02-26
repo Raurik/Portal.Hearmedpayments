@@ -335,7 +335,7 @@ function hm_notifications_render() {
                     <span class="hm-notif-section__count" id="count-<?php echo esc_attr( $key ); ?>">0</span>
                     <button class="hm-notif-section__clear hm-btn hm-btn--xs hm-btn--ghost"
                             data-clear-section="<?php echo esc_attr( $key ); ?>"
-                            title="Clear all to log">✕ Clear</button>
+                            title="Clear all to log">× Clear</button>
                     <span class="hm-notif-section__chevron">▾</span>
                 </div>
                 <div class="hm-notif-section__body" id="section-<?php echo esc_attr( $key ); ?>">

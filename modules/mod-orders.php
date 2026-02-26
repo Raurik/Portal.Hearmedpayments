@@ -633,7 +633,7 @@ class HearMed_Orders {
                                     data-ajax="hm_reject_order" data-order-id="<?php echo $order_id; ?>"
                                     data-nonce="<?php echo esc_attr($nonce); ?>"
                                     data-confirm="Reject this order? The dispenser will be notified.">
-                                ✕ Reject
+                                × Reject
                             </button>
                         </div>
                     </div>
@@ -1666,7 +1666,7 @@ class HearMed_Orders {
                         <td class="hm-money">€${item.unit_price.toFixed(2)}</td>
                         <td class="hm-money">€${item.vat_amount.toFixed(2)}</td>
                         <td class="hm-money">€${item.line_total.toFixed(2)}</td>
-                        <td><button type="button" class="hm-btn hm-btn--sm hm-btn--danger hm-remove" data-idx="${idx}">✕</button></td>`;
+                        <td><button type="button" class="hm-btn hm-btn--sm hm-btn--danger hm-remove" data-idx="${idx}">×</button></td>`;
                     body.appendChild(tr);
                 });
 
