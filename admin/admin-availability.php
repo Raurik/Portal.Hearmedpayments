@@ -179,7 +179,7 @@ class HearMed_Admin_Availability {
                 <?php foreach ($rows as $r): ?>
                     <tr style="<?php echo $r['on_leave'] ? 'background:#fef2f2;' : ''; ?>">
                         <td style="text-align:center;">
-                            <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:<?php echo $r['on_leave'] ? '#ef4444' : '#22c55e'; ?>;box-shadow:0 0 0 3px <?php echo $r['on_leave'] ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)'; ?>;"></span>
+                            <span class="hm-status-dot <?php echo $r['on_leave'] ? 'hm-status-dot--red' : 'hm-status-dot--green'; ?>"></span>
                         </td>
                         <td><strong><?php echo esc_html($r['name']); ?></strong></td>
                         <td style="font-size:13px;color:var(--hm-text-light);"><?php echo esc_html($r['role']); ?></td>

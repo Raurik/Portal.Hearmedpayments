@@ -68,7 +68,7 @@ class HearMed_Admin_Holidays {
                         $is_away = in_array($name, $on_holiday_today);
                     ?>
                     <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:var(--hm-bg-muted);font-size:13px;">
-                        <span style="width:10px;height:10px;border-radius:50%;background:<?php echo $is_away ? '#ef4444' : '#22c55e'; ?>;display:inline-block;"></span>
+                        <span class="hm-status-dot <?php echo $is_away ? 'hm-status-dot--red' : 'hm-status-dot--green'; ?>"></span>
                         <span><?php echo esc_html($name); ?></span>
                         <?php if ($is_away): ?>
                             <span style="font-size:11px;color:#ef4444;font-weight:600;">Away</span>
@@ -109,7 +109,7 @@ class HearMed_Admin_Holidays {
                 ?>
                     <tr>
                         <td>
-                            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:<?php echo $is_current ? '#ef4444' : '#22c55e'; ?>;margin-right:6px;"></span>
+                            <span class="hm-status-dot <?php echo $is_current ? 'hm-status-dot--red' : 'hm-status-dot--green'; ?>" style="margin-right:6px;"></span>
                             <strong><?php echo esc_html($name); ?></strong>
                         </td>
                         <td><?php echo esc_html($h->start_date); ?></td>
