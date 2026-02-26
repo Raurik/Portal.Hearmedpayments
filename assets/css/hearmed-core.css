@@ -1040,4 +1040,484 @@
 #hm-app .hm-text--navy    { color: var(--hm-navy) !important; }
 
 
+/* ══════════════════════════════════════════
+   INPUTS & SELECTS
+   ══════════════════════════════════════════ */
+
+#hm-app .hm-input,
+#hm-app .hm-inp,
+#hm-app .hm-dd {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: var(--hm-font);
+  color: var(--hm-text);
+  background: var(--hm-bg);
+  border: 1px solid var(--hm-border);
+  border-radius: var(--hm-radius);
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+
+#hm-app .hm-input:focus,
+#hm-app .hm-inp:focus,
+#hm-app .hm-dd:focus {
+  border-color: var(--hm-teal);
+  box-shadow: 0 0 0 3px rgba(11,180,196,0.08);
+}
+
+#hm-app .hm-input::placeholder,
+#hm-app .hm-inp::placeholder {
+  color: var(--hm-text-muted);
+}
+
+#hm-app .hm-input--sm {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+#hm-app .hm-input--mono {
+  font-family: var(--hm-font-mono);
+  font-size: 12px;
+}
+
+#hm-app .hm-input--search {
+  padding-left: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%2394a3b8' viewBox='0 0 24 24'%3E%3Cpath d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' stroke='%2394a3b8' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 10px center;
+}
+
+#hm-app .hm-input--textarea,
+#hm-app textarea.hm-input {
+  min-height: 80px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+#hm-app select.hm-input,
+#hm-app .hm-dd {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+
+/* ══════════════════════════════════════════
+   FORM STRUCTURE
+   ══════════════════════════════════════════ */
+
+#hm-app .hm-form {
+  width: 100%;
+}
+
+#hm-app .hm-form__section {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--hm-border-light);
+}
+
+#hm-app .hm-form__section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+#hm-app .hm-form__section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--hm-navy);
+  margin: 0 0 14px;
+}
+
+#hm-app .hm-form__section-optional {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--hm-text-muted);
+  margin-left: 6px;
+}
+
+#hm-app .hm-form__row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+#hm-app .hm-form__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid var(--hm-border-light);
+  margin-top: 16px;
+}
+
+#hm-app .hm-form__hint {
+  font-size: 11px;
+  color: var(--hm-text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+#hm-app .hm-form-group--wide {
+  grid-column: 1 / -1;
+}
+
+#hm-app .hm-form-modal {
+  max-width: 500px;
+}
+
+#hm-app .hm-form-modal-body {
+  padding: 20px 24px;
+}
+
+#hm-app .hm-form-modal-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 14px 24px;
+  border-top: 1px solid var(--hm-border-light);
+}
+
+#hm-app .hm-form-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+
+/* ══════════════════════════════════════════
+   TEXT & COLOUR UTILITIES
+   ══════════════════════════════════════════ */
+
+/* Text colours */
+#hm-app .hm-teal    { color: var(--hm-teal) !important; }
+#hm-app .hm-navy    { color: var(--hm-navy) !important; }
+#hm-app .hm-red     { color: var(--hm-red) !important; }
+#hm-app .hm-green   { color: var(--hm-green) !important; }
+#hm-app .hm-amber   { color: var(--hm-amber) !important; }
+#hm-app .hm-primary { color: var(--hm-teal) !important; }
+#hm-app .hm-muted   { color: var(--hm-text-muted) !important; }
+
+#hm-app .hm-text--green  { color: var(--hm-green) !important; }
+#hm-app .hm-text--red    { color: var(--hm-red) !important; }
+#hm-app .hm-text--orange { color: var(--hm-amber) !important; }
+
+/* Typography */
+#hm-app .hm-mono        { font-family: var(--hm-font-mono); font-size: 12px; }
+#hm-app .hm-text-right  { text-align: right; }
+#hm-app .hm-num         { font-family: var(--hm-font-mono); font-variant-numeric: tabular-nums; }
+
+/* Layout */
+#hm-app .hm-divider {
+  height: 1px;
+  background: var(--hm-border-light);
+  border: none;
+  margin: 16px 0;
+}
+
+/* Form labels */
+#hm-app .hm-required::after {
+  content: " *";
+  color: var(--hm-red);
+  font-weight: 400;
+}
+
+#hm-app .hm-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+#hm-app .hm-checkbox-label input {
+  accent-color: var(--hm-teal);
+}
+
+/* Placeholder/helper text */
+#hm-app .hm-placeholder {
+  color: var(--hm-text-muted);
+  font-style: italic;
+  font-size: 13px;
+}
+
+#hm-app .hm-workflow-hint {
+  background: #f0fdfa;
+  border: 1px solid #ccfbf1;
+  border-radius: var(--hm-radius-md);
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #0d9488;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+
+/* ══════════════════════════════════════════
+   ADDITIONAL BADGE VARIANTS
+   ══════════════════════════════════════════ */
+
+#hm-app .hm-badge--sm {
+  font-size: 10px;
+  padding: 1px 6px;
+}
+
+#hm-app .hm-badge--yellow,
+#hm-app .hm-badge--warning {
+  background: #fef3cd;
+  color: #92400e;
+}
+
+#hm-app .hm-badge-navy,
+#hm-app .hm-badge--navy {
+  background: #e2e8f0;
+  color: var(--hm-navy);
+}
+
+#hm-app .hm-badge-purple,
+#hm-app .hm-badge--purple {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+/* Status badges (order workflow) */
+#hm-app .hm-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+#hm-app .hm-status-awaiting-order   { background: #fef3cd; color: #92400e; }
+#hm-app .hm-status-awaiting-delivery { background: #dbeafe; color: #1e40af; }
+#hm-app .hm-status-awaiting-fitting  { background: #d1fae5; color: #065f46; }
+
+
+/* ══════════════════════════════════════════
+   TABLE WRAPPERS & FILTER BARS
+   ══════════════════════════════════════════ */
+
+#hm-app .hm-tbl-wrap {
+  background: #fff;
+  border-radius: var(--hm-radius-lg);
+  border: 1px solid var(--hm-border-light);
+  box-shadow: var(--hm-shadow-sm);
+  overflow-x: auto;
+}
+
+#hm-app .hm-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#hm-app .hm-filter-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+#hm-app .hm-table__actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+
+/* ══════════════════════════════════════════
+   SEARCH & FILTER INPUTS
+   ══════════════════════════════════════════ */
+
+#hm-app .hm-search-input {
+  padding: 7px 12px;
+  font-size: 13px;
+  border: 1px solid var(--hm-border);
+  border-radius: var(--hm-radius);
+  color: var(--hm-text);
+  background: var(--hm-bg);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+#hm-app .hm-search-input:focus {
+  border-color: var(--hm-teal);
+  box-shadow: 0 0 0 3px rgba(11,180,196,0.08);
+}
+
+#hm-app .hm-filter-select {
+  padding: 7px 30px 7px 12px;
+  font-size: 12px;
+  border: 1px solid var(--hm-border);
+  border-radius: var(--hm-radius);
+  color: var(--hm-text);
+  background: var(--hm-bg);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  outline: none;
+}
+
+#hm-app .hm-filter-select:focus {
+  border-color: var(--hm-teal);
+}
+
+
+/* ══════════════════════════════════════════
+   LAYOUT HELPERS
+   ══════════════════════════════════════════ */
+
+#hm-app .hm-card-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#hm-app .hm-card-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#hm-app .hm-card--action {
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+#hm-app .hm-card--action:hover {
+  border-color: var(--hm-teal);
+  box-shadow: 0 2px 12px rgba(11,180,196,0.08);
+}
+
+#hm-app .hm-card--inset {
+  background: #f8fafc;
+  border-color: var(--hm-border-light);
+}
+
+#hm-app .hm-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--hm-border-light);
+}
+
+#hm-app .hm-secret-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#hm-app .hm-secret-wrap input {
+  flex: 1;
+}
+
+
+/* ══════════════════════════════════════════
+   ORDER TOTALS
+   ══════════════════════════════════════════ */
+
+#hm-app .hm-order-totals {
+  min-width: 240px;
+  margin-left: auto;
+}
+
+#hm-app .hm-order-totals__row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--hm-border-light);
+}
+
+#hm-app .hm-order-totals__row span:first-child {
+  color: var(--hm-text-light);
+}
+
+#hm-app .hm-order-totals__row--total {
+  font-weight: 700;
+  font-size: 15px;
+  border-bottom: none;
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 2px solid var(--hm-border);
+}
+
+#hm-app .hm-order-totals__row--total span:last-child {
+  color: var(--hm-teal);
+}
+
+#hm-app .hm-grand-total {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--hm-teal);
+}
+
+#hm-app .hm-subtotal {
+  font-weight: 600;
+  color: var(--hm-text);
+}
+
+
+/* ══════════════════════════════════════════
+   TIMELINE
+   ══════════════════════════════════════════ */
+
+#hm-app .hm-timeline {
+  position: relative;
+  padding-left: 24px;
+}
+
+#hm-app .hm-timeline::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--hm-border);
+}
+
+#hm-app .hm-timeline__item {
+  position: relative;
+  padding-bottom: 16px;
+  font-size: 13px;
+}
+
+#hm-app .hm-timeline__dot {
+  position: absolute;
+  left: -21px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--hm-border);
+  border: 2px solid #fff;
+}
+
+#hm-app .hm-timeline__item--done .hm-timeline__dot {
+  background: var(--hm-teal);
+}
+
+#hm-app .hm-timeline__label {
+  font-weight: 600;
+  color: var(--hm-text);
+}
+
+#hm-app .hm-timeline__date {
+  font-size: 12px;
+  color: var(--hm-text-muted);
+}
+
+
 /* ── End of hearmed-core.css ── */

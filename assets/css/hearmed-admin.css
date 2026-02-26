@@ -1140,3 +1140,170 @@
 }
 .hm-ajax-result:empty { margin-top: 0; }
 
+
+/* ══════════════════════════════════════════
+   AVAILABILITY PAGE
+   ══════════════════════════════════════════ */
+
+#hm-app .hm-availability-admin {
+  padding: 0;
+}
+
+/* ══════════════════════════════════════════
+   SETTINGS LAYOUTS
+   ══════════════════════════════════════════ */
+
+#hm-app .hm-finance-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  #hm-app .hm-finance-grid { grid-template-columns: 1fr; }
+}
+
+#hm-app .hm-section-toggles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 20px;
+}
+
+@media (max-width: 600px) {
+  #hm-app .hm-section-toggles { grid-template-columns: 1fr; }
+}
+
+/* Logo settings */
+#hm-app .hm-logo-preview {
+  max-width: 200px;
+  max-height: 80px;
+  border: 1px solid var(--hm-border);
+  border-radius: var(--hm-radius);
+  padding: 4px;
+  background: #fff;
+  margin-bottom: 8px;
+}
+
+#hm-app .hm-logo-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+#hm-app .hm-logo-upload-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+#hm-app .hm-logo-hint {
+  font-size: 12px;
+  color: var(--hm-text-light);
+  margin-top: 4px;
+}
+
+#hm-app .hm-logo-url-field {
+  width: 100%;
+}
+
+#hm-app .hm-logo-remove-btn {
+  font-size: 11px;
+  color: var(--hm-red);
+  cursor: pointer;
+}
+
+#hm-app .hm-logo-file {
+  font-size: 12px;
+}
+
+/* Form type / payment method chips */
+#hm-app .hm-ft-blocks,
+#hm-app .hm-pm-blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+}
+
+#hm-app .hm-ft-block {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--hm-teal);
+}
+
+#hm-app .hm-pm-block {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--hm-teal);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+#hm-app .hm-ft-x,
+#hm-app .hm-pm-x {
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 13px;
+  line-height: 1;
+}
+
+#hm-app .hm-ft-x:hover,
+#hm-app .hm-pm-x:hover { opacity: 1; }
+
+#hm-app .hm-ft-add-wrap,
+#hm-app .hm-pm-add-wrap {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+#hm-app .hm-ft-add-wrap input,
+#hm-app .hm-pm-add-wrap input { flex: 1; }
+
+#hm-app .hm-ft-hidden,
+#hm-app .hm-pm-hidden { display: none; }
+
+#hm-app .hm-ft-name,
+#hm-app .hm-pm-name { font-weight: 500; }
+
+#hm-app .hm-ft-new,
+#hm-app .hm-pm-new { width: 100%; }
+
+/* Invoice row (finance settings) */
+#hm-app .hm-inv-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+#hm-app .hm-inv-row .hm-form-group { flex: 1; margin-bottom: 0; }
+
+#hm-app .hm-inv-last {
+  font-size: 11px;
+  color: var(--hm-text-light);
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+/* ══════════════════════════════════════════
+   KPI CARDS
+   ══════════════════════════════════════════ */
+
+#hm-app .hm-kpi-card__value { font-size: 28px; font-weight: 700; color: var(--hm-navy); }
+#hm-app .hm-kpi-card__label { font-size: 12px; color: var(--hm-text-muted); margin-top: 4px; }
+#hm-app .hm-kpi-card__link  { font-size: 12px; color: var(--hm-teal); text-decoration: none; }
+#hm-app .hm-kpi-card__link:hover { text-decoration: underline; }
+#hm-app .hm-kpi-card--info    { border-top: 3px solid var(--hm-blue); }
+#hm-app .hm-kpi-card--warning { border-top: 3px solid var(--hm-amber); }
+#hm-app .hm-kpi-card--alert   { border-top: 3px solid var(--hm-red); }
+

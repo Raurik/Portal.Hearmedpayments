@@ -22,7 +22,7 @@ class HearMed_Enqueue {
                 wp_enqueue_style(
                     'calendar-settings',
                     HEARMED_URL . 'assets/css/calendar-settings.css',
-                    [ 'hearmed-design' ],
+                    [ 'hearmed-core' ],
                     $this->get_file_version( 'assets/css/calendar-settings.css' )
                 );
                 wp_enqueue_script(
@@ -96,14 +96,14 @@ class HearMed_Enqueue {
             wp_enqueue_style(
                 'hearmed-jet-overrides',
                 HEARMED_URL . 'assets/css/hearmed-jet-overrides.css',
-                [ 'hearmed-design' ],
+                [ 'hearmed-core' ],
                 $this->get_file_version( 'assets/css/hearmed-jet-overrides.css' )
             );
         }
 
         // Layout/foundation CSS - ONLY on portal pages to avoid global scroll interference
         if ( $this->is_portal_page() ) {
-            $foundation_deps = [ 'hearmed-design' ];
+            $foundation_deps = [ 'hearmed-core' ];
             if ( wp_style_is( 'elementor-frontend', 'registered' ) ) {
                 $foundation_deps[] = 'elementor-frontend';
             }
@@ -416,7 +416,7 @@ class HearMed_Enqueue {
             wp_enqueue_style(
                 "hearmed-{$module}",
                 HEARMED_URL . $css_path,
-                [ 'hearmed-design' ], // Always depend on design system
+                [ 'hearmed-core' ], // Core has all variables + foundation classes
                 $this->get_file_version( $css_path )
             );
         }
