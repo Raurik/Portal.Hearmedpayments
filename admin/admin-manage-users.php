@@ -254,8 +254,9 @@ class HearMed_Admin_Manage_Users {
                                 </select>
                             </div>
                             <div class="hm-form-group">
-                                <label class="hm-toggle-label">
+                                <label class="hm-toggle">
                                     <input type="checkbox" id="hmu-active" checked>
+                                    <span class="hm-toggle-track"></span>
                                     Active
                                 </label>
                             </div>
@@ -269,8 +270,9 @@ class HearMed_Admin_Manage_Users {
                                 <input type="text" id="hmu-username" placeholder="Uses staff email if blank">
                             </div>
                             <div class="hm-form-group">
-                                <label class="hm-toggle-label">
+                                <label class="hm-toggle">
                                     <input type="checkbox" id="hmu-2fa">
+                                    <span class="hm-toggle-track"></span>
                                     Two-Factor Enabled
                                 </label>
                             </div>

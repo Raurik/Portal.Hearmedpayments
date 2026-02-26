@@ -159,14 +159,16 @@ class HearMed_Admin_Appointment_Types {
                         </div>
                         <div class="hm-form-row">
                             <div class="hm-form-group">
-                                <label class="hm-toggle-label">
+                                <label class="hm-toggle">
                                     <input type="checkbox" id="hma-sales">
+                                    <span class="hm-toggle-track"></span>
                                     Sales opportunity
                                 </label>
                             </div>
                             <div class="hm-form-group">
-                                <label class="hm-toggle-label">
+                                <label class="hm-toggle">
                                     <input type="checkbox" id="hma-income" checked>
+                                    <span class="hm-toggle-track"></span>
                                     Income bearing
                                 </label>
                             </div>

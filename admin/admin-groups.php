@@ -174,8 +174,9 @@ class HearMed_Admin_Groups {
                                 <input type="text" id="hmg-name" placeholder="e.g. Dispensers - Dublin">
                             </div>
                             <div class="hm-form-group" style="flex:1">
-                                <label class="hm-toggle-label">
+                                <label class="hm-toggle">
                                     <input type="checkbox" id="hmg-active" checked>
+                                    <span class="hm-toggle-track"></span>
                                     Active
                                 </label>
                             </div>

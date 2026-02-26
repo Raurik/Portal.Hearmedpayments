@@ -173,8 +173,9 @@ class HearMed_Admin_Settings {
                 ?>
                 <div class="hm-form-group">
                     <?php if ($f['type'] === 'toggle'): ?>
-                        <label class="hm-toggle-label">
+                        <label class="hm-toggle">
                             <input type="checkbox" class="hm-form-group" data-key="<?php echo esc_attr($f['key']); ?>" <?php checked($val, '1'); ?>>
+                            <span class="hm-toggle-track"></span>
                             <?php echo esc_html($f['label']); ?>
                         </label>
                     <?php else: ?>
@@ -378,8 +379,9 @@ class HearMed_Admin_Settings {
                 </div>
 
                 <div class="hm-form-group">
-                    <label class="hm-toggle-label">
+                    <label class="hm-toggle">
                         <input type="checkbox" class="hm-form-group" data-key="hm_require_gdpr_consent" <?php checked($gdpr_req, '1'); ?>>
+                        <span class="hm-toggle-track"></span>
                         Require GDPR Consent on Forms
                     </label>
                 </div>
@@ -740,8 +742,9 @@ class HearMed_Admin_Settings {
                         ['key' => 'hm_report_show_terms',           'label' => 'Show Terms & Conditions Page', 'default' => '0'],
                     ];
                     foreach ($toggles as $t): ?>
-                    <label class="hm-toggle-label">
+                    <label class="hm-toggle">
                         <input type="checkbox" class="hm-form-group" data-key="<?php echo esc_attr($t['key']); ?>" <?php checked($v($t['key'], $t['default']), '1'); ?>>
+                        <span class="hm-toggle-track"></span>
                         <?php echo esc_html($t['label']); ?>
                     </label>
                     <?php endforeach; ?>

@@ -115,8 +115,9 @@ class HearMed_Staff_Login {
                 </div>
 
                 <div class="hm-form-row" style="align-items:center;">
-                    <label class="hm-toggle-label" style="margin:0;">
+                    <label class="hm-toggle" style="margin:0;">
                         <input type="checkbox" name="remember" value="1">
+                        <span class="hm-toggle-track"></span>
                         Remember me
                     </label>
                 </div>

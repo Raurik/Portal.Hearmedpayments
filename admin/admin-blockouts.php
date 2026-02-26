@@ -190,8 +190,9 @@ class HearMed_Admin_Blockouts {
                             </div>
                         </div>
                         <div class="hm-form-group">
-                            <label class="hm-toggle-label">
+                            <label class="hm-toggle">
                                 <input type="checkbox" id="hmb-active" checked>
+                                <span class="hm-toggle-track"></span>
                                 Active
                             </label>
                         </div>

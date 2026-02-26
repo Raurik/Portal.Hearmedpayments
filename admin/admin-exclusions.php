@@ -98,8 +98,9 @@ class HearMed_Admin_Exclusions {
                                 <input type="number" id="hme-sort" min="0" value="0">
                             </div>
                             <div class="hm-form-group">
-                                <label class="hm-toggle-label" style="margin-top:22px;">
+                                <label class="hm-toggle" style="margin-top:22px;">
                                     <input type="checkbox" id="hme-active" checked>
+                                    <span class="hm-toggle-track"></span>
                                     Active
                                 </label>
                             </div>

@@ -213,14 +213,14 @@ class HearMed_Admin_Document_Templates {
                         </select>
                     </div>
                     <div class="hm-form-group">
-                        <label class="hm-toggle-label">
-                            <input type="checkbox" id="hm-dt-ai"> AI Transcription Formatting
+                        <label class="hm-toggle">
+                            <input type="checkbox" id="hm-dt-ai"><span class="hm-toggle-track"></span> AI Transcription Formatting
                         </label>
                         <p style="font-size:11px;color:var(--hm-text-light);margin-top:4px;">When enabled, AI will detect content sections and apply formatting rules automatically.</p>
                     </div>
                     <div class="hm-form-group">
-                        <label class="hm-toggle-label">
-                            <input type="checkbox" id="hm-dt-pwd" checked> Password-Protected PDF
+                        <label class="hm-toggle">
+                            <input type="checkbox" id="hm-dt-pwd" checked><span class="hm-toggle-track"></span> Password-Protected PDF
                         </label>
                     </div>
                     <div class="hm-form-group">
@@ -379,8 +379,9 @@ class HearMed_Admin_Document_Templates {
                         <span class="hm-te-drag" title="Drag to reorder">&#9776;</span>
                         <span class="hm-te-name"><?php echo esc_html($sec['label']); ?></span>
                         <span class="hm-te-type"><?php echo esc_html($section_types[$sec['type']] ?? $sec['type']); ?></span>
-                        <label class="hm-toggle-label" style="font-size:12px;" onclick="event.stopPropagation()">
+                        <label class="hm-toggle" style="font-size:12px;" onclick="event.stopPropagation()">
                             <input type="checkbox" class="hm-te-toggle" data-idx="<?php echo $idx; ?>" <?php checked(!empty($sec['enabled'])); ?> onchange="hmTemplateEditor.toggleSection(<?php echo $idx; ?>,this.checked)">
+                            <span class="hm-toggle-track"></span>
                             Visible
                         </label>
                     </div>
@@ -458,8 +459,9 @@ class HearMed_Admin_Document_Templates {
                 </div>
                 <div class="hm-modal-body">
                     <p style="font-size:13px;margin-bottom:12px;">Before downloading or generating this document, you must confirm GDPR compliance.</p>
-                    <label class="hm-toggle-label" style="font-size:13px;">
+                    <label class="hm-toggle" style="font-size:13px;">
                         <input type="checkbox" id="hm-gdpr-consent-cb">
+                        <span class="hm-toggle-track"></span>
                         I confirm this data access/download is necessary for patient care and complies with our
                         <a href="<?php echo esc_url($privacy_url ?: '#'); ?>" target="_blank" style="color:var(--hm-primary);">GDPR Privacy Policy</a>.
                     </label>

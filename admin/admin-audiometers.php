@@ -121,7 +121,7 @@ class HearMed_Admin_Audiometers {
                                 <option value="__add_new__">+ Add New…</option>
                                 </select>
                             </div>
-                            <div class="hm-form-group"><label class="hm-toggle-label"><input type="checkbox" id="hma-active" checked> Active</label></div>
+                            <div class="hm-form-group"><label class="hm-toggle"><input type="checkbox" id="hma-active" checked><span class="hm-toggle-track"></span> Active</label></div>
                         </div>
                     </div>
                     <div class="hm-modal-ft"><button class="hm-btn" onclick="hmAud.close()">Cancel</button><button class="hm-btn hm-btn--primary" onclick="hmAud.save()" id="hma-save">Save</button></div>

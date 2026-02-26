@@ -126,8 +126,9 @@ class HearMed_Admin_KPI_Targets {
                         </td>
                         <td><span class="hm-badge hm-badge--blue"><?php echo esc_html($meta['unit']); ?></span></td>
                         <td>
-                            <label class="hm-toggle-label">
+                            <label class="hm-toggle">
                                 <input type="checkbox" class="hmk-active" data-key="<?php echo esc_attr($key); ?>" <?php checked($active); ?>>
+                                <span class="hm-toggle-track"></span>
                             </label>
                         </td>
                         <?php if ($active_tab !== 'global'): ?>

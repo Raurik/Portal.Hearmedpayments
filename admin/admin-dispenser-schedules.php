@@ -139,8 +139,9 @@ class HearMed_Admin_Dispenser_Schedules {
                             </div>
                         </div>
                         <div class="hm-form-group">
-                            <label class="hm-toggle-label">
+                            <label class="hm-toggle">
                                 <input type="checkbox" id="hmse-active" checked>
+                                <span class="hm-toggle-track"></span>
                                 Active
                             </label>
                         </div>
@@ -406,8 +407,9 @@ class HearMed_Admin_Dispenser_Schedules {
 
                         <div class="hm-form-row">
                             <div class="hm-form-group">
-                                <label class="hm-toggle-label">
+                                <label class="hm-toggle">
                                     <input type="checkbox" id="hms-active" checked>
+                                    <span class="hm-toggle-track"></span>
                                     Active
                                 </label>
                             </div>
