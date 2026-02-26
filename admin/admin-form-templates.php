@@ -32,11 +32,29 @@ class HearMed_Admin_Form_Templates {
     }
 
     private function type_label( $t ) {
-        return [ 'consent'=>'Consent','clinical'=>'Clinical','intake'=>'Intake','other'=>'Other' ][$t] ?? ucfirst($t);
+        return [
+            'consent'     => 'Consent',
+            'clinical'    => 'Clinical',
+            'intake'      => 'Intake',
+            'invoice'     => 'Invoice',
+            'credit_note' => 'Credit Note',
+            'letter'      => 'Letter',
+            'report'      => 'Report',
+            'other'       => 'Other',
+        ][$t] ?? ucfirst($t);
     }
 
     private function type_color( $t ) {
-        return [ 'consent'=>'#7c3aed','clinical'=>'#0BB4C4','intake'=>'#0e7490','other'=>'#64748b' ][$t] ?? '#64748b';
+        return [
+            'consent'     => '#7c3aed',
+            'clinical'    => '#0BB4C4',
+            'intake'      => '#0e7490',
+            'invoice'     => '#16a34a',
+            'credit_note' => '#dc2626',
+            'letter'      => '#d97706',
+            'report'      => '#2563eb',
+            'other'       => '#64748b',
+        ][$t] ?? '#64748b';
     }
 
     // ─── Render ───────────────────────────────────────────────────────────
@@ -580,6 +598,17 @@ class HearMed_Admin_Form_Templates {
                                 '{{clinic_email}}'      => 'Clinic email',
                                 '{{clinic_phone}}'      => 'Clinic phone',
                                 '{{clinic_address}}'    => 'Clinic address',
+                                '{{invoice_number}}'    => 'Invoice number',
+                                '{{invoice_date}}'      => 'Invoice date',
+                                '{{invoice_total}}'     => 'Invoice total €',
+                                '{{invoice_items}}'     => 'Line items table',
+                                '{{prsi_amount}}'       => 'PRSI grant amount',
+                                '{{balance_due}}'       => 'Balance due',
+                                '{{payment_method}}'    => 'Payment method',
+                                '{{credit_note_number}}'=> 'Credit note number',
+                                '{{credit_amount}}'     => 'Credit amount €',
+                                '{{credit_reason}}'     => 'Reason for credit',
+                                '{{order_number}}'      => 'Order number',
                                 '{{signature}}'         => '✍ Signature pad',
                             ];
                             foreach ( $phs as $ph => $hint ) : ?>
@@ -637,6 +666,10 @@ class HearMed_Admin_Form_Templates {
                             <option value="consent">Consent</option>
                             <option value="clinical">Clinical</option>
                             <option value="intake">Intake</option>
+                            <option value="invoice">Invoice</option>
+                            <option value="credit_note">Credit Note</option>
+                            <option value="letter">Letter</option>
+                            <option value="report">Report</option>
                             <option value="other">Other</option>
                         </select>
                     </div>
