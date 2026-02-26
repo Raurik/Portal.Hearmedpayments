@@ -69,15 +69,15 @@ function hm_render_approvals_page() {
 
     <div id="hm-app" class="hm-calendar" data-module="admin" data-view="approvals">
         <div class="hm-page">
-            <div class="hm-page-header" style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="hm-page-header">
                 <div>
-                    <h1 class="hm-page-title" style="font-size:22px;font-weight:700;color:#0f172a;margin:0;">Order Approvals</h1>
-                    <div style="color:#94a3b8;font-size:12px;margin-top:4px;">Review, approve or deny orders &mdash; C-Level access only.</div>
+                    <h1 class="hm-page-title">Order Approvals</h1>
+                    <div class="hm-muted" style="font-size:12px;margin-top:4px;">Review, approve or deny orders &mdash; C-Level access only.</div>
                 </div>
                 <?php if ($pending_count > 0): ?>
-                <div style="display:flex;align-items:center;gap:8px;background:#fef3cd;padding:8px 16px;border-radius:8px;">
-                    <span style="font-size:18px;">&#9888;</span>
-                    <span style="font-size:13px;font-weight:600;color:#92400e;"><?php echo $pending_count; ?> order<?php echo $pending_count !== 1 ? 's' : ''; ?> awaiting approval</span>
+                <div class="hm-notice hm-notice--warning" style="display:flex;align-items:center;gap:8px;">
+                    <span>&#9888;</span>
+                    <span><?php echo $pending_count; ?> order<?php echo $pending_count !== 1 ? 's' : ''; ?> awaiting approval</span>
                 </div>
                 <?php endif; ?>
             </div>
@@ -89,7 +89,7 @@ function hm_render_approvals_page() {
     </div>
 
     <!-- Deny modal -->
-    <div id="hma-deny-modal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at top left,rgba(148,163,184,.45),rgba(15,23,42,.75));backdrop-filter:blur(8px);z-index:9000;">
+    <div id="hma-deny-modal" class="hm-modal-bg">
         <div class="hm-modal" style="max-width:480px;">
             <div class="hm-modal-hd">
                 <h3 style="margin:0;font-size:14px;font-weight:600;">Deny Order</h3>
@@ -105,7 +105,7 @@ function hm_render_approvals_page() {
             </div>
             <div class="hm-modal-ft">
                 <button class="hm-btn" onclick="hmApprovals.closeDeny()">Cancel</button>
-                <button class="hm-btn" style="background:#dc2626;color:#fff;" onclick="hmApprovals.confirmDeny()">Deny Order</button>
+                <button class="hm-btn hm-btn--danger" onclick="hmApprovals.confirmDeny()">Deny Order</button>
             </div>
         </div>
     </div>
@@ -208,7 +208,7 @@ function hm_render_approvals_page() {
                 }
 
                 html += '<div class="hma-acts">';
-                html += '<button class="hm-btn" style="background:#dc2626;color:#fff;" onclick="hmApprovals.deny(' + o.id + ')">Deny</button>';
+                html += '<button class="hm-btn hm-btn--danger" onclick="hmApprovals.deny(' + o.id + ')">Deny</button>';
                 html += '<button class="hm-btn hm-btn--primary" onclick="hmApprovals.approve(' + o.id + ')">Approve &#10004;</button>';
                 html += '</div>';
 

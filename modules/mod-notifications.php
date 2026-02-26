@@ -279,11 +279,11 @@ function hm_notifications_render() {
     $role     = HearMed_Auth::current_role();
     $classes  = hm_notification_classes();
     ?>
-    <div class="hearmed-notifications" style="display:flex;flex-direction:column;background:#fff;padding:24px;min-height:100%;color:#334155;">
+    <div class="hearmed-notifications">
 
         <!-- Page header -->
-        <div class="hm-page-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid #e2e8f0;">
-            <h1 class="hm-page-title" style="font-size:22px;font-weight:700;color:#151B33;margin:0;">Notifications</h1>
+        <div class="hm-page-header">
+            <h1 class="hm-page-title">Notifications</h1>
             <div class="hm-notif-header-actions">
                 <button class="hm-btn hm-btn--sm hm-btn--ghost" id="hm-notif-mark-all-read">
                     Mark All Read
@@ -295,43 +295,43 @@ function hm_notifications_render() {
         </div>
 
         <!-- ═══════════ YOUR DAY TODAY ═══════════ -->
-        <div class="hm-notif-day-panel" style="margin-bottom:24px;">
-            <h2 class="hm-notif-day-title" style="font-size:15px;font-weight:700;color:#151B33;margin:0 0 12px 0;text-transform:uppercase;letter-spacing:.5px;">Your Day Today</h2>
-            <div class="hm-stats" id="hm-stats" style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;">
-                <div class="hm-stat" data-tile="appointments" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
-                    <div class="hm-stat-val" id="tile-appointments" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
-                    <div class="hm-stat-label" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Appointments</div>
+        <div class="hm-notif-day-panel">
+            <h2 class="hm-notif-day-title">Your Day Today</h2>
+            <div class="hm-stats" id="hm-stats">
+                <div class="hm-stat" data-tile="appointments">
+                    <div class="hm-stat-val" id="tile-appointments">—</div>
+                    <div class="hm-stat-label">Appointments</div>
                 </div>
-                <div class="hm-stat" data-tile="tests" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
-                    <div class="hm-stat-val" id="tile-tests" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
-                    <div class="hm-stat-label" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Tests Scheduled</div>
+                <div class="hm-stat" data-tile="tests">
+                    <div class="hm-stat-val" id="tile-tests">—</div>
+                    <div class="hm-stat-label">Tests Scheduled</div>
                 </div>
-                <div class="hm-stat" data-tile="calls" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
-                    <div class="hm-stat-val" id="tile-calls" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
-                    <div class="hm-stat-label" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Calls to Make</div>
+                <div class="hm-stat" data-tile="calls">
+                    <div class="hm-stat-val" id="tile-calls">—</div>
+                    <div class="hm-stat-label">Calls to Make</div>
                 </div>
-                <div class="hm-stat" data-tile="repairs" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
-                    <div class="hm-stat-val" id="tile-repairs" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
-                    <div class="hm-stat-label" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Repairs Overdue</div>
+                <div class="hm-stat" data-tile="repairs">
+                    <div class="hm-stat-val" id="tile-repairs">—</div>
+                    <div class="hm-stat-label">Repairs Overdue</div>
                 </div>
-                <div class="hm-stat" data-tile="fittings" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
-                    <div class="hm-stat-val" id="tile-fittings" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
-                    <div class="hm-stat-label" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Fittings Due</div>
+                <div class="hm-stat" data-tile="fittings">
+                    <div class="hm-stat-val" id="tile-fittings">—</div>
+                    <div class="hm-stat-label">Fittings Due</div>
                 </div>
-                <div class="hm-stat" data-tile="ha_not_received" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 12px;text-align:center;">
-                    <div class="hm-stat-val" id="tile-ha-not-received" style="font-size:28px;font-weight:800;color:#151B33;line-height:1.1;margin-bottom:4px;">—</div>
-                    <div class="hm-stat-label" style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">HAs Not Received</div>
+                <div class="hm-stat" data-tile="ha_not_received">
+                    <div class="hm-stat-val" id="tile-ha-not-received">—</div>
+                    <div class="hm-stat-label">HAs Not Received</div>
                 </div>
             </div>
         </div>
 
         <!-- ═══════════ NOTIFICATION SECTIONS ═══════════ -->
-        <div class="hm-notif-sections" id="hm-notif-sections" style="display:flex;flex-direction:column;gap:8px;">
+        <div class="hm-notif-sections" id="hm-notif-sections">
             <?php foreach ( $classes as $key => $cls ) : ?>
-            <div class="hm-notif-section" data-class="<?php echo esc_attr( $key ); ?>" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
-                <div class="hm-notif-section__header" data-toggle="<?php echo esc_attr( $key ); ?>" style="display:flex;align-items:center;gap:8px;padding:6px 12px;height:34px;cursor:pointer;">
-                    <span class="hm-notif-section__stripe" style="background:<?php echo esc_attr( $cls['color'] ); ?>;width:4px;height:18px;border-radius:2px;flex-shrink:0;"></span>
-                    <span class="hm-notif-section__label" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#334155;flex:1;"><?php echo esc_html( $cls['label'] ); ?></span>
+            <div class="hm-notif-section" data-class="<?php echo esc_attr( $key ); ?>">
+                <div class="hm-notif-section__header" data-toggle="<?php echo esc_attr( $key ); ?>">
+                    <span class="hm-notif-section__stripe" style="background:<?php echo esc_attr( $cls['color'] ); ?>;"></span>
+                    <span class="hm-notif-section__label"><?php echo esc_html( $cls['label'] ); ?></span>
                     <span class="hm-notif-section__count" id="count-<?php echo esc_attr( $key ); ?>">0</span>
                     <button class="hm-notif-section__clear hm-btn hm-btn--xs hm-btn--ghost"
                             data-clear-section="<?php echo esc_attr( $key ); ?>"
