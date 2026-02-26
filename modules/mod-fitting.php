@@ -1401,7 +1401,7 @@ tfoot tr:last-child td { font-size: 14px; color: var(--hm-teal); border-top: 2px
     <div class="section-title">Items</div>
     <table>
         <thead>
-            <tr><th>Description</th><th>Ear</th><th>Qty</th><th class="money">Unit Price</th><th class="money">Total</th></tr>
+            <tr><th>Description</th><th>Ear</th><th>Qty</th><th class="hm-money">Unit Price</th><th class="hm-money">Total</th></tr>
         </thead>
         <tbody>
         <?php foreach ($items ?: [] as $it): ?>
@@ -1409,21 +1409,21 @@ tfoot tr:last-child td { font-size: 14px; color: var(--hm-teal); border-top: 2px
             <td><?php echo esc_html($it->product_name ?: $it->item_description); ?></td>
             <td><?php echo esc_html($it->ear_side ?: '—'); ?></td>
             <td><?php echo esc_html($it->quantity); ?></td>
-            <td class="money">€<?php echo number_format((float)($it->unit_price ?? $it->unit_retail_price ?? 0), 2); ?></td>
-            <td class="money">€<?php echo number_format((float)$it->line_total, 2); ?></td>
+            <td class="hm-money">€<?php echo number_format((float)($it->unit_price ?? $it->unit_retail_price ?? 0), 2); ?></td>
+            <td class="hm-money">€<?php echo number_format((float)$it->line_total, 2); ?></td>
         </tr>
         <?php endforeach; ?>
         </tbody>
         <tfoot>
-            <tr><td colspan="4" class="money">Subtotal</td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->subtotal : $order->subtotal), 2); ?></td></tr>
+            <tr><td colspan="4" class="hm-money">Subtotal</td><td class="hm-money">€<?php echo number_format((float)($invoice ? $invoice->subtotal : $order->subtotal), 2); ?></td></tr>
             <?php if ((float)($invoice ? $invoice->discount_total : $order->discount_total) > 0): ?>
-            <tr><td colspan="4" class="money">Discount</td><td class="money">-€<?php echo number_format((float)($invoice ? $invoice->discount_total : $order->discount_total), 2); ?></td></tr>
+            <tr><td colspan="4" class="hm-money">Discount</td><td class="hm-money">-€<?php echo number_format((float)($invoice ? $invoice->discount_total : $order->discount_total), 2); ?></td></tr>
             <?php endif; ?>
-            <tr><td colspan="4" class="money">VAT</td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->vat_total : $order->vat_total), 2); ?></td></tr>
+            <tr><td colspan="4" class="hm-money">VAT</td><td class="hm-money">€<?php echo number_format((float)($invoice ? $invoice->vat_total : $order->vat_total), 2); ?></td></tr>
             <?php if ($order->prsi_applicable): ?>
-            <tr class="hm-text--teal"><td colspan="4" class="money">PRSI Grant</td><td class="money">-€<?php echo number_format((float)($order->prsi_amount ?? 0), 2); ?></td></tr>
+            <tr class="hm-text--teal"><td colspan="4" class="hm-money">PRSI Grant</td><td class="hm-money">-€<?php echo number_format((float)($order->prsi_amount ?? 0), 2); ?></td></tr>
             <?php endif; ?>
-            <tr><td colspan="4" class="money">Total Paid</td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->grand_total : $order->grand_total), 2); ?></td></tr>
+            <tr><td colspan="4" class="hm-money">Total Paid</td><td class="hm-money">€<?php echo number_format((float)($invoice ? $invoice->grand_total : $order->grand_total), 2); ?></td></tr>
         </tfoot>
     </table>
 </div>
