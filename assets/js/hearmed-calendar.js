@@ -39,8 +39,8 @@ var IC={
     cog:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
 };
 
-// Status pill colours
-var STATUS_MAP={
+// Status pill colours — defaults, overridden by calendar settings
+var STATUS_MAP_DEFAULTS={
     Confirmed:{bg:'#eff6ff',color:'#1e40af',border:'#bfdbfe'},
     Arrived:{bg:'#ecfdf5',color:'#065f46',border:'#a7f3d0'},
     'In Progress':{bg:'#fff7ed',color:'#9a3412',border:'#fed7aa'},
@@ -50,6 +50,7 @@ var STATUS_MAP={
     Pending:{bg:'#f5f3ff',color:'#5b21b6',border:'#ddd6fe'},
     Cancelled:{bg:'#fef2f2',color:'#991b1b',border:'#fecaca'},
 };
+var STATUS_MAP=STATUS_MAP_DEFAULTS;
 
 // ═══ ROUTER ═══
 var App={
@@ -104,9 +105,13 @@ var Cal={
             // Card colours
             apptBg:s.appt_bg_color||'#0BB4C4',
             apptFont:s.appt_font_color||'#ffffff',
+            apptName:s.appt_name_color||'#ffffff',
+            apptTime:s.appt_time_color||'#38bdf8',
             apptBadge:s.appt_badge_color||'#3b82f6',
             apptBadgeFont:s.appt_badge_font_color||'#ffffff',
             apptMeta:s.appt_meta_color||'#38bdf8',
+            borderColor:s.border_color||'',
+            tintOpacity:parseInt(s.tint_opacity)||12,
             // Calendar theme
             indicatorColor:s.indicator_color||'#00d59b',
             todayHighlight:s.today_highlight_color||'#e6f7f9',
@@ -114,6 +119,16 @@ var Cal={
             calBg:s.cal_bg_color||'#ffffff',
             workingDays:(s.working_days||'1,2,3,4,5').split(',').map(function(x){return parseInt(x.trim());}),
         };
+        // Override STATUS_MAP with saved per-status badge colours
+        if(s.status_badge_colours&&typeof s.status_badge_colours==='object'){
+            STATUS_MAP={};
+            for(var k in STATUS_MAP_DEFAULTS){STATUS_MAP[k]=STATUS_MAP_DEFAULTS[k];}
+            for(var k2 in s.status_badge_colours){
+                if(s.status_badge_colours[k2]&&typeof s.status_badge_colours[k2]==='object'){
+                    STATUS_MAP[k2]=s.status_badge_colours[k2];
+                }
+            }
+        }
         this.mode=s.default_view||'week';
         this.cfg.totalSlots=Math.ceil((this.cfg.endH-this.cfg.startH)*60/this.cfg.slotMin);
         this.render();
@@ -473,12 +488,11 @@ var Cal={
             if(cs==='solid'){bgStyle='background:'+col;fontColor=font;}
             else if(cs==='tinted'){
                 var r=parseInt(col.slice(1,3),16),g2=parseInt(col.slice(3,5),16),b=parseInt(col.slice(5,7),16);
-                var svcTint=Cal.svcMap[a.service_id];
-                var tA=(svcTint&&svcTint.tint_opacity?parseInt(svcTint.tint_opacity):12)/100;
+                var tA=(cfg.tintOpacity||12)/100;
                 bgStyle='background:rgba('+r+','+g2+','+b+','+tA+');border-left:3.5px solid '+col;
                 fontColor=col;
             }
-            else if(cs==='outline'){bgStyle='background:'+cfg.calBg+';border:1.5px solid '+col+';border-left:3.5px solid '+col;fontColor=col;}
+            else if(cs==='outline'){var bdrCol=cfg.borderColor||col;bgStyle='background:'+cfg.calBg+';border:1.5px solid '+bdrCol+';border-left:3.5px solid '+col;fontColor=col;}
             else if(cs==='minimal'){bgStyle='background:transparent;border-left:3px solid '+col;fontColor='var(--hm-text)';}
 
             // Banner style
@@ -502,10 +516,10 @@ var Cal={
             var card='<div class="hm-appt hm-appt--'+cs+stCls+'" data-id="'+a._ID+'" style="'+bgStyle+';height:'+h+'px;top:'+off+'px;color:'+fontColor+cardOpacity+'">';
             card+=bannerHtml;
             card+='<div class="hm-appt-inner">';
-            if(cfg.showApptType)card+='<div class="hm-appt-svc" style="color:'+(cs==='solid'?font:col)+'">'+esc(a.service_name)+'</div>';
+            if(cfg.showApptType)card+='<div class="hm-appt-svc" style="color:'+(cs==='solid'?(cfg.apptName||font):col)+'">'+esc(a.service_name)+'</div>';
             card+='<div class="hm-appt-pt" style="color:'+fontColor+'">'+tmLbl+esc(a.patient_name||'No patient')+'</div>';
-            if(cfg.showTime&&h>36&&!cfg.hideEndTime)card+='<div class="hm-appt-tm" style="color:'+(cs==='solid'?(cfg.apptMeta||'#38bdf8'):col)+'">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>';
-            else if(cfg.showTime&&h>36)card+='<div class="hm-appt-tm" style="color:'+(cs==='solid'?(cfg.apptMeta||'#38bdf8'):col)+'">'+a.start_time.substring(0,5)+'</div>';
+            if(cfg.showTime&&h>36&&!cfg.hideEndTime)card+='<div class="hm-appt-tm" style="color:'+(cs==='solid'?(cfg.apptTime||'#38bdf8'):col)+'">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>';
+            else if(cfg.showTime&&h>36)card+='<div class="hm-appt-tm" style="color:'+(cs==='solid'?(cfg.apptTime||'#38bdf8'):col)+'">'+a.start_time.substring(0,5)+'</div>';
             // Badges row
             if(cfg.showBadges&&h>44){
                 var badges='';

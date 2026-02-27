@@ -25,6 +25,13 @@ class HearMed_Admin_Calendar_Settings {
                 }
             }
         }
+        // Decode status_badge_colours as associative array (keep as array, don't implode)
+        if (isset($arr['status_badge_colours']) && is_string($arr['status_badge_colours'])) {
+            $decoded = json_decode($arr['status_badge_colours'], true);
+            if (is_array($decoded)) {
+                $arr['status_badge_colours'] = $decoded;
+            }
+        }
         return $arr;
     }
 
@@ -119,6 +126,8 @@ class HearMed_Admin_Calendar_Settings {
                                 <div class="hm-srow"><span class="hm-slbl">Banner size</span><span class="hm-sval">
                                     <select id="hs-bannerSize" name="banner_size"><?php foreach (['small'=>'Small','default'=>'Default','large'=>'Large'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected($s('banner_size','default'),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
                                 </span></div>
+                                <div class="hm-srow"><span class="hm-slbl">Border colour</span><div class="hm-sval hm-color-pick"><input type="color" id="hs-borderColor" name="border_color" value="<?php echo esc_attr($s('border_color','') ?: '#0BB4C4'); ?>" class="hm-color-inp"><span class="hm-color-hex" data-for="hs-borderColor"><?php echo esc_html($s('border_color','') ?: '#0BB4C4'); ?></span></div></div>
+                                <div class="hm-srow"><span class="hm-slbl">Tint opacity</span><span class="hm-sval"><div class="hm-range-wrap"><input type="range" class="hm-range hm-color-inp" id="hs-tintOpacity" name="tint_opacity" min="3" max="40" value="<?php echo intval($s('tint_opacity','12')); ?>"><span class="hm-range-val" id="hm-tint-val"><?php echo intval($s('tint_opacity','12')); ?>%</span></div></span></div>
                                 <div class="hm-srow-help">Colour is driven by appointment type. <strong>Solid:</strong> filled, white text. <strong>Tinted:</strong> light wash + accent bar. <strong>Outline:</strong> border only. <strong>Minimal:</strong> left bar only.</div>
 
                                 <!-- Live Preview -->
@@ -216,11 +225,13 @@ class HearMed_Admin_Calendar_Settings {
                         <div class="hm-card">
                             <div class="hm-card-hd"><h3 class="hm-card-title">Card Colours</h3></div>
                             <div class="hm-card-body">
-                                <div class="hm-srow-help" style="margin-bottom:10px">These colours are used as fallback when the appointment type has no colour assigned.</div>
+                                <div class="hm-srow-help" style="margin-bottom:10px">Text and element colours used on appointment cards. Card fill colour is set per appointment type.</div>
                                 <?php
                                 $colors = [
                                     ['Card background',  'hs-apptBg',       'appt_bg_color',       '#0BB4C4'],
                                     ['Patient name',     'hs-apptFont',     'appt_font_color',     '#ffffff'],
+                                    ['Appt type label',  'hs-apptName',     'appt_name_color',     '#ffffff'],
+                                    ['Time text',        'hs-apptTime',     'appt_time_color',     '#38bdf8'],
                                     ['Badge colour',     'hs-apptBadge',    'appt_badge_color',    '#3b82f6'],
                                     ['Badge text',       'hs-apptBadgeFont','appt_badge_font_color','#ffffff'],
                                     ['Meta text',        'hs-apptMeta',     'appt_meta_color',     '#38bdf8'],
@@ -244,6 +255,46 @@ class HearMed_Admin_Calendar_Settings {
                                 ];
                                 foreach($theme as $t): $tv = $s($t[2],$t[3]); ?>
                                 <div class="hm-srow"><span class="hm-slbl"><?php echo $t[0];?></span><div class="hm-sval hm-color-pick"><input type="color" id="<?php echo $t[1];?>" name="<?php echo $t[2];?>" value="<?php echo esc_attr($tv);?>" class="hm-color-inp"><span class="hm-color-hex" data-for="<?php echo $t[1];?>"><?php echo esc_html($tv);?></span></div></div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                        <!-- Card 9 — Status Badge Colours -->
+                        <div class="hm-card">
+                            <div class="hm-card-hd"><h3 class="hm-card-title">Status Badge Colours</h3></div>
+                            <div class="hm-card-body">
+                                <div class="hm-srow-help" style="margin-bottom:10px">Customise the badge colours for each appointment status.</div>
+                                <?php
+                                $badge_defaults = [
+                                    'Confirmed'   => ['bg'=>'#eff6ff','color'=>'#1e40af','border'=>'#bfdbfe'],
+                                    'Arrived'     => ['bg'=>'#ecfdf5','color'=>'#065f46','border'=>'#a7f3d0'],
+                                    'In Progress' => ['bg'=>'#fff7ed','color'=>'#9a3412','border'=>'#fed7aa'],
+                                    'Completed'   => ['bg'=>'#f9fafb','color'=>'#6b7280','border'=>'#e5e7eb'],
+                                    'No Show'     => ['bg'=>'#fef2f2','color'=>'#991b1b','border'=>'#fecaca'],
+                                    'Late'        => ['bg'=>'#fffbeb','color'=>'#92400e','border'=>'#fde68a'],
+                                    'Pending'     => ['bg'=>'#f5f3ff','color'=>'#5b21b6','border'=>'#ddd6fe'],
+                                    'Cancelled'   => ['bg'=>'#fef2f2','color'=>'#991b1b','border'=>'#fecaca'],
+                                ];
+                                $saved_badges = is_array($saved['status_badge_colours'] ?? null) ? $saved['status_badge_colours'] : $badge_defaults;
+                                foreach ($badge_defaults as $status => $defs):
+                                    $slug = strtolower(str_replace(' ', '_', $status));
+                                    $cur = $saved_badges[$status] ?? $defs;
+                                ?>
+                                <div class="hm-status-badge-row" style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #f1f5f9;">
+                                    <div style="font-size:12px;font-weight:700;color:#334155;margin-bottom:6px;"><?php echo esc_html($status); ?></div>
+                                    <div style="display:flex;gap:16px;align-items:center;">
+                                        <label style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">Bg
+                                            <input type="color" class="hm-color-inp hm-badge-inp" name="sbadge_<?php echo $slug; ?>_bg" value="<?php echo esc_attr($cur['bg'] ?? $defs['bg']); ?>" style="width:28px;height:22px;padding:0;border:1px solid #e2e8f0;border-radius:4px;">
+                                        </label>
+                                        <label style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">Text
+                                            <input type="color" class="hm-color-inp hm-badge-inp" name="sbadge_<?php echo $slug; ?>_color" value="<?php echo esc_attr($cur['color'] ?? $defs['color']); ?>" style="width:28px;height:22px;padding:0;border:1px solid #e2e8f0;border-radius:4px;">
+                                        </label>
+                                        <label style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">Border
+                                            <input type="color" class="hm-color-inp hm-badge-inp" name="sbadge_<?php echo $slug; ?>_border" value="<?php echo esc_attr($cur['border'] ?? $defs['border']); ?>" style="width:28px;height:22px;padding:0;border:1px solid #e2e8f0;border-radius:4px;">
+                                        </label>
+                                        <span class="hm-prev-badge" style="background:<?php echo esc_attr($cur['bg'] ?? $defs['bg']); ?>;color:<?php echo esc_attr($cur['color'] ?? $defs['color']); ?>;border:1px solid <?php echo esc_attr($cur['border'] ?? $defs['border']); ?>;padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;"><?php echo esc_html($status); ?></span>
+                                    </div>
+                                </div>
                                 <?php endforeach; ?>
                             </div>
                         </div>

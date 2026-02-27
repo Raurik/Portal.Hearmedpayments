@@ -160,6 +160,13 @@ class HearMed_Enqueue {
                         }
                     }
                 }
+                // Decode status_badge_colours as associative array (keep as object for JS)
+                if ( isset( $settings['status_badge_colours'] ) && is_string( $settings['status_badge_colours'] ) ) {
+                    $decoded = json_decode( $settings['status_badge_colours'], true );
+                    if ( is_array( $decoded ) ) {
+                        $settings['status_badge_colours'] = $decoded;
+                    }
+                }
             }
         } catch ( Throwable $e ) {
             error_log( '[HearMed] Could not load calendar settings: ' . $e->getMessage() );

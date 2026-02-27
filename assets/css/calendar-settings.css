@@ -116,6 +116,26 @@
 /* ── Save button wrap ───────────────────────────────────── */
 #hm-app .hm-settings-save-wrap { padding:12px 0 0; text-align:right; }
 
+/* ── Range slider ───────────────────────────────────────── */
+#hm-app .hm-range-wrap {
+  display:flex; align-items:center; gap:8px; width:150px;
+}
+#hm-app .hm-range {
+  flex:1; -webkit-appearance:none; appearance:none;
+  height:5px; background:#e2e8f0; border-radius:3px; outline:none;
+}
+#hm-app .hm-range::-webkit-slider-thumb {
+  -webkit-appearance:none; width:14px; height:14px;
+  border-radius:50%; background:var(--hm-teal,#0ea5e9); cursor:pointer;
+}
+#hm-app .hm-range::-moz-range-thumb {
+  width:14px; height:14px; border-radius:50%;
+  background:var(--hm-teal,#0ea5e9); cursor:pointer; border:none;
+}
+#hm-app .hm-range-val {
+  font-size:12px; font-weight:600; color:#334155; min-width:32px; text-align:right;
+}
+
 /* ── Live Preview ───────────────────────────────────────── */
 #hm-app .hm-preview-wrap {
   margin-top:16px; padding:16px;

@@ -1,11 +1,12 @@
 /**
- * Calendar Settings v3.1
- * Live preview, day pills, radio pills, colour hex labels, sortable list, AJAX save.
+ * Calendar Settings v3.2
+ * Live preview, day pills, radio pills, colour hex labels, sortable list,
+ * tint opacity slider, per-status badge colours, AJAX save.
  */
 (function($){
 'use strict';
 
-var STATUS_MAP={
+var STATUS_DEFAULTS={
     Confirmed:{bg:'#eff6ff',color:'#1e40af',border:'#bfdbfe'},
     Arrived:{bg:'#ecfdf5',color:'#065f46',border:'#a7f3d0'},
     'In Progress':{bg:'#fff7ed',color:'#9a3412',border:'#fed7aa'},
@@ -24,6 +25,7 @@ var SettingsPage = {
         this.bindDayPills();
         this.bindRadioPills();
         this.bindColorHex();
+        this.bindTintSlider();
         this.initSortable();
         this.bindPreviewStatus();
         this.bindPreviewUpdaters();
@@ -55,6 +57,30 @@ var SettingsPage = {
         });
     },
 
+    /* ─── Tint opacity slider ─── */
+    bindTintSlider: function(){
+        var self = this;
+        $(document).on('input', '#hs-tintOpacity', function(){
+            $('#hm-tint-val').text(this.value + '%');
+            self.renderPreview();
+        });
+    },
+
+    /* ─── Read current status badge colours from inputs ─── */
+    getStatusBadgeColours: function(){
+        var map = {};
+        var statuses = ['Confirmed','Arrived','In Progress','Completed','No Show','Late','Pending','Cancelled'];
+        statuses.forEach(function(s){
+            var slug = s.toLowerCase().replace(/ /g, '_');
+            map[s] = {
+                bg:     $('input[name="sbadge_'+slug+'_bg"]').val()     || STATUS_DEFAULTS[s].bg,
+                color:  $('input[name="sbadge_'+slug+'_color"]').val()  || STATUS_DEFAULTS[s].color,
+                border: $('input[name="sbadge_'+slug+'_border"]').val() || STATUS_DEFAULTS[s].border
+            };
+        });
+        return map;
+    },
+
     /* ─── Status selector for preview ─── */
     bindPreviewStatus: function(){
         var self = this;
@@ -73,13 +99,21 @@ var SettingsPage = {
         $(document).on('change', '#hs-cardStyle, #hs-bannerStyle, #hs-bannerSize, #hs-slotH', function(){
             self.renderPreview();
         });
-        // Colour pickers
+        // Colour pickers (including badge colour inputs)
         $(document).on('input', '.hm-color-inp', function(){
             self.renderPreview();
         });
         // Card Content toggles (Card 6)
         $(document).on('change', 'input[name="show_appointment_type"], input[name="show_time"], input[name="show_clinic"], input[name="show_dispenser_initials"], input[name="show_status_badge"], input[name="show_badges"], input[name="display_full_name"], input[name="show_time_inline"], input[name="hide_end_time"]', function(){
             self.renderPreview();
+        });
+        // Live badge preview update
+        $(document).on('input', '.hm-badge-inp', function(){
+            var $row = $(this).closest('.hm-status-badge-row');
+            var bg = $row.find('input[name$="_bg"]').val();
+            var color = $row.find('input[name$="_color"]').val();
+            var border = $row.find('input[name$="_border"]').val();
+            $row.find('.hm-prev-badge').css({background:bg, color:color, 'border-color':border});
         });
     },
 
@@ -100,11 +134,15 @@ var SettingsPage = {
         var bz = $('#hs-bannerSize').val() || 'default';
         var slotH = $('#hs-slotH').val() || 'regular';
         var status = this.previewStatus;
-        var col = '#0BB4C4';
+        var col = $('#hs-apptBg').val() || '#0BB4C4';
         var font = $('#hs-apptFont').val() || '#ffffff';
+        var nameCol = $('#hs-apptName').val() || '#ffffff';
+        var timeCol = $('#hs-apptTime').val() || '#38bdf8';
         var metaCol = $('#hs-apptMeta').val() || '#38bdf8';
         var badgeBg = $('#hs-apptBadge').val() || '#3b82f6';
         var badgeFont = $('#hs-apptBadgeFont').val() || '#ffffff';
+        var borderCol = $('#hs-borderColor').val() || col;
+        var tintPct = parseInt($('#hs-tintOpacity').val()) || 12;
 
         // Read Card Content toggles
         var showApptType = self._cb('show_appointment_type');
@@ -131,15 +169,22 @@ var SettingsPage = {
             fontColor = font;
         } else if (cs === 'tinted') {
             var r=parseInt(col.slice(1,3),16), g=parseInt(col.slice(3,5),16), b=parseInt(col.slice(5,7),16);
-            bgStyle = 'background:rgba('+r+','+g+','+b+',0.12);border-left:3.5px solid '+col;
+            var tAlpha = (tintPct / 100).toFixed(2);
+            bgStyle = 'background:rgba('+r+','+g+','+b+','+tAlpha+');border-left:3.5px solid '+col;
             fontColor = col;
         } else if (cs === 'outline') {
-            bgStyle = 'background:#fff;border:1.5px solid '+col+';border-left:3.5px solid '+col;
+            bgStyle = 'background:#fff;border:1.5px solid '+(borderCol||col)+';border-left:3.5px solid '+col;
             fontColor = col;
         } else if (cs === 'minimal') {
             bgStyle = 'background:transparent;border-left:3px solid '+col;
             fontColor = '#334155';
         }
+
+        // Determine text colours based on card style
+        var ptColor = (cs === 'solid') ? font : fontColor;
+        var svcColor = (cs === 'solid') ? nameCol : col;
+        var tmColor = (cs === 'solid') ? timeCol : col;
+        var mtColor = (cs === 'solid') ? metaCol : '#94a3b8';
 
         // Banner (only shown for outcome-bearing statuses: Completed)
         var bannerH = '';
@@ -153,8 +198,8 @@ var SettingsPage = {
             bannerH = '<div style="height:'+hPx+';background:'+bannerBg+';font-size:8px;color:#fff;font-weight:700;letter-spacing:.3px;text-transform:uppercase;line-height:'+hPx+';padding:0 6px;white-space:nowrap;overflow:hidden">Aided</div>';
         }
 
-        // Status badge
-        var st = STATUS_MAP[status] || STATUS_MAP.Confirmed;
+        // Status badge — use per-status colours from inputs
+        var st = self.getStatusBadgeColours()[status] || STATUS_DEFAULTS[status] || STATUS_DEFAULTS.Confirmed;
 
         // Cancelled / No Show overlay
         var overlayClass = '';
@@ -169,20 +214,20 @@ var SettingsPage = {
         var h = '<div class="hm-prev-card'+overlayClass+'" style="'+bgStyle+';border-radius:6px;position:relative;overflow:hidden;height:'+cardH+'px">';
         h += bannerH;
         h += '<div style="padding:3px 6px;overflow:hidden">';
-        if (showApptType) h += '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.2px;color:'+(cs==='solid'?font:col)+';line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Follow-up</div>';
-        h += '<div style="font-size:11px;font-weight:700;color:'+fontColor+';line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+timePre+ptName+'</div>';
+        if (showApptType) h += '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.2px;color:'+svcColor+';line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Follow-up</div>';
+        h += '<div style="font-size:11px;font-weight:700;color:'+ptColor+';line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+timePre+ptName+'</div>';
         if (showTime && cardH > 44) {
             var timeStr = hideEndTime ? '09:30' : '09:30 – 10:00';
-            h += '<div style="font-size:9px;font-weight:600;color:'+(cs==='solid'?metaCol:'#94a3b8')+';line-height:1.3">'+timeStr+'</div>';
+            h += '<div style="font-size:9px;font-weight:600;color:'+tmColor+';line-height:1.3">'+timeStr+'</div>';
         }
         // Badges row
         if (showBadges && cardH > 50) {
             var badges = '';
             if (showStatusBadge) badges += '<span style="display:inline-block;padding:0 5px;border-radius:9999px;font-size:7px;font-weight:700;line-height:14px;background:'+st.bg+';color:'+st.color+';border:1px solid '+st.border+'">'+status+'</span>';
-            if (showDispIni) badges += '<span style="display:inline-block;padding:0 5px;border-radius:9999px;font-size:7px;font-weight:700;line-height:14px;background:rgba(0,0,0,.08);color:'+fontColor+'">JS</span>';
+            if (showDispIni) badges += '<span style="display:inline-block;padding:0 5px;border-radius:9999px;font-size:7px;font-weight:700;line-height:14px;background:rgba(0,0,0,.08);color:'+ptColor+'">JS</span>';
             if (badges) h += '<div style="display:flex;gap:3px;margin-top:1px">'+badges+'</div>';
         }
-        if (showClinic && cardH > 56) h += '<div style="font-size:8px;color:'+(cs==='solid'?metaCol:'#94a3b8')+';line-height:1.3;white-space:nowrap">Main Clinic</div>';
+        if (showClinic && cardH > 56) h += '<div style="font-size:8px;color:'+mtColor+';line-height:1.3;white-space:nowrap">Main Clinic</div>';
         h += '</div>';
         if (isCancelled || isNoShow) h += '<div class="hm-prev-overlay">'+(isCancelled?'Cancelled':'No Show')+'</div>';
         h += '</div>';
@@ -234,7 +279,9 @@ var SettingsPage = {
         var textFields = [
             'start_time', 'end_time', 'time_interval', 'slot_height', 'default_view',
             'card_style', 'banner_style', 'banner_size', 'outcome_style',
-            'appt_bg_color', 'appt_font_color', 'appt_badge_color', 'appt_badge_font_color', 'appt_meta_color',
+            'appt_bg_color', 'appt_font_color', 'appt_name_color', 'appt_time_color',
+            'appt_badge_color', 'appt_badge_font_color', 'appt_meta_color',
+            'border_color', 'tint_opacity',
             'indicator_color', 'today_highlight_color', 'grid_line_color', 'cal_bg_color'
         ];
         textFields.forEach(function(name){
@@ -267,6 +314,9 @@ var SettingsPage = {
         var order = [];
         $('#hs-sortList .hm-sort-item').each(function(){ order.push($(this).data('id')); });
         if (order.length) data.calendar_order = order.join(',');
+
+        // Status badge colours — serialize as JSON
+        data.status_badge_colours = JSON.stringify(this.getStatusBadgeColours());
 
         $.ajax({
             url: (window.HM && HM.ajax_url) || '/wp-admin/admin-ajax.php',

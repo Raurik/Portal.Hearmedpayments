@@ -80,6 +80,13 @@ function hm_ajax_get_settings() {
                     }
                 }
             }
+            // Decode status_badge_colours as object (keep as assoc array for JS)
+            if ( isset( $arr['status_badge_colours'] ) && is_string( $arr['status_badge_colours'] ) ) {
+                $decoded = json_decode( $arr['status_badge_colours'], true );
+                if ( is_array( $decoded ) ) {
+                    $arr['status_badge_colours'] = $decoded;
+                }
+            }
             wp_send_json_success( $arr );
         } else {
             wp_send_json_success( [] );
@@ -104,7 +111,9 @@ function hm_ajax_save_settings() {
         $text_fields = [
             'start_time', 'end_time', 'slot_height', 'default_view', 'default_mode',
             'outcome_style',
-            'appt_bg_color', 'appt_font_color', 'appt_badge_color', 'appt_badge_font_color', 'appt_meta_color',
+            'appt_bg_color', 'appt_font_color', 'appt_name_color', 'appt_time_color',
+            'appt_badge_color', 'appt_badge_font_color', 'appt_meta_color',
+            'border_color', 'tint_opacity',
             'card_style', 'banner_style', 'banner_size', 'indicator_color', 'today_highlight_color',
             'grid_line_color', 'cal_bg_color',
         ];
@@ -112,6 +121,7 @@ function hm_ajax_save_settings() {
         // JSONB fields — must be stored as valid JSON strings, not sanitized as text
         $json_fields = [
             'enabled_days', 'calendar_order', 'appointment_statuses', 'working_days',
+            'status_badge_colours',
         ];
         
         // Checkbox fields — JS sends explicit '1' or '0'
