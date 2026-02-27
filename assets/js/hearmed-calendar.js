@@ -598,8 +598,7 @@ var Cal={
             var isRescheduled=a.status==='Rescheduled';
             var stCls=isCancelled?' cancelled':isNoShow?' noshow':isRescheduled?' rescheduled':'';
 
-            // Cancelled / Rescheduled → halve the card height to free up slot space
-            if(isCancelled||isRescheduled){ h=Math.max(slotH*0.4, h/2); }
+
             var tmLbl=cfg.showTimeInline?(a.start_time.substring(0,5)+' '):'';
             var hasOutcome=a.outcome_banner_colour&&a.outcome_name;
             var font=cfg.apptFont||'#fff';
@@ -669,6 +668,8 @@ var Cal={
             card+='</div>';
 
             var el=$(card);
+            // Cancelled / Rescheduled → halve the card width
+            if(isCancelled||isRescheduled){ el.css({right:'calc(50% + 1px)'}); }
             $t.append(el);
 
             // Track for overlap detection
