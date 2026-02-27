@@ -66,15 +66,27 @@ var SettingsPage = {
         });
     },
 
-    /* ─── Update preview when card style/banner/colours change ─── */
+    /* ─── Update preview when ANY appearance / content setting changes ─── */
     bindPreviewUpdaters: function(){
         var self = this;
-        $(document).on('change', '#hs-cardStyle, #hs-bannerStyle, #hs-bannerSize', function(){
+        // Dropdowns
+        $(document).on('change', '#hs-cardStyle, #hs-bannerStyle, #hs-bannerSize, #hs-slotH', function(){
             self.renderPreview();
         });
+        // Colour pickers
         $(document).on('input', '.hm-color-inp', function(){
             self.renderPreview();
         });
+        // Card Content toggles (Card 6)
+        $(document).on('change', 'input[name="show_appointment_type"], input[name="show_time"], input[name="show_clinic"], input[name="show_dispenser_initials"], input[name="show_status_badge"], input[name="show_badges"], input[name="display_full_name"], input[name="show_time_inline"], input[name="hide_end_time"]', function(){
+            self.renderPreview();
+        });
+    },
+
+    /* ─── Helper: is checkbox checked? ─── */
+    _cb: function(name){
+        var $el = $('input[name="'+name+'"]');
+        return $el.length && $el.is(':checked');
     },
 
     /* ─── Live Preview Card ─── */
@@ -82,19 +94,38 @@ var SettingsPage = {
         var $target = $('#hm-preview-card');
         if (!$target.length) return;
 
+        var self = this;
         var cs = $('#hs-cardStyle').val() || 'tinted';
         var bs = $('#hs-bannerStyle').val() || 'default';
         var bz = $('#hs-bannerSize').val() || 'default';
+        var slotH = $('#hs-slotH').val() || 'regular';
         var status = this.previewStatus;
-        var col = '#0BB4C4'; // example appointment type colour
+        var col = '#0BB4C4';
         var font = $('#hs-apptFont').val() || '#ffffff';
         var metaCol = $('#hs-apptMeta').val() || '#38bdf8';
+        var badgeBg = $('#hs-apptBadge').val() || '#3b82f6';
+        var badgeFont = $('#hs-apptBadgeFont').val() || '#ffffff';
+
+        // Read Card Content toggles
+        var showApptType = self._cb('show_appointment_type');
+        var showTime = self._cb('show_time');
+        var showClinic = self._cb('show_clinic');
+        var showDispIni = self._cb('show_dispenser_initials');
+        var showStatusBadge = self._cb('show_status_badge');
+        var showBadges = self._cb('show_badges');
+        var showTimeInline = self._cb('show_time_inline');
+        var hideEndTime = self._cb('hide_end_time');
+        var displayFull = self._cb('display_full_name');
 
         var isCancelled = status === 'Cancelled';
         var isNoShow = status === 'No Show';
 
+        // Map slot height to pixel height for the preview card
+        var htMap = {compact:52, regular:68, large:88};
+        var cardH = htMap[slotH] || 68;
+
         // Card style rendering
-        var bgStyle = '', fontColor = font, borderExtra = '';
+        var bgStyle = '', fontColor = font;
         if (cs === 'solid') {
             bgStyle = 'background:'+col;
             fontColor = font;
@@ -110,39 +141,50 @@ var SettingsPage = {
             fontColor = '#334155';
         }
 
-        // Banner
+        // Banner (only shown for outcome-bearing statuses: Completed)
         var bannerH = '';
-        if (bs !== 'none') {
-            var hMap = {small:'16px',default:'20px',large:'26px'};
-            var hPx = hMap[bz] || '20px';
-            var bannerBg = col;
-            if (bs === 'gradient') bannerBg = 'linear-gradient(90deg,'+col+','+col+'88)';
-            else if (bs === 'stripe') bannerBg = 'repeating-linear-gradient(135deg,'+col+','+col+' 4px,'+col+'cc 4px,'+col+'cc 8px)';
-            bannerH = '<div style="height:'+hPx+';'+
-                (bs==='gradient'||bs==='stripe'?'background:'+bannerBg:'background:'+bannerBg)+
-                ';border-radius:6px 6px 0 0"></div>';
+        var hasOutcome = (status === 'Completed');
+        if (bs !== 'none' && hasOutcome) {
+            var hMap = {small:'12px',default:'16px',large:'20px'};
+            var hPx = hMap[bz] || '16px';
+            var bannerBg = '#10b981';
+            if (bs === 'gradient') bannerBg = 'linear-gradient(90deg,#10b981,#10b98188)';
+            else if (bs === 'stripe') bannerBg = 'repeating-linear-gradient(135deg,#10b981,#10b981 4px,#10b981cc 4px,#10b981cc 8px)';
+            bannerH = '<div style="height:'+hPx+';background:'+bannerBg+';font-size:8px;color:#fff;font-weight:700;letter-spacing:.3px;text-transform:uppercase;line-height:'+hPx+';padding:0 6px;white-space:nowrap;overflow:hidden">Aided</div>';
         }
 
         // Status badge
         var st = STATUS_MAP[status] || STATUS_MAP.Confirmed;
-        var badge = '<span style="display:inline-block;padding:1px 8px;border-radius:9999px;font-size:10px;font-weight:600;background:'+st.bg+';color:'+st.color+';border:1px solid '+st.border+'">'+status+'</span>';
 
         // Cancelled / No Show overlay
         var overlayClass = '';
         if (isCancelled) overlayClass = ' hm-prev--cancelled';
         else if (isNoShow) overlayClass = ' hm-prev--noshow';
 
-        var h = '<div class="hm-prev-card'+overlayClass+'" style="'+bgStyle+';border-radius:6px;padding:0;position:relative;overflow:hidden">';
+        // Patient name
+        var ptName = displayFull ? 'Jane Smith' : 'Jane';
+        var timePre = showTimeInline ? '09:30 ' : '';
+
+        // Build card
+        var h = '<div class="hm-prev-card'+overlayClass+'" style="'+bgStyle+';border-radius:6px;position:relative;overflow:hidden;height:'+cardH+'px">';
         h += bannerH;
-        h += '<div style="padding:8px 10px">';
-        h += '<div style="font-size:11px;font-weight:600;color:'+(cs==='solid'?font:col)+';margin-bottom:2px">Follow-up</div>';
-        h += '<div style="font-size:13px;font-weight:700;color:'+fontColor+'">Jane Smith</div>';
-        h += '<div style="font-size:11px;color:'+(cs==='solid'?metaCol:'#94a3b8')+'">09:30 – 10:00</div>';
-        h += '<div style="margin-top:4px">'+badge+'</div>';
-        h += '</div>';
-        if (isCancelled || isNoShow) {
-            h += '<div class="hm-prev-overlay">'+(isCancelled?'Cancelled':'No Show')+'</div>';
+        h += '<div style="padding:3px 6px;overflow:hidden">';
+        if (showApptType) h += '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.2px;color:'+(cs==='solid'?font:col)+';line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Follow-up</div>';
+        h += '<div style="font-size:11px;font-weight:700;color:'+fontColor+';line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+timePre+ptName+'</div>';
+        if (showTime && cardH > 44) {
+            var timeStr = hideEndTime ? '09:30' : '09:30 – 10:00';
+            h += '<div style="font-size:9px;font-weight:600;color:'+(cs==='solid'?metaCol:'#94a3b8')+';line-height:1.3">'+timeStr+'</div>';
         }
+        // Badges row
+        if (showBadges && cardH > 50) {
+            var badges = '';
+            if (showStatusBadge) badges += '<span style="display:inline-block;padding:0 5px;border-radius:9999px;font-size:7px;font-weight:700;line-height:14px;background:'+st.bg+';color:'+st.color+';border:1px solid '+st.border+'">'+status+'</span>';
+            if (showDispIni) badges += '<span style="display:inline-block;padding:0 5px;border-radius:9999px;font-size:7px;font-weight:700;line-height:14px;background:rgba(0,0,0,.08);color:'+fontColor+'">JS</span>';
+            if (badges) h += '<div style="display:flex;gap:3px;margin-top:1px">'+badges+'</div>';
+        }
+        if (showClinic && cardH > 56) h += '<div style="font-size:8px;color:'+(cs==='solid'?metaCol:'#94a3b8')+';line-height:1.3;white-space:nowrap">Main Clinic</div>';
+        h += '</div>';
+        if (isCancelled || isNoShow) h += '<div class="hm-prev-overlay">'+(isCancelled?'Cancelled':'No Show')+'</div>';
         h += '</div>';
 
         $target.html(h);

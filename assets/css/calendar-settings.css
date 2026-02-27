@@ -139,7 +139,7 @@
   background:var(--hm-teal); border-color:var(--hm-teal); color:#fff;
 }
 #hm-app .hm-preview-card {
-  min-height:60px;
+  width:140px;
 }
 
 /* ── Cancelled / No Show overlays ───────────────────────── */
