@@ -474,16 +474,17 @@
 /* ── Outcome banner ── */
 .hm-appt-outcome {
   color: #fff;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  padding: 1px 6px;
-  line-height: 14px;
+  padding: 2px 6px;
+  line-height: 1.4;
   font-family: var(--hm-font-btn, 'Plus Jakarta Sans', sans-serif);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-shrink: 0;
 }
 
 /* ── Card style variants ── */

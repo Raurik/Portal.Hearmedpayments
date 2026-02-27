@@ -619,7 +619,8 @@ var Cal={
 
 
             var tmLbl=cfg.showTimeInline?(a.start_time.substring(0,5)+' '):'';
-            var hasOutcome=a.outcome_banner_colour&&a.outcome_name;
+            var outcomeColor=a.outcome_banner_colour||'#6b7280';
+            var hasOutcome=!!(a.outcome_name);
             var font=cfg.apptFont||'#fff';
 
             // Card style
@@ -641,9 +642,9 @@ var Cal={
             if(bStyle!=='none'&&hasOutcome){
                 var bHMap={small:'14px',default:'18px',large:'24px'};
                 var bH=bHMap[bSize]||'18px';
-                var bannerBg=a.outcome_banner_colour;
-                if(bStyle==='gradient')bannerBg='linear-gradient(90deg,'+a.outcome_banner_colour+','+a.outcome_banner_colour+'88)';
-                else if(bStyle==='stripe')bannerBg='repeating-linear-gradient(135deg,'+a.outcome_banner_colour+','+a.outcome_banner_colour+' 4px,'+a.outcome_banner_colour+'cc 4px,'+a.outcome_banner_colour+'cc 8px)';
+                var bannerBg=outcomeColor;
+                if(bStyle==='gradient')bannerBg='linear-gradient(90deg,'+outcomeColor+','+outcomeColor+'88)';
+                else if(bStyle==='stripe')bannerBg='repeating-linear-gradient(135deg,'+outcomeColor+','+outcomeColor+' 4px,'+outcomeColor+'cc 4px,'+outcomeColor+'cc 8px)';
                 bannerHtml='<div class="hm-appt-outcome" style="background:'+bannerBg+';height:'+bH+';font-size:'+(bSize==='small'?'9px':'10px')+'">'+esc(a.outcome_name)+'</div>';
             } else if(bStyle!=='none'&&!hasOutcome){
                 // No outcome — show a thin colour banner at top for non-solid styles
@@ -935,12 +936,13 @@ var Cal={
         var disp=this.dispensers.find(function(d){return parseInt(d.id)===parseInt(a.dispenser_id);});
         var clinic=this.clinics.find(function(c){return parseInt(c.id)===parseInt(a.clinic_id);});
         var st=STATUS_MAP[a.status]||STATUS_MAP.Confirmed;
-        var hasOutcome=a.outcome_banner_colour&&a.outcome_name;
+        var hasOutcome=!!(a.outcome_name);
+        var popOutcomeColor=a.outcome_banner_colour||'#6b7280';
         var isCompleted=a.status==='Completed';
 
         var h='<div class="hm-pop-bar" style="background:'+col+'"></div>';
         if(hasOutcome){
-            h+='<div class="hm-pop-outcome" style="background:linear-gradient(90deg,'+a.outcome_banner_colour+','+a.outcome_banner_colour+'cc)">'+esc(a.outcome_name)+'</div>';
+            h+='<div class="hm-pop-outcome" style="background:linear-gradient(90deg,'+popOutcomeColor+','+popOutcomeColor+'cc)">'+esc(a.outcome_name)+'</div>';
         }
         h+='<div class="hm-pop-body">';
         h+='<div class="hm-pop-hd"><div><div class="hm-pop-name">'+esc(a.patient_name||'No patient')+'</div><div class="hm-pop-num">'+esc(a.patient_number||'')+'</div></div><button class="hm-pop-x">'+IC.x+'</button></div>';

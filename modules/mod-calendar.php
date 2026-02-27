@@ -437,14 +437,15 @@ function hm_ajax_get_appointments() {
                    COALESCE(sv.service_color, '#3B82F6') AS service_colour,
                    COALESCE(sv.text_color, '#FFFFFF') AS service_text_color,
                    COALESCE(a.duration_minutes, sv.duration_minutes, 30) AS service_duration,
-                   ao.outcome_color AS outcome_banner_colour
+                   COALESCE(ao.outcome_color, '') AS outcome_banner_colour,
+                   COALESCE(ao.outcome_name, a.outcome, '') AS resolved_outcome_name
             FROM hearmed_core.appointments a
             LEFT JOIN hearmed_core.patients p ON a.patient_id = p.id
             LEFT JOIN hearmed_reference.staff st ON a.staff_id = st.id
             LEFT JOIN hearmed_reference.clinics c ON a.clinic_id = c.id
             LEFT JOIN hearmed_reference.services sv ON sv.id = a.service_id
             LEFT JOIN LATERAL (
-                SELECT outcome_color FROM hearmed_core.appointment_outcomes
+                SELECT outcome_color, outcome_name FROM hearmed_core.appointment_outcomes
                 WHERE appointment_id = a.id ORDER BY created_at DESC LIMIT 1
             ) ao ON true
             WHERE a.appointment_date >= \$1 AND a.appointment_date <= \$2";
@@ -501,10 +502,23 @@ function hm_ajax_get_appointments() {
             'notes'                 => $r->notes ?? '',
             'outcome'               => $r->outcome ?? '',
             'outcome_id'            => 0,
-            'outcome_name'          => $r->outcome ?? '',
-            'outcome_banner_colour' => $r->outcome_banner_colour ?? '',
+            'outcome_name'          => $r->resolved_outcome_name ?: ($r->outcome ?? ''),
+            'outcome_banner_colour' => $r->outcome_banner_colour ?: '',
             'created_by'            => (int) ($r->created_by ?? 0),
         ];
+
+        // Fallback: if outcome name exists but no banner colour, look up from templates
+        $last = &$d[count($d) - 1];
+        if ( $last['outcome_name'] && ! $last['outcome_banner_colour'] ) {
+            $tpl_color = HearMed_DB::get_var(
+                "SELECT outcome_color FROM hearmed_core.outcome_templates WHERE outcome_name = $1 LIMIT 1",
+                [ $last['outcome_name'] ]
+            );
+            if ( $tpl_color ) {
+                $last['outcome_banner_colour'] = $tpl_color;
+            }
+        }
+        unset( $last );
     }
     wp_send_json_success( $d );
     } catch ( Throwable $e ) {
