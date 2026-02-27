@@ -1550,4 +1550,343 @@
 }
 
 
+/* ════════════════════════════════════════════════════════════════════════
+   DOCUMENT TEMPLATES — List Page
+   ════════════════════════════════════════════════════════════════════════ */
+
+#hm-dt-app .hm-dt-gdpr {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: #92400e;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+#hm-dt-app .hm-dt-gdpr svg { flex-shrink: 0; margin-top: 1px; }
+
+#hm-dt-app .hm-dt-subtitle {
+  color: var(--hm-text-muted);
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+#hm-dt-app .hm-dt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+#hm-dt-app .hm-dt-card {
+  background: var(--hm-bg);
+  border: 1px solid var(--hm-border);
+  border-radius: var(--hm-radius-lg);
+  border-top: 3px solid var(--hm-teal);
+  padding: 18px 20px;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+#hm-dt-app .hm-dt-card:hover {
+  border-color: var(--hm-teal);
+  box-shadow: 0 4px 16px rgba(11, 180, 196, 0.12);
+  transform: translateY(-2px);
+}
+#hm-dt-app .hm-dt-card__actions {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+}
+#hm-dt-app .hm-dt-card__act {
+  font-size: 12px;
+  color: var(--hm-text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: var(--hm-transition);
+}
+#hm-dt-app .hm-dt-card__act:hover {
+  border-color: var(--hm-border);
+  background: var(--hm-bg-alt);
+}
+#hm-dt-app .hm-dt-card__act--del:hover {
+  color: var(--hm-red);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+#hm-dt-app .hm-dt-card__name {
+  font-family: var(--hm-font-heading, var(--hm-font));
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--hm-navy);
+  margin: 0 0 8px 0;
+}
+#hm-dt-app .hm-dt-card__badges {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+#hm-dt-app .hm-dt-card__stats {
+  font-size: 11px;
+  color: var(--hm-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+#hm-dt-app .hm-dt-dot { font-size: 8px; }
+#hm-dt-app .hm-dt-ai-count { color: #8b5cf6; }
+#hm-dt-app .hm-dt-card__lock {
+  font-size: 11px;
+  color: var(--hm-text-muted);
+  margin-top: 6px;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   TEMPLATE EDITOR — Form Builder
+   ════════════════════════════════════════════════════════════════════════ */
+
+#hm-te-app .hm-te-meta-badges {
+  display: flex;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+#hm-te-app .hm-te-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  #hm-te-app .hm-te-layout { grid-template-columns: 1fr; }
+}
+
+/* AI Prompt Card */
+#hm-te-app .hm-te-ai-card {
+  border-top-color: #8b5cf6;
+  margin-bottom: 16px;
+}
+#hm-te-app .hm-te-ai-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--hm-border);
+  border-radius: 8px;
+  font-family: var(--hm-font);
+  font-size: 13px;
+  color: var(--hm-text);
+  background: var(--hm-bg-input, #fff);
+  resize: vertical;
+  box-sizing: border-box;
+  transition: var(--hm-transition);
+}
+#hm-te-app .hm-te-ai-textarea:focus {
+  border: 2px solid #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+  outline: none;
+}
+
+/* Section Cards (accordion) */
+#hm-te-app .hm-te-sec {
+  background: var(--hm-bg);
+  border: 1px solid var(--hm-border);
+  border-radius: var(--hm-radius-lg);
+  margin-bottom: 8px;
+  transition: border-color 0.15s, opacity 0.2s;
+}
+#hm-te-app .hm-te-sec:hover { border-color: #cbd5e1; }
+#hm-te-app .hm-te-sec--disabled { opacity: 0.45; }
+
+#hm-te-app .hm-te-sec-hd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+#hm-te-app .hm-te-sec-drag {
+  cursor: grab;
+  color: var(--hm-text-muted);
+  font-size: 14px;
+}
+#hm-te-app .hm-te-sec-chevron {
+  font-size: 10px;
+  color: var(--hm-text-muted);
+  transition: transform 0.2s;
+}
+#hm-te-app .hm-te-sec-chevron.open { transform: rotate(180deg); }
+#hm-te-app .hm-te-sec-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--hm-navy);
+  flex: 1;
+}
+#hm-te-app .hm-te-sec-type { font-size: 10px; }
+#hm-te-app .hm-te-sec-count {
+  font-size: 11px;
+  color: var(--hm-text-muted);
+  margin-right: 4px;
+}
+#hm-te-app .hm-te-sec-toggle { margin-left: auto; }
+#hm-te-app .hm-te-sec-del {
+  font-size: 16px;
+  color: var(--hm-text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+#hm-te-app .hm-te-sec-del:hover { color: var(--hm-red); }
+
+/* Section body (collapsed by default) */
+#hm-te-app .hm-te-sec-body {
+  display: none;
+  padding: 4px 16px 14px;
+  border-top: 1px solid var(--hm-border);
+}
+#hm-te-app .hm-te-sec-body.open { display: block; }
+
+/* Field rows */
+#hm-te-app .hm-te-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  transition: background 0.1s;
+}
+#hm-te-app .hm-te-field-row:hover {
+  background: var(--hm-bg-alt, #f8fafc);
+  border-color: var(--hm-border);
+}
+#hm-te-app .hm-te-field-drag {
+  cursor: grab;
+  color: var(--hm-text-muted);
+  font-size: 12px;
+}
+#hm-te-app .hm-te-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hm-text);
+  flex: 1;
+}
+#hm-te-app .hm-te-field-format { font-size: 10px; }
+#hm-te-app .hm-te-field-del {
+  font-size: 14px;
+  color: var(--hm-text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+}
+#hm-te-app .hm-te-field-del:hover { color: var(--hm-red); }
+
+/* Add section dashed box */
+#hm-te-app .hm-te-add-section {
+  border: 2px dashed var(--hm-border);
+  border-radius: var(--hm-radius-lg);
+  padding: 14px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--hm-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color 0.15s, color 0.15s;
+  margin-top: 8px;
+}
+#hm-te-app .hm-te-add-section:hover {
+  border-color: var(--hm-teal);
+  color: var(--hm-teal);
+}
+
+/* Schema preview */
+#hm-te-app .hm-te-schema-code {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--hm-text);
+  background: var(--hm-bg-alt, #f8fafc);
+  border-radius: 8px;
+  padding: 14px;
+  max-height: 500px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}
+
+/* Sidebar sticky */
+#hm-te-app .hm-te-sidebar {
+  position: sticky;
+  top: 20px;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   CLINICAL REVIEW — Split Screen
+   ════════════════════════════════════════════════════════════════════════ */
+
+#hm-cr-app .hm-cr-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 80px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  #hm-cr-app .hm-cr-split { grid-template-columns: 1fr; }
+}
+
+#hm-cr-app .hm-cr-transcript-body {
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+}
+#hm-cr-app .hm-cr-transcript-text {
+  font-family: var(--hm-font);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--hm-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  padding: 0;
+}
+
+#hm-cr-app .hm-cr-section {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--hm-border);
+}
+#hm-cr-app .hm-cr-section:last-child { border-bottom: none; }
+#hm-cr-app .hm-cr-section-title {
+  font-family: var(--hm-font-heading, var(--hm-font));
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--hm-navy);
+  margin: 0 0 10px 0;
+}
+
+/* Bottom action bar */
+#hm-cr-app .hm-cr-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--hm-bg);
+  border-top: 2px solid var(--hm-teal);
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+}
+#hm-cr-app .hm-cr-bottom-actions {
+  display: flex;
+  gap: 8px;
+}
 /* ── End of hearmed-core.css ── */

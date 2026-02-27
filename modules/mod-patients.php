@@ -1763,19 +1763,54 @@ function hm_ajax_save_ai_transcript() {
 
     if ( ! $pid || ! $text ) wp_send_json_error( 'Patient ID and transcript required' );
 
-    $db       = HearMed_DB::instance();
-    $staff_id = hm_patient_staff_id();
+    $db             = HearMed_DB::instance();
+    $staff_id       = hm_patient_staff_id();
+    $appointment_id = intval( $_POST['appointment_id'] ?? 0 );
+    $word_count     = str_word_count( $text );
+    $duration_secs  = intval( $_POST['duration_secs'] ?? 0 );
+    $hash           = hash( 'sha256', $text );
 
-    $id = $db->insert( 'hearmed_core.patient_notes', [
+    /* ── 1. Save to patient_notes (legacy, keeps existing workflows) ── */
+    $note_id = $db->insert( 'hearmed_core.patient_notes', [
         'patient_id' => $pid,
         'note_type'  => 'AI Transcript',
         'note_text'  => '[AI Transcription — ' . date( 'Y-m-d H:i' ) . "]\n" . $text,
         'created_by' => $staff_id ?: null,
     ]);
 
-    hm_patient_audit( 'SAVE_AI_TRANSCRIPT', 'patient_note', $id, [ 'patient_id' => $pid ] );
+    /* ── 2. Save to appointment_transcripts (new clinical pipeline) ── */
+    $transcript_id = null;
+    $t_exists = HearMed_DB::get_var( "SELECT to_regclass('hearmed_admin.appointment_transcripts')" );
+    if ( $t_exists !== null ) {
+        $transcript_id = $db->insert( 'hearmed_admin.appointment_transcripts', [
+            'appointment_id'  => $appointment_id ?: null,
+            'patient_id'      => $pid,
+            'staff_id'        => $staff_id ?: null,
+            'transcript_text' => $text,
+            'transcript_hash' => $hash,
+            'word_count'      => $word_count,
+            'duration_secs'   => $duration_secs,
+            'source'          => 'whisper',
+            'created_at'      => current_time( 'mysql' ),
+        ]);
+    }
 
-    wp_send_json_success( [ 'id' => $id ] );
+    hm_patient_audit( 'SAVE_AI_TRANSCRIPT', 'patient_note', $note_id, [
+        'patient_id'     => $pid,
+        'transcript_id'  => $transcript_id,
+        'appointment_id' => $appointment_id,
+        'word_count'     => $word_count,
+    ]);
+
+    /* ── 3. Trigger AI extraction (Job 7) ── */
+    if ( $transcript_id && $appointment_id ) {
+        hm_trigger_ai_extraction( $pid, $appointment_id, $transcript_id, $text );
+    }
+
+    wp_send_json_success( [
+        'id'            => $note_id,
+        'transcript_id' => $transcript_id,
+    ] );
 }
 
 
@@ -2063,6 +2098,199 @@ function hm_ajax_create_exchange() {
     } catch ( \Exception $e ) {
         $db->rollback();
         wp_send_json_error( 'Exchange failed: ' . $e->getMessage() );
+    }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  JOB 7 — AI EXTRACTION TRIGGER
+//  Called after transcript save. Finds matching template, anonymises
+//  transcript, builds AI prompt, calls API (MOCK mode available),
+//  creates clinical_docs record with extracted data.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Trigger AI extraction for a new transcript.
+ *
+ * @param int    $patient_id
+ * @param int    $appointment_id
+ * @param int    $transcript_id
+ * @param string $transcript_text
+ */
+function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id, $transcript_text ) {
+    $db = HearMed_DB::instance();
+
+    /* ── 1. Determine appointment type → find matching template ── */
+    $appt = $db->get_row(
+        "SELECT appointment_type_id FROM hearmed_core.appointments WHERE id = $1",
+        [ $appointment_id ]
+    );
+
+    // Try to find template by appointment type name, fallback to first AI-enabled template
+    $template = null;
+    if ( $appt && $appt->appointment_type_id ) {
+        $apt_type = $db->get_row(
+            "SELECT name FROM hearmed_reference.appointment_types WHERE id = $1",
+            [ $appt->appointment_type_id ]
+        );
+        if ( $apt_type ) {
+            // Try exact name match
+            $template = $db->get_row(
+                "SELECT * FROM hearmed_admin.document_templates 
+                 WHERE LOWER(name) = LOWER($1) AND is_active = true AND ai_enabled = true
+                 LIMIT 1",
+                [ $apt_type->name ]
+            );
+        }
+    }
+
+    // Fallback: first active AI-enabled template
+    if ( ! $template ) {
+        $template = $db->get_row(
+            "SELECT * FROM hearmed_admin.document_templates 
+             WHERE is_active = true AND ai_enabled = true
+             ORDER BY sort_order LIMIT 1"
+        );
+    }
+
+    if ( ! $template ) {
+        // No AI template found — skip extraction
+        HearMed_Logger::log( 'ai_extraction', 'No AI template found for appointment ' . $appointment_id );
+        return;
+    }
+
+    /* ── 2. Anonymise transcript ── */
+    $patient = $db->get_row(
+        "SELECT first_name, last_name, h_number FROM hearmed_core.patients WHERE id = $1",
+        [ $patient_id ]
+    );
+
+    $anon_text = $transcript_text;
+    if ( $patient ) {
+        // Replace patient name with H-number
+        $names = array_filter( [ $patient->first_name ?? '', $patient->last_name ?? '' ] );
+        foreach ( $names as $name ) {
+            if ( strlen( $name ) > 1 ) {
+                $anon_text = str_ireplace( $name, '[PATIENT]', $anon_text );
+            }
+        }
+        $full_name = trim( ( $patient->first_name ?? '' ) . ' ' . ( $patient->last_name ?? '' ) );
+        if ( strlen( $full_name ) > 2 ) {
+            $anon_text = str_ireplace( $full_name, '[PATIENT]', $anon_text );
+        }
+    }
+
+    /* ── 3. Build extraction schema from template sections ── */
+    $sections = json_decode( $template->sections_json ?: '[]', true );
+    $schema   = [];
+    if ( is_array( $sections ) ) {
+        foreach ( $sections as $sec ) {
+            if ( empty( $sec['enabled'] ) ) continue;
+            $sec_type = $sec['type'] ?? '';
+            if ( ! in_array( $sec_type, [ 'ai_extract', 'ai_detect' ] ) ) continue;
+
+            $fields_schema = [];
+            if ( ! empty( $sec['fields'] ) && is_array( $sec['fields'] ) ) {
+                foreach ( $sec['fields'] as $f ) {
+                    if ( ! is_array( $f ) ) continue;
+                    $fs = [ 'type' => $f['format'] ?? 'text' ];
+                    if ( ! empty( $f['ai_instruction'] ) ) {
+                        $fs['instruction'] = $f['ai_instruction'];
+                    }
+                    $fields_schema[ $f['key'] ?? '' ] = $fs;
+                }
+            }
+            $schema[ $sec['key'] ?? '' ] = [
+                'label'  => $sec['label'] ?? '',
+                'fields' => $fields_schema,
+            ];
+        }
+    }
+
+    /* ── 4. Build AI prompt ── */
+    $system_prompt = $template->ai_system_prompt ?? '';
+    if ( empty( $system_prompt ) ) {
+        $system_prompt = 'You are a clinical audiologist assistant. Extract structured data from the consultation transcript. Output valid JSON matching the provided schema exactly. Be concise and clinical. If information is not mentioned in the transcript, use null for that field.';
+    }
+
+    $user_prompt = "Extract clinical data from the following audiology consultation transcript.\n\n";
+    $user_prompt .= "OUTPUT SCHEMA (respond with JSON matching this structure):\n";
+    $user_prompt .= json_encode( $schema, JSON_PRETTY_PRINT ) . "\n\n";
+    $user_prompt .= "TRANSCRIPT:\n" . $anon_text;
+
+    /* ── 5. Call AI API or use MOCK mode ── */
+    $ai_mode = get_option( 'hm_ai_extraction_mode', 'mock' ); // 'mock' | 'openai' | 'off'
+    $extracted = [];
+
+    if ( $ai_mode === 'off' ) {
+        // Create doc with empty extraction
+        $extracted = [];
+    } elseif ( $ai_mode === 'openai' ) {
+        $api_key = get_option( 'hm_openai_api_key', '' );
+        if ( $api_key ) {
+            $response = wp_remote_post( 'https://api.openai.com/v1/chat/completions', [
+                'headers' => [
+                    'Content-Type'  => 'application/json',
+                    'Authorization' => 'Bearer ' . $api_key,
+                ],
+                'body'    => wp_json_encode( [
+                    'model'       => get_option( 'hm_openai_model', 'gpt-4o-mini' ),
+                    'messages'    => [
+                        [ 'role' => 'system', 'content' => $system_prompt ],
+                        [ 'role' => 'user',   'content' => $user_prompt ],
+                    ],
+                    'temperature' => 0.2,
+                    'max_tokens'  => 2000,
+                ] ),
+                'timeout' => 60,
+            ] );
+
+            if ( ! is_wp_error( $response ) ) {
+                $body = json_decode( wp_remote_retrieve_body( $response ), true );
+                $content = $body['choices'][0]['message']['content'] ?? '';
+                // Strip markdown code fences if present
+                $content = preg_replace( '/^```(?:json)?\s*/m', '', $content );
+                $content = preg_replace( '/```\s*$/m', '', $content );
+                $parsed  = json_decode( trim( $content ), true );
+                if ( is_array( $parsed ) ) {
+                    $extracted = $parsed;
+                }
+            } else {
+                HearMed_Logger::log( 'ai_extraction', 'OpenAI error: ' . $response->get_error_message() );
+            }
+        }
+    } else {
+        /* MOCK mode — generate placeholder data from schema */
+        foreach ( $schema as $sec_key => $sec_info ) {
+            $extracted[ $sec_key ] = [];
+            if ( ! empty( $sec_info['fields'] ) ) {
+                foreach ( $sec_info['fields'] as $fkey => $finfo ) {
+                    $extracted[ $sec_key ][ $fkey ] = '[Mock: ' . ( $finfo['instruction'] ?? $fkey ) . ']';
+                }
+            }
+        }
+    }
+
+    /* ── 6. Create clinical_docs record ── */
+    $cd_exists = HearMed_DB::get_var( "SELECT to_regclass('hearmed_admin.appointment_clinical_docs')" );
+    if ( $cd_exists === null ) return;
+
+    $doc_id = $db->insert( 'hearmed_admin.appointment_clinical_docs', [
+        'appointment_id'   => $appointment_id,
+        'patient_id'       => $patient_id,
+        'template_id'      => $template->id,
+        'template_version' => $template->current_version ?? 1,
+        'transcript_id'    => $transcript_id,
+        'status'           => ! empty( $extracted ) ? 'extracted' : 'draft',
+        'extracted_json'   => wp_json_encode( $extracted ),
+        'reviewed_json'    => '{}',
+        'created_by'       => get_current_user_id() ?: null,
+        'created_at'       => current_time( 'mysql' ),
+        'updated_at'       => current_time( 'mysql' ),
+    ] );
+
+    if ( class_exists( 'HearMed_Logger' ) ) {
+        HearMed_Logger::log( 'ai_extraction', "Created clinical doc #{$doc_id} for appointment #{$appointment_id}, mode={$ai_mode}" );
     }
 }
 
