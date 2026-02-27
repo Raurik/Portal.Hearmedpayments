@@ -374,7 +374,7 @@ function hm_ajax_get_appointments() {
     // Columns: staff_id, service_id, appointment_type_id, duration_minutes, appointment_status
     // Services table: service_color (NOT colour), duration_minutes (NOT duration)
     $sql = "SELECT a.id, a.patient_id, a.staff_id, a.clinic_id,
-                   COALESCE(a.appointment_type_id, a.service_id) AS resolved_service_id,
+                   a.service_id AS resolved_service_id,
                    a.appointment_date, a.start_time, a.end_time,
                    a.appointment_status, a.location_type, a.notes, a.outcome,
                    a.duration_minutes,
@@ -390,7 +390,7 @@ function hm_ajax_get_appointments() {
             LEFT JOIN hearmed_core.patients p ON a.patient_id = p.id
             LEFT JOIN hearmed_reference.staff st ON a.staff_id = st.id
             LEFT JOIN hearmed_reference.clinics c ON a.clinic_id = c.id
-            LEFT JOIN hearmed_reference.services sv ON sv.id = COALESCE(a.appointment_type_id, a.service_id)
+            LEFT JOIN hearmed_reference.services sv ON sv.id = a.service_id
             WHERE a.appointment_date >= \$1 AND a.appointment_date <= \$2";
     $params = [ $start, $end ];
     $pi = 3;
@@ -486,7 +486,6 @@ function hm_ajax_create_appointment() {
         'staff_id'           => intval( $_POST['dispenser_id'] ?? 0 ),
         'clinic_id'          => intval( $_POST['clinic_id']  ?? 0 ),
         'service_id'         => $sid,
-        'appointment_type_id'=> $sid,
         'appointment_date'   => sanitize_text_field( $_POST['appointment_date'] ),
         'start_time'         => $st,
         'end_time'           => $et,
@@ -551,7 +550,7 @@ function hm_ajax_update_appointment() {
         $sid = intval( $_POST['service_id'] ?? 0 );
         if ( ! $sid ) {
             $sid = (int) HearMed_DB::get_var(
-                "SELECT COALESCE(appointment_type_id, service_id) FROM hearmed_core.appointments WHERE id = $1", [ $id ]
+                "SELECT service_id FROM hearmed_core.appointments WHERE id = $1", [ $id ]
             );
         }
         $dur = intval( $_POST['duration'] ?? 0 );
@@ -568,7 +567,6 @@ function hm_ajax_update_appointment() {
         $et  = sprintf( '%02d:%02d', floor( $em / 60 ), $em % 60 );
 
         $data['service_id']          = $sid;
-        $data['appointment_type_id'] = $sid;
         $data['duration_minutes']    = $dur;
         $data['start_time']          = $st;
         $data['end_time']            = $et;

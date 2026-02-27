@@ -1076,7 +1076,7 @@ function hm_ajax_get_patient_appointments() {
                 COALESCE(c.clinic_name, '') AS clinic_name,
                 COALESCE(st.first_name || ' ' || st.last_name, '') AS dispenser_name
          FROM hearmed_core.appointments a
-         LEFT JOIN hearmed_reference.services sv ON sv.id = COALESCE(a.appointment_type_id, a.service_id)
+         LEFT JOIN hearmed_reference.services sv ON sv.id = a.service_id
          LEFT JOIN hearmed_reference.clinics c ON c.id = a.clinic_id
          LEFT JOIN hearmed_reference.staff st ON st.id = a.staff_id
          WHERE a.patient_id = \$1
