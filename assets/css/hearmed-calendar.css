@@ -474,7 +474,7 @@
 .hm-appt-outcome {
   color: #fff;
   font-size: 9px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   padding: 2px 6px;
@@ -600,9 +600,9 @@
   align-items: flex-end;
   justify-content: center;
   padding-bottom: 2px;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1px;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   color: #155e75;
   text-shadow: 0 0 2px rgba(255,255,255,0.9);
@@ -1647,6 +1647,29 @@ textarea.hm-inp {
 .hm-excl--hours {
   display: flex;
   align-items: flex-start;
+}
+
+/* ── Exclusion kebab button ── */
+.hm-excl-kebab {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 3;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 3px;
+  border-radius: 4px;
+  color: var(--excl-color, #6b7280);
+  opacity: 0.6;
+  pointer-events: auto;
+}
+.hm-excl-kebab:hover {
+  opacity: 1;
+  background: rgba(0,0,0,0.06);
+}
+.hm-excl-ctx-item:hover {
+  background: #f1f5f9;
 }
 
 
