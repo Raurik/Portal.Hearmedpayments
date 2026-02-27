@@ -649,8 +649,8 @@ var Cal={
                 // No outcome — show a thin colour banner at top for non-solid styles
             }
 
-            // Cancelled / No Show / Rescheduled opacity
-            var cardOpacity=(isCancelled||isNoShow||isRescheduled)?';opacity:.55':'';
+            // Cancelled / No Show opacity (rescheduled stays fully visible)
+            var cardOpacity=(isCancelled||isNoShow)?';opacity:.55':'';
 
             var card='<div class="hm-appt hm-appt--'+cs+stCls+'" data-id="'+a._ID+'" style="'+bgStyle+';height:'+h+'px;top:'+off+'px;color:'+fontColor+cardOpacity+'">';
             card+=bannerHtml;
@@ -683,7 +683,7 @@ var Cal={
             // Cancelled / No Show / Rescheduled overlay
             if(isCancelled)card+='<div class="hm-appt-overlay hm-appt-overlay--cancel"><span>CANCELLED</span></div>';
             else if(isNoShow)card+='<div class="hm-appt-overlay hm-appt-overlay--noshow"></div>';
-            else if(isRescheduled)card+='<div class="hm-appt-overlay hm-appt-overlay--resched"><span>RESCHEDULED</span></div>';
+            else if(isRescheduled)card+='<div class="hm-appt-overlay hm-appt-overlay--resched"><span>Resched</span></div>';
             card+='</div>';
 
             var el=$(card);

@@ -582,25 +582,30 @@
 
 /* ── Rescheduled overlay ── */
 .hm-appt.rescheduled {
-  opacity: 0.45;
-}
-.hm-appt.rescheduled:hover {
-  opacity: 0.6;
+  opacity: 1;
 }
 .hm-appt-overlay--resched {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(14,116,144,0.10),
+    rgba(14,116,144,0.10) 5px,
+    transparent 5px,
+    transparent 10px
+  );
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  font-size: 10px;
+  padding-bottom: 2px;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
   text-transform: uppercase;
-  color: rgba(12, 74, 110, 0.85);
-  text-shadow: 0 0 3px rgba(255,255,255,0.5);
+  color: #155e75;
+  text-shadow: 0 0 2px rgba(255,255,255,0.9);
 }
 
 /* ── Kebab (3-dot) button on cards ── */
