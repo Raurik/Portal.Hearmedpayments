@@ -7,6 +7,7 @@
 'use strict';
 
 var STATUS_DEFAULTS={
+    'Not Confirmed':{bg:'#fefce8',color:'#854d0e',border:'#fde68a'},
     Confirmed:{bg:'#eff6ff',color:'#1e40af',border:'#bfdbfe'},
     Arrived:{bg:'#ecfdf5',color:'#065f46',border:'#a7f3d0'},
     'In Progress':{bg:'#fff7ed',color:'#9a3412',border:'#fed7aa'},
@@ -15,6 +16,7 @@ var STATUS_DEFAULTS={
     Late:{bg:'#fffbeb',color:'#92400e',border:'#fde68a'},
     Pending:{bg:'#f5f3ff',color:'#5b21b6',border:'#ddd6fe'},
     Cancelled:{bg:'#fef2f2',color:'#991b1b',border:'#fecaca'},
+    Rescheduled:{bg:'#f0f9ff',color:'#0c4a6e',border:'#bae6fd'},
 };
 
 var SettingsPage = {
@@ -69,7 +71,7 @@ var SettingsPage = {
     /* ─── Read current status badge colours from inputs ─── */
     getStatusBadgeColours: function(){
         var map = {};
-        var statuses = ['Confirmed','Arrived','In Progress','Completed','No Show','Late','Pending','Cancelled'];
+        var statuses = ['Not Confirmed','Confirmed','Arrived','In Progress','Completed','No Show','Late','Pending','Cancelled','Rescheduled'];
         statuses.forEach(function(s){
             var slug = s.toLowerCase().replace(/ /g, '_');
             map[s] = {

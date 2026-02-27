@@ -48,11 +48,14 @@ function hm_notification_class_map() {
         'urgent'              => 'urgent',
 
         // Appointment-focused
-        'appointment'         => 'appointment',
-        'appointment_created' => 'appointment',
-        'appointment_moved'   => 'appointment',
-        'appointment_cancel'  => 'appointment',
-        'schedule_change'     => 'appointment',
+        'appointment'              => 'appointment',
+        'appointment_created'      => 'appointment',
+        'appointment_moved'        => 'appointment',
+        'appointment_cancel'       => 'appointment',
+        'appointment_arrived'      => 'appointment',
+        'appointment_late'         => 'appointment',
+        'appointment_rescheduled'  => 'appointment',
+        'schedule_change'          => 'appointment',
 
         // Patient-focused
         'patient'             => 'patient',
@@ -257,9 +260,12 @@ class HearMed_Notifications {
             'cheque_reminder'      => 'Cheque not sent',
             'repair_update'        => 'Repair returned' . ( $patient ? " — {$patient}" : '' ),
             'annual_review'        => 'Annual review overdue' . ( $patient ? " — {$patient}" : '' ),
-            'appointment_created'  => 'New appointment' . ( $patient ? " — {$patient}" : '' ),
-            'appointment_cancel'   => 'Appointment cancelled' . ( $patient ? " — {$patient}" : '' ),
-            'message'              => 'New message',
+            'appointment_created'      => 'New appointment' . ( $patient ? " — {$patient}" : '' ),
+            'appointment_cancel'       => 'Appointment cancelled' . ( $patient ? " — {$patient}" : '' ),
+            'appointment_arrived'      => 'Patient arrived' . ( $patient ? " — {$patient}" : '' ),
+            'appointment_late'         => 'Patient running late' . ( $patient ? " — {$patient}" : '' ),
+            'appointment_rescheduled'  => 'Appointment rescheduled' . ( $patient ? " — {$patient}" : '' ),
+            'message'                  => 'New message',
         ];
         return $map[ $type ] ?? ucfirst( str_replace( '_', ' ', $type ) );
     }

@@ -571,6 +571,150 @@
 }
 
 
+/* ── Rescheduled overlay ── */
+.hm-appt.rescheduled {
+  opacity: 0.45;
+}
+.hm-appt.rescheduled:hover {
+  opacity: 0.6;
+}
+.hm-appt-overlay--resched {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  opacity: 0.65;
+  text-shadow: 0 0 4px rgba(255,255,255,0.6);
+}
+
+/* ── Kebab (3-dot) button on cards ── */
+.hm-appt-kebab {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 3;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 3px;
+  border-radius: 4px;
+  color: inherit;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  line-height: 1;
+}
+.hm-appt:hover .hm-appt-kebab {
+  opacity: 0.7;
+}
+.hm-appt-kebab:hover {
+  opacity: 1 !important;
+  background: rgba(0,0,0,0.1);
+}
+
+/* ── Context menu (from kebab) ── */
+.hm-ctx-menu {
+  position: fixed;
+  z-index: 10001;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06);
+  padding: 4px 0;
+  font-size: 13px;
+  color: #334155;
+  animation: hm-ctx-in 0.12s ease-out;
+}
+@keyframes hm-ctx-in { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+
+.hm-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+.hm-ctx-item:hover {
+  background: #f1f5f9;
+}
+.hm-ctx-item svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+.hm-ctx-sep {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 4px 0;
+}
+.hm-ctx-arrow {
+  margin-left: auto;
+  font-size: 14px;
+  color: #94a3b8;
+}
+.hm-ctx-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.hm-ctx-active {
+  font-weight: 700;
+  background: #f8fafc;
+}
+
+/* Status submenu (nested) */
+.hm-ctx-parent {
+  position: relative;
+}
+.hm-ctx-sub {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: -4px;
+  min-width: 160px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  padding: 4px 0;
+  z-index: 10002;
+}
+.hm-ctx-parent:hover > .hm-ctx-sub {
+  display: block;
+}
+
+/* ── Toast notification ── */
+.hm-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1e293b;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 99999;
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.hm-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
 /* ═══════════════════════════════════════
    4. LUNCH BLOCKS
    ═══════════════════════════════════════ */

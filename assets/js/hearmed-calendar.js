@@ -37,10 +37,15 @@ var IC={
     clock:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     x:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>',
     cog:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
+    dots:'<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>',
+    note:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>',
+    pound:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20H6c0-4 2-8 2-12a4 4 0 0 1 8 0"/><path d="M6 14h8"/></svg>',
+    edit:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
 };
 
 // Status pill colours — defaults, overridden by calendar settings
 var STATUS_MAP_DEFAULTS={
+    'Not Confirmed':{bg:'#fefce8',color:'#854d0e',border:'#fde68a'},
     Confirmed:{bg:'#eff6ff',color:'#1e40af',border:'#bfdbfe'},
     Arrived:{bg:'#ecfdf5',color:'#065f46',border:'#a7f3d0'},
     'In Progress':{bg:'#fff7ed',color:'#9a3412',border:'#fed7aa'},
@@ -49,6 +54,7 @@ var STATUS_MAP_DEFAULTS={
     Late:{bg:'#fffbeb',color:'#92400e',border:'#fde68a'},
     Pending:{bg:'#f5f3ff',color:'#5b21b6',border:'#ddd6fe'},
     Cancelled:{bg:'#fef2f2',color:'#991b1b',border:'#fecaca'},
+    Rescheduled:{bg:'#f0f9ff',color:'#0c4a6e',border:'#bae6fd'},
 };
 var STATUS_MAP=STATUS_MAP_DEFAULTS;
 
@@ -204,14 +210,85 @@ var Cal={
         });
 
         // Close dropdowns on outside click
-        $(document).on('click',function(){$('.hm-ms-drop').removeClass('open');$('#hm-plusMenu').removeClass('open');});
+        $(document).on('click',function(){$('.hm-ms-drop').removeClass('open');$('#hm-plusMenu').removeClass('open');$('.hm-ctx-menu').remove();});
         $(document).on('click','#hm-plusBtn',function(e){e.stopPropagation();$('#hm-plusMenu').toggleClass('open');$('.hm-ms-drop').removeClass('open');});
         $(document).on('click','.hm-plus-item',function(){$('#hm-plusMenu').removeClass('open');self.onPlusAction($(this).data('act'));});
 
         // Popover close
-        $(document).on('click',function(e){if(!$(e.target).closest('.hm-pop,.hm-appt').length)$('#hm-pop').removeClass('open');});
+        $(document).on('click',function(e){if(!$(e.target).closest('.hm-pop,.hm-appt,.hm-ctx-menu').length)$('#hm-pop').removeClass('open');});
         $(document).on('click','.hm-pop-x',function(){$('#hm-pop').removeClass('open');});
         $(document).on('click','.hm-pop-edit',function(){self.editPop();});
+
+        // ── Kebab (3-dot) context menu ──
+        $(document).on('click','.hm-appt-kebab',function(e){
+            e.stopPropagation();e.preventDefault();
+            clearTimeout(Cal._hoverTimer);$('#hm-tooltip').hide();$('#hm-pop').removeClass('open');
+            $('.hm-ctx-menu').remove();
+            var $btn=$(this),aid=parseInt($btn.data('id'));
+            var a=Cal.appts.find(function(x){return x._ID===aid||x.id===aid;});
+            if(!a)return;
+            Cal._popAppt=a;
+            var rect=$btn[0].getBoundingClientRect();
+            var m='<div class="hm-ctx-menu" style="left:'+Math.min(rect.left,window.innerWidth-180)+'px;top:'+(rect.bottom+4)+'px">';
+            // Status submenu
+            m+='<div class="hm-ctx-parent">';
+            m+='<div class="hm-ctx-item hm-ctx-has-sub">'+IC.clock+' Status <span class="hm-ctx-arrow">›</span></div>';
+            m+='<div class="hm-ctx-sub">';
+            ['Not Confirmed','Confirmed','Arrived','Late','Rescheduled','Cancelled'].forEach(function(s){
+                var active=a.status===s?' hm-ctx-active':'';
+                var st=STATUS_MAP[s]||STATUS_MAP['Not Confirmed'];
+                m+='<div class="hm-ctx-item hm-ctx-status'+active+'" data-status="'+s+'">';
+                m+='<span class="hm-ctx-dot" style="background:'+st.color+'"></span>'+s+'</div>';
+            });
+            m+='</div></div>';
+            // Quick Add Notes
+            m+='<div class="hm-ctx-sep"></div>';
+            m+='<div class="hm-ctx-item hm-ctx-notes">'+IC.note+' Quick Add Notes</div>';
+            // Quick Payment
+            m+='<div class="hm-ctx-item hm-ctx-payment" style="opacity:0.5;cursor:default">'+IC.pound+' Quick Payment</div>';
+            // Edit Appointment
+            m+='<div class="hm-ctx-sep"></div>';
+            m+='<div class="hm-ctx-item hm-ctx-edit">'+IC.edit+' Edit Appointment</div>';
+            m+='</div>';
+            $('body').append(m);
+        });
+
+        // Context menu → status
+        $(document).on('click','.hm-ctx-status',function(e){
+            e.stopPropagation();
+            var status=$(this).data('status'),a=Cal._popAppt;
+            if(!a)return;
+            $('.hm-ctx-menu').remove();
+            // Statuses that need no prompt
+            if(status==='Not Confirmed'||status==='Confirmed'||status==='Arrived'){
+                Cal.doStatusChange(a,status,'');
+            }
+            // Late → prompt note
+            else if(status==='Late'){
+                Cal.openNoteModal(a,status,'Why is the patient running late?');
+            }
+            // Rescheduled → note + new date/time
+            else if(status==='Rescheduled'){
+                Cal.openRescheduleModal(a);
+            }
+            // Cancelled → prompt note
+            else if(status==='Cancelled'){
+                Cal.openNoteModal(a,status,'Reason for cancellation:');
+            }
+        });
+
+        // Context menu → quick notes
+        $(document).on('click','.hm-ctx-notes',function(e){
+            e.stopPropagation();$('.hm-ctx-menu').remove();
+            var a=Cal._popAppt;if(!a)return;
+            Cal.openQuickNoteModal(a);
+        });
+
+        // Context menu → edit
+        $(document).on('click','.hm-ctx-edit',function(e){
+            e.stopPropagation();$('.hm-ctx-menu').remove();
+            Cal.editPop();
+        });
 
         // Slot double-click
         $(document).on('dblclick','.hm-slot',function(){self.onSlot(this);});
@@ -289,7 +366,7 @@ var Cal={
 
         // Resize
         var rt;$(window).on('resize',function(){clearTimeout(rt);rt=setTimeout(function(){self.refresh();},150);});
-        $(document).on('keydown',function(e){if(e.key==='Escape'){$('#hm-pop').removeClass('open');$('#hm-tooltip').hide();}});
+        $(document).on('keydown',function(e){if(e.key==='Escape'){$('#hm-pop').removeClass('open');$('#hm-tooltip').hide();$('.hm-ctx-menu').remove();}});
     },
 
     // ── Data loading (parallel, fault-tolerant) ──
@@ -510,7 +587,8 @@ var Cal={
 
             var isCancelled=a.status==='Cancelled';
             var isNoShow=a.status==='No Show';
-            var stCls=isCancelled?' cancelled':isNoShow?' noshow':'';
+            var isRescheduled=a.status==='Rescheduled';
+            var stCls=isCancelled?' cancelled':isNoShow?' noshow':isRescheduled?' rescheduled':'';
             var tmLbl=cfg.showTimeInline?(a.start_time.substring(0,5)+' '):'';
             var hasOutcome=a.outcome_banner_colour&&a.outcome_name;
             var font=cfg.apptFont||'#fff';
@@ -542,11 +620,13 @@ var Cal={
                 // No outcome — show a thin colour banner at top for non-solid styles
             }
 
-            // Cancelled / No Show opacity
-            var cardOpacity=(isCancelled||isNoShow)?';opacity:.55':'';
+            // Cancelled / No Show / Rescheduled opacity
+            var cardOpacity=(isCancelled||isNoShow||isRescheduled)?';opacity:.55':'';
 
             var card='<div class="hm-appt hm-appt--'+cs+stCls+'" data-id="'+a._ID+'" style="'+bgStyle+';height:'+h+'px;top:'+off+'px;color:'+fontColor+cardOpacity+'">';
             card+=bannerHtml;
+            // Kebab (3-dot) menu button
+            card+='<button class="hm-appt-kebab" data-id="'+a._ID+'">'+IC.dots+'</button>';
             card+='<div class="hm-appt-inner">';
             if(cfg.showApptType)card+='<div class="hm-appt-svc" style="color:'+(cfg.apptName||font)+'">'+esc(a.service_name)+'</div>';
             card+='<div class="hm-appt-pt" style="color:'+fontColor+'">'+tmLbl+esc(a.patient_name||'No patient')+'</div>';
@@ -556,7 +636,7 @@ var Cal={
             if(cfg.showBadges&&h>44){
                 var badges='';
                 if(cfg.showStatusBadge){
-                    var st2=STATUS_MAP[a.status]||STATUS_MAP.Confirmed;
+                    var st2=STATUS_MAP[a.status]||STATUS_MAP['Not Confirmed'];
                     badges+='<span class="hm-appt-badge" style="background:'+st2.bg+';color:'+st2.color+';border:1px solid '+st2.border+'">'+esc(a.status)+'</span>';
                 }
                 if(cfg.showDispIni){
@@ -571,16 +651,26 @@ var Cal={
                 if(metaParts.length)card+='<div class="hm-appt-meta" style="color:'+(cfg.apptMeta||'#38bdf8')+'">'+metaParts.join(' · ')+'</div>';
             }
             card+='</div>';
-            // Cancelled / No Show overlay
+            // Cancelled / No Show / Rescheduled overlay
             if(isCancelled)card+='<div class="hm-appt-overlay hm-appt-overlay--cancel"></div>';
             else if(isNoShow)card+='<div class="hm-appt-overlay hm-appt-overlay--noshow"></div>';
+            else if(isRescheduled)card+='<div class="hm-appt-overlay hm-appt-overlay--resched" style="color:'+col+'"><span>RESCHEDULED</span></div>';
             card+='</div>';
 
             var el=$(card);
             $t.append(el);
 
             // Click → popover
-            el.on('click',function(e){e.stopPropagation();clearTimeout(Cal._hoverTimer);$('#hm-tooltip').hide();Cal.showPop(a,this);});
+            el.on('click',function(e){
+                if($(e.target).closest('.hm-appt-kebab').length) return; // handled by kebab
+                e.stopPropagation();clearTimeout(Cal._hoverTimer);$('#hm-tooltip').hide();Cal.showPop(a,this);
+            });
+
+            // Double-click → edit
+            el.on('dblclick',function(e){
+                e.stopPropagation();e.preventDefault();
+                Cal._popAppt=a;Cal.editPop();
+            });
 
             // Hover → tooltip after 1 second
             el.on('mouseenter',function(){
@@ -667,8 +757,6 @@ var Cal={
         if(!isCompleted && !hasOutcome){
             h+='<button class="hm-pop-act hm-pop-act--teal hm-pop-closeoff" data-sid="'+a.service_id+'" data-aid="'+a._ID+'">Close Off</button>';
         }
-        h+='<button class="hm-pop-act hm-pop-act--green hm-pop-status" data-status="Arrived">Arrived</button>';
-        h+='<button class="hm-pop-act hm-pop-act--red hm-pop-status" data-status="No Show">No Show</button>';
         h+='</div>';
         h+='</div>';
 
@@ -683,23 +771,43 @@ var Cal={
         var a=this._popAppt;if(!a)return;
         $('#hm-pop').removeClass('open');
         var self=this;
+        // Ensure services & clinics loaded for the edit modal
+        var ready=$.Deferred();
+        if(!self.services.length||!self.clinics.length){
+            $.when(
+                self.services.length?null:self.loadServices(),
+                self.clinics.length?null:self.loadClinics(),
+                self.dispensers.length?null:self.loadDispensers()
+            ).always(function(){ready.resolve();});
+        } else { ready.resolve(); }
+        ready.then(function(){ self._buildEditModal(a); });
+    },
+    _buildEditModal:function(a){
+        var self=this;
+        var svcOpts=self.services.map(function(s){return'<option value="'+s.id+'"'+(parseInt(s.id)===parseInt(a.service_id)?' selected':'')+'>'+esc(s.name)+'</option>';}).join('');
+        var cliOpts=self.clinics.map(function(c){return'<option value="'+c.id+'"'+(parseInt(c.id)===parseInt(a.clinic_id)?' selected':'')+'>'+esc(c.name)+'</option>';}).join('');
+        var dispOpts=self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(parseInt(d.id)===parseInt(a.dispenser_id)?' selected':'')+'>'+esc(d.name)+'</option>';}).join('');
         var html='<div class="hm-modal-bg open"><div class="hm-modal hm-modal--md">'+
             '<div class="hm-modal-hd"><h3>Edit Appointment</h3><button class="hm-close hm-edit-close">'+IC.x+'</button></div>'+
             '<div class="hm-modal-body">'+
+                '<div class="hm-row"><div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hme-service">'+svcOpts+'</select></div>'+
+                '<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hme-disp">'+dispOpts+'</select></div></div>'+
+                '<div class="hm-row"><div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hme-clinic">'+cliOpts+'</select></div>'+
+                '<div class="hm-fld"><label>Location</label><select class="hm-inp" id="hme-loc"><option>Clinic</option><option>Home</option></select></div></div>'+
                 '<div class="hm-row"><div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hme-date" value="'+a.appointment_date+'"></div>'+
                 '<div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hme-time" value="'+(a.start_time||'').substring(0,5)+'"></div></div>'+
-                '<div class="hm-row"><div class="hm-fld"><label>Status</label><select class="hm-inp" id="hme-status"><option>Confirmed</option><option>Arrived</option><option>In Progress</option><option>Completed</option><option>Late</option><option>No Show</option><option>Cancelled</option><option>Pending</option></select></div>'+
-                '<div class="hm-fld"><label>Location</label><select class="hm-inp" id="hme-loc"><option>Clinic</option><option>Home</option></select></div></div>'+
+                '<div class="hm-row"><div class="hm-fld"><label>Status</label><select class="hm-inp" id="hme-status"><option>Not Confirmed</option><option>Confirmed</option><option>Arrived</option><option>In Progress</option><option>Completed</option><option>Late</option><option>No Show</option><option>Cancelled</option><option>Rescheduled</option><option>Pending</option></select></div>'+
+                '<div class="hm-fld"></div></div>'+
                 '<div class="hm-fld"><label>Notes</label><textarea class="hm-inp" id="hme-notes" rows="3">'+esc(a.notes||'')+'</textarea></div>'+
             '</div>'+
             '<div class="hm-modal-ft"><button class="hm-btn hm-btn--danger hm-edit-del">Delete</button><div class="hm-modal-acts"><button class="hm-btn hm-edit-close">Cancel</button><button class="hm-btn hm-btn--primary hm-edit-save">Save</button></div></div>'+
         '</div></div>';
         $('body').append(html);
-        $('#hme-status').val(a.status);
+        $('#hme-status').val(a.status||'Not Confirmed');
         $('#hme-loc').val(a.location_type||'Clinic');
         $(document).off('click.editclose').on('click.editclose','.hm-edit-close',function(){$('.hm-modal-bg').remove();$(document).off('.editclose .editsave .editdel');});
         $(document).off('click.editsave').on('click.editsave','.hm-edit-save',function(){
-            post('update_appointment',{appointment_id:a._ID,appointment_date:$('#hme-date').val(),start_time:$('#hme-time').val(),status:$('#hme-status').val(),location_type:$('#hme-loc').val(),notes:$('#hme-notes').val()})
+            post('update_appointment',{appointment_id:a._ID,appointment_date:$('#hme-date').val(),start_time:$('#hme-time').val(),status:$('#hme-status').val(),location_type:$('#hme-loc').val(),notes:$('#hme-notes').val(),service_id:$('#hme-service').val(),clinic_id:$('#hme-clinic').val(),dispenser_id:$('#hme-disp').val()})
             .then(function(r){if(r.success){$('.hm-modal-bg').remove();$(document).off('.editclose .editsave .editdel');self.refresh();}else{alert(r.data||'Error');}});
         });
         $(document).off('click.editdel').on('click.editdel','.hm-edit-del',function(){
@@ -709,6 +817,104 @@ var Cal={
                 if(r.success){$('.hm-modal-bg').remove();$(document).off('.editclose .editsave .editdel');self.refresh();}else{alert(r.data||'Error');}
             });
         });
+    },
+
+    // ── STATUS CHANGE with side-effects ──
+    doStatusChange:function(a,status,note,extra){
+        var data={appointment_id:a._ID,status:status,note:note||''};
+        if(extra)$.extend(data,extra);
+        var self=this;
+        post('update_appointment_status',data).then(function(r){
+            if(r.success){
+                self.refresh();
+                // Show a brief toast
+                Cal.toast(status==='Confirmed'?'Confirmed — note added to patient file':
+                          status==='Arrived'?'Arrived — dispenser notified':
+                          status==='Late'?'Running late — dispenser notified':
+                          status==='Rescheduled'?'Rescheduled — new appointment created':
+                          status==='Cancelled'?'Cancelled — note added to patient file':
+                          'Status updated to '+status);
+            } else {
+                alert(r.data&&r.data.message?r.data.message:'Error updating status');
+            }
+        }).fail(function(){alert('Network error');});
+    },
+
+    // ── Note modal for Late / Cancelled ──
+    openNoteModal:function(a,status,prompt){
+        var self=this;
+        var h='<div class="hm-modal-bg open"><div class="hm-modal hm-modal--sm">';
+        h+='<div class="hm-modal-hd"><h3>'+esc(status)+' — '+esc(a.patient_name||'')+'</h3><button class="hm-close hm-note-close">'+IC.x+'</button></div>';
+        h+='<div class="hm-modal-body">';
+        h+='<div class="hm-fld"><label>'+esc(prompt)+'</label><textarea class="hm-inp" id="hm-status-note" rows="3" placeholder="Add a note..." autofocus></textarea></div>';
+        h+='</div>';
+        h+='<div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hm-note-close">Cancel</button><button class="hm-btn hm-btn--primary hm-note-save">Save</button></div></div>';
+        h+='</div></div>';
+        $('body').append(h);
+        setTimeout(function(){$('#hm-status-note').focus();},100);
+        $(document).off('click.noteclose').on('click.noteclose','.hm-note-close',function(){$('.hm-modal-bg').remove();$(document).off('.noteclose .notesave');});
+        $(document).off('click.notesave').on('click.notesave','.hm-note-save',function(){
+            var note=$('#hm-status-note').val()||'';
+            if(!note&&status==='Late'){alert('Please add a note for why the patient is late.');return;}
+            $('.hm-modal-bg').remove();$(document).off('.noteclose .notesave');
+            self.doStatusChange(a,status,note);
+        });
+    },
+
+    // ── Reschedule modal — note + new date/time ──
+    openRescheduleModal:function(a){
+        var self=this;
+        var h='<div class="hm-modal-bg open"><div class="hm-modal hm-modal--sm">';
+        h+='<div class="hm-modal-hd"><h3>Reschedule — '+esc(a.patient_name||'')+'</h3><button class="hm-close hm-resched-close">'+IC.x+'</button></div>';
+        h+='<div class="hm-modal-body">';
+        h+='<div class="hm-fld"><label>Reason for rescheduling</label><textarea class="hm-inp" id="hm-resched-note" rows="2" placeholder="Add a note..."></textarea></div>';
+        h+='<div class="hm-row"><div class="hm-fld"><label>New Date</label><input type="date" class="hm-inp" id="hm-resched-date" value=""></div>';
+        h+='<div class="hm-fld"><label>New Time</label><input type="time" class="hm-inp" id="hm-resched-time" value="'+(a.start_time||'09:00').substring(0,5)+'"></div></div>';
+        h+='</div>';
+        h+='<div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hm-resched-close">Cancel</button><button class="hm-btn hm-btn--primary hm-resched-save">Reschedule</button></div></div>';
+        h+='</div></div>';
+        $('body').append(h);
+        $(document).off('click.reschedclose').on('click.reschedclose','.hm-resched-close',function(){$('.hm-modal-bg').remove();$(document).off('.reschedclose .reschedsave');});
+        $(document).off('click.reschedsave').on('click.reschedsave','.hm-resched-save',function(){
+            var note=$('#hm-resched-note').val()||'';
+            var nd=$('#hm-resched-date').val();
+            var nt=$('#hm-resched-time').val();
+            if(!nd||!nt){alert('Please select a new date and time.');return;}
+            $('.hm-modal-bg').remove();$(document).off('.reschedclose .reschedsave');
+            self.doStatusChange(a,'Rescheduled',note,{new_date:nd,new_time:nt});
+        });
+    },
+
+    // ── Quick add notes modal ──
+    openQuickNoteModal:function(a){
+        if(!a.patient_id){alert('No patient linked to this appointment.');return;}
+        var h='<div class="hm-modal-bg open"><div class="hm-modal hm-modal--sm">';
+        h+='<div class="hm-modal-hd"><h3>Quick Note — '+esc(a.patient_name||'')+'</h3><button class="hm-close hm-qn-close">'+IC.x+'</button></div>';
+        h+='<div class="hm-modal-body">';
+        h+='<div class="hm-fld"><label>Note</label><textarea class="hm-inp" id="hm-qn-text" rows="3" placeholder="Type your note..." autofocus></textarea></div>';
+        h+='</div>';
+        h+='<div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hm-qn-close">Cancel</button><button class="hm-btn hm-btn--primary hm-qn-save">Save Note</button></div></div>';
+        h+='</div></div>';
+        $('body').append(h);
+        setTimeout(function(){$('#hm-qn-text').focus();},100);
+        $(document).off('click.qnclose').on('click.qnclose','.hm-qn-close',function(){$('.hm-modal-bg').remove();$(document).off('.qnclose .qnsave');});
+        $(document).off('click.qnsave').on('click.qnsave','.hm-qn-save',function(){
+            var txt=$('#hm-qn-text').val()||'';
+            if(!txt){alert('Please enter a note.');return;}
+            var $btn=$(this);$btn.prop('disabled',true).text('Saving...');
+            post('save_patient_note',{patient_id:a.patient_id,note_type:'Manual',note_text:txt}).then(function(r){
+                if(r.success){$('.hm-modal-bg').remove();$(document).off('.qnclose .qnsave');Cal.toast('Note saved to patient file');}
+                else{$btn.prop('disabled',false).text('Save Note');alert('Error saving note');}
+            }).fail(function(){$btn.prop('disabled',false).text('Save Note');alert('Network error');});
+        });
+    },
+
+    // ── Toast notification ──
+    toast:function(msg){
+        var $t=$('<div class="hm-toast">'+esc(msg)+'</div>');
+        $('body').append($t);
+        setTimeout(function(){$t.addClass('show');},10);
+        setTimeout(function(){$t.removeClass('show');setTimeout(function(){$t.remove();},300);},3000);
     },
 
     onSlot:function(el){var d=el.dataset;this.openNewApptModal(d.date,d.time,parseInt(d.disp));},
@@ -745,7 +951,7 @@ var Cal={
                 '<div class="hm-row"><div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hmn-service">'+svcOpts+'</select></div>'+
                 '<div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hmn-clinic">'+cliOpts+'</select></div></div>'+
                 '<div class="hm-row"><div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hmn-disp">'+self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(parseInt(d.id)===dispId?' selected':'')+'>'+esc(d.name)+'</option>';}).join('')+'</select></div>'+
-                '<div class="hm-fld"><label>Status</label><select class="hm-inp" id="hmn-status"><option>Confirmed</option><option>Pending</option></select></div></div>'+
+                '<div class="hm-fld"><label>Status</label><select class="hm-inp" id="hmn-status"><option selected>Not Confirmed</option><option>Confirmed</option><option>Pending</option></select></div></div>'+
                 '<div class="hm-row"><div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hmn-date" value="'+date+'"></div>'+
                 '<div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hmn-time" value="'+time+'"></div></div>'+
                 '<div class="hm-row"><div class="hm-fld"><label>Duration</label><select class="hm-inp" id="hmn-duration">'+

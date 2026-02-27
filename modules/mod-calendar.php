@@ -56,6 +56,7 @@ add_action( 'wp_ajax_hm_get_exclusion_types',  'hm_ajax_get_exclusion_types' );
 add_action( 'wp_ajax_hm_create_patient',       'hm_ajax_create_patient_from_calendar' );
 add_action( 'wp_ajax_hm_get_outcome_templates', 'hm_ajax_get_outcome_templates' );
 add_action( 'wp_ajax_hm_save_appointment_outcome', 'hm_ajax_save_appointment_outcome' );
+add_action( 'wp_ajax_hm_update_appointment_status', 'hm_ajax_update_appointment_status' );
 
 // ================================================================
 // CALENDAR SETTINGS
@@ -486,7 +487,7 @@ function hm_ajax_get_appointments() {
             'start_time'            => $r->start_time,
             'end_time'              => $r->end_time ?? '',
             'duration'              => (int) ($r->service_duration ?: 30),
-            'status'                => $r->appointment_status ?: 'Confirmed',
+            'status'                => $r->appointment_status ?: 'Not Confirmed',
             'location_type'         => $r->location_type ?? 'Clinic',
             'notes'                 => $r->notes ?? '',
             'outcome'               => $r->outcome ?? '',
@@ -536,7 +537,7 @@ function hm_ajax_create_appointment() {
         'start_time'         => $st,
         'end_time'           => $et,
         'duration_minutes'   => $dur,
-        'appointment_status' => sanitize_text_field( $_POST['status'] ?? 'Confirmed' ),
+        'appointment_status' => sanitize_text_field( $_POST['status'] ?? 'Not Confirmed' ),
         'location_type'      => sanitize_text_field( $_POST['location_type'] ?? 'Clinic' ),
         'referring_source'   => sanitize_text_field( $_POST['referring_source'] ?? '' ),
         'notes'              => sanitize_textarea_field( $_POST['notes'] ?? '' ),
@@ -628,6 +629,188 @@ function hm_ajax_update_appointment() {
     wp_send_json_success( [ 'id' => $id ] );
     } catch ( Throwable $e ) {
         error_log( '[HearMed] update_appointment error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+// ================================================================
+// APPOINTMENT STATUS CHANGE — with notes + notifications
+// ================================================================
+function hm_ajax_update_appointment_status() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    try {
+        $id     = intval( $_POST['appointment_id'] );
+        $status = sanitize_text_field( $_POST['status'] ?? '' );
+        $note   = sanitize_textarea_field( $_POST['note'] ?? '' );
+
+        if ( ! $id || ! $status ) {
+            wp_send_json_error( 'Missing appointment_id or status' );
+            return;
+        }
+
+        $db  = HearMed_DB::instance();
+        $t   = HearMed_Portal::table( 'appointments' );
+
+        // Fetch current appointment for context
+        $appt = $db->get_row(
+            "SELECT a.*, p.first_name AS patient_first, p.last_name AS patient_last,
+                    p.patient_number,
+                    sv.service_name,
+                    COALESCE(sv.service_color, '#3B82F6') AS service_colour,
+                    (st.first_name || ' ' || st.last_name) AS dispenser_name
+             FROM hearmed_core.appointments a
+             LEFT JOIN hearmed_core.patients p ON a.patient_id = p.id
+             LEFT JOIN hearmed_reference.staff st ON a.staff_id = st.id
+             LEFT JOIN hearmed_reference.services sv ON sv.id = a.service_id
+             WHERE a.id = \$1",
+            [ $id ]
+        );
+        if ( ! $appt ) { wp_send_json_error( 'Appointment not found' ); return; }
+
+        $patient_name = trim( ( $appt->patient_first ?? '' ) . ' ' . ( $appt->patient_last ?? '' ) ) ?: 'Walk-in';
+        $patient_id   = (int) ( $appt->patient_id ?? 0 );
+        $staff_id     = (int) ( $appt->staff_id ?? 0 );
+        $svc_name     = $appt->service_name ?? '';
+        $appt_date    = $appt->appointment_date ?? '';
+        $appt_time    = substr( $appt->start_time ?? '', 0, 5 );
+        $staff_user   = hm_notif_staff_id() ?: null;
+
+        $result = [ 'id' => $id, 'new_status' => $status ];
+
+        // --- Update status ---
+        $update = [ 'appointment_status' => $status, 'updated_at' => current_time( 'mysql' ) ];
+        $db->update( $t, $update, [ 'id' => $id ] );
+        HearMed_Portal::log( 'status_change', 'appointment', $id, [ 'status' => $status ] );
+
+        // --- Per-status side-effects ---
+        switch ( $status ) {
+
+            case 'Confirmed':
+                // Add note to patient file
+                if ( $patient_id ) {
+                    $db->insert( 'hearmed_core.patient_notes', [
+                        'patient_id' => $patient_id,
+                        'note_type'  => 'Appointment',
+                        'note_text'  => "Appointment confirmed — {$svc_name} on {$appt_date} at {$appt_time}",
+                        'created_by' => $staff_user,
+                    ]);
+                }
+                break;
+
+            case 'Arrived':
+                // Send notification to dispenser
+                if ( $staff_id && class_exists( 'HearMed_Notifications' ) ) {
+                    HearMed_Notifications::create( $staff_id, 'appointment_arrived', [
+                        'subject'      => "Patient arrived — {$patient_name}",
+                        'message'      => "{$patient_name} has arrived for their {$appt_time} {$svc_name} appointment.",
+                        'patient_name' => $patient_name,
+                        'entity_type'  => 'appointment',
+                        'entity_id'    => $id,
+                        'created_by'   => $staff_user,
+                    ]);
+                }
+                break;
+
+            case 'Late':
+                // Send notification to dispenser with note
+                if ( $staff_id && class_exists( 'HearMed_Notifications' ) ) {
+                    $msg = "{$patient_name} is running late for their {$appt_time} {$svc_name} appointment.";
+                    if ( $note ) $msg .= "\nNote: {$note}";
+                    HearMed_Notifications::create( $staff_id, 'appointment_late', [
+                        'subject'      => "Patient running late — {$patient_name}",
+                        'message'      => $msg,
+                        'patient_name' => $patient_name,
+                        'entity_type'  => 'appointment',
+                        'entity_id'    => $id,
+                        'created_by'   => $staff_user,
+                    ]);
+                }
+                // Add note to patient file
+                if ( $patient_id && $note ) {
+                    $db->insert( 'hearmed_core.patient_notes', [
+                        'patient_id' => $patient_id,
+                        'note_type'  => 'Appointment',
+                        'note_text'  => "Running late — {$svc_name} on {$appt_date} at {$appt_time}. {$note}",
+                        'created_by' => $staff_user,
+                    ]);
+                }
+                break;
+
+            case 'Rescheduled':
+                // Notify dispenser
+                if ( $staff_id && class_exists( 'HearMed_Notifications' ) ) {
+                    $new_date = sanitize_text_field( $_POST['new_date'] ?? '' );
+                    $new_time = sanitize_text_field( $_POST['new_time'] ?? '' );
+                    $msg = "Appointment rescheduled — {$patient_name} ({$svc_name}, was {$appt_date} {$appt_time}).";
+                    if ( $new_date && $new_time ) $msg .= "\nNew: {$new_date} at {$new_time}.";
+                    if ( $note ) $msg .= "\nNote: {$note}";
+                    HearMed_Notifications::create( $staff_id, 'appointment_rescheduled', [
+                        'subject'      => "Appointment rescheduled — {$patient_name}",
+                        'message'      => $msg,
+                        'patient_name' => $patient_name,
+                        'entity_type'  => 'appointment',
+                        'entity_id'    => $id,
+                        'created_by'   => $staff_user,
+                    ]);
+                }
+                // Add note to patient file
+                if ( $patient_id ) {
+                    $note_text = "Appointment rescheduled — {$svc_name} on {$appt_date} at {$appt_time}.";
+                    if ( $note ) $note_text .= " {$note}";
+                    $db->insert( 'hearmed_core.patient_notes', [
+                        'patient_id' => $patient_id,
+                        'note_type'  => 'Appointment',
+                        'note_text'  => $note_text,
+                        'created_by' => $staff_user,
+                    ]);
+                }
+                // Create new appointment if date/time provided
+                $new_date = sanitize_text_field( $_POST['new_date'] ?? '' );
+                $new_time = sanitize_text_field( $_POST['new_time'] ?? '' );
+                if ( $new_date && $new_time ) {
+                    $dur = (int) ( $appt->duration_minutes ?: 30 );
+                    $sp  = explode( ':', $new_time );
+                    $em  = intval( $sp[0] ) * 60 + intval( $sp[1] ?? 0 ) + $dur;
+                    $et  = sprintf( '%02d:%02d', floor( $em / 60 ), $em % 60 );
+                    $new_id = $db->insert( $t, [
+                        'patient_id'         => $patient_id,
+                        'staff_id'           => $staff_id,
+                        'clinic_id'          => (int) ( $appt->clinic_id ?? 0 ),
+                        'service_id'         => (int) ( $appt->service_id ?? 0 ),
+                        'appointment_date'   => $new_date,
+                        'start_time'         => $new_time,
+                        'end_time'           => $et,
+                        'duration_minutes'   => $dur,
+                        'appointment_status' => 'Not Confirmed',
+                        'location_type'      => $appt->location_type ?? 'Clinic',
+                        'notes'              => '',
+                        'created_by'         => get_current_user_id(),
+                        'created_at'         => current_time( 'mysql' ),
+                        'updated_at'         => current_time( 'mysql' ),
+                    ]);
+                    $result['new_appointment_id'] = $new_id;
+                }
+                break;
+
+            case 'Cancelled':
+                // Add note to patient file
+                if ( $patient_id ) {
+                    $note_text = "Appointment cancelled — {$svc_name} on {$appt_date} at {$appt_time}.";
+                    if ( $note ) $note_text .= " {$note}";
+                    $db->insert( 'hearmed_core.patient_notes', [
+                        'patient_id' => $patient_id,
+                        'note_type'  => 'Appointment',
+                        'note_text'  => $note_text,
+                        'created_by' => $staff_user,
+                    ]);
+                }
+                break;
+        }
+
+        wp_send_json_success( $result );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] update_appointment_status error: ' . $e->getMessage() );
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
     }
 }

@@ -134,11 +134,13 @@ class HearMed_Admin_Calendar_Settings {
                                 <div class="hm-preview-wrap">
                                     <div class="hm-preview-label">Live Preview</div>
                                     <div class="hm-preview-status-bar">
+                                        <button type="button" class="hm-prev-status" data-status="Not Confirmed">Not Confirmed</button>
                                         <button type="button" class="hm-prev-status on" data-status="Confirmed">Confirmed</button>
                                         <button type="button" class="hm-prev-status" data-status="Arrived">Arrived</button>
                                         <button type="button" class="hm-prev-status" data-status="Completed">Completed</button>
                                         <button type="button" class="hm-prev-status" data-status="Cancelled">Cancelled</button>
                                         <button type="button" class="hm-prev-status" data-status="No Show">No Show</button>
+                                        <button type="button" class="hm-prev-status" data-status="Rescheduled">Rescheduled</button>
                                     </div>
                                     <div class="hm-preview-card" id="hm-preview-card">
                                         <!-- JS renders preview card here -->
@@ -266,6 +268,7 @@ class HearMed_Admin_Calendar_Settings {
                                 <div class="hm-srow-help" style="margin-bottom:10px">Customise the badge colours for each appointment status.</div>
                                 <?php
                                 $badge_defaults = [
+                                    'Not Confirmed'=>['bg'=>'#fefce8','color'=>'#854d0e','border'=>'#fde68a'],
                                     'Confirmed'   => ['bg'=>'#eff6ff','color'=>'#1e40af','border'=>'#bfdbfe'],
                                     'Arrived'     => ['bg'=>'#ecfdf5','color'=>'#065f46','border'=>'#a7f3d0'],
                                     'In Progress' => ['bg'=>'#fff7ed','color'=>'#9a3412','border'=>'#fed7aa'],
@@ -274,6 +277,7 @@ class HearMed_Admin_Calendar_Settings {
                                     'Late'        => ['bg'=>'#fffbeb','color'=>'#92400e','border'=>'#fde68a'],
                                     'Pending'     => ['bg'=>'#f5f3ff','color'=>'#5b21b6','border'=>'#ddd6fe'],
                                     'Cancelled'   => ['bg'=>'#fef2f2','color'=>'#991b1b','border'=>'#fecaca'],
+                                    'Rescheduled' => ['bg'=>'#f0f9ff','color'=>'#0c4a6e','border'=>'#bae6fd'],
                                 ];
                                 $saved_badges = is_array($saved['status_badge_colours'] ?? null) ? $saved['status_badge_colours'] : $badge_defaults;
                                 foreach ($badge_defaults as $status => $defs):
