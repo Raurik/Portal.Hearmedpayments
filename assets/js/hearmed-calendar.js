@@ -59,6 +59,14 @@ var STATUS_MAP_DEFAULTS={
 };
 var STATUS_MAP=STATUS_MAP_DEFAULTS;
 
+// Status card style defaults for Cancelled / No Show / Rescheduled
+var SCS_DEFAULTS={
+    Cancelled:{pattern:'striped',overlayColor:'#ef4444',overlayOpacity:10,label:'CANCELLED',labelColor:'#7f1d1d',labelSize:8,contentOpacity:35,halfWidth:true},
+    'No Show':{pattern:'striped',overlayColor:'#f59e0b',overlayOpacity:8,label:'',labelColor:'#92400e',labelSize:8,contentOpacity:35,halfWidth:false},
+    Rescheduled:{pattern:'striped',overlayColor:'#0e7490',overlayOpacity:10,label:'Rescheduled',labelColor:'#155e75',labelSize:8,contentOpacity:35,halfWidth:true}
+};
+var SCS_MAP=SCS_DEFAULTS;
+
 // ═══ ROUTER ═══
 var App={
     init:function(){
@@ -140,6 +148,16 @@ var Cal={
             for(var k2 in s.status_badge_colours){
                 if(s.status_badge_colours[k2]&&typeof s.status_badge_colours[k2]==='object'){
                     STATUS_MAP[k2]=s.status_badge_colours[k2];
+                }
+            }
+        }
+        // Override SCS_MAP with saved status card styles
+        if(s.status_card_styles&&typeof s.status_card_styles==='object'){
+            SCS_MAP={};
+            for(var sk in SCS_DEFAULTS){SCS_MAP[sk]=SCS_DEFAULTS[sk];}
+            for(var sk2 in s.status_card_styles){
+                if(s.status_card_styles[sk2]&&typeof s.status_card_styles[sk2]==='object'){
+                    SCS_MAP[sk2]=s.status_card_styles[sk2];
                 }
             }
         }
@@ -666,6 +684,7 @@ var Cal={
             var isCancelled=a.status==='Cancelled';
             var isNoShow=a.status==='No Show';
             var isRescheduled=a.status==='Rescheduled';
+            var scs=(isCancelled||isNoShow||isRescheduled)?SCS_MAP[a.status]||SCS_DEFAULTS[a.status]||null:null;
             var stCls=isCancelled?' cancelled':isNoShow?' noshow':isRescheduled?' rescheduled':'';
 
 
@@ -701,14 +720,15 @@ var Cal={
                 // No outcome — show a thin colour banner at top for non-solid styles
             }
 
-            // Cancelled / No Show / Rescheduled — card faded via CSS on .hm-appt-inner
-            var cardOpacity='';
+            // Cancelled / No Show / Rescheduled — content opacity from SCS settings
+            var contentOpStyle='';
+            if(scs){contentOpStyle='opacity:'+(scs.contentOpacity/100).toFixed(2)+';';}
 
-            var card='<div class="hm-appt hm-appt--'+cs+stCls+'" data-id="'+a._ID+'" style="'+bgStyle+';height:'+h+'px;top:'+off+'px;color:'+fontColor+cardOpacity+'">';
+            var card='<div class="hm-appt hm-appt--'+cs+stCls+'" data-id="'+a._ID+'" style="'+bgStyle+';height:'+h+'px;top:'+off+'px;color:'+fontColor+'">';
             card+=bannerHtml;
             // Kebab (3-dot) menu button
             card+='<button class="hm-appt-kebab" data-id="'+a._ID+'">'+IC.dots+'</button>';
-            card+='<div class="hm-appt-inner">';
+            card+='<div class="hm-appt-inner" style="'+contentOpStyle+'">';
             var cFF=cfg.cardFontFamily||'Plus Jakarta Sans';
             var cFS=cfg.cardFontSize||11;
             var cFW=cfg.cardFontWeight||600;
@@ -735,15 +755,25 @@ var Cal={
                 if(metaParts.length)card+='<div class="hm-appt-meta" style="color:'+(cfg.apptMeta||'#38bdf8')+'">'+metaParts.join(' · ')+'</div>';
             }
             card+='</div>';
-            // Cancelled / No Show / Rescheduled overlay
-            if(isCancelled)card+='<div class="hm-appt-overlay hm-appt-overlay--cancel"><span>CANCELLED</span></div>';
-            else if(isNoShow)card+='<div class="hm-appt-overlay hm-appt-overlay--noshow"></div>';
-            else if(isRescheduled)card+='<div class="hm-appt-overlay hm-appt-overlay--resched"><span>Rescheduled</span></div>';
+            // Dynamic overlay from status card styles
+            if(scs&&scs.pattern!=='none'){
+                var oC=scs.overlayColor||'#ef4444';
+                var oA=((scs.overlayOpacity||10)/100).toFixed(2);
+                var rr=parseInt(oC.slice(1,3),16),gg=parseInt(oC.slice(3,5),16),bb=parseInt(oC.slice(5,7),16);
+                var rgba='rgba('+rr+','+gg+','+bb+','+oA+')';
+                var overlayBg='transparent';
+                if(scs.pattern==='striped')overlayBg='repeating-linear-gradient(135deg,'+rgba+','+rgba+' 5px,transparent 5px,transparent 10px)';
+                else if(scs.pattern==='crosshatch')overlayBg='repeating-linear-gradient(135deg,'+rgba+','+rgba+' 3px,transparent 3px,transparent 8px),repeating-linear-gradient(45deg,'+rgba+','+rgba+' 3px,transparent 3px,transparent 8px)';
+                else if(scs.pattern==='dots')overlayBg='radial-gradient(circle 1.5px at 6px 6px,'+rgba+' 99%,transparent 100%)';
+                else if(scs.pattern==='solid')overlayBg=rgba;
+                var scsLbl=scs.label||'';
+                card+='<div class="hm-appt-overlay" style="background:'+overlayBg+';display:flex;align-items:center;justify-content:center;font-size:'+scs.labelSize+'px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:'+scs.labelColor+';text-shadow:0 0 2px rgba(255,255,255,0.9)"><span>'+esc(scsLbl)+'</span></div>';
+            }
             card+='</div>';
 
             var el=$(card);
-            // Cancelled / Rescheduled → halve the card width
-            if(isCancelled||isRescheduled){ el.css({right:'calc(50% + 1px)'}); }
+            // Half-width from SCS settings
+            if(scs&&scs.halfWidth){ el.css({right:'calc(50% + 1px)'}); }
             $t.append(el);
 
             // Track for overlap detection

@@ -32,6 +32,13 @@ class HearMed_Admin_Calendar_Settings {
                 $arr['status_badge_colours'] = $decoded;
             }
         }
+        // Decode status_card_styles
+        if (isset($arr['status_card_styles']) && is_string($arr['status_card_styles'])) {
+            $decoded = json_decode($arr['status_card_styles'], true);
+            if (is_array($decoded)) {
+                $arr['status_card_styles'] = $decoded;
+            }
+        }
         return $arr;
     }
 
@@ -226,6 +233,78 @@ class HearMed_Admin_Calendar_Settings {
                                         <label class="hm-badge-pick">Border <input type="color" class="hm-color-inp hm-badge-inp" name="sbadge_<?php echo $slug; ?>_border" value="<?php echo esc_attr($cur['border'] ?? $defs['border']); ?>"></label>
                                         <span class="hm-prev-badge" style="background:<?php echo esc_attr($cur['bg'] ?? $defs['bg']); ?>;color:<?php echo esc_attr($cur['color'] ?? $defs['color']); ?>;border:1px solid <?php echo esc_attr($cur['border'] ?? $defs['border']); ?>;"><?php echo esc_html($status); ?></span>
                                     </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                        <!-- Card — Status Card Styles (Cancelled / No Show / Rescheduled) -->
+                        <div class="hm-card">
+                            <div class="hm-card-hd"><h3 class="hm-card-title">Status Card Styles</h3></div>
+                            <div class="hm-card-body">
+                                <div class="hm-srow-help" style="margin-bottom:12px">Customise how Cancelled, No Show and Rescheduled appointment cards look on the calendar — overlay pattern, colours, text and sizing.</div>
+                                <?php
+                                $scs_defaults = [
+                                    'Cancelled' => [
+                                        'pattern'       => 'striped',
+                                        'overlayColor'  => '#ef4444',
+                                        'overlayOpacity'=> 10,
+                                        'label'         => 'CANCELLED',
+                                        'labelColor'    => '#7f1d1d',
+                                        'labelSize'     => 8,
+                                        'contentOpacity'=> 35,
+                                        'halfWidth'     => true,
+                                    ],
+                                    'No Show' => [
+                                        'pattern'       => 'striped',
+                                        'overlayColor'  => '#f59e0b',
+                                        'overlayOpacity'=> 8,
+                                        'label'         => '',
+                                        'labelColor'    => '#92400e',
+                                        'labelSize'     => 8,
+                                        'contentOpacity'=> 35,
+                                        'halfWidth'     => false,
+                                    ],
+                                    'Rescheduled' => [
+                                        'pattern'       => 'striped',
+                                        'overlayColor'  => '#0e7490',
+                                        'overlayOpacity'=> 10,
+                                        'label'         => 'Rescheduled',
+                                        'labelColor'    => '#155e75',
+                                        'labelSize'     => 8,
+                                        'contentOpacity'=> 35,
+                                        'halfWidth'     => true,
+                                    ],
+                                ];
+                                $saved_scs = is_array($saved['status_card_styles'] ?? null) ? $saved['status_card_styles'] : $scs_defaults;
+                                foreach ($scs_defaults as $scs_status => $scs_defs):
+                                    $scs_slug = strtolower(str_replace(' ', '_', $scs_status));
+                                    $scs_cur = $saved_scs[$scs_status] ?? $scs_defs;
+                                ?>
+                                <div class="hm-scs-block" data-status="<?php echo esc_attr($scs_status); ?>">
+                                    <div style="font-size:12px;font-weight:700;color:#334155;margin:14px 0 8px;border-bottom:1px solid var(--hm-border,#e2e8f0);padding-bottom:6px;"><?php echo esc_html($scs_status); ?></div>
+
+                                    <div class="hm-srow"><span class="hm-slbl">Overlay pattern</span><span class="hm-sval">
+                                        <select class="hm-scs-inp" name="scs_<?php echo $scs_slug; ?>_pattern">
+                                            <?php foreach (['none'=>'None','striped'=>'Diagonal Stripes','crosshatch'=>'Cross-hatch','dots'=>'Dots','solid'=>'Solid Fill'] as $pv=>$pl): ?>
+                                            <option value="<?php echo $pv; ?>" <?php selected($scs_cur['pattern'] ?? $scs_defs['pattern'], $pv); ?>><?php echo $pl; ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </span></div>
+
+                                    <div class="hm-srow"><span class="hm-slbl">Overlay colour</span><div class="hm-sval hm-color-pick"><input type="color" class="hm-color-inp hm-scs-inp" name="scs_<?php echo $scs_slug; ?>_overlayColor" value="<?php echo esc_attr($scs_cur['overlayColor'] ?? $scs_defs['overlayColor']); ?>"></div></div>
+
+                                    <div class="hm-srow"><span class="hm-slbl">Overlay opacity</span><span class="hm-sval"><div class="hm-range-wrap"><input type="range" class="hm-range hm-scs-inp" name="scs_<?php echo $scs_slug; ?>_overlayOpacity" min="0" max="50" value="<?php echo intval($scs_cur['overlayOpacity'] ?? $scs_defs['overlayOpacity']); ?>"><span class="hm-range-val hm-scs-opacity-val"><?php echo intval($scs_cur['overlayOpacity'] ?? $scs_defs['overlayOpacity']); ?>%</span></div></span></div>
+
+                                    <div class="hm-srow"><span class="hm-slbl">Overlay label</span><span class="hm-sval"><input type="text" class="hm-scs-inp" name="scs_<?php echo $scs_slug; ?>_label" value="<?php echo esc_attr($scs_cur['label'] ?? $scs_defs['label']); ?>" placeholder="e.g. CANCELLED" style="width:120px;"></span></div>
+
+                                    <div class="hm-srow"><span class="hm-slbl">Label colour</span><div class="hm-sval hm-color-pick"><input type="color" class="hm-color-inp hm-scs-inp" name="scs_<?php echo $scs_slug; ?>_labelColor" value="<?php echo esc_attr($scs_cur['labelColor'] ?? $scs_defs['labelColor']); ?>"></div></div>
+
+                                    <div class="hm-srow"><span class="hm-slbl">Label size</span><span class="hm-sval"><div class="hm-range-wrap"><input type="range" class="hm-range hm-scs-inp" name="scs_<?php echo $scs_slug; ?>_labelSize" min="6" max="14" value="<?php echo intval($scs_cur['labelSize'] ?? $scs_defs['labelSize']); ?>"><span class="hm-range-val hm-scs-labelsize-val"><?php echo intval($scs_cur['labelSize'] ?? $scs_defs['labelSize']); ?>px</span></div></span></div>
+
+                                    <div class="hm-srow"><span class="hm-slbl">Content opacity</span><span class="hm-sval"><div class="hm-range-wrap"><input type="range" class="hm-range hm-scs-inp" name="scs_<?php echo $scs_slug; ?>_contentOpacity" min="10" max="100" value="<?php echo intval($scs_cur['contentOpacity'] ?? $scs_defs['contentOpacity']); ?>"><span class="hm-range-val hm-scs-content-val"><?php echo intval($scs_cur['contentOpacity'] ?? $scs_defs['contentOpacity']); ?>%</span></div></span></div>
+
+                                    <div class="hm-srow"><span class="hm-slbl">Half-width card</span><label class="hm-toggle"><input type="checkbox" class="hm-scs-inp" name="scs_<?php echo $scs_slug; ?>_halfWidth" value="1" <?php if($scs_cur['halfWidth'] ?? $scs_defs['halfWidth']) echo 'checked'; ?>><span class="hm-toggle-track"></span></label></div>
                                 </div>
                                 <?php endforeach; ?>
                             </div>

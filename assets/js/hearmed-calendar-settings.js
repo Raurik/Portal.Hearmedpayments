@@ -83,6 +83,26 @@ var SettingsPage = {
         return map;
     },
 
+    /* ─── Read status card styles (Cancelled / No Show / Rescheduled) ─── */
+    getStatusCardStyles: function(){
+        var map = {};
+        var statuses = ['Cancelled','No Show','Rescheduled'];
+        statuses.forEach(function(s){
+            var slug = s.toLowerCase().replace(/ /g, '_');
+            map[s] = {
+                pattern:        $('[name="scs_'+slug+'_pattern"]').val() || 'striped',
+                overlayColor:   $('[name="scs_'+slug+'_overlayColor"]').val() || '#ef4444',
+                overlayOpacity: parseInt($('[name="scs_'+slug+'_overlayOpacity"]').val()) || 10,
+                label:          $('[name="scs_'+slug+'_label"]').val() || '',
+                labelColor:     $('[name="scs_'+slug+'_labelColor"]').val() || '#7f1d1d',
+                labelSize:      parseInt($('[name="scs_'+slug+'_labelSize"]').val()) || 8,
+                contentOpacity: parseInt($('[name="scs_'+slug+'_contentOpacity"]').val()) || 35,
+                halfWidth:      $('[name="scs_'+slug+'_halfWidth"]').is(':checked')
+            };
+        });
+        return map;
+    },
+
     /* ─── Status selector for preview ─── */
     bindPreviewStatus: function(){
         var self = this;
@@ -127,6 +147,15 @@ var SettingsPage = {
             var color = $row.find('input[name$="_color"]').val();
             var border = $row.find('input[name$="_border"]').val();
             $row.find('.hm-prev-badge').css({background:bg, color:color, 'border-color':border});
+        });
+        // Status card style inputs — live preview + range value labels
+        $(document).on('input change', '.hm-scs-inp', function(){
+            var $wrap = $(this).closest('.hm-srow');
+            if ($(this).attr('type') === 'range') {
+                var v = $(this).val();
+                $wrap.find('.hm-range-val').text(v + ($(this).attr('name').indexOf('Size') > -1 ? 'px' : '%'));
+            }
+            self.renderPreview();
         });
     },
 
@@ -178,6 +207,12 @@ var SettingsPage = {
 
         var isCancelled = status === 'Cancelled';
         var isNoShow = status === 'No Show';
+        var isRescheduled = status === 'Rescheduled';
+
+        // Get status card style settings for this status
+        var scsAll = self.getStatusCardStyles();
+        var scs = scsAll[status] || null;
+        var hasOverlay = scs && (isCancelled || isNoShow || isRescheduled);
 
         // Map slot height to pixel height for the preview card
         var htMap = {compact:57, regular:75, large:97};
@@ -218,10 +253,15 @@ var SettingsPage = {
         // Status badge — use per-status colours from inputs
         var st = self.getStatusBadgeColours()[status] || STATUS_DEFAULTS[status] || STATUS_DEFAULTS.Confirmed;
 
-        // Cancelled / No Show overlay
+        // Overlay class + content opacity from status card styles
         var overlayClass = '';
-        if (isCancelled) overlayClass = ' hm-prev--cancelled';
-        else if (isNoShow) overlayClass = ' hm-prev--noshow';
+        var contentOpStyle = '';
+        if (hasOverlay && scs) {
+            if (isCancelled) overlayClass = ' hm-prev--cancelled';
+            else if (isNoShow) overlayClass = ' hm-prev--noshow';
+            else if (isRescheduled) overlayClass = ' hm-prev--rescheduled';
+            contentOpStyle = 'opacity:' + (scs.contentOpacity / 100).toFixed(2) + ';';
+        }
 
         // Patient name
         var ptName = displayFull ? 'Jane Smith' : 'Jane';
@@ -230,7 +270,7 @@ var SettingsPage = {
         // Build card
         var h = '<div class="hm-prev-card'+overlayClass+'" style="'+bgStyle+';border-radius:6px;position:relative;overflow:hidden;height:'+cardH+'px">';
         h += bannerH;
-        h += '<div style="padding:3px 6px;overflow:hidden">';
+        h += '<div style="padding:3px 6px;overflow:hidden;'+contentOpStyle+'">';
         if (showApptType) h += '<div style="font-size:'+(cardFS-1)+'px;font-weight:'+cardFW+';font-family:\''+cardFF+'\',sans-serif;text-transform:uppercase;letter-spacing:.2px;color:'+svcColor+';line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Follow-up</div>';
         h += '<div style="font-size:'+cardFS+'px;font-weight:'+cardFW+';font-family:\''+cardFF+'\',sans-serif;color:'+ptColor+';line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+timePre+ptName+'</div>';
         if (showTime && cardH > 44) {
@@ -246,7 +286,20 @@ var SettingsPage = {
         }
         if (showClinic && cardH > 56) h += '<div style="font-size:8px;color:'+metaCol+';line-height:1.3;white-space:nowrap">Main Clinic</div>';
         h += '</div>';
-        if (isCancelled || isNoShow) h += '<div class="hm-prev-overlay">'+(isCancelled?'Cancelled':'No Show')+'</div>';
+        // Dynamic overlay from status card styles
+        if (hasOverlay && scs && scs.pattern !== 'none') {
+            var oC = scs.overlayColor || '#ef4444';
+            var oA = ((scs.overlayOpacity || 10) / 100).toFixed(2);
+            var r2=parseInt(oC.slice(1,3),16), g2=parseInt(oC.slice(3,5),16), b2=parseInt(oC.slice(5,7),16);
+            var rgba = 'rgba('+r2+','+g2+','+b2+','+oA+')';
+            var overlayBg = 'transparent';
+            if (scs.pattern === 'striped') overlayBg = 'repeating-linear-gradient(135deg,'+rgba+','+rgba+' 5px,transparent 5px,transparent 10px)';
+            else if (scs.pattern === 'crosshatch') overlayBg = 'repeating-linear-gradient(135deg,'+rgba+','+rgba+' 3px,transparent 3px,transparent 8px),repeating-linear-gradient(45deg,'+rgba+','+rgba+' 3px,transparent 3px,transparent 8px)';
+            else if (scs.pattern === 'dots') overlayBg = 'radial-gradient(circle 1.5px at 6px 6px,'+rgba+' 99%,transparent 100%)';
+            else if (scs.pattern === 'solid') overlayBg = rgba;
+            var lbl = scs.label || '';
+            h += '<div style="position:absolute;inset:0;pointer-events:none;z-index:1;background:'+overlayBg+';display:flex;align-items:center;justify-content:center;font-size:'+scs.labelSize+'px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:'+scs.labelColor+';text-shadow:0 0 2px rgba(255,255,255,0.9)">'+lbl+'</div>';
+        }
         h += '</div>';
 
         $target.html(h);
@@ -336,6 +389,9 @@ var SettingsPage = {
 
         // Status badge colours — serialize as JSON
         data.status_badge_colours = JSON.stringify(this.getStatusBadgeColours());
+
+        // Status card styles (Cancelled / No Show / Rescheduled) — serialize as JSON
+        data.status_card_styles = JSON.stringify(this.getStatusCardStyles());
 
         $.ajax({
             url: (window.HM && HM.ajax_url) || '/wp-admin/admin-ajax.php',

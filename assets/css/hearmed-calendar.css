@@ -510,15 +510,11 @@
   box-shadow: none;
 }
 
-/* No Show / Cancelled opacity */
+/* No Show / Cancelled / Rescheduled — opacity now driven by status_card_styles (JS inline) */
+.hm-appt.cancelled,
 .hm-appt.noshow,
-.hm-appt.cancelled {
-  opacity: 0.55;
-}
-
-.hm-appt.noshow:hover,
-.hm-appt.cancelled:hover {
-  opacity: 0.7;
+.hm-appt.rescheduled {
+  opacity: 1;
 }
 
 /* ── Badges row ── */
@@ -544,80 +540,12 @@
   font-size: 8px;
 }
 
-/* ── Cancelled / No Show diagonal overlay ── */
+/* ── Status overlay (positioned, styled inline by JS via status_card_styles) ── */
 .hm-appt-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
-}
-.hm-appt-overlay--cancel {
-  background: repeating-linear-gradient(
-    135deg,
-    rgba(239,68,68,0.10),
-    rgba(239,68,68,0.10) 5px,
-    transparent 5px,
-    transparent 10px
-  );
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: #7f1d1d;
-  text-shadow: 0 0 2px rgba(255,255,255,0.9);
-}
-.hm-appt-overlay--noshow {
-  background: repeating-linear-gradient(
-    135deg,
-    rgba(245,158,11,0.08),
-    rgba(245,158,11,0.08) 5px,
-    transparent 5px,
-    transparent 10px
-  );
-}
-
-
-/* ── Faded content for cancelled / no-show / rescheduled ── */
-.hm-appt.cancelled .hm-appt-inner,
-.hm-appt.cancelled .hm-appt-outcome,
-.hm-appt.cancelled .hm-appt-kebab,
-.hm-appt.noshow .hm-appt-inner,
-.hm-appt.noshow .hm-appt-outcome,
-.hm-appt.noshow .hm-appt-kebab,
-.hm-appt.rescheduled .hm-appt-inner,
-.hm-appt.rescheduled .hm-appt-outcome,
-.hm-appt.rescheduled .hm-appt-kebab {
-  opacity: .35;
-}
-.hm-appt.cancelled,
-.hm-appt.noshow,
-.hm-appt.rescheduled {
-  opacity: 1;
-}
-.hm-appt-overlay--resched {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  background: repeating-linear-gradient(
-    135deg,
-    rgba(14,116,144,0.10),
-    rgba(14,116,144,0.10) 5px,
-    transparent 5px,
-    transparent 10px
-  );
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: #155e75;
-  text-shadow: 0 0 2px rgba(255,255,255,0.9);
 }
 
 /* ── Kebab (3-dot) button on cards ── */

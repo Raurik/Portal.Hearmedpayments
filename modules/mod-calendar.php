@@ -93,6 +93,13 @@ function hm_ajax_get_settings() {
                     $arr['status_badge_colours'] = $decoded;
                 }
             }
+            // Decode status_card_styles
+            if ( isset( $arr['status_card_styles'] ) && is_string( $arr['status_card_styles'] ) ) {
+                $decoded = json_decode( $arr['status_card_styles'], true );
+                if ( is_array( $decoded ) ) {
+                    $arr['status_card_styles'] = $decoded;
+                }
+            }
             wp_send_json_success( $arr );
         } else {
             wp_send_json_success( [] );
@@ -130,6 +137,7 @@ function hm_ajax_save_settings() {
         $json_fields = [
             'enabled_days', 'calendar_order', 'appointment_statuses', 'working_days',
             'status_badge_colours',
+            'status_card_styles',
         ];
         
         // Checkbox fields — JS sends explicit '1' or '0'
