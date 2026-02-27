@@ -159,8 +159,8 @@ var SettingsPage = {
         var isNoShow = status === 'No Show';
 
         // Map slot height to pixel height for the preview card
-        var htMap = {compact:52, regular:68, large:88};
-        var cardH = htMap[slotH] || 68;
+        var htMap = {compact:57, regular:75, large:97};
+        var cardH = htMap[slotH] || 75;
 
         // Card style rendering
         var bgStyle = '', fontColor = font;
