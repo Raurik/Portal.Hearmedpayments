@@ -423,6 +423,10 @@ class HearMed_Enqueue {
             'hearmed_document_template_editor',
             'hearmed_form_templates',
             'hearmed_finance_form_builder',
+            // Global settings + roles
+            'hearmed_global_settings',
+            'hearmed_admin_roles',
+            'hearmed_clinical_review',
         ]);
     }
     

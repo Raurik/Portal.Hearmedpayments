@@ -44,7 +44,7 @@ class HearMed_Admin_Global_Settings {
                 <div class="hm-gs-col">
 
                     <!-- Company Branding -->
-                    <div class="hm-gs-card">
+                    <div class="hm-settings-panel">
                         <div class="hm-gs-card-header">
                             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z"/><path d="M8 12h8M12 8v8"/></svg>
                             Company Branding
@@ -85,7 +85,7 @@ class HearMed_Admin_Global_Settings {
                     </div>
 
                     <!-- Legal & Compliance -->
-                    <div class="hm-gs-card">
+                    <div class="hm-settings-panel">
                         <div class="hm-gs-card-header">
                             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z"/></svg>
                             Legal &amp; Compliance
@@ -114,7 +114,7 @@ class HearMed_Admin_Global_Settings {
                 <div class="hm-gs-col">
 
                     <!-- Backups -->
-                    <div class="hm-gs-card">
+                    <div class="hm-settings-panel">
                         <div class="hm-gs-card-header">
                             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1m-4-8-4-4m0 0L8 8m4-4v12"/></svg>
                             Database Backups
@@ -145,7 +145,7 @@ class HearMed_Admin_Global_Settings {
                     </div>
 
                     <!-- Preview -->
-                    <div class="hm-gs-card hm-gs-preview-card">
+                    <div class="hm-settings-panel hm-gs-preview-card">
                         <div class="hm-gs-card-header">
                             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                             Document Header Preview
@@ -170,7 +170,6 @@ class HearMed_Admin_Global_Settings {
             .hm-gs-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
             @media(max-width:860px){.hm-gs-grid{grid-template-columns:1fr;}}
             .hm-gs-col{display:flex;flex-direction:column;gap:16px;}
-            .hm-gs-card{background:var(--hm-surface);border:1px solid var(--hm-border);border-radius:var(--hm-radius);padding:18px 20px;}
             .hm-gs-card-header{font-size:13px;font-weight:700;color:var(--hm-text);display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--hm-border);}
             .hm-gs-card-header svg{color:var(--hm-teal);}
             .hm-gs-field{margin-bottom:14px;}

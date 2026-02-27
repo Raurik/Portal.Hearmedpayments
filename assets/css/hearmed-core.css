@@ -45,10 +45,14 @@
   --hm-bg-hover:    #f1f5f9;
   --hm-bg-card:     #ffffff;
   --hm-bg-input:    #ffffff;
+  --hm-surface:     #ffffff;           /* alias: card / panel background */
 
   /* ── Borders ── */
   --hm-border:       #e2e8f0;
   --hm-border-light: #f1f5f9;
+
+  /* ── Text shorthand aliases ── */
+  --hm-muted:        #94a3b8;          /* alias: same as --hm-text-muted */
 
   /* ── Status colours ── */
   --hm-green:   #10b981;

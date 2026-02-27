@@ -38,7 +38,7 @@ class HearMed_Admin_Finance_Form_Builder {
             </div>
 
             <!-- Global Logo -->
-            <div class="hm-ffb-logo-panel">
+            <div class="hm-settings-panel hm-ffb-logo-panel">
                 <div class="hm-ffb-logo-left">
                     <?php if ($global_logo_url): ?>
                         <img src="<?php echo esc_url($global_logo_url); ?>" alt="Company Logo" class="hm-ffb-logo-img" id="hm-ffb-logo-img">
@@ -73,7 +73,7 @@ class HearMed_Admin_Finance_Form_Builder {
             <div class="hm-ffb-panel" data-type="<?php echo $type; ?>" style="<?php echo $type !== 'invoice' ? 'display:none;' : ''; ?>">
                 <div class="hm-ffb-layout">
                     <!-- Builder controls -->
-                    <div class="hm-ffb-controls">
+                    <div class="hm-settings-panel hm-ffb-controls">
                         <div class="hm-ffb-section-title">Template Settings</div>
 
                         <div class="hm-ffb-field">
@@ -153,7 +153,7 @@ class HearMed_Admin_Finance_Form_Builder {
                     </div>
 
                     <!-- Live preview -->
-                    <div class="hm-ffb-preview">
+                    <div class="hm-settings-panel hm-ffb-preview">
                         <div class="hm-ffb-paper" data-type="<?php echo $type; ?>"></div>
                     </div>
                 </div>
@@ -166,8 +166,8 @@ class HearMed_Admin_Finance_Form_Builder {
             .hm-ffb-tab{padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--hm-muted);border-bottom:3px solid transparent;font-family:inherit;}
             .hm-ffb-tab.active{color:var(--hm-teal);font-weight:700;border-bottom-color:var(--hm-teal);}
             .hm-ffb-layout{display:grid;grid-template-columns:340px 1fr;gap:20px;}
-            .hm-ffb-controls{background:var(--hm-surface);border:1px solid var(--hm-border);border-radius:var(--hm-radius);padding:16px;}
-            .hm-ffb-preview{background:var(--hm-surface);border:1px solid var(--hm-border);border-radius:var(--hm-radius);padding:20px;min-height:300px;}
+            .hm-ffb-controls{padding:16px;}
+            .hm-ffb-preview{padding:20px;min-height:300px;}
             .hm-ffb-section-title{font-size:11px;font-weight:700;color:var(--hm-teal);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
             .hm-ffb-field{margin-bottom:10px;}
             .hm-ffb-field label{display:block;font-size:11px;color:var(--hm-muted);margin-bottom:3px;}
@@ -244,7 +244,7 @@ class HearMed_Admin_Finance_Form_Builder {
             .p-divider{height:1px;background:#e2e8f0;margin:10px 0;}
 
             /* Logo panel */
-            .hm-ffb-logo-panel{display:flex;align-items:center;gap:16px;background:var(--hm-surface);border:1px solid var(--hm-border);border-radius:var(--hm-radius);padding:14px 18px;margin-bottom:16px;}
+            .hm-ffb-logo-panel{display:flex;align-items:center;gap:16px;padding:14px 18px;margin-bottom:16px;}
             .hm-ffb-logo-left{flex-shrink:0;}
             .hm-ffb-logo-img{max-width:140px;max-height:56px;border:1px solid var(--hm-border);border-radius:6px;padding:4px;background:#fff;object-fit:contain;}
             .hm-ffb-logo-placeholder{display:flex;align-items:center;gap:8px;color:var(--hm-muted);font-size:11px;padding:10px 16px;border:2px dashed var(--hm-border);border-radius:8px;background:var(--hm-bg);}
