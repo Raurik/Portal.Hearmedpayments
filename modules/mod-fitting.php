@@ -1295,148 +1295,15 @@ function hm_ajax_fitting_receipt() {
         [$order->patient_id]
     );
 
+    // Build data object for template engine
+    $tpl_data = clone $order;
+    $tpl_data->invoice_number = $inv_number;
+    $tpl_data->invoice        = $invoice;
+    $tpl_data->items          = $items;
+    $tpl_data->payments       = $payments;
+    $tpl_data->devices        = $devices;
+
     header('Content-Type: text/html; charset=utf-8');
-    ?>
-<!DOCTYPE html>
-<html>
-<head>
-<title>Receipt — <?php echo esc_html($inv_number); ?></title>
-<style>
-@page { size: A4; margin: 15mm; }
-@media print { body { -webkit-print-color-adjust: exact; } .no-print { display: none !important; } }
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: #1e293b; line-height: 1.5; padding: 30px; max-width: 700px; margin: 0 auto; }
-.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid var(--hm-teal); }
-.header h1 { font-size: 24px; color: var(--hm-teal); }
-.header-sub { font-size: 11px; color: #64748b; }
-.header-meta { text-align: right; font-size: 11px; color: #64748b; }
-.header-meta strong { color: #1e293b; display: block; }
-.section { margin-bottom: 20px; }
-.section-title { font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
-.patient-info { background: #f8fafc; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; }
-.patient-info strong { font-size: 14px; }
-.patient-info div { font-size: 11px; color: #64748b; margin-top: 2px; }
-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-th { background: #f8fafc; text-align: left; padding: 8px 10px; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .3px; border-bottom: 2px solid #e2e8f0; }
-td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
-.money { text-align: right; }
-tfoot td { font-weight: 600; border-bottom: none; }
-tfoot tr:last-child td { font-size: 14px; color: var(--hm-teal); border-top: 2px solid #e2e8f0; }
-.payments-section { background: #f0fdfa; border-radius: 6px; padding: 14px 16px; margin-bottom: 16px; }
-.payments-section h3 { font-size: 11px; font-weight: 600; color: #065f46; text-transform: uppercase; margin-bottom: 8px; }
-.pay-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #d1fae5; }
-.pay-row:last-child { border-bottom: none; font-weight: 700; }
-.serials { font-size: 11px; color: #475569; margin-bottom: 16px; }
-.serials span { font-family: monospace; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; }
-.footer { margin-top: 30px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
-.status-paid { display: inline-block; background: #d1fae5; color: #065f46; padding: 4px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-top: 4px; }
-.print-btn { position: fixed; top: 10px; right: 10px; padding: 10px 20px; background: var(--hm-teal); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; z-index: 100; }
-.print-btn:hover { background: #0a9aa8; }
-</style>
-</head>
-<body>
-<button class="print-btn no-print" onclick="window.print()">Print Receipt</button>
-
-<div class="header">
-    <div>
-        <h1>HearMed</h1>
-        <div class="header-sub">Payment Receipt</div>
-    </div>
-    <div class="header-meta">
-        <strong>Invoice: <?php echo esc_html($inv_number); ?></strong>
-        <div>Date: <?php echo date('d M Y'); ?></div>
-        <div>Clinic: <?php echo esc_html($order->clinic_name); ?></div>
-        <?php if (!empty($order->clinic_phone)): ?><div>Phone: <?php echo esc_html($order->clinic_phone); ?></div><?php endif; ?>
-        <div class="status-paid">PAID</div>
-    </div>
-</div>
-
-<div class="patient-info">
-    <strong><?php echo esc_html($order->p_first . ' ' . $order->p_last); ?></strong>
-    <div>Patient #: <?php echo esc_html($order->patient_number); ?></div>
-    <?php
-    $addr = array_filter([
-        $order->address_line1 ?? '',
-        $order->address_line2 ?? '',
-        $order->city ?? '',
-        $order->county ?? '',
-        $order->eircode ?? '',
-    ]);
-    if ($addr): ?>
-    <div><?php echo esc_html(implode(', ', $addr)); ?></div>
-    <?php endif; ?>
-</div>
-
-<div class="section">
-    <div class="section-title">Items</div>
-    <table>
-        <thead>
-            <tr><th>Description</th><th>Ear</th><th>Qty</th><th class="hm-money">Unit Price</th><th class="hm-money">Total</th></tr>
-        </thead>
-        <tbody>
-        <?php foreach ($items ?: [] as $it): ?>
-        <tr>
-            <td><?php echo esc_html($it->product_name ?: $it->item_description); ?></td>
-            <td><?php echo esc_html($it->ear_side ?: '—'); ?></td>
-            <td><?php echo esc_html($it->quantity); ?></td>
-            <td class="hm-money">€<?php echo number_format((float)($it->unit_price ?? $it->unit_retail_price ?? 0), 2); ?></td>
-            <td class="hm-money">€<?php echo number_format((float)$it->line_total, 2); ?></td>
-        </tr>
-        <?php endforeach; ?>
-        </tbody>
-        <tfoot>
-            <tr><td colspan="4" class="hm-money">Subtotal</td><td class="hm-money">€<?php echo number_format((float)($invoice ? $invoice->subtotal : $order->subtotal), 2); ?></td></tr>
-            <?php if ((float)($invoice ? $invoice->discount_total : $order->discount_total) > 0): ?>
-            <tr><td colspan="4" class="hm-money">Discount</td><td class="hm-money">-€<?php echo number_format((float)($invoice ? $invoice->discount_total : $order->discount_total), 2); ?></td></tr>
-            <?php endif; ?>
-            <tr><td colspan="4" class="hm-money">VAT</td><td class="hm-money">€<?php echo number_format((float)($invoice ? $invoice->vat_total : $order->vat_total), 2); ?></td></tr>
-            <?php if ($order->prsi_applicable): ?>
-            <tr class="hm-text--teal"><td colspan="4" class="hm-money">PRSI Grant</td><td class="hm-money">-€<?php echo number_format((float)($order->prsi_amount ?? 0), 2); ?></td></tr>
-            <?php endif; ?>
-            <tr><td colspan="4" class="hm-money">Total Paid</td><td class="hm-money">€<?php echo number_format((float)($invoice ? $invoice->grand_total : $order->grand_total), 2); ?></td></tr>
-        </tfoot>
-    </table>
-</div>
-
-<?php if (!empty($payments)): ?>
-<div class="payments-section">
-    <h3>Payment Details</h3>
-    <?php $pay_total = 0; ?>
-    <?php foreach ($payments as $pm):
-        $pay_total += (float)$pm->amount;
-    ?>
-    <div class="pay-row">
-        <span><?php echo date('d M Y', strtotime($pm->payment_date)); ?> — <?php echo esc_html($pm->payment_method); ?></span>
-        <span>€<?php echo number_format((float)$pm->amount, 2); ?></span>
-    </div>
-    <?php endforeach; ?>
-    <div class="pay-row">
-        <span>Total Payments</span>
-        <span>€<?php echo number_format($pay_total, 2); ?></span>
-    </div>
-</div>
-<?php endif; ?>
-
-<?php if (!empty($devices)): ?>
-<div class="serials">
-    <strong>Device Serial Numbers:</strong><br>
-    <?php foreach ($devices as $dev): ?>
-        <?php echo esc_html($dev->product_name ?? 'Device'); ?>:
-        <?php if ($dev->serial_number_left): ?> L: <span><?php echo esc_html($dev->serial_number_left); ?></span><?php endif; ?>
-        <?php if ($dev->serial_number_right): ?> R: <span><?php echo esc_html($dev->serial_number_right); ?></span><?php endif; ?>
-        <br>
-    <?php endforeach; ?>
-</div>
-<?php endif; ?>
-
-<div class="footer">
-    <p>HearMed Acoustic Health Care Ltd — <?php echo esc_html($order->clinic_name); ?></p>
-    <p>Receipt generated <?php echo date('d M Y \a\t H:i'); ?> | Order: <?php echo esc_html($order->order_number); ?> | Invoice: <?php echo esc_html($inv_number); ?></p>
-    <p style="margin-top:4px;">Thank you for choosing HearMed.</p>
-</div>
-
-</body>
-</html>
-    <?php
+    echo HearMed_Print_Templates::render('invoice', $tpl_data);
     exit;
 }

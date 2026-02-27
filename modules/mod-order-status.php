@@ -560,118 +560,38 @@ function hm_ajax_os_order_pdf() {
         ];
     }
 
+    // Build data object for template engine
+    $tpl_data = clone $order;
+    $tpl_data->items = $items;
+
+    // Flatten first item's product info for display
+    if (!empty($items[0])) {
+        $first = $items[0];
+        foreach (['style', 'tech_level', 'product_code', 'manufacturer_name'] as $f) {
+            if (!isset($tpl_data->$f) && isset($first->$f)) {
+                $tpl_data->$f = $first->$f;
+            }
+        }
+    }
+
+    // Approval info
+    if (!empty($order->approved_by)) {
+        $approver = $db->get_row(
+            "SELECT CONCAT(first_name, ' ', last_name) AS name FROM hearmed_reference.staff WHERE id = \$1",
+            [$order->approved_by]
+        );
+        $tpl_data->approved_by_name = $approver ? $approver->name : '';
+        $tpl_data->approved_at      = $order->approved_at ?? $order->approved_date ?? '';
+    }
+
+    // Ear mould + notes
+    $tpl_data->ear_mould_type       = $order->ear_mould_type ?? '';
+    $tpl_data->ear_mould_vent       = $order->ear_mould_vent ?? '';
+    $tpl_data->ear_mould_material   = $order->ear_mould_material ?? '';
+    $tpl_data->special_instructions = $order->notes ?? '';
+
     header('Content-Type: text/html; charset=utf-8');
-    ?>
-<!DOCTYPE html>
-<html>
-<head>
-<title>Order <?php echo esc_html($order->order_number); ?> - Manufacturer Order Sheet</title>
-<style>
-@page { size: A4; margin: 15mm; }
-@media print { body { -webkit-print-color-adjust: exact; } .no-print { display: none !important; } }
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; color: #1e293b; line-height: 1.5; padding: 20px; }
-.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid var(--hm-teal); }
-.header h1 { font-size: 20px; color: var(--hm-teal); }
-.header-meta { text-align: right; font-size: 10px; color: #64748b; }
-.header-meta strong { color: #1e293b; }
-.section { margin-bottom: 16px; }
-.section-title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0; }
-.meta-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 10px; }
-.meta-item label { color: #94a3b8; font-size: 9px; text-transform: uppercase; letter-spacing: .3px; font-weight: 600; display: block; }
-.meta-item div { font-weight: 500; color: #1e293b; }
-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-th { background: #f8fafc; text-align: left; padding: 6px 8px; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .3px; border-bottom: 1px solid #e2e8f0; }
-td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; font-size: 11px; }
-.mfr-block { margin-bottom: 20px; page-break-inside: avoid; }
-.mfr-header { background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; }
-.mfr-name { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
-.mfr-contact { font-size: 10px; color: #475569; }
-.footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 9px; color: #94a3b8; text-align: center; }
-.print-btn { position: fixed; top: 10px; right: 10px; padding: 10px 20px; background: var(--hm-teal); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; z-index: 100; }
-.print-btn:hover { background: #0a9aa8; }
-</style>
-</head>
-<body>
-<button class="print-btn no-print" onclick="window.print()">Print / Save PDF</button>
-
-<div class="header">
-    <div>
-        <h1>HearMed</h1>
-        <div style="font-size:10px;color:#64748b;margin-top:2px;">Manufacturer Order Sheet</div>
-    </div>
-    <div class="header-meta">
-        <div><strong>Order:</strong> <?php echo esc_html($order->order_number); ?></div>
-        <div><strong>Date:</strong> <?php echo date('d M Y'); ?></div>
-        <div><strong>Clinic:</strong> <?php echo esc_html($order->clinic_name); ?></div>
-    </div>
-</div>
-
-<div class="section">
-    <div class="section-title">Order Details</div>
-    <div class="meta-grid">
-        <div class="meta-item"><label>Order Number</label><div><?php echo esc_html($order->order_number); ?></div></div>
-        <div class="meta-item"><label>H Number</label><div><?php echo esc_html($order->patient_number); ?></div></div>
-        <div class="meta-item"><label>Patient</label><div><?php echo esc_html($order->p_first . ' ' . $order->p_last); ?></div></div>
-        <div class="meta-item"><label>Dispenser</label><div><?php echo esc_html($order->dispenser_name); ?></div></div>
-        <div class="meta-item"><label>Clinic</label><div><?php echo esc_html($order->clinic_name); ?></div></div>
-        <div class="meta-item"><label>Order Date</label><div><?php echo esc_html(date('d M Y', strtotime($order->order_date))); ?></div></div>
-    </div>
-</div>
-
-<?php foreach ($by_mfr as $mfr): ?>
-<div class="mfr-block">
-    <div class="mfr-header">
-        <div class="mfr-name"><?php echo esc_html($mfr['name']); ?></div>
-        <div class="mfr-contact">
-            <?php if ($mfr['contact']): ?>Contact: <?php echo esc_html($mfr['contact']); ?> | <?php endif; ?>
-            <?php if ($mfr['email']): ?>Email: <?php echo esc_html($mfr['email']); ?> | <?php endif; ?>
-            <?php if ($mfr['phone']): ?>Phone: <?php echo esc_html($mfr['phone']); ?> | <?php endif; ?>
-            <?php if ($mfr['account']): ?>Account: <?php echo esc_html($mfr['account']); ?> | <?php endif; ?>
-            <?php if ($mfr['address']): ?><br>Address: <?php echo esc_html($mfr['address']); ?><?php endif; ?>
-        </div>
-    </div>
-    <table>
-        <thead>
-            <tr>
-                <th>Product</th><th>Code</th><th>Tech Level</th><th>Class</th>
-                <th>Style</th><th>Ear</th><th>Qty</th><th>Power</th><th>Charger</th><th>Bundled Items</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php foreach ($mfr['items'] as $item): ?>
-            <tr>
-                <td><strong><?php echo esc_html($item['product']); ?></strong></td>
-                <td><?php echo esc_html($item['product_code'] ?: "\xE2\x80\x94"); ?></td>
-                <td><?php echo esc_html($item['tech_level'] ?: "\xE2\x80\x94"); ?></td>
-                <td><?php echo esc_html($item['hearing_aid_class'] ?: "\xE2\x80\x94"); ?></td>
-                <td><?php echo esc_html($item['style'] ?: "\xE2\x80\x94"); ?></td>
-                <td><?php echo esc_html($item['ear_side'] ?: "\xE2\x80\x94"); ?></td>
-                <td><?php echo $item['quantity']; ?></td>
-                <td><?php echo $item['rechargeable'] ? 'Rechargeable' : 'Battery'; ?></td>
-                <td><?php echo $item['needs_charger'] ? 'Yes' : 'No'; ?></td>
-                <td><?php echo esc_html($item['bundled'] ?: "\xE2\x80\x94"); ?></td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>
-<?php endforeach; ?>
-
-<?php if ($order->notes): ?>
-<div class="section">
-    <div class="section-title">Clinical Notes</div>
-    <p style="font-size:11px;color:#475569;"><?php echo nl2br(esc_html($order->notes)); ?></p>
-</div>
-<?php endif; ?>
-
-<div class="footer">
-    Generated by HearMed Portal on <?php echo date('d M Y \a\t H:i'); ?> | Order <?php echo esc_html($order->order_number); ?>
-</div>
-
-</body>
-</html>
-    <?php
+    echo HearMed_Print_Templates::render('order', $tpl_data);
     exit;
 }
 

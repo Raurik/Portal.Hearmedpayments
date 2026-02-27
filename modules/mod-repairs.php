@@ -194,6 +194,7 @@ class HearMed_Repairs {
         $db = HearMed_DB::instance();
         $r = $db->get_row(
             "SELECT r.id, r.repair_number, r.serial_number, r.date_booked,
+                    r.date_sent, r.date_received,
                     r.repair_status, r.warranty_status, r.under_warranty,
                     r.repair_reason, r.repair_notes, r.sent_to,
                     COALESCE(pr.product_name, 'Unknown') AS product_name,
@@ -201,7 +202,9 @@ class HearMed_Repairs {
                     m.warranty_terms,
                     CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
                     p.date_of_birth, p.phone, p.mobile,
+                    p.address_line1 AS patient_address,
                     c.clinic_name,
+                    CONCAT_WS(', ', c.address_line1, c.city, c.county, c.postcode) AS clinic_address,
                     CONCAT(s.first_name, ' ', s.last_name) AS dispenser_name
              FROM hearmed_core.repairs r
              LEFT JOIN hearmed_core.patient_devices pd ON pd.id = r.patient_device_id
@@ -216,104 +219,9 @@ class HearMed_Repairs {
 
         if (!$r) wp_send_json_error('Repair not found');
 
-        $dob_fmt = $r->date_of_birth ? date('d/m/Y', strtotime($r->date_of_birth)) : '—';
-        $booked_fmt = $r->date_booked ? date('d M Y', strtotime($r->date_booked)) : '—';
-        $warranty_label = !empty($r->under_warranty) && hm_pg_bool($r->under_warranty) ? 'IN WARRANTY' : 'OUT OF WARRANTY';
-        $warranty_class = !empty($r->under_warranty) && hm_pg_bool($r->under_warranty) ? 'color:#16a34a' : 'color:#dc2626';
-
-        $html = '<!DOCTYPE html><html><head>
-        <meta charset="UTF-8">
-        <title>Repair Docket — ' . esc_html($r->repair_number ?: 'HMREP-' . $rid) . '</title>
-        <style>
-            *{box-sizing:border-box}
-            body{font-family:Arial,sans-serif;max-width:820px;margin:2rem auto;color:#151B33;font-size:13px}
-            h1{color:#151B33;margin-bottom:0.25rem} .teal{color:var(--hm-teal)}
-            .sub{color:#64748b;font-size:12px;margin-bottom:2rem}
-            .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem 1.5rem;margin-bottom:1.5rem}
-            .grid div strong{display:block;font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
-            table{width:100%;border-collapse:collapse;margin-top:1rem}
-            th{background:#151B33;color:#fff;padding:7px 10px;text-align:left;font-size:11px;text-transform:uppercase}
-            td{padding:8px 10px;border-bottom:1px solid #e2e8f0}
-            .badge{padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold}
-            .section{margin-top:1.5rem;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px}
-            .section h3{margin:0 0 8px;font-size:13px;color:#151B33}
-            .sign{margin-top:2.5rem;border-top:2px solid #151B33;padding-top:1.25rem}
-            .sign-row{display:flex;gap:3rem;margin-top:0.75rem}
-            .sign-field{flex:1}
-            .sign-field span{display:block;font-size:10px;color:#94a3b8;text-transform:uppercase;margin-bottom:0.5rem}
-            .sign-line{border-bottom:1px solid #94a3b8;min-height:28px}
-            .footer{margin-top:2rem;font-size:10px;color:#94a3b8}
-            @media print{body{margin:1cm}}
-        </style>
-        </head><body>
-
-        <h1>HearMed <span class="teal">Repair Docket</span></h1>
-        <p class="sub">Internal repair tracking document. One copy to manufacturer, one filed.</p>
-
-        <div class="grid">
-            <div><strong>Repair Ref</strong>' . esc_html($r->repair_number ?: 'HMREP-' . $rid) . '</div>
-            <div><strong>Date Booked</strong>' . $booked_fmt . '</div>
-            <div><strong>Warranty</strong><span style="' . $warranty_class . ';font-weight:bold">' . $warranty_label . '</span></div>
-            <div><strong>Patient</strong>' . esc_html($r->patient_name ?: '—') . '</div>
-            <div><strong>DOB</strong>' . $dob_fmt . '</div>
-            <div><strong>Phone</strong>' . esc_html($r->phone ?: $r->mobile ?: '—') . '</div>
-            <div><strong>Clinic</strong>' . esc_html($r->clinic_name ?: '—') . '</div>
-            <div><strong>Dispenser</strong>' . esc_html($r->dispenser_name ?: '—') . '</div>
-            <div><strong>Status</strong>' . esc_html($r->repair_status ?: 'Booked') . '</div>
-        </div>
-
-        <table>
-            <thead><tr><th>Manufacturer</th><th>Model</th><th>Serial Number</th><th>Reason for Repair</th></tr></thead>
-            <tbody>
-                <tr>
-                    <td>' . esc_html($r->manufacturer_name ?: '—') . '</td>
-                    <td>' . esc_html($r->product_name) . '</td>
-                    <td><strong>' . esc_html($r->serial_number ?: '—') . '</strong></td>
-                    <td>' . esc_html($r->repair_reason ?: '—') . '</td>
-                </tr>
-            </tbody>
-        </table>';
-
-        if ($r->repair_notes) {
-            $html .= '<div class="section"><h3>Repair Notes / Fault Description</h3><p>' . esc_html($r->repair_notes) . '</p></div>';
-        }
-
-        if ($r->warranty_terms) {
-            $html .= '<div class="section"><h3>Manufacturer Warranty Terms</h3><p>' . esc_html($r->warranty_terms) . '</p></div>';
-        }
-
-        $html .= '
-        <div class="section">
-            <h3>Checklist</h3>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;">
-                <label>☐ Hearing aid cleaned before sending</label>
-                <label>☐ Battery / charger included</label>
-                <label>☐ RMA number obtained from manufacturer</label>
-                <label>☐ Return postage label attached</label>
-                <label>☐ Patient informed of turnaround time</label>
-                <label>☐ Loaner device issued (if applicable)</label>
-            </div>
-        </div>
-
-        <div class="sign">
-            <div class="sign-row">
-                <div class="sign-field"><span>Sent by (staff)</span><div class="sign-line"></div></div>
-                <div class="sign-field"><span>Date sent to manufacturer</span><div class="sign-line"></div></div>
-                <div class="sign-field"><span>RMA / Tracking Number</span><div class="sign-line"></div></div>
-            </div>
-            <div class="sign-row" style="margin-top:1.25rem;">
-                <div class="sign-field"><span>Date received back</span><div class="sign-line"></div></div>
-                <div class="sign-field"><span>Received by</span><div class="sign-line"></div></div>
-                <div class="sign-field"><span>Repair outcome / notes</span><div class="sign-line"></div></div>
-            </div>
-        </div>
-
-        <p class="footer">HearMed Acoustic Health Care Ltd — Confidential — ' . esc_html($r->clinic_name ?: '') . '</p>
-        <script>window.print();</script>
-        </body></html>';
-
-        // Return as HTML for opening in new tab
-        wp_send_json_success(['html' => $html]);
+        // Use template engine
+        $tpl_html = HearMed_Print_Templates::render('repair', $r);
+        wp_send_json_success(['html' => $tpl_html]);
     }
 }
 

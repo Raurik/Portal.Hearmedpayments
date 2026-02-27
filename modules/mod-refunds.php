@@ -285,15 +285,17 @@ class HearMed_Refunds {
                         }
                     }
 
+                    var printBtn = '<button class="hm-btn hm-btn--sm hm-btn--ghost" onclick="window.open(HM.ajax_url+\'?action=hm_print_credit_note&nonce=\'+HM.nonce+\'&credit_note_id='+x.id+'\',\'_blank\')" style="margin-left:4px;">Print</button>';
+
                     h += '<tr>' +
                         '<td><code class="hm-mono">'+esc(x.credit_note_number)+'</code></td>' +
                         '<td><a href="/patients/?id='+x.patient_id+'" style="color:var(--hm-teal);">'+esc(x.patient_name)+'</a></td>' +
                         '<td>'+typeBadge+'</td>' +
                         '<td style="font-weight:600;">'+amt+'</td>' +
-                        '<td class="hm-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(x.reason)+'">'+esc(x.reason||'—')+'</td>' +
+                        '<td class="hm-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(x.reason)+'">'+esc(x.reason||'\u2014')+'</td>' +
                         '<td class="hm-mono hm-muted" style="font-size:12px;">'+fmtDate((x.credit_date||'').split(' ')[0])+'</td>' +
                         '<td>'+statusHtml+'</td>' +
-                        '<td>'+actHtml+'</td>' +
+                        '<td>'+actHtml+printBtn+'</td>' +
                     '</tr>';
                 });
 
@@ -658,6 +660,69 @@ class HearMed_Refunds {
         );
         wp_send_json_success( $rows ?: [] );
     }
+
+    /**
+     * Print a credit note using the template engine
+     */
+    public static function ajax_print_credit_note() {
+        check_ajax_referer('hm_nonce', 'nonce');
+        if (!is_user_logged_in()) wp_die('Access denied');
+
+        $db = HearMed_DB::instance();
+        $cn_id = intval($_GET['credit_note_id'] ?? 0);
+        if (!$cn_id) wp_die('Missing credit note ID');
+
+        $cn = $db->get_row(
+            "SELECT cn.*,
+                    p.first_name AS p_first, p.last_name AS p_last, p.patient_number,
+                    p.address_line1, p.address_line2, p.city, p.county, p.eircode,
+                    c.clinic_name
+             FROM hearmed_core.credit_notes cn
+             JOIN hearmed_core.patients p ON p.id = cn.patient_id
+             LEFT JOIN hearmed_core.orders o ON o.id = cn.order_id
+             LEFT JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
+             WHERE cn.id = \$1",
+            [$cn_id]
+        );
+        if (!$cn) wp_die('Credit note not found');
+
+        $items = [];
+        if (!empty($cn->order_id)) {
+            $items = $db->get_results(
+                "SELECT oi.*, COALESCE(pr.product_name, oi.item_description) AS product_name
+                 FROM hearmed_core.order_items oi
+                 LEFT JOIN hearmed_reference.products pr ON pr.id = oi.item_id AND oi.item_type = 'product'
+                 WHERE oi.order_id = \$1
+                 ORDER BY oi.line_number",
+                [$cn->order_id]
+            );
+        }
+
+        $orig_inv = '';
+        if (!empty($cn->invoice_id)) {
+            $inv = $db->get_row(
+                "SELECT invoice_number FROM hearmed_core.invoices WHERE id = \$1",
+                [$cn->invoice_id]
+            );
+            $orig_inv = $inv ? $inv->invoice_number : '';
+        }
+
+        $tpl_data = clone $cn;
+        $tpl_data->items                   = $items;
+        $tpl_data->original_invoice_number = $orig_inv;
+        $tpl_data->subtotal                = $cn->amount ?? 0;
+        $tpl_data->vat_total               = 0;
+        $tpl_data->grand_total             = $cn->amount ?? 0;
+
+        if (!empty($cn->exchange_order_id)) {
+            $ex = $db->get_row("SELECT order_number FROM hearmed_core.orders WHERE id = \$1", [$cn->exchange_order_id]);
+            $tpl_data->exchange_order_number = $ex ? $ex->order_number : '';
+        }
+
+        header('Content-Type: text/html; charset=utf-8');
+        echo HearMed_Print_Templates::render('creditnote', $tpl_data);
+        exit;
+    }
 }
 
 // Register AJAX actions directly here (supplementary to class-hearmed-ajax.php)
@@ -665,3 +730,4 @@ add_action( 'wp_ajax_hm_get_all_credit_notes',    ['HearMed_Refunds', 'ajax_get_
 add_action( 'wp_ajax_hm_create_credit_note',       ['HearMed_Refunds', 'ajax_create_credit_note'] );
 add_action( 'wp_ajax_hm_process_refund',           ['HearMed_Refunds', 'ajax_process'] );
 add_action( 'wp_ajax_hm_get_patient_invoices',     ['HearMed_Refunds', 'ajax_get_patient_invoices'] );
+add_action( 'wp_ajax_hm_print_credit_note',        ['HearMed_Refunds', 'ajax_print_credit_note'] );

@@ -101,6 +101,7 @@ class HearMed_Core {
             HEARMED_PATH . 'admin/admin-roles.php',
             HEARMED_PATH . 'admin/admin-availability.php',
             HEARMED_PATH . 'admin/admin-document-templates.php',
+            HEARMED_PATH . 'admin/admin-finance-form-builder.php',
             HEARMED_PATH . 'admin/admin-clinical-review.php',
         ];
         foreach ( $admin_shortcode_files as $file ) {
@@ -128,6 +129,7 @@ class HearMed_Core {
             HEARMED_PATH . 'modules/mod-commissions.php',
             HEARMED_PATH . 'modules/mod-kpi.php',
             HEARMED_PATH . 'modules/mod-cash.php',
+            HEARMED_PATH . 'core/class-hearmed-print-templates.php',
             HEARMED_PATH . 'core/class-hearmed-invoice.php',
             HEARMED_PATH . 'modules/mod-forms.php', 
             HEARMED_PATH . 'modules/mod-clinical-pdf.php',

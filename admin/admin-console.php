@@ -49,6 +49,7 @@ class HearMed_Admin_Console {
                 ['KPI Targets', 'kpi-targets'],
                 ['Cash Management', 'cash-management'],
                 ['Report Layout', 'report-layout'],
+                ['Finance Form Builder', 'finance-form-builder'],
             ]],
             ['Documents & Forms', [
                 ['Document Types', 'document-types'],
