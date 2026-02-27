@@ -286,17 +286,22 @@ function hm_ajax_get_dispensers() {
 function hm_ajax_get_services() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     try {
-    // Query only guaranteed columns first; optional columns handled below
+    // Use COALESCE to support both old (colour/duration) and new (service_color/duration_minutes) column names
     $ps = HearMed_DB::get_results(
-        "SELECT id, service_name, colour, duration, is_active FROM hearmed_reference.services WHERE is_active = true ORDER BY service_name"
+        "SELECT id, service_name,
+                COALESCE(service_color, colour, '#3B82F6') AS service_color,
+                COALESCE(text_color, '#FFFFFF') AS text_color,
+                COALESCE(duration_minutes, duration, 30) AS duration_minutes,
+                is_active
+         FROM hearmed_reference.services WHERE is_active = true ORDER BY service_name"
     );
     $d = [];
     foreach ( $ps as $p ) {
         $d[] = [
             'id'       => (int) $p->id,
             'name'     => $p->service_name,
-            'colour'   => $p->colour ?: '#3B82F6',
-            'duration' => (int) ($p->duration ?: 30),
+            'colour'   => $p->service_color ?: '#3B82F6',
+            'duration' => (int) ($p->duration_minutes ?: 30),
         ];
     }
     wp_send_json_success( $d );
@@ -368,7 +373,9 @@ function hm_ajax_get_appointments() {
                    p.first_name AS patient_first, p.last_name AS patient_last, p.patient_number,
                    (st.first_name || ' ' || st.last_name) AS dispenser_name,
                    c.clinic_name,
-                   sv.service_name, sv.colour AS service_colour, sv.duration AS service_duration
+                   sv.service_name,
+                   COALESCE(sv.service_color, sv.colour, '#3B82F6') AS service_colour,
+                   COALESCE(sv.duration_minutes, sv.duration, 30) AS service_duration
             FROM hearmed_core.appointments a
             LEFT JOIN hearmed_core.patients p ON a.patient_id = p.id
             LEFT JOIN hearmed_reference.staff st ON a.dispenser_id = st.id
@@ -668,10 +675,15 @@ function hm_ajax_save_service() {
     try {
     $id   = intval( $_POST['id'] ?? 0 );
     $name = sanitize_text_field( $_POST['name'] );
+    $colour   = sanitize_text_field( $_POST['colour'] ?? '#3B82F6' );
+    $dur      = intval( $_POST['duration'] ?? 30 );
     $d = [
         'service_name'         => $name,
-        'colour'               => sanitize_text_field( $_POST['colour'] ?? '#3B82F6' ),
-        'duration'             => intval( $_POST['duration'] ?? 30 ),
+        'service_color'        => $colour,
+        'colour'               => $colour,
+        'text_color'           => sanitize_text_field( $_POST['text_color'] ?? '#FFFFFF' ),
+        'duration_minutes'     => $dur,
+        'duration'             => $dur,
         'sales_opportunity'    => ( $_POST['sales_opportunity'] ?? 'no' ) === 'yes',
         'income_bearing'       => ( $_POST['income_bearing'] ?? 'no' ) === 'yes',
         'appointment_category' => sanitize_text_field( $_POST['appointment_category'] ?? 'Normal' ),

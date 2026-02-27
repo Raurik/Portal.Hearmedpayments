@@ -54,15 +54,19 @@ function hm_quick_add_handler() {
             break;
 
         case 'appointment_type':
+            $colour = sanitize_hex_color($_POST['colour'] ?? '') ?: '#0BB4C4';
+            $dur    = intval($_POST['duration'] ?? 30);
             $appt_data = [
-                'type_name'     => $name,
-                'service_color' => '#0BB4C4',
-                'is_active'     => true,
-                'created_at'    => $now,
+                'service_name'    => $name,
+                'service_color'   => $colour,
+                'colour'          => $colour,
+                'text_color'      => '#FFFFFF',
+                'duration_minutes'=> $dur,
+                'duration'        => $dur,
+                'is_active'       => true,
+                'created_at'      => $now,
             ];
-            if (!empty($_POST['duration'])) $appt_data['duration_minutes'] = intval($_POST['duration']);
-            if (!empty($_POST['colour']))   $appt_data['service_color']    = sanitize_hex_color($_POST['colour']);
-            $id = HearMed_DB::insert('hearmed_reference.appointment_types', $appt_data);
+            $id = HearMed_DB::insert('hearmed_reference.services', $appt_data);
             if ($id) wp_send_json_success(['id' => $id, 'name' => $name]);
             break;
 

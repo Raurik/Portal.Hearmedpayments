@@ -254,11 +254,16 @@ class HearMed_Admin_Appointment_Types {
         $name = sanitize_text_field($_POST['service_name'] ?? '');
         if (!$name) { wp_send_json_error('Name is required'); return; }
 
+        $colour = sanitize_hex_color($_POST['colour'] ?? '#3B82F6') ?: '#3B82F6';
+        $dur    = intval($_POST['duration'] ?? 30);
+
         $data = [
             'service_name'        => $name,
-            'service_color'       => sanitize_hex_color($_POST['colour'] ?? '#3B82F6') ?: '#3B82F6',
+            'service_color'       => $colour,
+            'colour'              => $colour,
             'text_color'          => sanitize_hex_color($_POST['text_color'] ?? '#FFFFFF') ?: '#FFFFFF',
-            'duration_minutes'    => intval($_POST['duration'] ?? 30),
+            'duration_minutes'    => $dur,
+            'duration'            => $dur,
             'appointment_category'=> sanitize_text_field($_POST['appointment_category'] ?? ''),
             'sales_opportunity'   => !empty($_POST['sales_opportunity']),
             'income_bearing'      => !empty($_POST['income_bearing']),

@@ -1068,7 +1068,7 @@ function hm_ajax_get_patient_appointments() {
         "SELECT a.id, a.appointment_date, a.start_time, a.end_time,
                 a.appointment_status AS status, a.notes,
                 COALESCE(sv.service_name, a.outcome, '') AS service_name,
-                sv.service_colour,
+                COALESCE(sv.service_color, sv.colour, '#3B82F6') AS service_colour,
                 COALESCE(c.clinic_name, '') AS clinic_name,
                 COALESCE(st.first_name || ' ' || st.last_name, '') AS dispenser_name,
                 ao.outcome_name, ao.outcome_color AS outcome_banner_colour
