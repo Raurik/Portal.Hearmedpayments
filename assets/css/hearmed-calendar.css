@@ -441,7 +441,7 @@
 /* Patient name */
 .hm-appt-pt {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
@@ -452,11 +452,11 @@
 /* Time display */
 .hm-appt-tm {
   font-size: 9px;
-  font-weight: 600;
+  font-weight: 700;
   font-family: var(--hm-font-btn, 'Plus Jakarta Sans', sans-serif);
   line-height: 1.3;
   margin-top: 1px;
-  opacity: 0.8;
+  opacity: 1;
   white-space: nowrap;
 }
 
@@ -566,8 +566,8 @@
   font-weight: 800;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: rgba(153, 27, 27, 0.85);
-  text-shadow: 0 0 3px rgba(255,255,255,0.5);
+  color: #7f1d1d;
+  text-shadow: 0 0 4px rgba(255,255,255,0.8);
 }
 .hm-appt-overlay--noshow {
   background: repeating-linear-gradient(

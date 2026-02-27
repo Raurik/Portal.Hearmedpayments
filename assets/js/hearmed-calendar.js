@@ -683,7 +683,7 @@ var Cal={
             // Cancelled / No Show / Rescheduled overlay
             if(isCancelled)card+='<div class="hm-appt-overlay hm-appt-overlay--cancel"><span>CANCELLED</span></div>';
             else if(isNoShow)card+='<div class="hm-appt-overlay hm-appt-overlay--noshow"></div>';
-            else if(isRescheduled)card+='<div class="hm-appt-overlay hm-appt-overlay--resched"><span>Resched</span></div>';
+            else if(isRescheduled)card+='<div class="hm-appt-overlay hm-appt-overlay--resched"><span>Rescheduled</span></div>';
             card+='</div>';
 
             var el=$(card);
