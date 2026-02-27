@@ -28,12 +28,37 @@ class HearMed_Admin_Finance_Form_Builder {
             $all_settings[$t] = HearMed_Print_Templates::get_settings($t);
         }
 
+        $global_logo_url = HearMed_Settings::get('hm_report_logo_url', '');
+
         ob_start(); ?>
         <div id="hm-app" class="hm-ffb">
             <div class="hm-page-header">
                 <h2 class="hm-page-title">Finance Form Builder</h2>
                 <p class="hm-muted" style="margin-top:4px;">Configure print templates for invoices, orders, repair dockets, and credit notes.</p>
             </div>
+
+            <!-- Global Logo -->
+            <div class="hm-ffb-logo-panel">
+                <div class="hm-ffb-logo-left">
+                    <?php if ($global_logo_url): ?>
+                        <img src="<?php echo esc_url($global_logo_url); ?>" alt="Company Logo" class="hm-ffb-logo-img" id="hm-ffb-logo-img">
+                    <?php else: ?>
+                        <div class="hm-ffb-logo-placeholder" id="hm-ffb-logo-placeholder">
+                            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                            <span>No logo uploaded</span>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <div class="hm-ffb-logo-right">
+                    <div style="font-size:11px;font-weight:600;color:var(--hm-text);margin-bottom:4px;">Company Logo</div>
+                    <p style="font-size:11px;color:var(--hm-muted);margin-bottom:8px;">This logo appears on all printed documents — invoices, orders, repair dockets, credit notes, reports and case histories.</p>
+                    <a href="<?php echo esc_url(home_url('/admin-settings/?tab=report_layout')); ?>" class="hm-btn hm-btn--sm">
+                        <?php echo $global_logo_url ? 'Change Logo in Settings' : 'Upload Logo in Settings'; ?> →
+                    </a>
+                </div>
+            </div>
+
+            <input type="hidden" id="hm-ffb-global-logo" value="<?php echo esc_attr($global_logo_url); ?>">
 
             <!-- Tab bar -->
             <div class="hm-ffb-tabs">
@@ -107,8 +132,8 @@ class HearMed_Admin_Finance_Form_Builder {
                             <input type="text" class="hm-input hm-ffb-input" data-key="footerLine1" value="<?php echo esc_attr($s['footerLine1'] ?? ''); ?>">
                         </div>
                         <div class="hm-ffb-field">
-                            <label>Line 2</label>
-                            <input type="text" class="hm-input hm-ffb-input" data-key="footerLine2" value="<?php echo esc_attr($s['footerLine2'] ?? ''); ?>">
+                            <label>Line 2 / Terms</label>
+                            <textarea class="hm-input hm-ffb-input" data-key="footerLine2" rows="4" style="resize:vertical;font-size:11px;"><?php echo esc_textarea($s['footerLine2'] ?? ''); ?></textarea>
                         </div>
 
                         <?php if ($type === 'repair'): ?>
@@ -217,6 +242,14 @@ class HearMed_Admin_Finance_Form_Builder {
             .p-footer{margin-top:14px;padding-top:6px;border-top:1px solid #e2e8f0;text-align:center;font-size:9px;color:#94a3b8;}
             .p-hidden{display:none!important;}
             .p-divider{height:1px;background:#e2e8f0;margin:10px 0;}
+
+            /* Logo panel */
+            .hm-ffb-logo-panel{display:flex;align-items:center;gap:16px;background:var(--hm-surface);border:1px solid var(--hm-border);border-radius:var(--hm-radius);padding:14px 18px;margin-bottom:16px;}
+            .hm-ffb-logo-left{flex-shrink:0;}
+            .hm-ffb-logo-img{max-width:140px;max-height:56px;border:1px solid var(--hm-border);border-radius:6px;padding:4px;background:#fff;object-fit:contain;}
+            .hm-ffb-logo-placeholder{display:flex;align-items:center;gap:8px;color:var(--hm-muted);font-size:11px;padding:10px 16px;border:2px dashed var(--hm-border);border-radius:8px;background:var(--hm-bg);}
+            .hm-ffb-logo-right{flex:1;}
+            .p-logo-img{max-width:48px;max-height:48px;border-radius:6px;object-fit:contain;margin-bottom:4px;}
         </style>
 
         <script>
@@ -337,6 +370,8 @@ class HearMed_Admin_Finance_Form_Builder {
                 return s;
             }
 
+            var globalLogoUrl = (document.getElementById('hm-ffb-global-logo') || {}).value || '';
+
             /* ── Render preview into paper div ── */
             function renderPreview(type) {
                 var paper = document.querySelector('.hm-ffb-paper[data-type="'+type+'"]');
@@ -367,7 +402,13 @@ class HearMed_Admin_Finance_Form_Builder {
                 var showLogo = s.logo !== false && s.logo !== 'false' && s.logo !== undefined ? true : (s.logo === undefined);
                 html += '<div class="p-header">';
                 html += '<div>';
-                if (showLogo) html += '<div class="p-logo" style="background:'+accent+';">HM</div>';
+                if (showLogo) {
+                    if (globalLogoUrl) {
+                        html += '<img src="'+esc(globalLogoUrl)+'" class="p-logo-img" alt="Logo">';
+                    } else {
+                        html += '<div class="p-logo" style="background:'+accent+';">HM</div>';
+                    }
+                }
                 html += '<div class="p-company" style="font-family:\''+hFont+'\',serif;font-size:'+hSize+'px;color:'+hColor+';">'+esc(company)+'</div>';
                 if (tagline) html += '<div class="p-tagline">'+esc(tagline)+'</div>';
                 html += '</div>';
@@ -556,7 +597,12 @@ class HearMed_Admin_Finance_Form_Builder {
                 if (f1 || f2) {
                     html += '<div class="p-footer">';
                     if (f1) html += '<div>'+esc(f1)+'</div>';
-                    if (f2) html += '<div>'+esc(f2)+'</div>';
+                    if (f2) {
+                        var lines = f2.split(/\n/);
+                        lines.forEach(function(ln){
+                            if (ln.trim()) html += '<div style="font-size:8px;margin-top:1px;">'+esc(ln)+'</div>';
+                        });
+                    }
                     html += '</div>';
                 }
 

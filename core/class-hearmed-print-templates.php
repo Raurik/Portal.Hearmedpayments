@@ -330,12 +330,17 @@ tfoot td { font-weight: 600; border-bottom: none; }
     private static function section_companyHeader(array $s, object $d, string $type): string {
         $company = esc_html($s['companyName'] ?? 'HearMed Acoustic Health Care Ltd');
         $tagline = esc_html($s['tagline'] ?? '');
+        $logo_url = HearMed_Settings::get('hm_report_logo_url', '');
         
         ob_start(); ?>
         <div class="hm-print-header">
             <div>
                 <?php if ($s['logo'] ?? true): ?>
-                <div class="hm-print-logo">H</div>
+                    <?php if ($logo_url): ?>
+                    <img src="<?php echo esc_url($logo_url); ?>" alt="Logo" style="max-width:48px;max-height:48px;border-radius:8px;object-fit:contain;margin-bottom:6px;">
+                    <?php else: ?>
+                    <div class="hm-print-logo">H</div>
+                    <?php endif; ?>
                 <?php endif; ?>
                 <div class="hm-print-company"><?php echo $company; ?></div>
                 <?php if ($tagline): ?><div class="hm-print-tagline"><?php echo $tagline; ?></div><?php endif; ?>
@@ -395,7 +400,11 @@ tfoot td { font-weight: 600; border-bottom: none; }
         ob_start(); ?>
         <div class="hm-print-footer">
             <?php if ($l1): ?><div><?php echo esc_html($l1); ?></div><?php endif; ?>
-            <?php if ($l2): ?><div><?php echo esc_html($l2); ?></div><?php endif; ?>
+            <?php if ($l2): ?>
+                <?php foreach (explode("\n", $l2) as $line): $line = trim($line); if ($line): ?>
+                    <div style="font-size:<?php echo intval($s['footerSize'] ?? 9) - 1; ?>px;margin-top:1px;"><?php echo esc_html($line); ?></div>
+                <?php endif; endforeach; ?>
+            <?php endif; ?>
         </div>
         <?php return ob_get_clean();
     }
