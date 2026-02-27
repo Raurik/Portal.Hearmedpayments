@@ -803,13 +803,13 @@ var Cal={
                     var $slot=$('.hm-slot[data-day="'+di+'"][data-slot="0"][data-disp="'+disps[pi].id+'"]');
                     if(!$slot.length)return;
                     var block=$('<div class="hm-excl hm-excl--fullday" data-excl-id="'+ex.id+'" style="'+
-                        'position:absolute;left:1px;right:1px;top:0;height:'+totalH+'px;'+
-                        'background:rgba('+r+','+g+','+b+',0.08);'+
-                        'border:1px solid rgba('+r+','+g+','+b+',0.20);'+
-                        'border-left:3px solid '+col+';'+
-                        'border-radius:4px;z-index:1;">'+
-                        '<span class="hm-excl-label" style="color:'+col+'">'+esc(ex.type_name||'Exclusion')+'</span>'+
+                        'position:absolute;left:1px;right:1px;top:0;height:'+totalH+'px;z-index:1;">'+
+                        '<span class="hm-excl-label">'+esc(ex.type_name||'Exclusion')+'</span>'+
                     '</div>');
+                    block[0].style.setProperty('--excl-color',col);
+                    block[0].style.setProperty('--excl-r',r);
+                    block[0].style.setProperty('--excl-g',g);
+                    block[0].style.setProperty('--excl-b',b);
                     $slot.append(block);
                     // click → popover
                     block.on('click',function(e){e.stopPropagation();self._showExclPop(ex,this);});
@@ -829,13 +829,13 @@ var Cal={
                     if(!$slot.length)return;
 
                     var block=$('<div class="hm-excl hm-excl--hours" data-excl-id="'+ex.id+'" style="'+
-                        'position:absolute;left:1px;right:1px;top:'+off+'px;height:'+h+'px;'+
-                        'background:rgba('+r+','+g+','+b+',0.08);'+
-                        'border:1px solid rgba('+r+','+g+','+b+',0.20);'+
-                        'border-left:3px solid '+col+';'+
-                        'border-radius:4px;z-index:1;padding:3px 6px;">'+
-                        '<span class="hm-excl-label" style="color:'+col+'">'+esc(ex.type_name||'Exclusion')+'</span>'+
+                        'position:absolute;left:1px;right:1px;top:'+off+'px;height:'+h+'px;z-index:1;padding:3px 6px;">'+
+                        '<span class="hm-excl-label">'+esc(ex.type_name||'Exclusion')+'</span>'+
                     '</div>');
+                    block[0].style.setProperty('--excl-color',col);
+                    block[0].style.setProperty('--excl-r',r);
+                    block[0].style.setProperty('--excl-g',g);
+                    block[0].style.setProperty('--excl-b',b);
                     $slot.append(block);
                     block.on('click',function(e){e.stopPropagation();self._showExclPop(ex,this);});
                 }

@@ -1608,7 +1608,11 @@ textarea.hm-inp {
    12b. EXCLUSION BLOCKS
    ═══════════════════════════════════════ */
 
+/* ── Exclusion blocks — solid light ── */
 .hm-excl {
+  background: rgba(var(--excl-r), var(--excl-g), var(--excl-b), 0.08);
+  border: 1px solid rgba(var(--excl-r), var(--excl-g), var(--excl-b), 0.2);
+  border-left: 3px solid var(--excl-color);
   border-radius: 4px;
   overflow: hidden;
   position: relative;
@@ -1618,14 +1622,17 @@ textarea.hm-inp {
   font-size: 10px;
   font-weight: 700;
   font-family: var(--hm-font-btn, 'Plus Jakarta Sans', sans-serif);
+  color: var(--excl-color);
   text-transform: uppercase;
   letter-spacing: 0.4px;
   opacity: 0.85;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding: 0 8px;
 }
 .hm-excl--fullday {
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1635,6 +1642,7 @@ textarea.hm-inp {
   transform: rotate(180deg);
   font-size: 11px;
   letter-spacing: 1px;
+  padding: 12px 0;
 }
 .hm-excl--hours {
   display: flex;
