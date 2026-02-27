@@ -1169,3 +1169,51 @@
 .hm-btn-danger:hover {
   background: #dc2626;
 }
+
+/* ═══════════════════════════════════════════════════
+   Case History — sub-tabs & AI transcription
+   ═══════════════════════════════════════════════════ */
+.hm-ch-tabs { display: flex; gap: 4px; }
+.hm-ch-tab {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  font-weight: 500;
+  transition: all .15s ease;
+}
+.hm-ch-tab:hover { background: #e2e8f0; color: #334155; }
+.hm-ch-tab--active {
+  background: #0BB4C4;
+  color: #fff;
+  border-color: #0BB4C4;
+}
+.hm-ch-tab--active:hover { background: #0a9fad; }
+
+/* Recording pulse animation */
+@keyframes hm-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .3; }
+}
+
+/* Danger variant for recording state */
+.hm-btn--danger {
+  background: #ef4444 !important;
+  color: #fff !important;
+  border-color: #ef4444 !important;
+}
+.hm-btn--danger:hover { background: #dc2626 !important; }
+
+/* Outline variant for past transcript links */
+.hm-btn--outline {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+.hm-btn--outline:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* Past transcripts list */
+.hm-tx-list .hm-tx-item:first-child { padding-top: 0; }
+.hm-tx-list .hm-tx-item:last-child { border-bottom: none; }

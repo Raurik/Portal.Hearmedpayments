@@ -895,56 +895,273 @@ function initProfile(){
 
     /* ── CASE HISTORY ── */
     function loadCaseHistory($c){
-        $c.html('<div class="hm-tab-section"><div class="hm-section-header"><h3>Case History &amp; AI Transcription</h3></div>'+
-            '<div class="hm-card" style="margin-bottom:20px;"><div class="hm-card-hd">Manual Case History</div><div class="hm-card-body">'+
-                '<div class="hm-form-row"><div class="hm-form-group"><label class="hm-label">Date</label><input type="date" class="hm-inp" id="ch-date" value="'+new Date().toISOString().split('T')[0]+'"></div><div class="hm-form-group"><label class="hm-label">Appointment type</label><input type="text" class="hm-inp" id="ch-type" placeholder="e.g. Initial consultation"></div></div>'+
-                '<div class="hm-form-group"><label class="hm-label">Chief complaint</label><textarea class="hm-textarea" id="ch-complaint" rows="2"></textarea></div>'+
-                '<div class="hm-form-group"><label class="hm-label">History of presenting complaint</label><textarea class="hm-textarea" id="ch-hpc" rows="2"></textarea></div>'+
-                '<div class="hm-form-group"><label class="hm-label">Audiological history</label><textarea class="hm-textarea" id="ch-audio" rows="2"></textarea></div>'+
-                '<div class="hm-form-group"><label class="hm-label">Medical history relevant to hearing</label><textarea class="hm-textarea" id="ch-medical" rows="2"></textarea></div>'+
-                '<div class="hm-form-group"><label class="hm-label">Outcome / recommendations</label><textarea class="hm-textarea" id="ch-outcome" rows="2"></textarea></div>'+
-                '<div class="hm-form-group"><label class="hm-label">Follow-up plan</label><textarea class="hm-textarea" id="ch-followup" rows="2"></textarea></div>'+
-                '<button class="hm-btn hm-btn--primary" id="ch-save">Save Case History</button>'+
-            '</div></div>'+
-            '<div class="hm-ai-notice"><div class="hm-ai-notice-icon">'+HM_ICONS.warning+'</div><div style="flex:1;">'+
-                '<strong>AI Processing Notice</strong>'+
-                '<p>This consultation will be recorded and transcribed by AI. The transcript will be reviewed before saving. The patient must be informed before recording begins.</p>'+
-                '<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin-top:10px;"><input type="checkbox" id="hm-ai-consent" style="margin-top:2px;flex-shrink:0;"><span>I confirm the patient has been informed that this consultation will be processed by AI.</span></label>'+
-                '<button class="hm-btn hm-btn--primary" id="hm-start-recording" disabled style="margin-top:12px;">'+HM_ICONS.mic+'<span>Start Recording</span></button>'+
-            '</div></div>'+
-            '<div id="hm-rec-status" style="display:none;margin-top:12px;"></div>'+
-            '<div id="hm-transcript-wrap" style="display:none;margin-top:16px;"></div>'+
-        '</div>');
+        var chTab='manual'; // 'manual' | 'ai'
 
-        $c.on('click','#ch-save',function(){
-            var parts=[];
-            if($('#ch-complaint').val())parts.push('Chief complaint: '+$('#ch-complaint').val());if($('#ch-hpc').val())parts.push('History: '+$('#ch-hpc').val());if($('#ch-audio').val())parts.push('Audiological: '+$('#ch-audio').val());if($('#ch-medical').val())parts.push('Medical: '+$('#ch-medical').val());if($('#ch-outcome').val())parts.push('Outcome: '+$('#ch-outcome').val());if($('#ch-followup').val())parts.push('Follow-up: '+$('#ch-followup').val());
-            if(!parts.length){toast('Enter at least one field','error');return;}
-            $(this).prop('disabled',true).text('Saving…');
-            $.post(_hm.ajax,{action:'hm_save_case_history',nonce:_hm.nonce,patient_id:pid,appointment_type:$('#ch-type').val(),note_text:'['+$('#ch-date').val()+' · '+($('#ch-type').val()||'Case History')+']\n'+parts.join('\n')},function(r){if(r.success){toast('Case history saved');loadCaseHistory($c);}else{toast('Error','error');$('#ch-save').prop('disabled',false).text('Save Case History');}});
-        });
-        $c.on('change','#hm-ai-consent',function(){$('#hm-start-recording').prop('disabled',!this.checked);});
+        /* ── Render shell with sub-tabs ── */
+        function renderShell(){
+            $c.html(
+                '<div class="hm-tab-section">'+
+                    '<div class="hm-section-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'+
+                        '<h3>Case History</h3>'+
+                        '<div class="hm-ch-tabs" style="display:flex;gap:4px;">'+
+                            '<button class="hm-btn hm-btn--sm hm-ch-tab'+(chTab==='manual'?' hm-ch-tab--active':'')+'" data-chtab="manual">'+HM_ICONS.form+' Manual</button>'+
+                            '<button class="hm-btn hm-btn--sm hm-ch-tab'+(chTab==='ai'?' hm-ch-tab--active':'')+'" data-chtab="ai">'+HM_ICONS.mic+' AI Transcription</button>'+
+                        '</div>'+
+                    '</div>'+
+                    '<div id="hm-ch-body"></div>'+
+                '</div>'
+            );
+            if(chTab==='manual') renderManual();
+            else renderAI();
+        }
 
-        var mr,chunks=[],isRec=false;
-        $c.on('click','#hm-start-recording',function(){
-            if(isRec)return;
-            if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('Recording not supported','error');return;}
-            navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
-                isRec=true;chunks=[];mr=new MediaRecorder(stream);
-                mr.ondataavailable=function(e){chunks.push(e.data);};
-                mr.onstop=function(){stream.getTracks().forEach(function(t){t.stop();});isRec=false;$('#hm-rec-status').html('<div style="color:#94a3b8;font-size:13px;">Processing…</div>').show();
-                    var blob=new Blob(chunks,{type:'audio/webm'}),reader=new FileReader();
-                    reader.onloadend=function(){var b64=reader.result.split(',')[1];$('#hm-rec-status').html('<div style="display:flex;align-items:center;gap:10px;"><span class="hm-spinner"></span><span style="font-size:13px;color:#64748b;">Transcribing audio…</span></div>').show();$.post(_hm.ajax,{action:'hm_transcribe_audio',nonce:_hm.nonce,audio:b64},function(r){if(r.success&&r.data.transcript){showTx(r.data.transcript);}else{$('#hm-rec-status').html('<div style="color:#e53e3e;font-size:13px;">'+(r.data||'Transcription failed')+'</div>');}}).fail(function(){$('#hm-rec-status').html('<div style="color:#e53e3e;font-size:13px;">Transcription request failed</div>');});};
-                    reader.readAsDataURL(blob);
-                };
-                mr.start();
-                $('#hm-rec-status').html('<div style="display:flex;align-items:center;gap:10px;"><span style="width:10px;height:10px;background:#e53e3e;border-radius:50%;display:inline-block;"></span><span style="font-size:13px;color:#e53e3e;font-weight:500;">Recording…</span><button class="hm-btn hm-btn--secondary hm-btn--sm" id="hm-stop-rec">Stop</button></div>').show();
-            }).catch(function(){toast('Microphone access denied','error');});
+        /* ── Sub-tab switch ── */
+        $c.off('click','.hm-ch-tab').on('click','.hm-ch-tab',function(){
+            chTab=$(this).data('chtab');
+            renderShell();
         });
-        $c.on('click','#hm-stop-rec',function(){if(mr&&mr.state!=='inactive')mr.stop();});
-        function showTx(txt){$('#hm-rec-status').hide();$('#hm-transcript-wrap').html('<div class="hm-card"><div class="hm-card-hd">Transcript — review before saving</div><div class="hm-card-body"><textarea class="hm-textarea" id="ai-tx-text" rows="8">'+esc(txt)+'</textarea><div style="margin-top:12px;display:flex;gap:10px;"><button class="hm-btn hm-btn--primary" id="ai-save-tx">Save to Case History</button><button class="hm-btn hm-btn--secondary" id="ai-discard-tx">Discard</button></div></div></div>').show();}
-        $c.on('click','#ai-save-tx',function(){var t=$.trim($('#ai-tx-text').val());if(!t){toast('Empty','error');return;}$(this).prop('disabled',true).text('Saving…');$.post(_hm.ajax,{action:'hm_save_ai_transcript',nonce:_hm.nonce,patient_id:pid,appointment_id:window.hmCurrentApptId||latestApptId||0,transcript:t},function(r){if(r.success){toast('Saved');$('#hm-transcript-wrap').hide();if(r.data&&r.data.clinical_doc_id){$('#hm-transcript-wrap').after('<a href="?page=clinical-review&doc_id='+r.data.clinical_doc_id+'" class="hm-btn" style="margin-top:8px;background:#0BB4C4;color:#fff;text-decoration:none;">Review Clinical Document</a>');}}else toast(r.data||'Error','error');});}); 
-        $c.on('click','#ai-discard-tx',function(){$('#hm-transcript-wrap').hide();});
+
+        /* ───────────────────────────────────────
+           MANUAL CASE HISTORY (existing)
+           ─────────────────────────────────────── */
+        function renderManual(){
+            var $b=$('#hm-ch-body');
+            $b.html(
+                '<div class="hm-card" style="margin-top:16px;"><div class="hm-card-hd">Manual Case History</div><div class="hm-card-body">'+
+                    '<div class="hm-form-row"><div class="hm-form-group"><label class="hm-label">Date</label><input type="date" class="hm-inp" id="ch-date" value="'+new Date().toISOString().split('T')[0]+'"></div><div class="hm-form-group"><label class="hm-label">Appointment type</label><input type="text" class="hm-inp" id="ch-type" placeholder="e.g. Initial consultation"></div></div>'+
+                    '<div class="hm-form-group"><label class="hm-label">Chief complaint</label><textarea class="hm-textarea" id="ch-complaint" rows="2"></textarea></div>'+
+                    '<div class="hm-form-group"><label class="hm-label">History of presenting complaint</label><textarea class="hm-textarea" id="ch-hpc" rows="2"></textarea></div>'+
+                    '<div class="hm-form-group"><label class="hm-label">Audiological history</label><textarea class="hm-textarea" id="ch-audio" rows="2"></textarea></div>'+
+                    '<div class="hm-form-group"><label class="hm-label">Medical history relevant to hearing</label><textarea class="hm-textarea" id="ch-medical" rows="2"></textarea></div>'+
+                    '<div class="hm-form-group"><label class="hm-label">Outcome / recommendations</label><textarea class="hm-textarea" id="ch-outcome" rows="2"></textarea></div>'+
+                    '<div class="hm-form-group"><label class="hm-label">Follow-up plan</label><textarea class="hm-textarea" id="ch-followup" rows="2"></textarea></div>'+
+                    '<button class="hm-btn hm-btn--primary" id="ch-save">Save Case History</button>'+
+                '</div></div>'
+            );
+
+            $b.off('click','#ch-save').on('click','#ch-save',function(){
+                var parts=[];
+                if($('#ch-complaint').val())parts.push('Chief complaint: '+$('#ch-complaint').val());
+                if($('#ch-hpc').val())parts.push('History: '+$('#ch-hpc').val());
+                if($('#ch-audio').val())parts.push('Audiological: '+$('#ch-audio').val());
+                if($('#ch-medical').val())parts.push('Medical: '+$('#ch-medical').val());
+                if($('#ch-outcome').val())parts.push('Outcome: '+$('#ch-outcome').val());
+                if($('#ch-followup').val())parts.push('Follow-up: '+$('#ch-followup').val());
+                if(!parts.length){toast('Enter at least one field','error');return;}
+                $(this).prop('disabled',true).text('Saving…');
+                $.post(_hm.ajax,{action:'hm_save_case_history',nonce:_hm.nonce,patient_id:pid,appointment_type:$('#ch-type').val(),note_text:'['+$('#ch-date').val()+' · '+($('#ch-type').val()||'Case History')+']\n'+parts.join('\n')},function(r){
+                    if(r.success){toast('Case history saved');renderManual();}
+                    else{toast('Error','error');$('#ch-save').prop('disabled',false).text('Save Case History');}
+                });
+            });
+        }
+
+        /* ───────────────────────────────────────
+           AI TRANSCRIPTION TAB
+           ─────────────────────────────────────── */
+        function renderAI(){
+            var $b=$('#hm-ch-body');
+            $b.html(
+                '<div style="margin-top:16px;">'+
+                    /* ── 1. Document type picker ── */
+                    '<div class="hm-card" style="margin-bottom:16px;">'+
+                        '<div class="hm-card-hd">'+HM_ICONS.note+' New AI Transcription</div>'+
+                        '<div class="hm-card-body">'+
+                            '<div class="hm-form-group"><label class="hm-label">Document Type</label>'+
+                                '<select class="hm-select" id="ai-doc-type"><option value="">Loading…</option></select>'+
+                                '<span style="font-size:12px;color:#94a3b8;margin-top:4px;display:block;">Choose the document type this recording will generate.</span>'+
+                            '</div>'+
+                            /* ── Consent + Record ── */
+                            '<div class="hm-ai-notice" style="margin-top:12px;"><div class="hm-ai-notice-icon">'+HM_ICONS.warning+'</div><div style="flex:1;">'+
+                                '<strong>AI Processing Notice</strong>'+
+                                '<p style="margin:4px 0 0;">This consultation will be recorded and transcribed by AI. The transcript will be reviewed before saving. The patient must be informed before recording begins.</p>'+
+                                '<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin-top:10px;"><input type="checkbox" id="hm-ai-consent" style="margin-top:2px;flex-shrink:0;"><span>I confirm the patient has been informed that this consultation will be processed by AI.</span></label>'+
+                            '</div></div>'+
+                            '<div style="display:flex;align-items:center;gap:10px;margin-top:14px;">'+
+                                '<button class="hm-btn hm-btn--primary" id="hm-start-recording" disabled>'+HM_ICONS.mic+' <span>Start Recording</span></button>'+
+                                '<span id="hm-rec-timer" style="display:none;font-size:13px;font-weight:600;color:#e53e3e;font-variant-numeric:tabular-nums;">00:00</span>'+
+                            '</div>'+
+                            '<div id="hm-rec-status" style="display:none;margin-top:12px;"></div>'+
+                            '<div id="hm-transcript-wrap" style="display:none;margin-top:16px;"></div>'+
+                        '</div>'+
+                    '</div>'+
+                    /* ── 2. Past transcripts list ── */
+                    '<div class="hm-card" id="hm-past-tx-card">'+
+                        '<div class="hm-card-hd">'+HM_ICONS.audit+' Past Transcriptions</div>'+
+                        '<div class="hm-card-body" id="hm-past-tx"><div style="display:flex;align-items:center;gap:8px;"><span class="hm-spinner"></span> Loading…</div></div>'+
+                    '</div>'+
+                '</div>'
+            );
+
+            /* ── Load document types ── */
+            $.post(_hm.ajax,{action:'hm_get_ai_document_types',nonce:_hm.nonce},function(r){
+                var $sel=$('#ai-doc-type');
+                $sel.empty().append('<option value="">— Select document type —</option>');
+                if(r.success&&r.data.length){
+                    r.data.forEach(function(d){
+                        $sel.append('<option value="'+d.id+'">'+esc(d.name)+' ('+esc(d.category)+')</option>');
+                    });
+                }else{
+                    $sel.append('<option value="" disabled>No AI-enabled templates found</option>');
+                }
+            });
+
+            /* ── Load past transcripts ── */
+            loadPastTranscripts();
+
+            /* ── Enable record when consent checked + doc chosen ── */
+            function checkReady(){
+                var ok=$('#hm-ai-consent').is(':checked') && $('#ai-doc-type').val();
+                $('#hm-start-recording').prop('disabled',!ok);
+            }
+            $b.off('change','#hm-ai-consent').on('change','#hm-ai-consent',checkReady);
+            $b.off('change','#ai-doc-type').on('change','#ai-doc-type',checkReady);
+
+            /* ── Recording logic ── */
+            var mr,chunks=[],isRec=false,recStart=0,timerIv=null;
+
+            $b.off('click','#hm-start-recording').on('click','#hm-start-recording',function(){
+                if(isRec)return;
+                if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('Recording not supported','error');return;}
+                navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+                    isRec=true;chunks=[];mr=new MediaRecorder(stream);
+                    mr.ondataavailable=function(e){chunks.push(e.data);};
+                    mr.onstop=function(){
+                        stream.getTracks().forEach(function(t){t.stop();});
+                        isRec=false;
+                        clearInterval(timerIv);
+                        $('#hm-rec-timer').hide();
+                        $('#hm-start-recording').html(HM_ICONS.mic+' <span>Start Recording</span>').removeClass('hm-btn--danger').addClass('hm-btn--primary').prop('disabled',true);
+                        $('#hm-rec-status').html('<div style="display:flex;align-items:center;gap:10px;"><span class="hm-spinner"></span><span style="font-size:13px;color:#64748b;">Transcribing audio…</span></div>').show();
+                        var blob=new Blob(chunks,{type:'audio/webm'}),reader=new FileReader();
+                        reader.onloadend=function(){
+                            var b64=reader.result.split(',')[1];
+                            $.post(_hm.ajax,{action:'hm_transcribe_audio',nonce:_hm.nonce,audio:b64},function(r){
+                                if(r.success&&r.data.transcript){
+                                    showTx(r.data.transcript,r.data.duration_secs||0);
+                                }else{
+                                    $('#hm-rec-status').html('<div style="color:#e53e3e;font-size:13px;">'+(r.data||'Transcription failed')+'</div>');
+                                    checkReady();
+                                }
+                            }).fail(function(){
+                                $('#hm-rec-status').html('<div style="color:#e53e3e;font-size:13px;">Transcription request failed</div>');
+                                checkReady();
+                            });
+                        };
+                        reader.readAsDataURL(blob);
+                    };
+                    mr.start();
+                    recStart=Date.now();
+                    $('#hm-rec-timer').show();
+                    timerIv=setInterval(function(){
+                        var s=Math.floor((Date.now()-recStart)/1000),m=Math.floor(s/60);s=s%60;
+                        $('#hm-rec-timer').text((m<10?'0':'')+m+':'+(s<10?'0':'')+s);
+                    },500);
+                    $('#hm-start-recording').html(HM_ICONS.mic+' <span>Stop Recording</span>').removeClass('hm-btn--primary').addClass('hm-btn--danger');
+                    $('#hm-rec-status').html('<div style="display:flex;align-items:center;gap:10px;"><span style="width:10px;height:10px;background:#e53e3e;border-radius:50%;display:inline-block;animation:hm-pulse 1s infinite;"></span><span style="font-size:13px;color:#e53e3e;font-weight:500;">Recording in progress…</span></div>').show();
+                    // Second click = stop
+                    $b.off('click','#hm-start-recording').on('click','#hm-start-recording',function(){
+                        if(mr&&mr.state!=='inactive')mr.stop();
+                    });
+                }).catch(function(){toast('Microphone access denied','error');});
+            });
+
+            /* ── Show transcript for review ── */
+            function showTx(txt,durSecs){
+                $('#hm-rec-status').hide();
+                var docName=$('#ai-doc-type option:selected').text()||'';
+                $('#hm-transcript-wrap').html(
+                    '<div class="hm-card"><div class="hm-card-hd">Transcript — Review before saving</div><div class="hm-card-body">'+
+                        '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;">'+
+                            '<span class="hm-badge hm-badge--teal" style="font-size:12px;">'+esc(docName)+'</span>'+
+                            (durSecs?'<span style="font-size:12px;color:#64748b;">Duration: '+Math.floor(durSecs/60)+'m '+durSecs%60+'s</span>':'')+
+                            '<span style="font-size:12px;color:#64748b;">Words: '+txt.split(/\s+/).length+'</span>'+
+                        '</div>'+
+                        '<textarea class="hm-textarea" id="ai-tx-text" rows="10" style="font-size:13px;line-height:1.6;">'+esc(txt)+'</textarea>'+
+                        '<div style="margin-top:12px;display:flex;gap:10px;">'+
+                            '<button class="hm-btn hm-btn--primary" id="ai-save-tx">'+HM_ICONS.check+' Save &amp; Process</button>'+
+                            '<button class="hm-btn hm-btn--secondary" id="ai-discard-tx">Discard</button>'+
+                        '</div>'+
+                    '</div></div>'
+                ).show();
+            }
+
+            /* ── Save transcript ── */
+            $b.off('click','#ai-save-tx').on('click','#ai-save-tx',function(){
+                var t=$.trim($('#ai-tx-text').val());
+                if(!t){toast('Empty','error');return;}
+                var tplId=$('#ai-doc-type').val()||0;
+                $(this).prop('disabled',true).html(HM_ICONS.check+' Saving…');
+                $.post(_hm.ajax,{
+                    action:'hm_save_ai_transcript',
+                    nonce:_hm.nonce,
+                    patient_id:pid,
+                    appointment_id:window.hmCurrentApptId||latestApptId||0,
+                    template_id:tplId,
+                    transcript:t
+                },function(r){
+                    if(r.success){
+                        toast('Transcript saved — AI extraction triggered');
+                        $('#hm-transcript-wrap').hide();
+                        checkReady();
+                        loadPastTranscripts();
+                        if(r.data&&r.data.clinical_doc_id){
+                            $('#hm-transcript-wrap').after(
+                                '<div style="margin-top:10px;"><a href="?page=clinical-review&doc_id='+r.data.clinical_doc_id+'" class="hm-btn" style="background:#0BB4C4;color:#fff;text-decoration:none;">'+HM_ICONS.note+' Review Clinical Document</a></div>'
+                            );
+                        }
+                    }else{
+                        toast(r.data||'Error','error');
+                        $('#ai-save-tx').prop('disabled',false).html(HM_ICONS.check+' Save &amp; Process');
+                    }
+                });
+            });
+
+            /* ── Discard ── */
+            $b.off('click','#ai-discard-tx').on('click','#ai-discard-tx',function(){
+                $('#hm-transcript-wrap').hide();
+                checkReady();
+            });
+        }
+
+        /* ───────────────────────────────────────
+           PAST TRANSCRIPTS LIST
+           ─────────────────────────────────────── */
+        function loadPastTranscripts(){
+            $.post(_hm.ajax,{action:'hm_get_patient_transcripts',nonce:_hm.nonce,patient_id:pid},function(r){
+                var $w=$('#hm-past-tx');
+                if(!r.success||!r.data.length){
+                    $w.html('<div class="hm-empty" style="padding:20px 0;"><div class="hm-empty-icon">'+HM_ICONS.mic+'</div><div class="hm-empty-text">No transcriptions yet</div></div>');
+                    return;
+                }
+                var h='<div class="hm-tx-list">';
+                r.data.forEach(function(tx){
+                    var dur=tx.duration_seconds?Math.floor(tx.duration_seconds/60)+'m '+(tx.duration_seconds%60)+'s':'—';
+                    var preview=tx.transcript_text.length>150?tx.transcript_text.substr(0,150)+'…':tx.transcript_text;
+                    var statusBadge='';
+                    if(tx.doc_status==='draft') statusBadge='<span class="hm-badge hm-badge--amber" style="font-size:11px;">Draft</span>';
+                    else if(tx.doc_status==='reviewed') statusBadge='<span class="hm-badge hm-badge--green" style="font-size:11px;">Reviewed</span>';
+                    else if(tx.doc_status==='final') statusBadge='<span class="hm-badge hm-badge--teal" style="font-size:11px;">Final</span>';
+                    else if(tx.clinical_doc_id) statusBadge='<span class="hm-badge hm-badge--grey" style="font-size:11px;">'+esc(tx.doc_status||'processing')+'</span>';
+
+                    h+='<div class="hm-tx-item" style="border-bottom:1px solid #f1f5f9;padding:12px 0;">'+
+                        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+
+                            '<span style="font-size:13px;font-weight:600;color:#334155;">'+fmtDateTime(tx.created_at)+'</span>'+
+                            (tx.template_name?'<span class="hm-badge hm-badge--blue" style="font-size:11px;">'+esc(tx.template_name)+'</span>':'')+
+                            statusBadge+
+                            '<span style="font-size:12px;color:#94a3b8;margin-left:auto;">'+esc(tx.created_by)+' · '+dur+'</span>'+
+                        '</div>'+
+                        '<p style="font-size:13px;color:#64748b;margin:6px 0 0;line-height:1.5;">'+esc(preview)+'</p>'+
+                        (tx.clinical_doc_id?'<a href="?page=clinical-review&doc_id='+tx.clinical_doc_id+'" class="hm-btn hm-btn--sm hm-btn--outline" style="margin-top:8px;">'+HM_ICONS.note+' View Document</a>':'')+
+                    '</div>';
+                });
+                h+='</div>';
+                $w.html(h);
+            });
+        }
+
+        /* ── Init ── */
+        renderShell();
     }
 
     /* ── ACTIVITY ── */

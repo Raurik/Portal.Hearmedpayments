@@ -103,9 +103,11 @@ add_action( 'wp_ajax_hm_anonymise_patient',        'hm_ajax_anonymise_patient' )
 add_action( 'wp_ajax_hm_export_patient_data',      'hm_ajax_export_patient_data' );
 
 // Case History & AI (integrates with admin AI Settings)
-add_action( 'wp_ajax_hm_save_case_history',   'hm_ajax_save_case_history' );
-add_action( 'wp_ajax_hm_save_ai_transcript',  'hm_ajax_save_ai_transcript' );
-add_action( 'wp_ajax_hm_transcribe_audio',    'hm_ajax_transcribe_audio' );
+add_action( 'wp_ajax_hm_save_case_history',        'hm_ajax_save_case_history' );
+add_action( 'wp_ajax_hm_save_ai_transcript',       'hm_ajax_save_ai_transcript' );
+add_action( 'wp_ajax_hm_transcribe_audio',         'hm_ajax_transcribe_audio' );
+add_action( 'wp_ajax_hm_get_ai_document_types',    'hm_ajax_get_ai_document_types' );
+add_action( 'wp_ajax_hm_get_patient_transcripts',  'hm_ajax_get_patient_transcripts' );
 
 // Activity / Audit
 add_action( 'wp_ajax_hm_get_patient_audit',   'hm_ajax_get_patient_audit' );
@@ -1872,6 +1874,7 @@ function hm_ajax_save_ai_transcript() {
     $db             = HearMed_DB::instance();
     $staff_id       = hm_patient_staff_id();
     $appointment_id = intval( $_POST['appointment_id'] ?? 0 );
+    $template_id    = intval( $_POST['template_id'] ?? 0 );
     $word_count     = str_word_count( $text );
     $duration_secs  = intval( $_POST['duration_secs'] ?? 0 );
     $hash           = hash( 'sha256', $text );
@@ -1901,13 +1904,14 @@ function hm_ajax_save_ai_transcript() {
         'patient_id'     => $pid,
         'transcript_id'  => $transcript_id,
         'appointment_id' => $appointment_id,
+        'template_id'    => $template_id,
         'word_count'     => $word_count,
     ]);
 
-    /* ── 3. Trigger AI extraction (Job 7) ── */
+    /* ── 3. Trigger AI extraction ── */
     $clinical_doc_id = null;
-    if ( $transcript_id && $appointment_id ) {
-        $clinical_doc_id = hm_trigger_ai_extraction( $pid, $appointment_id, $transcript_id, $text );
+    if ( $transcript_id ) {
+        $clinical_doc_id = hm_trigger_ai_extraction( $pid, $appointment_id ?: 0, $transcript_id, $text, $template_id ?: 0 );
     }
 
     wp_send_json_success( [
@@ -1915,6 +1919,80 @@ function hm_ajax_save_ai_transcript() {
         'transcript_id'   => $transcript_id,
         'clinical_doc_id' => $clinical_doc_id,
     ] );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  18b. AI DOCUMENT TYPES + PATIENT TRANSCRIPTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Return active, AI-enabled document templates for the dropdown picker.
+ */
+function hm_ajax_get_ai_document_types() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+
+    $rows = HearMed_DB::get_results(
+        "SELECT id, name, category
+         FROM hearmed_admin.document_templates
+         WHERE is_active = true AND ai_enabled = true
+         ORDER BY sort_order, name"
+    );
+
+    $data = [];
+    foreach ( ( $rows ?: [] ) as $r ) {
+        $data[] = [
+            'id'       => (int) $r->id,
+            'name'     => $r->name,
+            'category' => $r->category ?? 'clinical',
+        ];
+    }
+
+    wp_send_json_success( $data );
+}
+
+/**
+ * Return past transcripts + clinical docs for a patient.
+ */
+function hm_ajax_get_patient_transcripts() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $pid = intval( $_POST['patient_id'] ?? 0 );
+    if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
+
+    $db   = HearMed_DB::instance();
+    $rows = $db->get_results(
+        "SELECT t.id, t.appointment_id, t.transcript_text,
+                t.duration_seconds, t.source, t.created_at,
+                COALESCE(CONCAT(s.first_name, ' ', s.last_name), 'System') AS created_by_name,
+                cd.id AS clinical_doc_id, cd.status AS doc_status,
+                dt.name AS template_name
+         FROM hearmed_admin.appointment_transcripts t
+         LEFT JOIN hearmed_reference.staff s ON s.id = t.created_by
+         LEFT JOIN hearmed_admin.appointment_clinical_docs cd ON cd.transcript_id = t.id
+         LEFT JOIN hearmed_admin.document_templates dt ON dt.id = cd.template_id
+         WHERE t.patient_id = \$1
+         ORDER BY t.created_at DESC
+         LIMIT 50",
+        [ $pid ]
+    );
+
+    $data = [];
+    foreach ( ( $rows ?: [] ) as $r ) {
+        $data[] = [
+            'id'               => (int) $r->id,
+            'appointment_id'   => (int) ( $r->appointment_id ?? 0 ),
+            'transcript_text'  => $r->transcript_text,
+            'duration_seconds' => (int) ( $r->duration_seconds ?? 0 ),
+            'source'           => $r->source ?? 'whisper',
+            'created_at'       => $r->created_at,
+            'created_by'       => $r->created_by_name ?? 'System',
+            'clinical_doc_id'  => $r->clinical_doc_id ? (int) $r->clinical_doc_id : null,
+            'doc_status'       => $r->doc_status ?? null,
+            'template_name'    => $r->template_name ?? null,
+        ];
+    }
+
+    wp_send_json_success( $data );
 }
 
 
@@ -2220,35 +2298,46 @@ function hm_ajax_create_exchange() {
  * @param int    $appointment_id
  * @param int    $transcript_id
  * @param string $transcript_text
+ * @param int    $template_id  Optional — explicit template chosen by user
  */
-function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id, $transcript_text ) {
+function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id, $transcript_text, $template_id = 0 ) {
     $db = HearMed_DB::instance();
 
-    /* ── 1. Determine appointment type → find matching template ── */
-    $appt = $db->get_row(
-        "SELECT appointment_type_id FROM hearmed_core.appointments WHERE id = $1",
-        [ $appointment_id ]
-    );
-
-    // Try to find template by appointment type name, fallback to first AI-enabled template
+    /* ── 1. Determine template ── */
     $template = null;
-    if ( $appt && $appt->appointment_type_id ) {
-        $apt_type = $db->get_row(
-            "SELECT type_name FROM hearmed_reference.appointment_types WHERE id = $1",
-            [ $appt->appointment_type_id ]
+
+    // a) Explicit template_id from user selection
+    if ( $template_id ) {
+        $template = $db->get_row(
+            "SELECT * FROM hearmed_admin.document_templates
+             WHERE id = $1 AND is_active = true AND ai_enabled = true",
+            [ $template_id ]
         );
-        if ( $apt_type ) {
-            // Try exact name match
-            $template = $db->get_row(
-                "SELECT * FROM hearmed_admin.document_templates 
-                 WHERE LOWER(name) = LOWER($1) AND is_active = true AND ai_enabled = true
-                 LIMIT 1",
-                [ $apt_type->type_name ]
+    }
+
+    // b) Fallback: match by appointment type name
+    if ( ! $template && $appointment_id ) {
+        $appt = $db->get_row(
+            "SELECT appointment_type_id FROM hearmed_core.appointments WHERE id = $1",
+            [ $appointment_id ]
+        );
+        if ( $appt && $appt->appointment_type_id ) {
+            $apt_type = $db->get_row(
+                "SELECT type_name FROM hearmed_reference.appointment_types WHERE id = $1",
+                [ $appt->appointment_type_id ]
             );
+            if ( $apt_type ) {
+                $template = $db->get_row(
+                    "SELECT * FROM hearmed_admin.document_templates 
+                     WHERE LOWER(name) = LOWER($1) AND is_active = true AND ai_enabled = true
+                     LIMIT 1",
+                    [ $apt_type->type_name ]
+                );
+            }
         }
     }
 
-    // Fallback: first active AI-enabled template
+    // c) Fallback: first active AI-enabled template
     if ( ! $template ) {
         $template = $db->get_row(
             "SELECT * FROM hearmed_admin.document_templates 
