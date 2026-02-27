@@ -79,6 +79,7 @@ class HearMed_Admin_Appointment_Type_Detail {
         $badge_bg    = $svc->badge_bg_color ?? '#ffffff33';
         $badge_text  = $svc->badge_text_color ?? '#FFFFFF';
         $border_colour = $svc->border_color ?? '';
+        $tint_opacity  = intval($svc->tint_opacity ?? 12);
         $assigned_ids = array_map(function($a) { return (int)$a->staff_id; }, $assigned);
 
         ob_start();
@@ -111,6 +112,12 @@ class HearMed_Admin_Appointment_Type_Detail {
         /* ── Colour section groups ── */
         #hm-app .hm-colour-group     { margin-bottom:16px; }
         #hm-app .hm-colour-group-hd  { font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #f1f5f9; }
+        /* Range slider */
+        #hm-app .hm-range-wrap        { display:flex; align-items:center; gap:8px; width:150px; }
+        #hm-app .hm-range             { flex:1; -webkit-appearance:none; appearance:none; height:5px; background:#e2e8f0; border-radius:3px; outline:none; }
+        #hm-app .hm-range::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--hm-teal,#0ea5e9); cursor:pointer; }
+        #hm-app .hm-range::-moz-range-thumb { width:14px; height:14px; border-radius:50%; background:var(--hm-teal,#0ea5e9); cursor:pointer; border:none; }
+        #hm-app .hm-range-val         { font-size:12px; font-weight:600; color:#334155; min-width:32px; text-align:right; }
 
         /* ── Preview card — matches calendar card exactly ── */
         #hm-app .hm-appt-preview-wrap { display:flex; flex-direction:column; align-items:center; gap:16px; padding:8px 0; }
@@ -204,6 +211,10 @@ class HearMed_Admin_Appointment_Type_Detail {
                             <div class="hm-srow hm-color-row">
                                 <span class="hm-slbl">Border colour</span>
                                 <span class="hm-sval"><input type="color" id="hm-svc-border-colour" value="<?php echo esc_attr($border_colour ?: $colour); ?>" class="hm-color-box"></span>
+                            </div>
+                            <div class="hm-srow">
+                                <span class="hm-slbl">Tint opacity</span>
+                                <span class="hm-sval"><div class="hm-range-wrap"><input type="range" class="hm-range" id="hm-svc-tint" min="3" max="40" value="<?php echo $tint_opacity; ?>"><span class="hm-range-val" id="hm-tint-val"><?php echo $tint_opacity; ?>%</span></div></span>
                             </div>
                         </div>
 
@@ -490,6 +501,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                 var metaCol = $('#hm-svc-meta-colour').val();
                 var badgeBg = $('#hm-svc-badge-bg').val();
                 var badgeTx = $('#hm-svc-badge-text').val();
+                var tintPct = parseInt($('#hm-svc-tint').val()) || 12;
                 var name    = $('#hm-svc-name').val() || 'Preview';
                 var dur     = parseInt($('#hm-svc-duration').val()) || 30;
                 var cs      = previewStyle;
@@ -511,12 +523,13 @@ class HearMed_Admin_Appointment_Type_Detail {
                     $iniBadge.css({ background: badgeBg, color: badgeTx });
                 } else if (cs === 'tinted') {
                     var r = parseInt(bg.slice(1,3),16), g = parseInt(bg.slice(3,5),16), b = parseInt(bg.slice(5,7),16);
-                    bgStyle = 'background:rgba('+r+','+g+','+b+',0.12);border-left:3.5px solid '+bg + ';color:' + bg;
+                    var tAlpha = (tintPct / 100).toFixed(2);
+                    bgStyle = 'background:rgba('+r+','+g+','+b+','+tAlpha+');border-left:3.5px solid '+bg + ';color:' + bg;
                     fontColor = bg;
                     $svc.css('color', bg);
                     $tm.css('color', bg);
                     $meta.css('color', 'var(--hm-text-muted)');
-                    $iniBadge.css({ background: 'rgba('+r+','+g+','+b+',0.15)', color: bg });
+                    $iniBadge.css({ background: 'rgba('+r+','+g+','+b+','+(tAlpha*1.25).toFixed(2)+')', color: bg });
                 } else if (cs === 'outline') {
                     bgStyle = 'background:#fff;border:1.5px solid '+bg+';border-left:3.5px solid '+bg+';color:'+bg;
                     fontColor = bg;
@@ -548,6 +561,7 @@ class HearMed_Admin_Appointment_Type_Detail {
             // Bind all colour pickers and inputs to live preview
             $('#hm-svc-colour, #hm-svc-border-colour, #hm-svc-text-colour, #hm-svc-name-colour, #hm-svc-time-colour, #hm-svc-meta-colour, #hm-svc-badge-bg, #hm-svc-badge-text').on('input', updatePreview);
             $('#hm-svc-name, #hm-svc-duration').on('input', updatePreview);
+            $('#hm-svc-tint').on('input', function(){ $('#hm-tint-val').text(this.value+'%'); updatePreview(); });
 
             // Card style tabs
             $(document).on('click', '.hm-preview-style-btn', function() {
@@ -584,6 +598,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                     badge_bg_color:      $('#hm-svc-badge-bg').val(),
                     badge_text_color:    $('#hm-svc-badge-text').val(),
                     border_color:        $('#hm-svc-border-colour').val(),
+                    tint_opacity:        $('#hm-svc-tint').val(),
                     duration:            $('#hm-svc-duration').val(),
                     appointment_category:$('#hm-svc-category').val(),
                     sales_opportunity:   $('#hm-svc-sales').is(':checked') ? 1 : 0,
@@ -743,6 +758,7 @@ class HearMed_Admin_Appointment_Type_Detail {
             'badge_bg_color'      => sanitize_hex_color($_POST['badge_bg_color'] ?? '#ffffff') ?: '#ffffff',
             'badge_text_color'    => sanitize_hex_color($_POST['badge_text_color'] ?? '#FFFFFF') ?: '#FFFFFF',
             'border_color'        => sanitize_hex_color($_POST['border_color'] ?? '') ?: '',
+            'tint_opacity'        => max(3, min(40, intval($_POST['tint_opacity'] ?? 12))),
             'duration_minutes'    => $dur,
             'duration'            => $dur,
             'appointment_category'=> sanitize_text_field($_POST['appointment_category'] ?? ''),

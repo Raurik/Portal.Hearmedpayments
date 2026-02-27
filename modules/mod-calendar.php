@@ -312,6 +312,7 @@ function hm_ajax_get_services() {
                 COALESCE(service_color, '#3B82F6') AS service_color,
                 COALESCE(text_color, '#FFFFFF') AS text_color,
                 COALESCE(duration_minutes, 30) AS duration_minutes,
+                COALESCE(tint_opacity, 12) AS tint_opacity,
                 is_active
          FROM hearmed_reference.services WHERE is_active = true ORDER BY service_name"
     );
@@ -322,6 +323,7 @@ function hm_ajax_get_services() {
             'name'     => $p->service_name,
             'colour'   => $p->service_color ?: '#3B82F6',
             'duration' => (int) ($p->duration_minutes ?: 30),
+            'tint_opacity' => (int) ($p->tint_opacity ?: 12),
         ];
     }
     wp_send_json_success( $d );
@@ -404,7 +406,8 @@ function hm_ajax_get_appointments() {
                    sv.service_name,
                    COALESCE(sv.service_color, '#3B82F6') AS service_colour,
                    COALESCE(sv.text_color, '#FFFFFF') AS service_text_color,
-                   COALESCE(a.duration_minutes, sv.duration_minutes, 30) AS service_duration
+                   COALESCE(a.duration_minutes, sv.duration_minutes, 30) AS service_duration,
+                   COALESCE(sv.tint_opacity, 12) AS tint_opacity
             FROM hearmed_core.appointments a
             LEFT JOIN hearmed_core.patients p ON a.patient_id = p.id
             LEFT JOIN hearmed_reference.staff st ON a.staff_id = st.id
@@ -466,6 +469,7 @@ function hm_ajax_get_appointments() {
             'outcome_id'            => 0,
             'outcome_name'          => $r->outcome ?? '',
             'outcome_banner_colour' => '',
+            'tint_opacity'          => (int) ($r->tint_opacity ?: 12),
             'created_by'            => (int) ($r->created_by ?? 0),
         ];
     }
