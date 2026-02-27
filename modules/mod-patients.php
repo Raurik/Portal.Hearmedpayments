@@ -1064,19 +1064,31 @@ function hm_ajax_get_patient_appointments() {
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
     $db   = HearMed_DB::instance();
+
+    // Check if appointment_outcomes table exists for the LEFT JOIN
+    $has_ao = false;
+    try {
+        $has_ao = (bool) $db->get_var(
+            "SELECT 1 FROM information_schema.tables WHERE table_schema='hearmed_core' AND table_name='appointment_outcomes'"
+        );
+    } catch ( Throwable $ignored ) {}
+
+    $ao_join   = $has_ao ? "LEFT JOIN hearmed_core.appointment_outcomes ao ON ao.appointment_id = a.id" : "";
+    $ao_select = $has_ao ? "ao.outcome_name, ao.outcome_color AS outcome_banner_colour" : "NULL AS outcome_name, NULL AS outcome_banner_colour";
+
     $rows = $db->get_results(
         "SELECT a.id, a.appointment_date, a.start_time, a.end_time,
                 a.appointment_status AS status, a.notes,
-                COALESCE(sv.service_name, a.outcome, '') AS service_name,
+                COALESCE(sv.service_name, '') AS service_name,
                 COALESCE(sv.service_color, sv.colour, '#3B82F6') AS service_colour,
                 COALESCE(c.clinic_name, '') AS clinic_name,
                 COALESCE(st.first_name || ' ' || st.last_name, '') AS dispenser_name,
-                ao.outcome_name, ao.outcome_color AS outcome_banner_colour
+                {$ao_select}
          FROM hearmed_core.appointments a
-         LEFT JOIN hearmed_reference.services sv ON sv.id = a.service_id
+         LEFT JOIN hearmed_reference.services sv ON sv.id = a.appointment_type_id
          LEFT JOIN hearmed_reference.clinics c ON c.id = a.clinic_id
          LEFT JOIN hearmed_reference.staff st ON st.id = a.staff_id
-         LEFT JOIN hearmed_core.appointment_outcomes ao ON ao.appointment_id = a.id
+         {$ao_join}
          WHERE a.patient_id = \$1
          ORDER BY a.appointment_date DESC, a.start_time DESC",
         [ $pid ]
