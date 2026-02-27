@@ -565,7 +565,7 @@ var Cal={
             // Filter by multi-select
             if(Cal.selDisps.length&&Cal.selDisps.indexOf(parseInt(a.dispenser_id))===-1)return;
             if(Cal.selClinics.length&&Cal.selClinics.indexOf(parseInt(a.clinic_id))===-1)return;
-            if(cfg.hideCancelled&&a.status==='Cancelled')return;
+            // Cancelled/rescheduled are always shown (half-height with overlay text)
 
             var di=-1;
             for(var i=0;i<dates.length;i++){if(fmt(dates[i])===a.appointment_date){di=i;break;}}
@@ -595,6 +595,9 @@ var Cal={
             var isNoShow=a.status==='No Show';
             var isRescheduled=a.status==='Rescheduled';
             var stCls=isCancelled?' cancelled':isNoShow?' noshow':isRescheduled?' rescheduled':'';
+
+            // Cancelled / Rescheduled → halve the card height to free up slot space
+            if(isCancelled||isRescheduled){ h=Math.max(slotH*0.4, h/2); }
             var tmLbl=cfg.showTimeInline?(a.start_time.substring(0,5)+' '):'';
             var hasOutcome=a.outcome_banner_colour&&a.outcome_name;
             var font=cfg.apptFont||'#fff';
@@ -658,9 +661,9 @@ var Cal={
             }
             card+='</div>';
             // Cancelled / No Show / Rescheduled overlay
-            if(isCancelled)card+='<div class="hm-appt-overlay hm-appt-overlay--cancel"></div>';
+            if(isCancelled)card+='<div class="hm-appt-overlay hm-appt-overlay--cancel"><span>CANCELLED</span></div>';
             else if(isNoShow)card+='<div class="hm-appt-overlay hm-appt-overlay--noshow"></div>';
-            else if(isRescheduled)card+='<div class="hm-appt-overlay hm-appt-overlay--resched" style="color:'+col+'"><span>RESCHEDULED</span></div>';
+            else if(isRescheduled)card+='<div class="hm-appt-overlay hm-appt-overlay--resched"><span>RESCHEDULED</span></div>';
             card+='</div>';
 
             var el=$(card);
