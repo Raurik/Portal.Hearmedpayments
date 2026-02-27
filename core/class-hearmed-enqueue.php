@@ -260,6 +260,8 @@ class HearMed_Enqueue {
             'hearmed_document_template_editor',
             // Form templates
             'hearmed_form_templates',
+            // Finance form builder
+            'hearmed_finance_form_builder',
             'hearmed_fitting',
             'hearmed_stock',
             'hearmed_refunds',
@@ -410,6 +412,10 @@ class HearMed_Enqueue {
             'hearmed_admin_patient_overview',
             // Chat admin
             'hearmed_chat_logs',
+            // Document / form / finance template builders
+            'hearmed_document_template_editor',
+            'hearmed_form_templates',
+            'hearmed_finance_form_builder',
         ]);
     }
     
