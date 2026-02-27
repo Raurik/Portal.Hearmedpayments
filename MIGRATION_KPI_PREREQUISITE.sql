@@ -28,27 +28,27 @@ ALTER TABLE hearmed_reference.staff
 ALTER TABLE hearmed_reference.staff_auth
   ADD COLUMN IF NOT EXISTS commission_pin TEXT;
 
--- ─── 5. Commission rules reference data ─────────────────
-CREATE TABLE IF NOT EXISTS hearmed_admin.commission_rules (
-    id              SERIAL PRIMARY KEY,
-    rule_name       TEXT NOT NULL,
-    category        TEXT,
-    min_revenue     NUMERIC(10,2) DEFAULT 0,
-    max_revenue     NUMERIC(10,2),
-    commission_pct  NUMERIC(5,2) NOT NULL DEFAULT 0,
-    is_active       BOOLEAN NOT NULL DEFAULT true,
-    created_at      TIMESTAMPTZ DEFAULT now(),
-    updated_at      TIMESTAMPTZ DEFAULT now()
-);
+-- ─── 5. Commission rules — add columns to existing table ─
+--    Existing cols: id, role_type, rule_type, bracket_from, bracket_to,
+--                   rate_pct, applies_to, clinic_scope, is_active, created_at, updated_at
+--    We add: rule_name (friendly label), category (alias for applies_to grouping)
+ALTER TABLE hearmed_admin.commission_rules
+  ADD COLUMN IF NOT EXISTS rule_name       TEXT,
+  ADD COLUMN IF NOT EXISTS category        TEXT,
+  ADD COLUMN IF NOT EXISTS min_revenue     NUMERIC(10,2) DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS max_revenue     NUMERIC(10,2),
+  ADD COLUMN IF NOT EXISTS commission_pct  NUMERIC(5,2) DEFAULT 0;
 
--- Seed default tiers (idempotent)
-INSERT INTO hearmed_admin.commission_rules (rule_name, category, min_revenue, max_revenue, commission_pct)
-SELECT * FROM (VALUES
-    ('Tier 1 – up to €5 000',   'hearing_aids',   0,     5000,  5.00),
-    ('Tier 2 – €5 001–€15 000', 'hearing_aids',   5001, 15000, 7.50),
-    ('Tier 3 – €15 001+',       'hearing_aids',  15001,  NULL, 10.00),
-    ('Accessories flat',         'accessories',      0,   NULL,  3.00)
-) AS v(rule_name, category, min_revenue, max_revenue, commission_pct)
+-- Seed default tiers using BOTH legacy and new columns (idempotent)
+INSERT INTO hearmed_admin.commission_rules
+    (rule_name, role_type, rule_type, bracket_from, bracket_to, rate_pct, applies_to, category, min_revenue, max_revenue, commission_pct)
+SELECT v.*
+FROM (VALUES
+    ('Tier 1 – up to €5 000',   'dispenser', 'tiered',   0.00,  5000.00,  5.00, 'hearing_aids', 'hearing_aids',   0.00,  5000.00,  5.00),
+    ('Tier 2 – €5 001–€15 000', 'dispenser', 'tiered',5001.00, 15000.00,  7.50, 'hearing_aids', 'hearing_aids',5001.00, 15000.00,  7.50),
+    ('Tier 3 – €15 001+',       'dispenser', 'tiered',15001.00,    NULL, 10.00, 'hearing_aids', 'hearing_aids',15001.00,     NULL, 10.00),
+    ('Accessories flat',         'dispenser', 'flat',      0.00,    NULL,  3.00, 'accessories',  'accessories',    0.00,     NULL,  3.00)
+) AS v(rule_name, role_type, rule_type, bracket_from, bracket_to, rate_pct, applies_to, category, min_revenue, max_revenue, commission_pct)
 WHERE NOT EXISTS (SELECT 1 FROM hearmed_admin.commission_rules LIMIT 1);
 
 -- ─── 6. KPI targets: add monthly revenue metric ─────────
