@@ -70,7 +70,17 @@ function hm_ajax_get_settings() {
         if ( ! $exists ) { wp_send_json_success( [] ); return; }
         $row = HearMed_DB::get_row( "SELECT * FROM {$t} LIMIT 1" );
         if ( $row ) {
-            wp_send_json_success( (array) $row );
+            $arr = (array) $row;
+            // Decode jsonb columns — PostgreSQL returns them with JSON encoding (quoted strings)
+            foreach ( ['working_days', 'enabled_days', 'calendar_order', 'appointment_statuses'] as $jf ) {
+                if ( isset( $arr[ $jf ] ) && is_string( $arr[ $jf ] ) ) {
+                    $decoded = json_decode( $arr[ $jf ], true );
+                    if ( $decoded !== null ) {
+                        $arr[ $jf ] = is_array( $decoded ) ? implode( ',', $decoded ) : $decoded;
+                    }
+                }
+            }
+            wp_send_json_success( $arr );
         } else {
             wp_send_json_success( [] );
         }

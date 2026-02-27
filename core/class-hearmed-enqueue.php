@@ -151,6 +151,15 @@ class HearMed_Enqueue {
             $settings_row = HearMed_DB::get_row( "SELECT * FROM hearmed_core.calendar_settings LIMIT 1" );
             if ( $settings_row ) {
                 $settings = (array) $settings_row;
+                // Decode jsonb columns — PostgreSQL returns them with JSON encoding
+                foreach ( ['working_days', 'enabled_days', 'calendar_order', 'appointment_statuses'] as $jf ) {
+                    if ( isset( $settings[ $jf ] ) && is_string( $settings[ $jf ] ) ) {
+                        $decoded = json_decode( $settings[ $jf ], true );
+                        if ( $decoded !== null ) {
+                            $settings[ $jf ] = is_array( $decoded ) ? implode( ',', $decoded ) : $decoded;
+                        }
+                    }
+                }
             }
         } catch ( Throwable $e ) {
             error_log( '[HearMed] Could not load calendar settings: ' . $e->getMessage() );
