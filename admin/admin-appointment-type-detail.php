@@ -162,6 +162,37 @@ class HearMed_Admin_Appointment_Type_Detail {
                                 Income bearing
                             </label>
                         </div>
+                        <div class="hm-srow">
+                            <label class="hm-day-check">
+                                <input type="checkbox" id="hm-svc-reportable" <?php checked(!empty($svc->is_reportable)); ?>>
+                                <span class="hm-check"></span>
+                                Include in KPI reports
+                            </label>
+                        </div>
+                        <div id="hm-svc-report-cat-wrap" style="margin-left:24px;margin-bottom:8px;<?php echo empty($svc->is_reportable) ? 'display:none;' : ''; ?>">
+                            <div class="hm-srow">
+                                <span class="hm-slbl">Report Category</span>
+                                <span class="hm-sval">
+                                    <select class="hm-dd" id="hm-svc-report-category">
+                                        <option value="">— Select —</option>
+                                        <?php
+                                        $rcats = [
+                                            'hearing_aids' => 'Hearing Aids',
+                                            'accessories'  => 'Accessories',
+                                            'wax_removal'  => 'Wax Removal',
+                                            'diagnostic'   => 'Diagnostic',
+                                            'aftercare'    => 'Aftercare',
+                                            'other'        => 'Other',
+                                        ];
+                                        $cur_rc = $svc->report_category ?? '';
+                                        foreach ($rcats as $rk => $rv):
+                                        ?>
+                                        <option value="<?php echo esc_attr($rk); ?>" <?php selected($cur_rc, $rk); ?>><?php echo esc_html($rv); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -232,6 +263,9 @@ class HearMed_Admin_Appointment_Type_Detail {
                                 <?php if (!empty($o->triggers_followup_call) && $o->triggers_followup_call): ?>
                                     <span class="hm-badge hm-badge--sm hm-badge--orange">Call <?php echo intval($o->followup_call_days ?? 7); ?>d</span>
                                 <?php endif; ?>
+                                <?php if (!empty($o->is_reportable) && $o->is_reportable): ?>
+                                    <span class="hm-badge hm-badge--sm hm-badge--teal">KPI</span>
+                                <?php endif; ?>
                                 <button class="hm-btn hm-btn--sm hm-outcome-edit" data-row='<?php echo json_encode([
                                     'id'                    => (int)$o->id,
                                     'outcome_name'          => $o->outcome_name,
@@ -243,6 +277,8 @@ class HearMed_Admin_Appointment_Type_Detail {
                                     'triggers_reminder'     => !empty($o->triggers_reminder) && $o->triggers_reminder,
                                     'triggers_followup_call'=> !empty($o->triggers_followup_call) && $o->triggers_followup_call,
                                     'followup_call_days'    => intval($o->followup_call_days ?? 7),
+                                    'is_reportable'         => !empty($o->is_reportable) && $o->is_reportable,
+                                    'report_outcome'        => $o->report_outcome ?? '',
                                 ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>'>Edit</button>
                                 <button class="hm-btn hm-btn--sm hm-btn--danger hm-outcome-del" data-id="<?php echo (int)$o->id; ?>" data-name="<?php echo esc_attr($o->outcome_name); ?>">Delete</button>
                             </span>
@@ -361,6 +397,28 @@ class HearMed_Admin_Appointment_Type_Detail {
                             </div>
                             <p style="font-size:11px;color:var(--hm-text-muted);margin:4px 0 0;">Creates a reminder in the patient file for the dispenser to phone the patient.</p>
                         </div>
+                        <div class="hm-srow">
+                            <label class="hm-day-check">
+                                <input type="checkbox" id="hmo-reportable">
+                                <span class="hm-check"></span>
+                                Include in KPI reports
+                            </label>
+                        </div>
+                        <div id="hmo-report-outcome-wrap" style="margin-left:24px;margin-bottom:8px;display:none;">
+                            <div class="hm-srow">
+                                <span class="hm-slbl">Report Outcome</span>
+                                <span class="hm-sval">
+                                    <select class="hm-dd" id="hmo-report-outcome">
+                                        <option value="">— Select —</option>
+                                        <option value="sale">Sale</option>
+                                        <option value="no_sale">No Sale</option>
+                                        <option value="partial">Partial</option>
+                                        <option value="return">Return</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </span>
+                            </div>
+                        </div>
                         <div id="hmo-followup-wrap" style="margin-top:4px;display:none;">
                             <span class="hm-slbl" style="display:block;margin-bottom:8px;">Follow-up appointment type(s)</span>
                             <div class="hm-days-grid" id="hmo-followup-opts">
@@ -394,6 +452,11 @@ class HearMed_Admin_Appointment_Type_Detail {
             var ajaxUrl = HM.ajax_url || HM.ajax;
             var nonce   = HM.nonce;
 
+            /* ── KPI reportable toggle ── */
+            $('#hm-svc-reportable').on('change', function(){
+                $('#hm-svc-report-cat-wrap').toggle(this.checked);
+            });
+
             /* ── Colour swatch live update ── */
             $('#hm-svc-colour').on('input', function(){
                 var c = $(this).val();
@@ -422,6 +485,8 @@ class HearMed_Admin_Appointment_Type_Detail {
                     appointment_category:$('#hm-svc-category').val(),
                     sales_opportunity:   $('#hm-svc-sales').is(':checked') ? 1 : 0,
                     income_bearing:      $('#hm-svc-income').is(':checked') ? 1 : 0,
+                    is_reportable:       $('#hm-svc-reportable').is(':checked') ? 1 : 0,
+                    report_category:     $('#hm-svc-report-category').val(),
                     reminder_enabled:    $('#hm-svc-reminder').is(':checked') ? 1 : 0,
                     reminder_sms_template_id: $('#hm-svc-sms-tpl').val()
                 }, function(r){
@@ -445,6 +510,8 @@ class HearMed_Admin_Appointment_Type_Detail {
                     $('#hmo-reminder').prop('checked', isEdit ? !!data.triggers_reminder : false);
                     $('#hmo-followup-call').prop('checked', isEdit ? !!data.triggers_followup_call : false);
                     $('#hmo-call-days').val(isEdit && data.followup_call_days ? data.followup_call_days : 7);
+                    $('#hmo-reportable').prop('checked', isEdit ? !!data.is_reportable : false);
+                    $('#hmo-report-outcome').val(isEdit ? (data.report_outcome || '') : '');
                     // Follow-up services
                     $('.hmo-fu-svc').prop('checked', false);
                     if (isEdit && data.followup_service_ids && data.followup_service_ids.length) {
@@ -454,6 +521,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                     }
                     $('#hmo-followup-wrap').toggle($('#hmo-followup').is(':checked'));
                     $('#hmo-followup-call-wrap').toggle($('#hmo-followup-call').is(':checked'));
+                    $('#hmo-report-outcome-wrap').toggle($('#hmo-reportable').is(':checked'));
                     $('#hm-outcome-modal').addClass('open');
                     setTimeout(function(){ $('#hmo-name').focus(); }, 100);
                 },
@@ -468,6 +536,10 @@ class HearMed_Admin_Appointment_Type_Detail {
 
             $('#hmo-followup-call').on('change', function(){
                 $('#hmo-followup-call-wrap').toggle(this.checked);
+            });
+
+            $('#hmo-reportable').on('change', function(){
+                $('#hmo-report-outcome-wrap').toggle(this.checked);
             });
 
             $('#hm-add-outcome').on('click', function(){ hmOutcome.open(); });
@@ -497,7 +569,9 @@ class HearMed_Admin_Appointment_Type_Detail {
                     followup_service_ids: JSON.stringify(fuIds),
                     triggers_reminder: $('#hmo-reminder').is(':checked') ? 1 : 0,
                     triggers_followup_call: $('#hmo-followup-call').is(':checked') ? 1 : 0,
-                    followup_call_days: $('#hmo-call-days').val()
+                    followup_call_days: $('#hmo-call-days').val(),
+                    is_reportable: $('#hmo-reportable').is(':checked') ? 1 : 0,
+                    report_outcome: $('#hmo-report-outcome').val()
                 }, function(r){
                     btn.text('Save Outcome').prop('disabled', false);
                     if (r.success) location.reload();
@@ -575,6 +649,8 @@ class HearMed_Admin_Appointment_Type_Detail {
             'appointment_category'=> sanitize_text_field($_POST['appointment_category'] ?? ''),
             'sales_opportunity'   => !empty($_POST['sales_opportunity']),
             'income_bearing'      => !empty($_POST['income_bearing']),
+            'is_reportable'       => !empty($_POST['is_reportable']),
+            'report_category'     => sanitize_text_field($_POST['report_category'] ?? ''),
             'reminder_enabled'    => !empty($_POST['reminder_enabled']),
             'reminder_sms_template_id' => intval($_POST['reminder_sms_template_id'] ?? 0) ?: null,
             'updated_at'          => current_time('mysql'),
@@ -615,6 +691,8 @@ class HearMed_Admin_Appointment_Type_Detail {
             'triggers_reminder'    => !empty($_POST['triggers_reminder']),
             'triggers_followup_call'=> !empty($_POST['triggers_followup_call']),
             'followup_call_days'   => max(1, intval($_POST['followup_call_days'] ?? 7)),
+            'is_reportable'        => !empty($_POST['is_reportable']),
+            'report_outcome'       => sanitize_text_field($_POST['report_outcome'] ?? ''),
             'updated_at'           => current_time('mysql'),
         ];
 

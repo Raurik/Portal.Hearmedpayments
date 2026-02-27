@@ -134,6 +134,7 @@ class HearMed_Core {
             HEARMED_PATH . 'core/class-hearmed-invoice.php',
             HEARMED_PATH . 'modules/mod-forms.php', 
             HEARMED_PATH . 'modules/mod-clinical-pdf.php',
+            HEARMED_PATH . 'modules/mod-commission-pin.php',
             HEARMED_PATH . 'admin/admin-form-templates.php',
         ];
         foreach ( $module_files as $file ) {

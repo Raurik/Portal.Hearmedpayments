@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) exit;
 class HearMed_Admin_KPI_Targets {
 
     private static $metrics = [
+        'monthly_revenue'         => ['label' => 'Monthly Revenue Target',      'unit' => '€',  'default' => 40000],
         'closing_rate'            => ['label' => 'Closing Rate',                'unit' => '%',  'default' => 50],
         'conversion_rate'         => ['label' => 'Conversion Rate',             'unit' => '%',  'default' => 40],
         'appointment_completion'  => ['label' => 'Appointment Completion Rate', 'unit' => '%',  'default' => 90],
