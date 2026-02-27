@@ -1600,6 +1600,44 @@ textarea.hm-inp {
 
 
 /* ═══════════════════════════════════════
+   12b. EXCLUSION BLOCKS
+   ═══════════════════════════════════════ */
+
+.hm-excl {
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  cursor: default;
+}
+.hm-excl-label {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--hm-font-btn, 'Plus Jakarta Sans', sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hm-excl--fullday {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hm-excl--fullday .hm-excl-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.hm-excl--hours {
+  display: flex;
+  align-items: flex-start;
+}
+
+
+/* ═══════════════════════════════════════
    13. RESPONSIVE
    ═══════════════════════════════════════ */
 

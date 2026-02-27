@@ -1,5 +1,5 @@
 /**
- * HearMed Calendar v3.1 — Settings v3.1 rebuild
+ * HearMed Calendar v3.2 — Exclusion instances, calendar rendering, picker improvements
  * ─────────────────────────────────────────────────────
  * Renders views based on #hm-app[data-view]
  *   calendar  → Cal
@@ -299,6 +299,17 @@ var Cal={
         // Slot double-click
         $(document).on('dblclick','.hm-slot',function(){self.onSlot(this);});
 
+        // Delete exclusion from popover
+        $(document).on('click','.hm-excl-del',function(e){
+            e.stopPropagation();
+            var eid=$(this).data('eid');
+            if(!confirm('Delete this exclusion?'))return;
+            post('delete_exclusion',{id:eid}).then(function(r){
+                if(r.success){$('.hm-excl-pop').remove();self.refresh();}
+                else alert(r.data&&r.data.message?r.data.message:'Delete failed.');
+            }).fail(function(){alert('Network error.');});
+        });
+
         // Popover status actions
         $(document).on('click','.hm-pop-status',function(){
             var status=$(this).data('status'),a=self._popAppt;
@@ -391,6 +402,14 @@ var Cal={
             if(r.success) Cal.holidays=r.data||[];
         }).fail(function(){ Cal.holidays=[]; });
     },
+    loadExclusions:function(){
+        var dates=this.visDates();
+        if(!dates.length)return $.Deferred().resolve();
+        return post('get_exclusions',{start_date:fmt(dates[0]),end_date:fmt(dates[dates.length-1])}).then(function(r){
+            if(r.success) Cal.exclusions=r.data||[];
+            else Cal.exclusions=[];
+        }).fail(function(){ Cal.exclusions=[]; });
+    },
     /* Check if a dispenser is on holiday/unavailable for a given date */
     isDispOnHoliday:function(dispId,date){
         var ds=fmt(date);
@@ -479,7 +498,7 @@ var Cal={
     },
 
     // ── Refresh ──
-    refresh:function(){var self=this;this.loadAppts().then(function(){self.renderGrid();self.renderAppts();self.renderNow();});},
+    refresh:function(){var self=this;$.when(this.loadAppts(),this.loadExclusions()).then(function(){self.renderGrid();self.renderExclusions();self.renderAppts();self.renderNow();});},
     refreshUI:function(){this.renderGrid();this.renderAppts();this.renderNow();this.updateViewBtns();},
     updateViewBtns:function(){$('.hm-view-btn').removeClass('on');$('.hm-view-btn[data-v="'+this.mode+'"]').addClass('on');},
     nav:function(dir){this.date.setDate(this.date.getDate()+(this.mode==='week'?dir*7:dir));$('#hm-pop').removeClass('open');$('#hm-tooltip').hide();this.refresh();},
@@ -742,6 +761,131 @@ var Cal={
                 });
             });
         });
+    },
+
+    // ── EXCLUSION BLOCKS ──
+    renderExclusions:function(){
+        $('.hm-excl').remove();$('.hm-excl-pop').remove();
+        var dates=this.visDates(),disps=this.visDisps(),cfg=this.cfg,slotH=cfg.slotHpx;
+        if(!disps.length||!this.exclusions||!this.exclusions.length)return;
+        var self=this;
+        this.exclusions.forEach(function(ex){
+            var col=ex.color||'#6b7280';
+            var exDate=ex.start_date;
+
+            // Find which day index this exclusion falls on
+            var di=-1;
+            for(var i=0;i<dates.length;i++){if(fmt(dates[i])===exDate){di=i;break;}}
+            if(di===-1)return;
+
+            // Determine which dispensers to render for
+            var targetDisps=[];
+            if(ex.staff_id&&parseInt(ex.staff_id)){
+                // Specific dispenser
+                for(var pi=0;pi<disps.length;pi++){
+                    if(parseInt(disps[pi].id)===parseInt(ex.staff_id)){targetDisps.push(pi);break;}
+                }
+            } else {
+                // All dispensers
+                for(var pi2=0;pi2<disps.length;pi2++){targetDisps.push(pi2);}
+            }
+            if(!targetDisps.length)return;
+
+            var isFullDay=ex.scope==='full_day'||!ex.start_time||!ex.end_time;
+
+            // Parse colour to rgb
+            var r=parseInt(col.slice(1,3),16)||107,g=parseInt(col.slice(3,5),16)||114,b=parseInt(col.slice(5,7),16)||128;
+
+            targetDisps.forEach(function(pi){
+                if(isFullDay){
+                    // Full day — fill entire column
+                    var totalH=cfg.totalSlots*slotH;
+                    var $slot=$('.hm-slot[data-day="'+di+'"][data-slot="0"][data-disp="'+disps[pi].id+'"]');
+                    if(!$slot.length)return;
+                    var block=$('<div class="hm-excl hm-excl--fullday" data-excl-id="'+ex.id+'" style="'+
+                        'position:absolute;left:1px;right:1px;top:0;height:'+totalH+'px;'+
+                        'background:rgba('+r+','+g+','+b+',0.08);'+
+                        'border:1px solid rgba('+r+','+g+','+b+',0.20);'+
+                        'border-left:3px solid '+col+';'+
+                        'border-radius:4px;z-index:1;">'+
+                        '<span class="hm-excl-label" style="color:'+col+'">'+esc(ex.type_name||'Exclusion')+'</span>'+
+                    '</div>');
+                    $slot.append(block);
+                    // click → popover
+                    block.on('click',function(e){e.stopPropagation();self._showExclPop(ex,this);});
+                } else {
+                    // Custom hours — positioned like an appointment card
+                    var stParts=(ex.start_time||'09:00').split(':'),etParts=(ex.end_time||'17:00').split(':');
+                    var stMn=parseInt(stParts[0])*60+parseInt(stParts[1]);
+                    var etMn=parseInt(etParts[0])*60+parseInt(etParts[1]);
+                    var dur=etMn-stMn;if(dur<=0)return;
+
+                    var off=((stMn-cfg.startH*60)/cfg.slotMin)*slotH;
+                    var h=(dur/cfg.slotMin)*slotH;
+                    var si=Math.floor((stMn-cfg.startH*60)/cfg.slotMin);
+                    if(si<0)si=0;
+
+                    var $slot=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+disps[pi].id+'"]');
+                    if(!$slot.length)return;
+
+                    var block=$('<div class="hm-excl hm-excl--hours" data-excl-id="'+ex.id+'" style="'+
+                        'position:absolute;left:1px;right:1px;top:'+off+'px;height:'+h+'px;'+
+                        'background:rgba('+r+','+g+','+b+',0.08);'+
+                        'border:1px solid rgba('+r+','+g+','+b+',0.20);'+
+                        'border-left:3px solid '+col+';'+
+                        'border-radius:4px;z-index:1;padding:3px 6px;">'+
+                        '<span class="hm-excl-label" style="color:'+col+'">'+esc(ex.type_name||'Exclusion')+'</span>'+
+                    '</div>');
+                    $slot.append(block);
+                    block.on('click',function(e){e.stopPropagation();self._showExclPop(ex,this);});
+                }
+            });
+        });
+    },
+    _showExclPop:function(ex,el){
+        $('.hm-excl-pop').remove();
+        var isFullDay=ex.scope==='full_day'||!ex.start_time||!ex.end_time;
+        var timeStr=isFullDay?'Full Day':(ex.start_time||'').substring(0,5)+' – '+(ex.end_time||'').substring(0,5);
+        var staffStr=ex.staff_name||'All';
+        var col=ex.color||'#6b7280';
+        var h='<div class="hm-excl-pop" style="position:fixed;z-index:9999;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:14px 16px;min-width:220px;max-width:300px;font-size:13px;font-family:var(--hm-font,\'Source Sans 3\',sans-serif);">';
+        h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="width:12px;height:12px;border-radius:3px;background:'+col+';flex-shrink:0"></span><strong style="font-size:14px">'+esc(ex.type_name||'Exclusion')+'</strong></div>';
+        h+='<div style="color:#64748b;margin-bottom:4px">'+timeStr+'</div>';
+        h+='<div style="color:#64748b;margin-bottom:4px">Assignee: '+esc(staffStr)+'</div>';
+        if(ex.reason)h+='<div style="color:#64748b;margin-bottom:8px">Notes: '+esc(ex.reason)+'</div>';
+        h+='<button class="hm-btn hm-btn--sm hm-btn--danger hm-excl-del" data-eid="'+ex.id+'" style="margin-top:4px">Delete</button>';
+        h+='</div>';
+        var $pop=$(h);
+        $('body').append($pop);
+        // Position near the clicked element
+        var rect=el.getBoundingClientRect();
+        var popW=$pop.outerWidth(),popH=$pop.outerHeight();
+        var left=rect.right+8,top=rect.top;
+        if(left+popW>window.innerWidth)left=rect.left-popW-8;
+        if(top+popH>window.innerHeight)top=window.innerHeight-popH-8;
+        $pop.css({left:left+'px',top:top+'px'});
+        // Close on outside click
+        setTimeout(function(){
+            $(document).one('click.exclpop',function(){$('.hm-excl-pop').remove();});
+        },10);
+    },
+    _isSlotExcluded:function(date,time,dispId){
+        if(!this.exclusions||!this.exclusions.length)return null;
+        var ds=typeof date==='string'?date:fmt(date);
+        var tmn=parseInt(time.split(':')[0])*60+parseInt(time.split(':')[1]);
+        for(var i=0;i<this.exclusions.length;i++){
+            var ex=this.exclusions[i];
+            if(ex.start_date!==ds)continue;
+            // Check dispenser match
+            if(ex.staff_id&&parseInt(ex.staff_id)&&parseInt(ex.staff_id)!==parseInt(dispId))continue;
+            var isFullDay=ex.scope==='full_day'||!ex.start_time||!ex.end_time;
+            if(isFullDay)return ex;
+            var stParts=(ex.start_time||'00:00').split(':'),etParts=(ex.end_time||'23:59').split(':');
+            var sMn=parseInt(stParts[0])*60+parseInt(stParts[1]);
+            var eMn=parseInt(etParts[0])*60+parseInt(etParts[1]);
+            if(tmn>=sMn&&tmn<eMn)return ex;
+        }
+        return null;
     },
 
     // ── NOW LINE ──
@@ -1435,7 +1579,15 @@ var Cal={
         });
     },
 
-    onSlot:function(el){var d=el.dataset;this.openNewApptModal(d.date,d.time,parseInt(d.disp));},
+    onSlot:function(el){
+        var d=el.dataset;
+        var blocked=this._isSlotExcluded(d.date,d.time,parseInt(d.disp));
+        if(blocked){
+            alert('This time is blocked: '+(blocked.type_name||'Exclusion'));
+            return;
+        }
+        this.openNewApptModal(d.date,d.time,parseInt(d.disp));
+    },
 
     openNewApptModal:function(date,time,dispId){
         var self=this;
@@ -1783,22 +1935,18 @@ var Cal={
             if(!sd){$('.hm-excl-err').text('Start date is required.');return;}
             if(!ed)ed=sd;
 
-            // Get exclusion type name for the reason
-            var typeEl=$('#hmex-type option:selected');
-            var typeName=typeEl.text();
             var reasonText=$('#hmex-reason').val().trim();
-            var reason=reasonText?(typeName+' — '+reasonText):typeName;
 
             var data={
-                dispenser_id:$('#hmex-disp').val()||0,
-                reason:reason,
                 exclusion_type_id:$('#hmex-type').val()||0,
+                staff_id:$('#hmex-disp').val()||0,
+                scope:scope==='hours'?'custom_hours':'full_day',
                 start_date:sd,
                 end_date:ed,
-                start_time:scope==='hours'?$('#hmex-st').val():'00:00',
-                end_time:scope==='hours'?$('#hmex-et').val():'23:59',
-                is_full_day:scope==='day'?'1':'0',
-                repeats:repeat==='no'?'no':(repeat==='days'?'custom_days':(repeat==='indefinite'?'indefinite':'until')),
+                start_time:scope==='hours'?$('#hmex-st').val():'',
+                end_time:scope==='hours'?$('#hmex-et').val():'',
+                reason:reasonText,
+                repeat_type:repeat==='no'?'none':(repeat==='days'?'days':(repeat==='indefinite'?'indefinite':'until_date')),
             };
             // Repeat days
             if(repeat==='days'){
@@ -1810,12 +1958,12 @@ var Cal={
             if(repeat==='until'){
                 var ud=$('#hmex-untilDate').val();
                 if(!ud){$('.hm-excl-err').text('Please set a repeat-until date.');return;}
-                data.repeat_end_date=ud;
+                data.repeat_until=ud;
             }
-            if(repeat==='indefinite')data.repeat_end_date='2099-12-31';
+            if(repeat==='indefinite')data.repeat_until='2099-12-31';
 
             var $btn=$('.hm-excl-save');$btn.prop('disabled',true).text('Saving...');
-            post('save_holiday',data).then(function(r){
+            post('save_exclusion',data).then(function(r){
                 if(r.success){
                     $('.hm-modal-bg').remove();$(document).off('.excl .exclclose .exclsave .exclbg');
                     self.refresh();

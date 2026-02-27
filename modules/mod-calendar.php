@@ -58,6 +58,9 @@ add_action( 'wp_ajax_hm_get_outcome_templates', 'hm_ajax_get_outcome_templates' 
 add_action( 'wp_ajax_hm_save_appointment_outcome', 'hm_ajax_save_appointment_outcome' );
 add_action( 'wp_ajax_hm_create_outcome_order',  'hm_ajax_create_outcome_order' );
 add_action( 'wp_ajax_hm_update_appointment_status', 'hm_ajax_update_appointment_status' );
+add_action( 'wp_ajax_hm_save_exclusion',           'hm_ajax_save_exclusion' );
+add_action( 'wp_ajax_hm_delete_exclusion',         'hm_ajax_delete_exclusion' );
+add_action( 'wp_ajax_hm_get_exclusions',           'hm_ajax_get_exclusions' );
 
 // ================================================================
 // CALENDAR SETTINGS
@@ -1390,6 +1393,186 @@ function hm_ajax_create_outcome_order() {
     } catch ( Throwable $e ) {
         error_log( '[HearMed] create_outcome_order error: ' . $e->getMessage() );
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+// ================================================================
+// EXCLUSION INSTANCES — save / delete / get
+// ================================================================
+
+function hm_ajax_save_exclusion() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+
+    try {
+        $t = 'hearmed_core.exclusion_instances';
+
+        // Ensure table exists
+        $exists = HearMed_DB::get_var( "SELECT to_regclass('{$t}')" );
+        if ( $exists === null ) {
+            wp_send_json_error( [ 'message' => 'Exclusion instances table does not exist. Please run the migration.' ] );
+            return;
+        }
+
+        $id = intval( $_POST['id'] ?? 0 );
+
+        $scope = sanitize_text_field( $_POST['scope'] ?? 'full_day' );
+        $repeat_type = sanitize_text_field( $_POST['repeat_type'] ?? 'none' );
+
+        $d = [
+            'exclusion_type_id' => intval( $_POST['exclusion_type_id'] ?? 0 ),
+            'staff_id'          => intval( $_POST['staff_id'] ?? 0 ) ?: null,
+            'scope'             => $scope,
+            'start_date'        => sanitize_text_field( $_POST['start_date'] ?? '' ),
+            'end_date'          => sanitize_text_field( $_POST['end_date'] ?? $_POST['start_date'] ?? '' ),
+            'start_time'        => $scope === 'custom_hours' ? sanitize_text_field( $_POST['start_time'] ?? null ) : null,
+            'end_time'          => $scope === 'custom_hours' ? sanitize_text_field( $_POST['end_time'] ?? null ) : null,
+            'reason'            => sanitize_text_field( $_POST['reason'] ?? '' ),
+            'repeat_type'       => $repeat_type,
+            'repeat_days'       => sanitize_text_field( $_POST['repeat_days'] ?? '' ) ?: null,
+            'repeat_until'      => sanitize_text_field( $_POST['repeat_until'] ?? '' ) ?: null,
+            'updated_at'        => current_time( 'mysql' ),
+        ];
+
+        if ( ! $d['start_date'] ) {
+            wp_send_json_error( [ 'message' => 'Start date is required.' ] );
+            return;
+        }
+
+        if ( $id ) {
+            HearMed_DB::update( $t, $d, [ 'id' => $id ] );
+        } else {
+            $user = wp_get_current_user();
+            $d['created_by'] = $user->ID;
+            $d['created_at'] = current_time( 'mysql' );
+            $id = HearMed_DB::insert( $t, $d );
+        }
+
+        wp_send_json_success( [ 'id' => $id ] );
+
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] save_exclusion error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+function hm_ajax_delete_exclusion() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+
+    try {
+        $id = intval( $_POST['id'] ?? 0 );
+        if ( ! $id ) { wp_send_json_error( 'Invalid ID' ); return; }
+
+        HearMed_DB::update(
+            'hearmed_core.exclusion_instances',
+            [ 'is_active' => false, 'updated_at' => current_time( 'mysql' ) ],
+            [ 'id' => $id ]
+        );
+
+        wp_send_json_success();
+
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] delete_exclusion error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+function hm_ajax_get_exclusions() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+
+    try {
+        $t = 'hearmed_core.exclusion_instances';
+        $exists = HearMed_DB::get_var( "SELECT to_regclass('{$t}')" );
+        if ( $exists === null ) { wp_send_json_success( [] ); return; }
+
+        $range_start = sanitize_text_field( $_POST['start_date'] ?? $_GET['start_date'] ?? '' );
+        $range_end   = sanitize_text_field( $_POST['end_date']   ?? $_GET['end_date']   ?? '' );
+
+        if ( ! $range_start || ! $range_end ) {
+            wp_send_json_error( 'start_date and end_date are required' );
+            return;
+        }
+
+        // Fetch non-repeating exclusions that overlap the date range
+        $rows = HearMed_DB::get_results( HearMed_DB::prepare(
+            "SELECT ei.id, ei.exclusion_type_id, et.type_name, et.color,
+                    ei.staff_id, ei.scope, ei.start_date, ei.end_date,
+                    ei.start_time, ei.end_time, ei.reason, ei.repeat_type, ei.repeat_days, ei.repeat_until
+             FROM {$t} ei
+             LEFT JOIN hearmed_reference.exclusion_types et ON et.id = ei.exclusion_type_id
+             WHERE ei.is_active = true
+               AND (
+                   (ei.repeat_type = 'none' AND ei.start_date <= %s AND ei.end_date >= %s)
+                   OR ei.repeat_type != 'none'
+               )",
+            $range_end, $range_start
+        ) );
+
+        $results = [];
+
+        // Get dispensers for staff_name lookup
+        $dispensers = HearMed_DB::get_results(
+            "SELECT id, name FROM hearmed_core.dispensers WHERE is_active = true"
+        ) ?: [];
+        $disp_map = [];
+        foreach ( $dispensers as $dd ) {
+            $disp_map[ $dd->id ] = $dd->name;
+        }
+
+        $range_s = new DateTime( $range_start );
+        $range_e = new DateTime( $range_end );
+
+        foreach ( $rows ?: [] as $row ) {
+            $r = (array) $row;
+            $r['staff_name'] = $r['staff_id'] ? ( $disp_map[ $r['staff_id'] ] ?? 'Unknown' ) : 'All';
+
+            if ( $r['repeat_type'] === 'none' ) {
+                $results[] = $r;
+            } else {
+                // Expand recurring exclusions into virtual instances
+                $excl_start = new DateTime( $r['start_date'] );
+                $excl_end   = ! empty( $r['repeat_until'] ) ? new DateTime( $r['repeat_until'] ) : clone $range_e;
+
+                // Clamp to visible range
+                $iter_start = max( $range_s, $excl_start );
+                $iter_end   = min( $range_e, $excl_end );
+
+                $repeat_days_arr = [];
+                if ( $r['repeat_type'] === 'days' && ! empty( $r['repeat_days'] ) ) {
+                    $repeat_days_arr = array_map( 'intval', explode( ',', $r['repeat_days'] ) );
+                }
+
+                $current = clone $iter_start;
+                while ( $current <= $iter_end ) {
+                    $dow = (int) $current->format( 'w' ); // 0=Sun, 1=Mon, ...
+
+                    $include = false;
+                    if ( $r['repeat_type'] === 'days' ) {
+                        $include = in_array( $dow, $repeat_days_arr, true );
+                    } elseif ( $r['repeat_type'] === 'indefinite' || $r['repeat_type'] === 'until_date' ) {
+                        // For indefinite/until_date without specific days, include every day
+                        $include = true;
+                    }
+
+                    if ( $include ) {
+                        $virtual = $r;
+                        $virtual['start_date'] = $current->format( 'Y-m-d' );
+                        $virtual['end_date']   = $current->format( 'Y-m-d' );
+                        $virtual['_virtual']   = true;
+                        $results[] = $virtual;
+                    }
+
+                    $current->modify( '+1 day' );
+                }
+            }
+        }
+
+        wp_send_json_success( $results );
+
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] get_exclusions error: ' . $e->getMessage() );
+        wp_send_json_success( [] ); // graceful fallback
     }
 }
 

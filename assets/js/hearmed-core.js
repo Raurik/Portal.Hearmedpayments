@@ -707,7 +707,50 @@
     // Run when DOM is ready (jQuery ensures proper timing)
     $(document).ready(function() {
         enhanceTables();
+        hmPickerEnhancements();
     });
     // Expose for manual re-init (e.g. after AJAX reload)
     window.hmEnhanceTables = enhanceTables;
+
+    // ═══════════════════════════════════════
+    // SITE-WIDE DATE & TIME PICKER IMPROVEMENTS
+    // ═══════════════════════════════════════
+    function hmPickerEnhancements(){
+        var $app=$('#hm-app');
+        if(!$app.length)$app=$(document.body);
+
+        // A) DATE INPUTS — click anywhere to open native picker
+        $app.on('click','input[type="date"]',function(){
+            if(this.showPicker){try{this.showPicker();}catch(e){}}
+        });
+
+        // B) TIME INPUTS — add step=900 (15-min increments) + click anywhere to open
+        function enhanceTimeInputs(ctx){
+            $(ctx||$app).find('input[type="time"]').each(function(){
+                if(!this.getAttribute('step'))this.setAttribute('step','900');
+            });
+        }
+        enhanceTimeInputs();
+
+        $app.on('click','input[type="time"]',function(){
+            if(!this.getAttribute('step'))this.setAttribute('step','900');
+            if(this.showPicker){try{this.showPicker();}catch(e){}}
+        });
+
+        // MutationObserver to catch dynamically created inputs (modals etc.)
+        if(window.MutationObserver){
+            var obs=new MutationObserver(function(muts){
+                for(var i=0;i<muts.length;i++){
+                    if(muts[i].addedNodes.length){
+                        for(var j=0;j<muts[i].addedNodes.length;j++){
+                            var n=muts[i].addedNodes[j];
+                            if(n.nodeType===1){enhanceTimeInputs(n);}
+                        }
+                    }
+                }
+            });
+            obs.observe(document.body,{childList:true,subtree:true});
+        }
+    }
+    window.hmPickerEnhancements=hmPickerEnhancements;
 })(jQuery);
