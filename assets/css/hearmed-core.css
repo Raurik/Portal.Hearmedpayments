@@ -537,6 +537,27 @@
   outline: none;
   padding: 7px 11px; /* compensate for 2px border */
 }
+
+/* Toggle inside form-group — prevent generic label/input rules
+   from overriding the slider component                         */
+#hm-app .hm-form-group label.hm-toggle,
+.hm-admin .hm-form-group label.hm-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--hm-text);
+  margin-bottom: 0;
+}
+#hm-app .hm-form-group .hm-toggle input,
+.hm-admin .hm-form-group .hm-toggle input {
+  display: none !important;
+  width: 0; height: 0;
+  padding: 0; border: none; background: none;
+}
+
 /* Global input focus (outside form-group) */
 #hm-app input,
 #hm-app select,

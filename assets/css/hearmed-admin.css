@@ -319,6 +319,53 @@
 .hm-settings-panel .hm-form-group textarea {
     min-height: 60px;
 }
+
+/* ── Toggle overrides inside settings panels ──
+   The generic .hm-form-group label / input rules above
+   override the toggle's inline-flex / display:none.
+   These higher-specificity selectors restore the toggle. */
+.hm-settings-panel .hm-form-group label.hm-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 400;
+    margin-bottom: 0;
+}
+.hm-settings-panel .hm-form-group .hm-toggle input {
+    display: none !important;
+    padding: 0;
+    border: none;
+    background: none;
+}
+.hm-settings-panel .hm-form-group .hm-toggle-track {
+    width: 40px; height: 22px;
+    border-radius: 11px;
+    background: #cbd5e1;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+    padding: 0;
+    border: none;
+}
+.hm-settings-panel .hm-form-group .hm-toggle-track::after {
+    content: '';
+    width: 18px; height: 18px;
+    border-radius: 9px;
+    background: #fff;
+    position: absolute;
+    top: 2px; left: 2px;
+    transition: left 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.hm-settings-panel .hm-form-group .hm-toggle input:checked + .hm-toggle-track {
+    background: var(--hm-teal);
+}
+.hm-settings-panel .hm-form-group .hm-toggle input:checked + .hm-toggle-track::after {
+    left: 20px;
+}
+
 .hm-filter-bar-hd {
     display: flex;
     justify-content: space-between;
