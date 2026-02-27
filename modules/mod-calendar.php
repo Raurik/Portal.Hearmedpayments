@@ -93,10 +93,15 @@ function hm_ajax_save_settings() {
         // Regular fields
         $text_fields = [
             'start_time', 'end_time', 'slot_height', 'default_view', 'default_mode',
-            'outcome_style', 'enabled_days', 'calendar_order', 'appointment_statuses',
+            'outcome_style',
             'appt_bg_color', 'appt_font_color', 'appt_badge_color', 'appt_badge_font_color', 'appt_meta_color',
             'card_style', 'banner_style', 'banner_size', 'indicator_color', 'today_highlight_color',
-            'grid_line_color', 'cal_bg_color', 'working_days',
+            'grid_line_color', 'cal_bg_color',
+        ];
+
+        // JSONB fields — must be stored as valid JSON strings, not sanitized as text
+        $json_fields = [
+            'enabled_days', 'calendar_order', 'appointment_statuses', 'working_days',
         ];
         
         // Checkbox fields — JS sends explicit '1' or '0'
@@ -121,7 +126,21 @@ function hm_ajax_save_settings() {
                 $data[ $f ] = sanitize_text_field( $_POST[ $f ] );
             }
         }
-        
+
+        // JSONB columns — validate as JSON, pass through as-is
+        foreach ( $json_fields as $f ) {
+            if ( isset( $_POST[ $f ] ) ) {
+                $raw = wp_unslash( $_POST[ $f ] );
+                // If it's already valid JSON, use it; otherwise wrap as JSON string
+                if ( is_array( $raw ) ) {
+                    $data[ $f ] = wp_json_encode( $raw );
+                } else {
+                    $decoded = json_decode( $raw );
+                    $data[ $f ] = ( $decoded !== null || $raw === 'null' ) ? $raw : wp_json_encode( $raw );
+                }
+            }
+        }
+
         foreach ( $checkbox_fields as $f ) {
             if ( isset( $_POST[ $f ] ) ) {
                 $val = $_POST[ $f ];
