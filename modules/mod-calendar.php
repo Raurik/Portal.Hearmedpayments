@@ -533,13 +533,74 @@ function hm_ajax_create_appointment() {
     $em  = intval( $sp[0] ) * 60 + intval( $sp[1] ) + $dur;
     $et  = sprintf( '%02d:%02d', floor( $em / 60 ), $em % 60 );
 
+    $patient_id = intval( $_POST['patient_id'] ?? 0 );
+    $appt_date  = sanitize_text_field( $_POST['appointment_date'] );
+    $staff_id   = intval( $_POST['dispenser_id'] ?? 0 );
+    $skip_dbl   = ! empty( $_POST['skip_double_book_check'] );
+
+    // ── SAME-PATIENT BLOCK ──
+    // Never allow the same patient to be double-booked at overlapping times
+    if ( $patient_id ) {
+        $same_patient = HearMed_DB::get_results(
+            "SELECT a.id, a.start_time, a.end_time, c.clinic_name
+             FROM hearmed_core.appointments a
+             LEFT JOIN hearmed_reference.clinics c ON c.id = a.clinic_id
+             WHERE a.patient_id = $1 AND a.appointment_date = $2
+               AND a.appointment_status NOT IN ('Cancelled','Rescheduled')
+               AND a.start_time < $3 AND a.end_time > $4",
+            [ $patient_id, $appt_date, $et, $st ]
+        );
+        if ( ! empty( $same_patient ) ) {
+            $sp_row = $same_patient[0];
+            $clinic_name = $sp_row->clinic_name ?: 'Unknown clinic';
+            $sp_time = substr( $sp_row->start_time, 0, 5 );
+            wp_send_json_error( [
+                'code'    => 'same_patient_conflict',
+                'message' => "This patient is already booked into {$clinic_name} at {$sp_time}. Cannot create a new appointment.",
+            ] );
+            return;
+        }
+    }
+
+    // ── DISPENSER DOUBLE-BOOK CHECK ──
+    // If not explicitly confirmed, return conflict info so JS can prompt
+    if ( ! $skip_dbl && $staff_id ) {
+        $conflicts = HearMed_DB::get_results(
+            "SELECT a.id, a.start_time, a.end_time, c.clinic_name,
+                    (p.first_name || ' ' || p.last_name) AS patient_name
+             FROM hearmed_core.appointments a
+             LEFT JOIN hearmed_reference.clinics c ON c.id = a.clinic_id
+             LEFT JOIN hearmed_core.patients p ON p.id = a.patient_id
+             WHERE a.staff_id = $1 AND a.appointment_date = $2
+               AND a.appointment_status NOT IN ('Cancelled','Rescheduled')
+               AND a.start_time < $3 AND a.end_time > $4",
+            [ $staff_id, $appt_date, $et, $st ]
+        );
+        if ( ! empty( $conflicts ) ) {
+            $cdata = [];
+            foreach ( $conflicts as $cf ) {
+                $cdata[] = [
+                    'clinic'  => $cf->clinic_name ?: '',
+                    'time'    => substr( $cf->start_time, 0, 5 ) . '–' . substr( $cf->end_time, 0, 5 ),
+                    'patient' => $cf->patient_name ?: 'Walk-in',
+                ];
+            }
+            wp_send_json_error( [
+                'code'      => 'double_book_conflict',
+                'message'   => 'Double booking detected',
+                'conflicts' => $cdata,
+            ] );
+            return;
+        }
+    }
+
     // Direct insert — known schema columns
     $insert_data = [
-        'patient_id'         => intval( $_POST['patient_id'] ?? 0 ),
-        'staff_id'           => intval( $_POST['dispenser_id'] ?? 0 ),
+        'patient_id'         => $patient_id,
+        'staff_id'           => $staff_id,
         'clinic_id'          => intval( $_POST['clinic_id']  ?? 0 ),
         'service_id'         => $sid,
-        'appointment_date'   => sanitize_text_field( $_POST['appointment_date'] ),
+        'appointment_date'   => $appt_date,
         'start_time'         => $st,
         'end_time'           => $et,
         'duration_minutes'   => $dur,

@@ -561,6 +561,8 @@ var Cal={
         if(!disps.length)return;
 
         var self=this;
+        // Collect card metadata for overlap detection
+        var cardMeta=[];
         this.appts.forEach(function(a){
             // Filter by multi-select
             if(Cal.selDisps.length&&Cal.selDisps.indexOf(parseInt(a.dispenser_id))===-1)return;
@@ -669,6 +671,9 @@ var Cal={
             var el=$(card);
             $t.append(el);
 
+            // Track for overlap detection
+            cardMeta.push({el:el, di:di, disp:parseInt(a.dispenser_id), startMn:aMn, endMn:aMn+dur});
+
             // Click / Double-click: use delay so dblclick can cancel single-click popup
             (function(el,a){
                 var clickTimer=null;
@@ -693,6 +698,48 @@ var Cal={
                 Cal._hoverTimer=setTimeout(function(){Cal.showTooltip(a,rect);},1000);
             });
             el.on('mouseleave',function(){clearTimeout(Cal._hoverTimer);$('#hm-tooltip').hide();});
+        });
+
+        // ── Overlap detection: split width for double-booked cards ──
+        // Group cards by day+dispenser column
+        var groups={};
+        cardMeta.forEach(function(m){
+            var key=m.di+'_'+m.disp;
+            if(!groups[key])groups[key]=[];
+            groups[key].push(m);
+        });
+        // For each group, find overlapping clusters and split widths
+        Object.keys(groups).forEach(function(key){
+            var cards=groups[key];
+            if(cards.length<2)return;
+            // Sort by start time
+            cards.sort(function(a,b){return a.startMn-b.startMn;});
+            // Build overlap clusters using a sweep
+            var clusters=[];
+            cards.forEach(function(c){
+                var placed=false;
+                for(var i=0;i<clusters.length;i++){
+                    // Check if this card overlaps with any card in the cluster
+                    var overlaps=clusters[i].some(function(x){
+                        return c.startMn<x.endMn&&c.endMn>x.startMn;
+                    });
+                    if(overlaps){clusters[i].push(c);placed=true;break;}
+                }
+                if(!placed)clusters.push([c]);
+            });
+            // Apply width splitting to clusters with >1 card
+            clusters.forEach(function(cl){
+                if(cl.length<2)return;
+                var n=cl.length;
+                var pct=(100/n);
+                cl.forEach(function(c,idx){
+                    c.el.css({
+                        left: (2 + idx*pct)+'%',
+                        right: 'auto',
+                        width: 'calc('+pct+'% - 3px)'
+                    });
+                });
+            });
         });
     },
 
@@ -1345,7 +1392,7 @@ var Cal={
                 var fd=$('#hm-fu-date').val(),ft=$('#hm-fu-time').val();
                 if(!fd||!ft){$('#hm-fu-err').text('Please select a date and time.');return;}
                 var $btn=$(this);$btn.prop('disabled',true).text('Booking...');
-                post('create_appointment',{
+                var fuData={
                     patient_id:$('#hm-fu-pid').val(),
                     service_id:$('#hm-fu-svc').val(),
                     clinic_id:$('#hm-fu-clinic').val(),
@@ -1356,16 +1403,33 @@ var Cal={
                     duration:$('#hm-fu-dur').val(),
                     location_type:'Clinic',
                     notes:$('#hm-fu-notes').val()||''
-                }).then(function(r){
-                    if(r.success){
-                        $('.hm-modal-bg--top').remove();$(document).off('.fuclose .fusave');
-                        self.refresh();
-                        self.toast('Follow-up appointment booked');
-                    } else {
+                };
+                var doPost=function(skip){
+                    var d=$.extend({},fuData);
+                    if(skip)d.skip_double_book_check='1';
+                    post('create_appointment',d).then(function(r){
+                        if(r.success){
+                            $('.hm-modal-bg--top').remove();$(document).off('.fuclose .fusave');
+                            self.refresh();
+                            self.toast('Follow-up appointment booked');
+                            return;
+                        }
                         $btn.prop('disabled',false).text('Book Follow-up');
+                        if(r.data&&r.data.code==='same_patient_conflict'){
+                            self._showDoubleBookAlert(r.data.message);return;
+                        }
+                        if(r.data&&r.data.code==='double_book_conflict'){
+                            var conflicts=r.data.conflicts||[];
+                            var msg='There is already a booking in this dispenser\'s diary for this time:\n\n';
+                            conflicts.forEach(function(c){msg+='• '+c.patient+' at '+c.time+(c.clinic?' ('+c.clinic+')':'')+'\n';});
+                            msg+='\nAre you sure you want to double book?';
+                            self._showDoubleBookConfirm(msg,function(){doPost(true);});
+                            return;
+                        }
                         $('#hm-fu-err').text(r.data&&r.data.message?r.data.message:'Error booking follow-up');
-                    }
-                }).fail(function(){$btn.prop('disabled',false).text('Book Follow-up');$('#hm-fu-err').text('Network error');});
+                    }).fail(function(){$btn.prop('disabled',false).text('Book Follow-up');$('#hm-fu-err').text('Network error');});
+                };
+                doPost(false);
             });
         });
     },
@@ -1463,7 +1527,7 @@ var Cal={
         $(document).off('click.newsave').on('click.newsave','.hm-new-save',function(){
             var pid=$('#hmn-patientid').val();
             if(!pid||pid==='0'){alert('Please search and select a patient first.');return;}
-            post('create_appointment',{
+            var apptData={
                 patient_id:pid,service_id:$('#hmn-service').val(),
                 clinic_id:$('#hmn-clinic').val(),dispenser_id:$('#hmn-disp').val(),
                 status:$('#hmn-status').val(),appointment_date:$('#hmn-date').val(),
@@ -1471,11 +1535,90 @@ var Cal={
                 location_type:$('#hmn-loc').val(),
                 referring_source:$('#hmn-refsource').val(),
                 notes:$('#hmn-notes').val()
-            }).then(function(r){
-                console.log('[HearMed] create_appointment response:', r);
-                if(r.success){$('.hm-modal-bg').remove();$(document).off('.newmodal .newclose .newbg .newsave');self.refresh();}
-                else{alert(r.data&&r.data.message?r.data.message:'Error creating appointment');}
-            }).fail(function(xhr){ console.error('[HearMed] create_appointment AJAX fail:', xhr.status, xhr.responseText); alert('Network error — please try again.'); });
+            };
+            self._submitNewAppt(apptData,false);
+        });
+    },
+
+    // ── Submit new appointment with double-book handling ──
+    _submitNewAppt:function(data,skipDoubleCheck){
+        var self=this;
+        if(skipDoubleCheck) data.skip_double_book_check='1';
+        post('create_appointment',data).then(function(r){
+            console.log('[HearMed] create_appointment response:',r);
+            if(r.success){
+                $('.hm-modal-bg').not('.hm-modal-bg--top').remove();
+                $(document).off('.newmodal .newclose .newbg .newsave');
+                self.refresh();
+                return;
+            }
+            // Same patient conflict — hard block, no override
+            if(r.data&&r.data.code==='same_patient_conflict'){
+                self._showDoubleBookAlert(r.data.message,false);
+                return;
+            }
+            // Dispenser double-book — soft warning with confirm
+            if(r.data&&r.data.code==='double_book_conflict'){
+                var conflicts=r.data.conflicts||[];
+                var msg='There is already a booking in this dispenser\'s diary for this time:\n\n';
+                conflicts.forEach(function(c){
+                    msg+='• '+c.patient+' at '+c.time+(c.clinic?' ('+c.clinic+')':'')+'\n';
+                });
+                msg+='\nAre you sure you want to double book?';
+                self._showDoubleBookConfirm(msg,function(){
+                    self._submitNewAppt(data,true);
+                });
+                return;
+            }
+            alert(r.data&&r.data.message?r.data.message:'Error creating appointment');
+        }).fail(function(xhr){
+            console.error('[HearMed] create_appointment AJAX fail:',xhr.status,xhr.responseText);
+            alert('Network error — please try again.');
+        });
+    },
+
+    // ── Double-book alert (hard block — no override) ──
+    _showDoubleBookAlert:function(msg){
+        var h='<div class="hm-modal-bg hm-modal-bg--top hm-dbl-alert open">';
+        h+='<div class="hm-modal" style="max-width:420px">';
+        h+='<div class="hm-modal-hd" style="background:#ef4444;color:#fff;border-radius:12px 12px 0 0;padding:14px 20px">';
+        h+='<div><h3 style="margin:0;color:#fff;font-size:15px">Cannot Book Appointment</h3></div>';
+        h+='<button class="hm-close hm-dbl-close" style="color:#fff">'+IC.x+'</button></div>';
+        h+='<div class="hm-modal-body" style="padding:20px">';
+        h+='<div style="display:flex;gap:12px;align-items:flex-start">';
+        h+='<span style="font-size:28px;flex-shrink:0">&#9888;</span>';
+        h+='<div style="font-size:13px;color:#334155;line-height:1.5">'+esc(msg)+'</div></div></div>';
+        h+='<div class="hm-modal-ft" style="padding:12px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end">';
+        h+='<button class="hm-btn hm-btn--primary hm-dbl-close" style="background:#ef4444">OK</button>';
+        h+='</div></div></div>';
+        $('body').append(h);
+        $(document).off('click.dblclose').on('click.dblclose','.hm-dbl-close',function(e){
+            e.stopPropagation();$('.hm-dbl-alert').remove();$(document).off('.dblclose');
+        });
+    },
+
+    // ── Double-book confirm (soft warning — user can override) ──
+    _showDoubleBookConfirm:function(msg,onConfirm){
+        var h='<div class="hm-modal-bg hm-modal-bg--top hm-dbl-confirm open">';
+        h+='<div class="hm-modal" style="max-width:440px">';
+        h+='<div class="hm-modal-hd" style="background:#f59e0b;color:#fff;border-radius:12px 12px 0 0;padding:14px 20px">';
+        h+='<div><h3 style="margin:0;color:#fff;font-size:15px">Double Booking Warning</h3></div>';
+        h+='<button class="hm-close hm-dblc-close" style="color:#fff">'+IC.x+'</button></div>';
+        h+='<div class="hm-modal-body" style="padding:20px">';
+        h+='<div style="display:flex;gap:12px;align-items:flex-start">';
+        h+='<span style="font-size:28px;flex-shrink:0">&#9888;</span>';
+        h+='<div style="font-size:13px;color:#334155;line-height:1.5;white-space:pre-line">'+esc(msg)+'</div></div></div>';
+        h+='<div class="hm-modal-ft" style="padding:12px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px">';
+        h+='<button class="hm-btn hm-dblc-close">Cancel</button>';
+        h+='<button class="hm-btn hm-btn--primary hm-dblc-yes" style="background:#f59e0b">Yes, Double Book</button>';
+        h+='</div></div></div>';
+        $('body').append(h);
+        $(document).off('click.dblcclose').on('click.dblcclose','.hm-dblc-close',function(e){
+            e.stopPropagation();$('.hm-dbl-confirm').remove();$(document).off('.dblcclose .dblcyes');
+        });
+        $(document).off('click.dblcyes').on('click.dblcyes','.hm-dblc-yes',function(e){
+            e.stopPropagation();$('.hm-dbl-confirm').remove();$(document).off('.dblcclose .dblcyes');
+            if(onConfirm)onConfirm();
         });
     },
 
