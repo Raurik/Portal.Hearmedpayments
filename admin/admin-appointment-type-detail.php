@@ -73,6 +73,12 @@ class HearMed_Admin_Appointment_Type_Detail {
 
         $colour      = $svc->service_color ?? '#3B82F6';
         $text_colour = $svc->text_color ?? '#FFFFFF';
+        $name_colour = $svc->name_color ?? '#FFFFFF';
+        $time_colour = $svc->time_color ?? '#38bdf8';
+        $meta_colour = $svc->meta_color ?? '#38bdf8';
+        $badge_bg    = $svc->badge_bg_color ?? '#ffffff33';
+        $badge_text  = $svc->badge_text_color ?? '#FFFFFF';
+        $border_colour = $svc->border_color ?? '';
         $assigned_ids = array_map(function($a) { return (int)$a->staff_id; }, $assigned);
 
         ob_start();
@@ -101,8 +107,29 @@ class HearMed_Admin_Appointment_Type_Detail {
             content:"" !important; display:block !important; position:absolute; left:4px; top:1px; width:5px; height:9px;
             border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
         }
+
+        /* ── Colour section groups ── */
+        #hm-app .hm-colour-group     { margin-bottom:16px; }
+        #hm-app .hm-colour-group-hd  { font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #f1f5f9; }
+
+        /* ── Preview card — matches calendar card exactly ── */
+        #hm-app .hm-appt-preview-wrap { display:flex; flex-direction:column; align-items:center; gap:16px; padding:8px 0; }
+        #hm-app .hm-preview-style-bar { display:flex; gap:4px; background:#f1f5f9; border-radius:6px; padding:3px; }
+        #hm-app .hm-preview-style-btn { padding:4px 10px; font-size:11px; font-weight:600; border:none; border-radius:4px; cursor:pointer; background:transparent; color:#64748b; transition:all .15s; }
+        #hm-app .hm-preview-style-btn.active { background:#fff; color:#0f172a; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+        #hm-app .hm-preview-card-wrap { width:100%; max-width:260px; }
+        #hm-app .hm-prev-card { border-radius:8px; overflow:hidden; box-shadow:0 2px 12px rgba(15,23,42,.08); display:flex; flex-direction:column; min-height:110px; position:relative; transition:all .2s; }
+        #hm-app .hm-prev-banner { padding:4px 10px; font-size:10px; font-weight:700; color:#fff; transition:background .2s; display:flex; align-items:center; }
+        #hm-app .hm-prev-inner { padding:8px 10px; display:flex; flex-direction:column; gap:3px; }
+        #hm-app .hm-prev-svc { font-size:11px; font-weight:700; opacity:.85; }
+        #hm-app .hm-prev-pt { font-size:13px; font-weight:700; }
+        #hm-app .hm-prev-tm { font-size:12px; font-weight:600; }
+        #hm-app .hm-prev-badges { display:flex; gap:4px; margin:1px 0; }
+        #hm-app .hm-prev-badge { height:17px; min-width:17px; padding:0 5px; border-radius:4px; font-size:9px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; }
+        #hm-app .hm-prev-meta { font-size:11px; }
+        #hm-app .hm-prev-label { font-size:10px; color:#94a3b8; text-align:center; margin-top:4px; }
+
         /* Appointment preview */
-        #hm-app .hm-appt-preview-wrap { display:flex; align-items:center; justify-content:center; padding:8px 0; }
         #hm-app .hm-appt-preview-card { width:100%; max-width:280px; border-radius:8px; overflow:hidden; box-shadow:0 2px 12px rgba(15,23,42,.08); display:flex; flex-direction:column; }
         #hm-app .hm-appt-outcome-banner { padding:8px 14px; font-size:13px; font-weight:600; color:#fff; background:#22c55e; transition:background .2s; }
         #hm-app .hm-appt-body { padding:10px 14px; display:flex; flex-direction:column; gap:6px; }
@@ -165,15 +192,58 @@ class HearMed_Admin_Appointment_Type_Detail {
 
                 <!-- Card 2: Colours -->
                 <div class="hm-card">
-                    <div class="hm-card-hd">Colours</div>
+                    <div class="hm-card-hd">Card Colours</div>
                     <div class="hm-card-body">
-                        <div class="hm-srow hm-color-row">
-                            <span class="hm-slbl">Block colour</span>
-                            <span class="hm-sval"><input type="color" id="hm-svc-colour" value="<?php echo esc_attr($colour); ?>" class="hm-color-box"></span>
+                        <!-- Background & Border -->
+                        <div class="hm-colour-group">
+                            <div class="hm-colour-group-hd">Card Background</div>
+                            <div class="hm-srow hm-color-row">
+                                <span class="hm-slbl">Block colour</span>
+                                <span class="hm-sval"><input type="color" id="hm-svc-colour" value="<?php echo esc_attr($colour); ?>" class="hm-color-box"></span>
+                            </div>
+                            <div class="hm-srow hm-color-row">
+                                <span class="hm-slbl">Border colour</span>
+                                <span class="hm-sval"><input type="color" id="hm-svc-border-colour" value="<?php echo esc_attr($border_colour ?: $colour); ?>" class="hm-color-box"></span>
+                            </div>
                         </div>
-                        <div class="hm-srow hm-color-row">
-                            <span class="hm-slbl">Text colour</span>
-                            <span class="hm-sval"><input type="color" id="hm-svc-text-colour" value="<?php echo esc_attr($text_colour); ?>" class="hm-color-box"></span>
+
+                        <!-- Text colours -->
+                        <div class="hm-colour-group">
+                            <div class="hm-colour-group-hd">Text</div>
+                            <div class="hm-srow hm-color-row">
+                                <span class="hm-slbl">Patient name</span>
+                                <span class="hm-sval"><input type="color" id="hm-svc-text-colour" value="<?php echo esc_attr($text_colour); ?>" class="hm-color-box"></span>
+                            </div>
+                            <div class="hm-srow hm-color-row">
+                                <span class="hm-slbl">Appointment type label</span>
+                                <span class="hm-sval"><input type="color" id="hm-svc-name-colour" value="<?php echo esc_attr($name_colour); ?>" class="hm-color-box"></span>
+                            </div>
+                        </div>
+
+                        <!-- Time & Meta -->
+                        <div class="hm-colour-group">
+                            <div class="hm-colour-group-hd">Time &amp; Meta</div>
+                            <div class="hm-srow hm-color-row">
+                                <span class="hm-slbl">Time colour</span>
+                                <span class="hm-sval"><input type="color" id="hm-svc-time-colour" value="<?php echo esc_attr($time_colour); ?>" class="hm-color-box"></span>
+                            </div>
+                            <div class="hm-srow hm-color-row">
+                                <span class="hm-slbl">Meta colour</span>
+                                <span class="hm-sval"><input type="color" id="hm-svc-meta-colour" value="<?php echo esc_attr($meta_colour); ?>" class="hm-color-box"></span>
+                            </div>
+                        </div>
+
+                        <!-- Badges -->
+                        <div class="hm-colour-group">
+                            <div class="hm-colour-group-hd">Badges</div>
+                            <div class="hm-srow hm-color-row">
+                                <span class="hm-slbl">Badge background</span>
+                                <span class="hm-sval"><input type="color" id="hm-svc-badge-bg" value="<?php echo esc_attr($badge_bg ?: '#ffffff'); ?>" class="hm-color-box"></span>
+                            </div>
+                            <div class="hm-srow hm-color-row">
+                                <span class="hm-slbl">Badge text</span>
+                                <span class="hm-sval"><input type="color" id="hm-svc-badge-text" value="<?php echo esc_attr($badge_text); ?>" class="hm-color-box"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -183,15 +253,31 @@ class HearMed_Admin_Appointment_Type_Detail {
                     <div class="hm-card-hd">Appointment Preview</div>
                     <div class="hm-card-body">
                         <div class="hm-appt-preview-wrap">
-                        <div class="hm-appt-preview-card" id="hm-svc-preview" style="background:<?php echo esc_attr($colour); ?>;color:<?php echo esc_attr($text_colour); ?>;">
-                            <div class="hm-appt-outcome-banner" id="hm-preview-banner" style="background:#22c55e;">Outcome</div>
-                            <div class="hm-appt-body">
-                                <div class="hm-appt-name" id="hm-preview-name"><?php echo esc_html($svc->service_name); ?></div>
-                                <div class="hm-appt-badges"><span class="hm-badge hm-badge-c">C</span> <span class="hm-badge hm-badge-r">R</span> <span class="hm-badge hm-badge-v">VM</span></div>
-                                <div class="hm-appt-time">09:00</div>
-                                <div class="hm-appt-meta"><?php echo esc_html($svc->service_name); ?> · Sample Clinic</div>
+                            <!-- Card style tabs -->
+                            <div class="hm-preview-style-bar">
+                                <button class="hm-preview-style-btn active" data-style="solid">Solid</button>
+                                <button class="hm-preview-style-btn" data-style="tinted">Tinted</button>
+                                <button class="hm-preview-style-btn" data-style="outline">Outline</button>
+                                <button class="hm-preview-style-btn" data-style="minimal">Minimal</button>
                             </div>
-                        </div>
+
+                            <!-- Live preview card -->
+                            <div class="hm-preview-card-wrap">
+                                <div class="hm-prev-card" id="hm-prev-card">
+                                    <div class="hm-prev-banner" id="hm-prev-banner" style="background:#22c55e;">Completed</div>
+                                    <div class="hm-prev-inner">
+                                        <div class="hm-prev-svc" id="hm-prev-svc"><?php echo esc_html($svc->service_name); ?></div>
+                                        <div class="hm-prev-pt" id="hm-prev-pt">Sarah Johnson</div>
+                                        <div class="hm-prev-tm" id="hm-prev-tm">09:00 – 09:30</div>
+                                        <div class="hm-prev-badges" id="hm-prev-badges">
+                                            <span class="hm-prev-badge" id="hm-prev-status-badge" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe">Confirmed</span>
+                                            <span class="hm-prev-badge hm-prev-badge--ini" id="hm-prev-ini-badge">SJ</span>
+                                        </div>
+                                        <div class="hm-prev-meta" id="hm-prev-meta"><?php echo esc_html($svc->service_name); ?> · Sample Clinic</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="hm-prev-label">Click an outcome below to preview its banner</div>
                         </div>
                     </div>
                 </div>
@@ -392,25 +478,94 @@ class HearMed_Admin_Appointment_Type_Detail {
             var SVC_ID = <?php echo $service_id; ?>;
             var ajaxUrl = HM.ajax_url || HM.ajax;
             var nonce   = HM.nonce;
+            var previewStyle = 'solid';
 
-            /* ── Live preview ── */
+            /* ── Live preview — matches calendar renderAppts exactly ── */
             function updatePreview() {
-                var bg = $('#hm-svc-colour').val();
-                var fg = $('#hm-svc-text-colour').val();
-                var name = $('#hm-svc-name').val() || 'Preview';
-                $('#hm-svc-preview').css({ background: bg, color: fg });
-                $('#hm-preview-name').text(name);
-                $('.hm-appt-meta').first().text(name + ' · Sample Clinic');
+                var bg      = $('#hm-svc-colour').val();
+                var border  = $('#hm-svc-border-colour').val() || bg;
+                var ptColor = $('#hm-svc-text-colour').val();
+                var svcColor= $('#hm-svc-name-colour').val();
+                var tmColor = $('#hm-svc-time-colour').val();
+                var metaCol = $('#hm-svc-meta-colour').val();
+                var badgeBg = $('#hm-svc-badge-bg').val();
+                var badgeTx = $('#hm-svc-badge-text').val();
+                var name    = $('#hm-svc-name').val() || 'Preview';
+                var dur     = parseInt($('#hm-svc-duration').val()) || 30;
+                var cs      = previewStyle;
+
+                var $card   = $('#hm-prev-card');
+                var $svc    = $('#hm-prev-svc');
+                var $pt     = $('#hm-prev-pt');
+                var $tm     = $('#hm-prev-tm');
+                var $meta   = $('#hm-prev-meta');
+                var $iniBadge = $('#hm-prev-ini-badge');
+
+                // Card style — mirroring hearmed-calendar.js renderAppts logic
+                var bgStyle = '', fontColor = ptColor;
+                if (cs === 'solid') {
+                    bgStyle = 'background:' + bg + ';color:' + ptColor;
+                    $svc.css('color', svcColor);
+                    $tm.css('color', tmColor);
+                    $meta.css('color', metaCol);
+                    $iniBadge.css({ background: badgeBg, color: badgeTx });
+                } else if (cs === 'tinted') {
+                    var r = parseInt(bg.slice(1,3),16), g = parseInt(bg.slice(3,5),16), b = parseInt(bg.slice(5,7),16);
+                    bgStyle = 'background:rgba('+r+','+g+','+b+',0.12);border-left:3.5px solid '+bg + ';color:' + bg;
+                    fontColor = bg;
+                    $svc.css('color', bg);
+                    $tm.css('color', bg);
+                    $meta.css('color', 'var(--hm-text-muted)');
+                    $iniBadge.css({ background: 'rgba('+r+','+g+','+b+',0.15)', color: bg });
+                } else if (cs === 'outline') {
+                    bgStyle = 'background:#fff;border:1.5px solid '+bg+';border-left:3.5px solid '+bg+';color:'+bg;
+                    fontColor = bg;
+                    $svc.css('color', bg);
+                    $tm.css('color', bg);
+                    $meta.css('color', 'var(--hm-text-muted)');
+                    $iniBadge.css({ background: bg+'1a', color: bg });
+                } else if (cs === 'minimal') {
+                    bgStyle = 'background:transparent;border-left:3px solid '+bg+';color:var(--hm-text)';
+                    fontColor = 'var(--hm-text)';
+                    $svc.css('color', bg);
+                    $tm.css('color', 'var(--hm-text-muted)');
+                    $meta.css('color', 'var(--hm-text-muted)');
+                    $iniBadge.css({ background: bg+'1a', color: bg });
+                }
+
+                $card.attr('style', bgStyle);
+                $pt.css('color', fontColor);
+                $svc.text(name);
+                $meta.text(name + ' · Sample Clinic');
+
+                // Time label with duration
+                var end_h = 9 + Math.floor(dur / 60);
+                var end_m = dur % 60;
+                var endTime = (end_h < 10 ? '0' : '') + end_h + ':' + (end_m < 10 ? '0' : '') + end_m;
+                $tm.text('09:00 – ' + endTime);
             }
-            $('#hm-svc-colour, #hm-svc-text-colour').on('input', updatePreview);
-            $('#hm-svc-name').on('input', updatePreview);
+
+            // Bind all colour pickers and inputs to live preview
+            $('#hm-svc-colour, #hm-svc-border-colour, #hm-svc-text-colour, #hm-svc-name-colour, #hm-svc-time-colour, #hm-svc-meta-colour, #hm-svc-badge-bg, #hm-svc-badge-text').on('input', updatePreview);
+            $('#hm-svc-name, #hm-svc-duration').on('input', updatePreview);
+
+            // Card style tabs
+            $(document).on('click', '.hm-preview-style-btn', function() {
+                $('.hm-preview-style-btn').removeClass('active');
+                $(this).addClass('active');
+                previewStyle = $(this).data('style');
+                updatePreview();
+            });
+
+            // Initial render
+            updatePreview();
 
             /* ── Outcome row click → update banner preview ── */
             $(document).on('click', '.hm-outcome-row', function(e) {
-                if ($(e.target).closest('.hm-btn').length) return; // don't trigger on edit/delete buttons
+                if ($(e.target).closest('.hm-btn').length) return;
                 var color = $(this).data('color') || '#22c55e';
                 var name  = $(this).data('name') || 'Outcome';
-                $('#hm-preview-banner').css('background', color).text(name);
+                $('#hm-prev-banner').css('background', color).text(name).show();
             });
 
             /* ── Save details ── */
@@ -423,6 +578,12 @@ class HearMed_Admin_Appointment_Type_Detail {
                     service_name:        $('#hm-svc-name').val(),
                     colour:              $('#hm-svc-colour').val(),
                     text_color:          $('#hm-svc-text-colour').val(),
+                    name_color:          $('#hm-svc-name-colour').val(),
+                    time_color:          $('#hm-svc-time-colour').val(),
+                    meta_color:          $('#hm-svc-meta-colour').val(),
+                    badge_bg_color:      $('#hm-svc-badge-bg').val(),
+                    badge_text_color:    $('#hm-svc-badge-text').val(),
+                    border_color:        $('#hm-svc-border-colour').val(),
                     duration:            $('#hm-svc-duration').val(),
                     appointment_category:$('#hm-svc-category').val(),
                     sales_opportunity:   $('#hm-svc-sales').is(':checked') ? 1 : 0,
@@ -576,6 +737,12 @@ class HearMed_Admin_Appointment_Type_Detail {
             'service_color'       => $colour,
             'colour'              => $colour,
             'text_color'          => sanitize_hex_color($_POST['text_color'] ?? '#FFFFFF') ?: '#FFFFFF',
+            'name_color'          => sanitize_hex_color($_POST['name_color'] ?? '#FFFFFF') ?: '#FFFFFF',
+            'time_color'          => sanitize_hex_color($_POST['time_color'] ?? '#38bdf8') ?: '#38bdf8',
+            'meta_color'          => sanitize_hex_color($_POST['meta_color'] ?? '#38bdf8') ?: '#38bdf8',
+            'badge_bg_color'      => sanitize_hex_color($_POST['badge_bg_color'] ?? '#ffffff') ?: '#ffffff',
+            'badge_text_color'    => sanitize_hex_color($_POST['badge_text_color'] ?? '#FFFFFF') ?: '#FFFFFF',
+            'border_color'        => sanitize_hex_color($_POST['border_color'] ?? '') ?: '',
             'duration_minutes'    => $dur,
             'duration'            => $dur,
             'appointment_category'=> sanitize_text_field($_POST['appointment_category'] ?? ''),
