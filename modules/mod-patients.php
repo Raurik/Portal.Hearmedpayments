@@ -1063,71 +1063,29 @@ function hm_ajax_get_patient_appointments() {
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
-    $db   = HearMed_DB::instance();
+    $db = HearMed_DB::instance();
 
-    // Detect which columns exist on the appointments table
-    $appt_cols = [];
-    try {
-        $col_rows = $db->get_results(
-            "SELECT column_name FROM information_schema.columns
-             WHERE table_schema = 'hearmed_core' AND table_name = 'appointments'"
-        );
-        foreach ( ($col_rows ?: []) as $cr ) {
-            $appt_cols[] = $cr->column_name;
-        }
-    } catch ( Throwable $ignored ) {}
-
-    $has_appt_type_id = in_array( 'appointment_type_id', $appt_cols );
-    $has_service_id   = in_array( 'service_id', $appt_cols );
-    $has_appt_status  = in_array( 'appointment_status', $appt_cols );
-    $has_staff_id     = in_array( 'staff_id', $appt_cols );
-
-    // Resolve service column for JOIN
-    if ( $has_appt_type_id && $has_service_id ) {
-        $svc_join = 'COALESCE(a.appointment_type_id, a.service_id)';
-    } elseif ( $has_appt_type_id ) {
-        $svc_join = 'a.appointment_type_id';
-    } elseif ( $has_service_id ) {
-        $svc_join = 'a.service_id';
-    } else {
-        $svc_join = 'NULL';
-    }
-
-    // Resolve status + staff columns
-    $status_col = $has_appt_status ? 'a.appointment_status' : 'a.status';
-    $staff_col  = $has_staff_id    ? 'a.staff_id'           : 'a.dispenser_id';
-
-    // Check if appointment_outcomes table exists for the LEFT JOIN
-    $has_ao = false;
-    try {
-        $has_ao = (bool) $db->get_var(
-            "SELECT 1 FROM information_schema.tables WHERE table_schema='hearmed_core' AND table_name='appointment_outcomes'"
-        );
-    } catch ( Throwable $ignored ) {}
-
-    $ao_join   = $has_ao ? "LEFT JOIN hearmed_core.appointment_outcomes ao ON ao.appointment_id = a.id" : "";
-    $ao_select = $has_ao ? "ao.outcome_name, ao.outcome_color AS outcome_banner_colour" : "NULL AS outcome_name, NULL AS outcome_banner_colour";
-
+    // Direct query — known schema columns
+    // appointments: staff_id, service_id, appointment_type_id, appointment_status
+    // services: service_color (NOT colour), duration_minutes (NOT duration)
     $rows = $db->get_results(
         "SELECT a.id, a.appointment_date, a.start_time, a.end_time,
-                {$status_col} AS status, a.notes,
+                a.appointment_status AS status, a.notes, a.outcome,
                 COALESCE(sv.service_name, '') AS service_name,
-                COALESCE(sv.service_color, sv.colour, '#3B82F6') AS service_colour,
+                COALESCE(sv.service_color, '#3B82F6') AS service_colour,
                 COALESCE(c.clinic_name, '') AS clinic_name,
-                COALESCE(st.first_name || ' ' || st.last_name, '') AS dispenser_name,
-                {$ao_select}
+                COALESCE(st.first_name || ' ' || st.last_name, '') AS dispenser_name
          FROM hearmed_core.appointments a
-         LEFT JOIN hearmed_reference.services sv ON sv.id = {$svc_join}
+         LEFT JOIN hearmed_reference.services sv ON sv.id = COALESCE(a.appointment_type_id, a.service_id)
          LEFT JOIN hearmed_reference.clinics c ON c.id = a.clinic_id
-         LEFT JOIN hearmed_reference.staff st ON st.id = {$staff_col}
-         {$ao_join}
+         LEFT JOIN hearmed_reference.staff st ON st.id = a.staff_id
          WHERE a.patient_id = \$1
          ORDER BY a.appointment_date DESC, a.start_time DESC",
         [ $pid ]
     );
 
     $out = [];
-    foreach ( $rows as $r ) {
+    foreach ( ($rows ?: []) as $r ) {
         $out[] = [
             'id'                    => (int) $r->id,
             'appointment_date'      => $r->appointment_date,
@@ -1139,8 +1097,8 @@ function hm_ajax_get_patient_appointments() {
             'service_colour'        => $r->service_colour ?: '',
             'clinic_name'           => $r->clinic_name,
             'dispenser_name'        => $r->dispenser_name,
-            'outcome_name'          => $r->outcome_name ?: '',
-            'outcome_banner_colour' => $r->outcome_banner_colour ?: '',
+            'outcome_name'          => $r->outcome ?: '',
+            'outcome_banner_colour' => '',
         ];
     }
     wp_send_json_success( $out );

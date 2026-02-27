@@ -689,6 +689,7 @@ var Cal={
                     '</div>'+
                     '<div class="hm-pt-results" id="hmn-ptresults"></div>'+
                     '<input type="hidden" id="hmn-patientid" value="0">'+
+                    '<input type="hidden" id="hmn-refsource" value="">'+
                 '</div>'+
                 '<div class="hm-row"><div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hmn-service">'+svcOpts+'</select></div>'+
                 '<div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hmn-clinic">'+cliOpts+'</select></div></div>'+
@@ -696,12 +697,29 @@ var Cal={
                 '<div class="hm-fld"><label>Status</label><select class="hm-inp" id="hmn-status"><option>Confirmed</option><option>Pending</option></select></div></div>'+
                 '<div class="hm-row"><div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hmn-date" value="'+date+'"></div>'+
                 '<div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hmn-time" value="'+time+'"></div></div>'+
-                '<div class="hm-fld"><label>Location</label><select class="hm-inp" id="hmn-loc"><option>Clinic</option><option>Home</option></select></div>'+
+                '<div class="hm-row"><div class="hm-fld"><label>Duration</label><select class="hm-inp" id="hmn-duration">'+
+                    '<option value="15">15 min</option><option value="30" selected>30 min</option><option value="45">45 min</option>'+
+                    '<option value="60">60 min</option><option value="75">75 min</option><option value="90">90 min</option>'+
+                    '<option value="105">105 min</option><option value="120">120 min</option>'+
+                '</select></div>'+
+                '<div class="hm-fld"><label>Location</label><select class="hm-inp" id="hmn-loc"><option>Clinic</option><option>Home</option></select></div></div>'+
+                '<div class="hm-fld"><label>Referral Source</label><input class="hm-inp" id="hmn-referral" placeholder="Auto-filled from patient" readonly></div>'+
                 '<div class="hm-fld"><label>Notes</label><textarea class="hm-inp" id="hmn-notes" placeholder="Optional notes..."></textarea></div>'+
             '</div>'+
             '<div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hm-new-close">Cancel</button><button class="hm-btn hm-btn--primary hm-new-save">Create Appointment</button></div></div>'+
         '</div></div>';
         $('body').append(html);
+
+        // Set default duration from selected service
+        var initSvc=self.svcMap[$('#hmn-service').val()];
+        if(initSvc&&initSvc.duration)$('#hmn-duration').val(initSvc.duration);
+
+        // Update duration default when appointment type changes
+        $(document).on('change.newmodal','#hmn-service',function(){
+            var s=self.svcMap[$(this).val()];
+            if(s&&s.duration)$('#hmn-duration').val(s.duration);
+        });
+
         var searchTimer;
         $(document).on('input.newmodal','#hmn-ptsearch',function(){
             var q=$(this).val();clearTimeout(searchTimer);
@@ -711,7 +729,7 @@ var Cal={
                     if(!r.success||!r.data||!r.data.length){$('#hmn-ptresults').removeClass('open').html('<div class="hm-pt-item" style="color:#94a3b8;cursor:default">No patients found</div>').addClass('open');return;}
                     var h='';r.data.forEach(function(p){
                         var lbl=p.label||p.name;
-                        h+='<div class="hm-pt-item" data-id="'+p.id+'"><span>'+esc(lbl)+'</span><span class="hm-pt-newtab">Select</span></div>';
+                        h+='<div class="hm-pt-item" data-id="'+p.id+'" data-refsource="'+esc(p.referral_source_name||'')+'"><span>'+esc(lbl)+'</span><span class="hm-pt-newtab">Select</span></div>';
                     });
                     $('#hmn-ptresults').html(h).addClass('open');
                 }).fail(function(){ $('#hmn-ptresults').removeClass('open').empty(); });
@@ -719,7 +737,9 @@ var Cal={
         });
         $(document).on('click.newmodal','.hm-pt-item[data-id]',function(){
             var id=$(this).data('id'),name=$(this).find('span:first').text();
+            var ref=$(this).data('refsource')||'';
             $('#hmn-ptsearch').val(name);$('#hmn-patientid').val(id);$('#hmn-ptresults').removeClass('open');
+            $('#hmn-referral').val(ref);$('#hmn-refsource').val(ref);
         });
         // Quick-add patient inline
         $(document).on('click.newmodal','#hmn-quickadd',function(e){
@@ -737,7 +757,9 @@ var Cal={
                 patient_id:pid,service_id:$('#hmn-service').val(),
                 clinic_id:$('#hmn-clinic').val(),dispenser_id:$('#hmn-disp').val(),
                 status:$('#hmn-status').val(),appointment_date:$('#hmn-date').val(),
-                start_time:$('#hmn-time').val(),location_type:$('#hmn-loc').val(),
+                start_time:$('#hmn-time').val(),duration:$('#hmn-duration').val(),
+                location_type:$('#hmn-loc').val(),
+                referring_source:$('#hmn-refsource').val(),
                 notes:$('#hmn-notes').val()
             }).then(function(r){
                 if(r.success){$('.hm-modal-bg').remove();$(document).off('.newmodal .newclose .newbg .newsave');self.refresh();}

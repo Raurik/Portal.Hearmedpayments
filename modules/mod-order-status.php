@@ -390,7 +390,7 @@ function hm_ajax_order_status_load() {
                      WHERE a.patient_id = (SELECT id FROM hearmed_core.patients WHERE patient_number = \$1 LIMIT 1)
                        AND at.category = 'fitting'
                        AND a.appointment_date >= CURRENT_DATE
-                       AND a.status != 'Cancelled'
+                       AND a.appointment_status != 'Cancelled'
                      ORDER BY a.appointment_date ASC
                      LIMIT 1",
                     [$o->patient_number]
