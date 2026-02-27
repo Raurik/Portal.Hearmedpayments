@@ -473,7 +473,8 @@ var Cal={
             if(cs==='solid'){bgStyle='background:'+col;fontColor=font;}
             else if(cs==='tinted'){
                 var r=parseInt(col.slice(1,3),16),g2=parseInt(col.slice(3,5),16),b=parseInt(col.slice(5,7),16);
-                var tA=(parseInt(a.tint_opacity)||12)/100;
+                var svcTint=Cal.svcMap[a.service_id];
+                var tA=(svcTint&&svcTint.tint_opacity?parseInt(svcTint.tint_opacity):12)/100;
                 bgStyle='background:rgba('+r+','+g2+','+b+','+tA+');border-left:3.5px solid '+col;
                 fontColor=col;
             }

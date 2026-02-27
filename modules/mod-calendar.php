@@ -317,12 +317,17 @@ function hm_ajax_get_dispensers() {
 function hm_ajax_get_services() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     try {
+    // Check if tint_opacity column exists (added by MIGRATION_SERVICE_CARD_COLOURS)
+    $has_tint = (bool) HearMed_DB::get_var(
+        "SELECT 1 FROM information_schema.columns WHERE table_schema='hearmed_reference' AND table_name='services' AND column_name='tint_opacity'"
+    );
+    $tint_col = $has_tint ? "COALESCE(tint_opacity, 12) AS tint_opacity," : "12 AS tint_opacity,";
     $ps = HearMed_DB::get_results(
         "SELECT id, service_name,
                 COALESCE(service_color, '#3B82F6') AS service_color,
                 COALESCE(text_color, '#FFFFFF') AS text_color,
                 COALESCE(duration_minutes, 30) AS duration_minutes,
-                COALESCE(tint_opacity, 12) AS tint_opacity,
+                {$tint_col}
                 is_active
          FROM hearmed_reference.services WHERE is_active = true ORDER BY service_name"
     );
@@ -416,8 +421,7 @@ function hm_ajax_get_appointments() {
                    sv.service_name,
                    COALESCE(sv.service_color, '#3B82F6') AS service_colour,
                    COALESCE(sv.text_color, '#FFFFFF') AS service_text_color,
-                   COALESCE(a.duration_minutes, sv.duration_minutes, 30) AS service_duration,
-                   COALESCE(sv.tint_opacity, 12) AS tint_opacity
+                   COALESCE(a.duration_minutes, sv.duration_minutes, 30) AS service_duration
             FROM hearmed_core.appointments a
             LEFT JOIN hearmed_core.patients p ON a.patient_id = p.id
             LEFT JOIN hearmed_reference.staff st ON a.staff_id = st.id
@@ -479,7 +483,6 @@ function hm_ajax_get_appointments() {
             'outcome_id'            => 0,
             'outcome_name'          => $r->outcome ?? '',
             'outcome_banner_colour' => '',
-            'tint_opacity'          => (int) ($r->tint_opacity ?: 12),
             'created_by'            => (int) ($r->created_by ?? 0),
         ];
     }
