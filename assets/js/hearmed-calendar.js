@@ -666,17 +666,23 @@ var Cal={
             var el=$(card);
             $t.append(el);
 
-            // Click → popover
-            el.on('click',function(e){
-                if($(e.target).closest('.hm-appt-kebab').length) return; // handled by kebab
-                e.stopPropagation();clearTimeout(Cal._hoverTimer);$('#hm-tooltip').hide();Cal.showPop(a,this);
-            });
-
-            // Double-click → edit
-            el.on('dblclick',function(e){
-                e.stopPropagation();e.preventDefault();
-                Cal._popAppt=a;Cal.editPop();
-            });
+            // Click / Double-click: use delay so dblclick can cancel single-click popup
+            (function(el,a){
+                var clickTimer=null;
+                el.on('click',function(e){
+                    if($(e.target).closest('.hm-appt-kebab').length) return;
+                    e.stopPropagation();clearTimeout(Cal._hoverTimer);$('#hm-tooltip').hide();
+                    var self=this;
+                    clearTimeout(clickTimer);
+                    clickTimer=setTimeout(function(){ Cal.showPop(a,self); },280);
+                });
+                el.on('dblclick',function(e){
+                    e.stopPropagation();e.preventDefault();
+                    clearTimeout(clickTimer);
+                    $('#hm-pop').removeClass('open');
+                    Cal._popAppt=a;Cal.openOutcomeModal(a);
+                });
+            })(el,a);
 
             // Hover → tooltip after 1 second
             el.on('mouseenter',function(){
@@ -923,6 +929,442 @@ var Cal={
         $('body').append($t);
         setTimeout(function(){$t.addClass('show');},10);
         setTimeout(function(){$t.removeClass('show');setTimeout(function(){$t.remove();},300);},3000);
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // OUTCOME MODAL — opened on double-click
+    // ═══════════════════════════════════════════════════════
+    openOutcomeModal:function(a){
+        var self=this;
+        $('#hm-pop').removeClass('open');$('#hm-tooltip').hide();
+        var col=a.service_colour||'#3B82F6';
+        var disp=this.dispensers.find(function(d){return parseInt(d.id)===parseInt(a.dispenser_id);});
+        var clinic=this.clinics.find(function(c){return parseInt(c.id)===parseInt(a.clinic_id);});
+        var st=STATUS_MAP[a.status]||STATUS_MAP.Confirmed;
+
+        var h='<div class="hm-modal-bg hm-outcome-modal-bg open"><div class="hm-modal hm-modal--md" style="max-width:520px">';
+        h+='<div class="hm-modal-hd" style="background:'+col+';color:#fff;border-radius:12px 12px 0 0;padding:14px 20px">';
+        h+='<div><h3 style="margin:0;color:#fff;font-size:16px">Appointment Outcome</h3>';
+        h+='<div style="font-size:12px;opacity:.85;margin-top:2px">'+esc(a.patient_name||'No patient')+' — '+esc(a.service_name)+'</div></div>';
+        h+='<button class="hm-close hm-outcome-close" style="color:#fff">'+IC.x+'</button></div>';
+        h+='<div class="hm-modal-body" style="padding:20px">';
+
+        // Info row
+        h+='<div style="display:flex;gap:16px;margin-bottom:16px;font-size:12px;color:#64748b">';
+        h+='<span>'+IC.clock+' '+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</span>';
+        h+='<span>'+IC.user+' '+esc(disp?disp.name:'—')+'</span>';
+        h+='<span class="hm-status-pill" style="background:'+st.bg+';color:'+st.color+';border:1px solid '+st.border+';font-size:10px;padding:1px 8px">'+esc(a.status)+'</span>';
+        h+='</div>';
+
+        // Outcome selection area
+        h+='<div style="font-size:11px;font-weight:700;color:#334155;margin-bottom:8px;text-transform:uppercase;letter-spacing:.3px">Select Outcome</div>';
+        h+='<div id="hm-om-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px"><div style="color:#94a3b8;font-size:12px;padding:12px 0;text-align:center">Loading outcomes...</div></div>';
+
+        // Note area (hidden, shown when outcome with requires_note is picked)
+        h+='<div id="hm-om-note-area" style="display:none;margin-bottom:16px">';
+        h+='<div style="font-size:11px;font-weight:700;color:#334155;margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px">Outcome Note <span style="color:#ef4444">*</span></div>';
+        h+='<textarea class="hm-inp" id="hm-om-note" rows="3" placeholder="Enter outcome note..." style="font-size:13px"></textarea>';
+        h+='<div id="hm-om-note-err" style="display:none;color:#ef4444;font-size:11px;margin-top:4px">Note is required for this outcome.</div>';
+        h+='</div>';
+
+        // Follow-up area (hidden, shown after outcome w/ triggers_followup is saved)
+        h+='<div id="hm-om-followup-area" style="display:none;margin-bottom:16px">';
+        h+='<div style="font-size:11px;font-weight:700;color:#334155;margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px">Follow-up Appointment</div>';
+        h+='<div id="hm-om-followup-types" style="display:flex;flex-direction:column;gap:4px"></div>';
+        h+='</div>';
+
+        // Order notice area (hidden, shown for invoiceable outcomes)
+        h+='<div id="hm-om-invoice-area" style="display:none;margin-bottom:16px">';
+        h+='<div style="padding:12px 16px;background:#fefce8;border:1px solid #fde68a;border-radius:8px;display:flex;align-items:center;gap:10px">';
+        h+='<span style="font-size:18px">£</span>';
+        h+='<div><div style="font-size:13px;font-weight:600;color:#854d0e">This outcome requires an order</div>';
+        h+='<div style="font-size:11px;color:#92400e">A new order form will open after saving.</div></div>';
+        h+='</div></div>';
+
+        h+='</div>'; // end modal-body
+
+        // Footer
+        h+='<div class="hm-modal-ft" style="padding:12px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">';
+        h+='<span id="hm-om-err" style="color:#ef4444;font-size:12px"></span>';
+        h+='<div style="display:flex;gap:8px"><button class="hm-btn hm-outcome-close">Cancel</button>';
+        h+='<button class="hm-btn hm-btn--primary hm-om-save" disabled>Save Outcome</button></div>';
+        h+='</div>';
+        h+='</div></div>';
+
+        $('body').append(h);
+        self._outcomeData=null;
+        self._outcomeFollowupPending=false;
+        self._outcomeInvoicePending=false;
+
+        // Load outcome templates for this appointment's service
+        post('get_outcome_templates',{service_id:a.service_id}).then(function(r){
+            if(!r.success||!r.data||!r.data.length){
+                $('#hm-om-list').html('<div style="color:#94a3b8;font-size:12px;padding:12px 0;text-align:center">No outcomes configured for this appointment type.<br><span style="font-size:11px">Add outcomes in Admin → Appointment Types → Edit.</span></div>');
+                return;
+            }
+            var oh='';
+            r.data.forEach(function(o){
+                oh+='<button class="hm-om-opt" data-oid="'+o.id+'" data-color="'+esc(o.outcome_color)+'" data-name="'+esc(o.outcome_name)+'"';
+                oh+=' data-note="'+(o.requires_note?'1':'0')+'" data-invoice="'+(o.is_invoiceable?'1':'0')+'"';
+                oh+=' data-followup="'+(o.triggers_followup?'1':'0')+'"';
+                oh+=' data-fu-svc="'+esc(JSON.stringify(o.followup_service_ids||[]))+'"';
+                oh+=' style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:#334155;transition:all .15s;text-align:left;width:100%">';
+                oh+='<span style="width:14px;height:14px;border-radius:4px;background:'+esc(o.outcome_color)+';flex-shrink:0"></span>';
+                oh+='<span style="flex:1">'+esc(o.outcome_name)+'</span>';
+                var badges='';
+                if(o.is_invoiceable)badges+='<span style="font-size:9px;background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:4px;font-weight:700">£ Invoiceable</span>';
+                if(o.requires_note)badges+='<span style="font-size:9px;background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-weight:700">Note Required</span>';
+                if(o.triggers_followup)badges+='<span style="font-size:9px;background:#dcfce7;color:#166534;padding:2px 6px;border-radius:4px;font-weight:700">Follow-up</span>';
+                if(badges)oh+='<span style="display:flex;gap:4px;flex-shrink:0">'+badges+'</span>';
+                oh+='</button>';
+            });
+            $('#hm-om-list').html(oh);
+        }).fail(function(){
+            $('#hm-om-list').html('<div style="color:#ef4444;font-size:12px;text-align:center">Failed to load outcomes</div>');
+        });
+
+        // Outcome option click
+        $(document).off('click.omopt').on('click.omopt','.hm-om-opt',function(){
+            $('.hm-om-opt').css({borderColor:'#e2e8f0',background:'#fff'});
+            var $o=$(this);
+            $o.css({borderColor:$o.data('color'),background:$o.data('color')+'12'});
+            var needsNote=$o.data('note')==='1'||$o.data('note')===1;
+            var isInvoice=$o.data('invoice')==='1'||$o.data('invoice')===1;
+            var needsFollowup=$o.data('followup')==='1'||$o.data('followup')===1;
+            var fuSvc=[];
+            try{fuSvc=JSON.parse($o.attr('data-fu-svc')||'[]');}catch(e){}
+
+            self._outcomeData={
+                id:$o.data('oid'),
+                color:$o.data('color'),
+                name:$o.data('name'),
+                requires_note:needsNote,
+                is_invoiceable:isInvoice,
+                triggers_followup:needsFollowup,
+                followup_service_ids:fuSvc
+            };
+
+            // Show/hide note area
+            if(needsNote){
+                $('#hm-om-note-area').show();
+                $('#hm-om-note').focus();
+            } else {
+                $('#hm-om-note-area').hide();
+                $('#hm-om-note').val('');
+            }
+
+            // Show/hide invoice notice
+            if(isInvoice){
+                $('#hm-om-invoice-area').show();
+                self._outcomeInvoicePending=true;
+            } else {
+                $('#hm-om-invoice-area').hide();
+                self._outcomeInvoicePending=false;
+            }
+
+            // Show/hide follow-up area
+            if(needsFollowup && fuSvc.length){
+                $('#hm-om-followup-area').show();
+                self._outcomeFollowupPending=true;
+                // Build follow-up service options (only allowed service types)
+                var fh='';
+                self.services.forEach(function(s){
+                    if(fuSvc.indexOf(parseInt(s.id))>-1){
+                        fh+='<label class="hm-om-fu-opt" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:12px;transition:all .15s">';
+                        fh+='<input type="radio" name="hm-om-fu-svc" value="'+s.id+'" style="accent-color:#0BB4C4"> ';
+                        fh+='<span style="width:10px;height:10px;border-radius:3px;background:'+(s.color||s.service_colour||'#3B82F6')+';flex-shrink:0"></span>';
+                        fh+=esc(s.name);
+                        fh+='</label>';
+                    }
+                });
+                if(!fh)fh='<div style="color:#94a3b8;font-size:12px">No follow-up service types configured.</div>';
+                $('#hm-om-followup-types').html(fh);
+            } else {
+                $('#hm-om-followup-area').hide();
+                self._outcomeFollowupPending=false;
+            }
+
+            // Enable save button
+            $('.hm-om-save').prop('disabled',false);
+            $('#hm-om-err').text('');
+        });
+
+        // Follow-up radio highlight
+        $(document).off('change.omfu').on('change.omfu','input[name="hm-om-fu-svc"]',function(){
+            $('.hm-om-fu-opt').css({borderColor:'#e2e8f0',background:'#fff'});
+            $(this).closest('.hm-om-fu-opt').css({borderColor:'#0BB4C4',background:'#f0fdfa'});
+        });
+
+        // Close
+        $(document).off('click.omclose').on('click.omclose','.hm-outcome-close',function(e){
+            e.stopPropagation();
+            $('.hm-outcome-modal-bg').remove();
+            $(document).off('.omopt .omfu .omclose .omsave');
+        });
+
+        // Click background to close
+        $(document).off('click.ombg').on('click.ombg','.hm-outcome-modal-bg',function(e){
+            if($(e.target).hasClass('hm-outcome-modal-bg')){
+                $('.hm-outcome-modal-bg').remove();
+                $(document).off('.omopt .omfu .omclose .omsave .ombg');
+            }
+        });
+
+        // Save outcome
+        $(document).off('click.omsave').on('click.omsave','.hm-om-save',function(){
+            var o=self._outcomeData;
+            if(!o){$('#hm-om-err').text('Please select an outcome.');return;}
+
+            // Validate note if required
+            var noteVal=$('#hm-om-note').val()||'';
+            if(o.requires_note && !noteVal.trim()){
+                $('#hm-om-note-err').show();
+                $('#hm-om-note').css('borderColor','#ef4444').focus();
+                return;
+            }
+
+            // Validate follow-up selection if required
+            var fuSvcId=0;
+            if(o.triggers_followup && o.followup_service_ids.length){
+                fuSvcId=parseInt($('input[name="hm-om-fu-svc"]:checked').val()||0);
+                if(!fuSvcId){
+                    $('#hm-om-err').text('Please select a follow-up appointment type.');
+                    return;
+                }
+            }
+
+            var $btn=$(this);$btn.prop('disabled',true).text('Saving...');
+
+            post('save_appointment_outcome',{
+                appointment_id:a._ID,
+                outcome_id:o.id,
+                outcome_note:noteVal
+            }).then(function(r){
+                if(!r.success){
+                    $btn.prop('disabled',false).text('Save Outcome');
+                    $('#hm-om-err').text(r.data&&r.data.message?r.data.message:'Failed to save outcome');
+                    return;
+                }
+
+                // Close modal
+                $('.hm-outcome-modal-bg').remove();
+                $(document).off('.omopt .omfu .omclose .omsave .ombg');
+                self.refresh();
+                self.toast('Outcome saved: '+o.name);
+
+                // Chain: if invoiceable → open new order modal
+                if(o.is_invoiceable && a.patient_id){
+                    self._openOutcomeOrderModal(a,o);
+                }
+
+                // Chain: if follow-up required → open follow-up booking
+                if(fuSvcId && a.patient_id){
+                    setTimeout(function(){
+                        self._openFollowUpBooking(a,fuSvcId);
+                    }, o.is_invoiceable ? 500 : 100);
+                }
+            }).fail(function(){
+                $btn.prop('disabled',false).text('Save Outcome');
+                $('#hm-om-err').text('Network error — please try again.');
+            });
+        });
+    },
+
+    // ── Outcome → New Order Modal ──
+    _openOutcomeOrderModal:function(a,outcome){
+        var self=this;
+        // Ensure services loaded
+        var ready=$.Deferred();
+        if(!self.services.length){self.loadServices().always(function(){ready.resolve();});}
+        else ready.resolve();
+
+        ready.then(function(){
+            // Build a lightweight inline order modal pre-filled with patient
+            var h='<div class="hm-modal-bg hm-modal-bg--top open"><div class="hm-modal hm-modal--md" style="max-width:600px">';
+            h+='<div class="hm-modal-hd" style="background:#f59e0b;color:#fff;border-radius:12px 12px 0 0;padding:14px 20px">';
+            h+='<div><h3 style="margin:0;color:#fff;font-size:16px">New Order — '+esc(outcome.name)+'</h3>';
+            h+='<div style="font-size:12px;opacity:.85;margin-top:2px">'+esc(a.patient_name||'')+'</div></div>';
+            h+='<button class="hm-close hm-oo-close" style="color:#fff">'+IC.x+'</button></div>';
+            h+='<div class="hm-modal-body" style="padding:20px;max-height:70vh;overflow-y:auto">';
+
+            h+='<div class="hm-fld"><label>Patient</label><input class="hm-inp" value="'+esc(a.patient_name||'')+'" readonly style="background:#f8fafc"></div>';
+            h+='<input type="hidden" id="hm-oo-pid" value="'+a.patient_id+'">';
+            h+='<input type="hidden" id="hm-oo-aid" value="'+a._ID+'">';
+
+            // Product picker
+            h+='<div class="hm-fld"><label>Add Product / Service</label>';
+            h+='<select class="hm-inp" id="hm-oo-product"><option value="">— select a product —</option>';
+            self.services.forEach(function(s){
+                h+='<option value="svc-'+s.id+'" data-name="'+esc(s.name)+'" data-price="'+(s.default_price||0)+'">'+esc(s.name)+' (Service)</option>';
+            });
+            h+='</select></div>';
+
+            // Items table
+            h+='<div id="hm-oo-items" style="margin:12px 0"></div>';
+            h+='<div style="display:flex;justify-content:flex-end;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:12px">Total: <span id="hm-oo-total" style="margin-left:8px">€0.00</span></div>';
+
+            // Notes
+            h+='<div class="hm-fld"><label>Order Notes</label><textarea class="hm-inp" id="hm-oo-notes" rows="2" placeholder="Optional notes..."></textarea></div>';
+
+            h+='</div>';
+            h+='<div class="hm-modal-ft" style="padding:12px 20px;border-top:1px solid #e2e8f0"><span id="hm-oo-err" style="color:#ef4444;font-size:12px"></span><div class="hm-modal-acts"><button class="hm-btn hm-oo-close">Cancel</button><button class="hm-btn hm-btn--primary hm-oo-save">Create Order</button></div></div>';
+            h+='</div></div>';
+
+            $('body').append(h);
+
+            // Internal item list
+            var orderItems=[];
+            var renderItems=function(){
+                if(!orderItems.length){$('#hm-oo-items').html('<div style="color:#94a3b8;font-size:12px;padding:8px 0">No items added yet.</div>');$('#hm-oo-total').text('€0.00');return;}
+                var th='<table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="border-bottom:1px solid #e2e8f0"><th style="text-align:left;padding:4px 6px">Item</th><th style="text-align:right;padding:4px 6px">Price</th><th style="width:40px"></th></tr></thead><tbody>';
+                var tot=0;
+                orderItems.forEach(function(it,idx){
+                    th+='<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:6px">'+esc(it.name)+'</td><td style="text-align:right;padding:6px">€'+parseFloat(it.price).toFixed(2)+'</td><td><button class="hm-oo-rem" data-idx="'+idx+'" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:14px">&times;</button></td></tr>';
+                    tot+=parseFloat(it.price);
+                });
+                th+='</tbody></table>';
+                $('#hm-oo-items').html(th);
+                $('#hm-oo-total').text('€'+tot.toFixed(2));
+            };
+            renderItems();
+
+            // Add product
+            $(document).off('change.ooprod').on('change.ooprod','#hm-oo-product',function(){
+                var $sel=$(this),val=$sel.val();if(!val){return;}
+                var opt=$sel.find('option:selected');
+                orderItems.push({id:val,name:opt.data('name'),price:opt.data('price')||0});
+                renderItems();
+                $sel.val('');
+            });
+
+            // Remove item
+            $(document).off('click.oorem').on('click.oorem','.hm-oo-rem',function(){
+                orderItems.splice(parseInt($(this).data('idx')),1);
+                renderItems();
+            });
+
+            // Close
+            $(document).off('click.ooclose').on('click.ooclose','.hm-oo-close',function(e){
+                e.stopPropagation();$('.hm-modal-bg--top').remove();$(document).off('.ooprod .oorem .ooclose .oosave');
+            });
+
+            // Save order
+            $(document).off('click.oosave').on('click.oosave','.hm-oo-save',function(){
+                if(!orderItems.length){$('#hm-oo-err').text('Please add at least one item.');return;}
+                var $btn=$(this);$btn.prop('disabled',true).text('Creating...');
+                post('create_outcome_order',{
+                    patient_id:$('#hm-oo-pid').val(),
+                    appointment_id:$('#hm-oo-aid').val(),
+                    items_json:JSON.stringify(orderItems),
+                    notes:$('#hm-oo-notes').val()||''
+                }).then(function(r){
+                    if(r.success){
+                        $('.hm-modal-bg--top').remove();$(document).off('.ooprod .oorem .ooclose .oosave');
+                        self.toast('Order created successfully');
+                    } else {
+                        $btn.prop('disabled',false).text('Create Order');
+                        $('#hm-oo-err').text(r.data&&r.data.message?r.data.message:'Failed to create order');
+                    }
+                }).fail(function(){
+                    $btn.prop('disabled',false).text('Create Order');
+                    $('#hm-oo-err').text('Network error');
+                });
+            });
+        });
+    },
+
+    // ── Outcome → Follow-up Booking ──
+    _openFollowUpBooking:function(a,serviceId){
+        var self=this;
+        // This re-uses the new appointment modal but pre-fills and locks the service
+        var ready=$.Deferred();
+        if(!self.services.length||!self.clinics.length||!self.dispensers.length){
+            $.when(
+                self.services.length?null:self.loadServices(),
+                self.clinics.length?null:self.loadClinics(),
+                self.dispensers.length?null:self.loadDispensers()
+            ).always(function(){ready.resolve();});
+        } else ready.resolve();
+
+        ready.then(function(){
+            var fuSvc=self.services.find(function(s){return parseInt(s.id)===parseInt(serviceId);});
+            var svcName=fuSvc?fuSvc.name:'Follow-up';
+            var cliOpts=self.clinics.map(function(c){return'<option value="'+c.id+'"'+(parseInt(c.id)===parseInt(a.clinic_id)?' selected':'')+'>'+esc(c.name)+'</option>';}).join('');
+            var dispOpts=self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(parseInt(d.id)===parseInt(a.dispenser_id)?' selected':'')+'>'+esc(d.name)+'</option>';}).join('');
+
+            // Calculate default follow-up date (7 days from now)
+            var fuDate=new Date();fuDate.setDate(fuDate.getDate()+7);
+            var fuDateStr=fmt(fuDate);
+
+            var h='<div class="hm-modal-bg hm-modal-bg--top open"><div class="hm-modal hm-modal--md" style="max-width:520px">';
+            h+='<div class="hm-modal-hd" style="background:#22c55e;color:#fff;border-radius:12px 12px 0 0;padding:14px 20px">';
+            h+='<div><h3 style="margin:0;color:#fff;font-size:16px">Book Follow-up Appointment</h3>';
+            h+='<div style="font-size:12px;opacity:.85;margin-top:2px">'+esc(a.patient_name||'')+' — '+esc(svcName)+'</div></div>';
+            h+='<button class="hm-close hm-fu-close" style="color:#fff">'+IC.x+'</button></div>';
+            h+='<div class="hm-modal-body" style="padding:20px">';
+
+            h+='<div class="hm-fld"><label>Patient</label><input class="hm-inp" value="'+esc(a.patient_name||'')+'" readonly style="background:#f8fafc"></div>';
+            h+='<input type="hidden" id="hm-fu-pid" value="'+a.patient_id+'">';
+
+            // Locked service type
+            h+='<div class="hm-fld"><label>Appointment Type</label><input class="hm-inp" value="'+esc(svcName)+'" readonly style="background:#f0fdf4;border-color:#86efac;font-weight:600"></div>';
+            h+='<input type="hidden" id="hm-fu-svc" value="'+serviceId+'">';
+
+            h+='<div class="hm-row"><div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hm-fu-clinic">'+cliOpts+'</select></div>';
+            h+='<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hm-fu-disp">'+dispOpts+'</select></div></div>';
+
+            h+='<div class="hm-row"><div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hm-fu-date" value="'+fuDateStr+'"></div>';
+            h+='<div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hm-fu-time" value="'+(a.start_time||'09:00').substring(0,5)+'"></div></div>';
+
+            h+='<div class="hm-row"><div class="hm-fld"><label>Duration</label><select class="hm-inp" id="hm-fu-dur">';
+            [15,30,45,60,75,90,105,120].forEach(function(d){
+                var sel=(fuSvc&&parseInt(fuSvc.duration)===d)?' selected':'';
+                h+='<option value="'+d+'"'+sel+'>'+d+' min</option>';
+            });
+            h+='</select></div>';
+            h+='<div class="hm-fld"><label>Status</label><select class="hm-inp" id="hm-fu-status"><option selected>Not Confirmed</option><option>Confirmed</option><option>Pending</option></select></div></div>';
+
+            h+='<div class="hm-fld"><label>Notes</label><textarea class="hm-inp" id="hm-fu-notes" rows="2" placeholder="Follow-up notes...">Follow-up from appointment on '+a.appointment_date+'</textarea></div>';
+
+            h+='</div>';
+            h+='<div class="hm-modal-ft" style="padding:12px 20px;border-top:1px solid #e2e8f0"><span id="hm-fu-err" style="color:#ef4444;font-size:12px"></span><div class="hm-modal-acts"><button class="hm-btn hm-fu-close">Cancel</button><button class="hm-btn hm-btn--primary hm-fu-save">Book Follow-up</button></div></div>';
+            h+='</div></div>';
+
+            $('body').append(h);
+
+            // Close
+            $(document).off('click.fuclose').on('click.fuclose','.hm-fu-close',function(e){
+                e.stopPropagation();$('.hm-modal-bg--top').remove();$(document).off('.fuclose .fusave');
+            });
+
+            // Save follow-up
+            $(document).off('click.fusave').on('click.fusave','.hm-fu-save',function(){
+                var fd=$('#hm-fu-date').val(),ft=$('#hm-fu-time').val();
+                if(!fd||!ft){$('#hm-fu-err').text('Please select a date and time.');return;}
+                var $btn=$(this);$btn.prop('disabled',true).text('Booking...');
+                post('create_appointment',{
+                    patient_id:$('#hm-fu-pid').val(),
+                    service_id:$('#hm-fu-svc').val(),
+                    clinic_id:$('#hm-fu-clinic').val(),
+                    dispenser_id:$('#hm-fu-disp').val(),
+                    status:$('#hm-fu-status').val(),
+                    appointment_date:fd,
+                    start_time:ft,
+                    duration:$('#hm-fu-dur').val(),
+                    location_type:'Clinic',
+                    notes:$('#hm-fu-notes').val()||''
+                }).then(function(r){
+                    if(r.success){
+                        $('.hm-modal-bg--top').remove();$(document).off('.fuclose .fusave');
+                        self.refresh();
+                        self.toast('Follow-up appointment booked');
+                    } else {
+                        $btn.prop('disabled',false).text('Book Follow-up');
+                        $('#hm-fu-err').text(r.data&&r.data.message?r.data.message:'Error booking follow-up');
+                    }
+                }).fail(function(){$btn.prop('disabled',false).text('Book Follow-up');$('#hm-fu-err').text('Network error');});
+            });
+        });
     },
 
     onSlot:function(el){var d=el.dataset;this.openNewApptModal(d.date,d.time,parseInt(d.disp));},

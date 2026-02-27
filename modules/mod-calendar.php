@@ -56,6 +56,7 @@ add_action( 'wp_ajax_hm_get_exclusion_types',  'hm_ajax_get_exclusion_types' );
 add_action( 'wp_ajax_hm_create_patient',       'hm_ajax_create_patient_from_calendar' );
 add_action( 'wp_ajax_hm_get_outcome_templates', 'hm_ajax_get_outcome_templates' );
 add_action( 'wp_ajax_hm_save_appointment_outcome', 'hm_ajax_save_appointment_outcome' );
+add_action( 'wp_ajax_hm_create_outcome_order',  'hm_ajax_create_outcome_order' );
 add_action( 'wp_ajax_hm_update_appointment_status', 'hm_ajax_update_appointment_status' );
 
 // ================================================================
@@ -432,12 +433,17 @@ function hm_ajax_get_appointments() {
                    sv.service_name,
                    COALESCE(sv.service_color, '#3B82F6') AS service_colour,
                    COALESCE(sv.text_color, '#FFFFFF') AS service_text_color,
-                   COALESCE(a.duration_minutes, sv.duration_minutes, 30) AS service_duration
+                   COALESCE(a.duration_minutes, sv.duration_minutes, 30) AS service_duration,
+                   ao.outcome_color AS outcome_banner_colour
             FROM hearmed_core.appointments a
             LEFT JOIN hearmed_core.patients p ON a.patient_id = p.id
             LEFT JOIN hearmed_reference.staff st ON a.staff_id = st.id
             LEFT JOIN hearmed_reference.clinics c ON a.clinic_id = c.id
             LEFT JOIN hearmed_reference.services sv ON sv.id = a.service_id
+            LEFT JOIN LATERAL (
+                SELECT outcome_color FROM hearmed_core.appointment_outcomes
+                WHERE appointment_id = a.id ORDER BY created_at DESC LIMIT 1
+            ) ao ON true
             WHERE a.appointment_date >= \$1 AND a.appointment_date <= \$2";
     $params = [ $start, $end ];
     $pi = 3;
@@ -493,7 +499,7 @@ function hm_ajax_get_appointments() {
             'outcome'               => $r->outcome ?? '',
             'outcome_id'            => 0,
             'outcome_name'          => $r->outcome ?? '',
-            'outcome_banner_colour' => '',
+            'outcome_banner_colour' => $r->outcome_banner_colour ?? '',
             'created_by'            => (int) ($r->created_by ?? 0),
         ];
     }
@@ -1147,7 +1153,7 @@ function hm_ajax_get_outcome_templates() {
     if ( ! $sid ) { wp_send_json_success( [] ); return; }
     $rows = HearMed_DB::get_results(
         "SELECT id, outcome_name, outcome_color, is_invoiceable, requires_note,
-                triggers_followup, triggers_reminder
+                triggers_followup, triggers_reminder, followup_service_ids
          FROM hearmed_core.outcome_templates
          WHERE service_id = $1
          ORDER BY outcome_name",
@@ -1155,14 +1161,20 @@ function hm_ajax_get_outcome_templates() {
     );
     $d = [];
     foreach ( ($rows ?: []) as $r ) {
+        $fu_ids = [];
+        if ( ! empty( $r->followup_service_ids ) ) {
+            $decoded = json_decode( $r->followup_service_ids, true );
+            if ( is_array( $decoded ) ) $fu_ids = array_map( 'intval', $decoded );
+        }
         $d[] = [
-            'id'              => (int) $r->id,
-            'outcome_name'    => $r->outcome_name,
-            'outcome_color'   => $r->outcome_color ?: '#6b7280',
-            'is_invoiceable'  => (bool) $r->is_invoiceable,
-            'requires_note'   => (bool) $r->requires_note,
-            'triggers_followup'=> (bool) $r->triggers_followup,
-            'triggers_reminder'=> (bool) $r->triggers_reminder,
+            'id'                  => (int) $r->id,
+            'outcome_name'        => $r->outcome_name,
+            'outcome_color'       => $r->outcome_color ?: '#6b7280',
+            'is_invoiceable'      => (bool) $r->is_invoiceable,
+            'requires_note'       => (bool) $r->requires_note,
+            'triggers_followup'   => (bool) $r->triggers_followup,
+            'triggers_reminder'   => (bool) $r->triggers_reminder,
+            'followup_service_ids'=> $fu_ids,
         ];
     }
     wp_send_json_success( $d );
@@ -1229,6 +1241,93 @@ function hm_ajax_save_appointment_outcome() {
     ] );
     } catch ( Throwable $e ) {
         error_log( '[HearMed] save_appointment_outcome error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+// ================================================================
+// CREATE ORDER FROM OUTCOME — lightweight order creation from calendar
+// ================================================================
+function hm_ajax_create_outcome_order() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    try {
+        $patient_id     = intval( $_POST['patient_id'] ?? 0 );
+        $appointment_id = intval( $_POST['appointment_id'] ?? 0 );
+        $notes          = sanitize_textarea_field( $_POST['notes'] ?? '' );
+        $items          = json_decode( stripslashes( $_POST['items_json'] ?? '[]' ), true );
+
+        if ( ! $patient_id ) { wp_send_json_error( [ 'message' => 'No patient specified.' ] ); return; }
+        if ( empty( $items ) ) { wp_send_json_error( [ 'message' => 'No items added.' ] ); return; }
+
+        $db = HearMed_DB::instance();
+
+        // Calculate totals
+        $subtotal = 0;
+        foreach ( $items as $item ) {
+            $subtotal += floatval( $item['price'] ?? 0 );
+        }
+
+        $order_num = 'ORD-' . date( 'Ymd' ) . '-' . str_pad( rand( 1, 9999 ), 4, '0', STR_PAD_LEFT );
+
+        $order_id = $db->insert( 'hearmed_core.orders', [
+            'order_number'   => $order_num,
+            'patient_id'     => $patient_id,
+            'staff_id'       => get_current_user_id(),
+            'clinic_id'      => null,
+            'order_date'     => date( 'Y-m-d' ),
+            'current_status' => 'Awaiting Approval',
+            'subtotal'       => $subtotal,
+            'discount_total' => 0,
+            'vat_total'      => 0,
+            'grand_total'    => $subtotal,
+            'notes'          => $notes,
+            'created_at'     => current_time( 'mysql' ),
+            'created_by'     => get_current_user_id(),
+        ] );
+
+        if ( ! $order_id ) {
+            wp_send_json_error( [ 'message' => 'Failed to create order.' ] );
+            return;
+        }
+
+        // Insert order items
+        foreach ( $items as $item ) {
+            try {
+                $db->insert( 'hearmed_core.order_items', [
+                    'order_id'    => $order_id,
+                    'item_type'   => strpos( $item['id'] ?? '', 'svc-' ) === 0 ? 'service' : 'product',
+                    'item_name'   => sanitize_text_field( $item['name'] ?? '' ),
+                    'qty'         => 1,
+                    'unit_price'  => floatval( $item['price'] ?? 0 ),
+                    'vat_rate'    => 0,
+                    'vat_amount'  => 0,
+                    'line_total'  => floatval( $item['price'] ?? 0 ),
+                    'created_at'  => current_time( 'mysql' ),
+                ] );
+            } catch ( Throwable $ignored ) {}
+        }
+
+        // Link order to appointment
+        if ( $appointment_id ) {
+            try {
+                HearMed_DB::update(
+                    HearMed_Portal::table( 'appointments' ),
+                    [ 'order_id' => $order_id, 'updated_at' => current_time( 'mysql' ) ],
+                    [ 'id' => $appointment_id ]
+                );
+            } catch ( Throwable $ignored ) {}
+        }
+
+        HearMed_Portal::log( 'order_created_from_outcome', 'order', $order_id, [
+            'appointment_id' => $appointment_id,
+            'patient_id'     => $patient_id,
+            'total'          => $subtotal,
+        ] );
+
+        wp_send_json_success( [ 'order_id' => $order_id, 'order_number' => $order_num ] );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] create_outcome_order error: ' . $e->getMessage() );
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
     }
 }
