@@ -976,6 +976,36 @@
   background: #fef2f2;
 }
 
+/* ── Close Off (teal) ── */
+.hm-pop-act--teal {
+  background: var(--hm-teal, #0BB4C4);
+  color: #fff;
+  border-color: var(--hm-teal, #0BB4C4);
+  font-weight: 700;
+}
+
+.hm-pop-act--teal:hover {
+  background: #0aa3b2;
+  border-color: #0aa3b2;
+}
+
+/* ── Outcome selection area ── */
+.hm-pop-outcome-area {
+  padding: 12px 0 0;
+  border-top: 1px solid var(--hm-border, #e2e8f0);
+  margin-top: 8px;
+}
+
+.hm-outcome-opt {
+  text-align: left;
+  font-family: var(--hm-font, 'Source Sans 3', sans-serif);
+}
+
+.hm-outcome-opt:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
 
 /* ═══════════════════════════════════════
    9. MODAL DIALOGS

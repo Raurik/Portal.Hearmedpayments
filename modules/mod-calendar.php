@@ -54,6 +54,8 @@ add_action( 'wp_ajax_hm_delete_service',       'hm_ajax_delete_service' );
 add_action( 'wp_ajax_hm_save_dispenser_order', 'hm_ajax_save_dispenser_order' );
 add_action( 'wp_ajax_hm_get_exclusion_types',  'hm_ajax_get_exclusion_types' );
 add_action( 'wp_ajax_hm_create_patient',       'hm_ajax_create_patient_from_calendar' );
+add_action( 'wp_ajax_hm_get_outcome_templates', 'hm_ajax_get_outcome_templates' );
+add_action( 'wp_ajax_hm_save_appointment_outcome', 'hm_ajax_save_appointment_outcome' );
 
 // ================================================================
 // CALENDAR SETTINGS
@@ -371,16 +373,19 @@ function hm_ajax_get_appointments() {
                    a.status, a.location_type, a.notes,
                    a.outcome_id, a.outcome_banner_colour, a.created_by,
                    p.first_name AS patient_first, p.last_name AS patient_last, p.patient_number,
+                   p.patient_phone,
                    (st.first_name || ' ' || st.last_name) AS dispenser_name,
                    c.clinic_name,
                    sv.service_name,
                    COALESCE(sv.service_color, sv.colour, '#3B82F6') AS service_colour,
-                   COALESCE(sv.duration_minutes, sv.duration, 30) AS service_duration
+                   COALESCE(sv.duration_minutes, sv.duration, 30) AS service_duration,
+                   ot.outcome_name, ot.outcome_color AS outcome_template_color
             FROM hearmed_core.appointments a
             LEFT JOIN hearmed_core.patients p ON a.patient_id = p.id
             LEFT JOIN hearmed_reference.staff st ON a.dispenser_id = st.id
             LEFT JOIN hearmed_reference.clinics c ON a.clinic_id = c.id
             LEFT JOIN hearmed_reference.services sv ON a.service_id = sv.id
+            LEFT JOIN hearmed_core.outcome_templates ot ON a.outcome_id = ot.id
             WHERE a.appointment_date >= $1 AND a.appointment_date <= $2";
     $params = [ $start, $end ];
     $pi = 3;
@@ -422,8 +427,10 @@ function hm_ajax_get_appointments() {
             'status'                => $r->status ?: 'Confirmed',
             'location_type'         => $r->location_type ?? 'Clinic',
             'notes'                 => $r->notes ?? '',
+            'patient_phone'         => $r->patient_phone ?? '',
             'outcome_id'            => (int) ($r->outcome_id ?? 0),
-            'outcome_banner_colour' => $r->outcome_banner_colour ?? '',
+            'outcome_name'          => $r->outcome_name ?? '',
+            'outcome_banner_colour' => $r->outcome_banner_colour ?: ($r->outcome_template_color ?? ''),
             'created_by'            => (int) ($r->created_by ?? 0),
         ];
     }
@@ -443,7 +450,7 @@ function hm_ajax_create_appointment() {
     // Get duration from PostgreSQL services table
     $dur = intval( $_POST['duration'] ?? 0 );
     if ( ! $dur && $sid ) {
-        $svc_dur = HearMed_DB::get_var( "SELECT duration FROM hearmed_reference.services WHERE id = $1", [ $sid ] );
+        $svc_dur = HearMed_DB::get_var( "SELECT COALESCE(duration_minutes, duration, 30) FROM hearmed_reference.services WHERE id = $1", [ $sid ] );
         $dur = intval( $svc_dur ) ?: 30;
     }
     if ( ! $dur ) $dur = 30;
@@ -481,30 +488,45 @@ function hm_ajax_update_appointment() {
     try {
     $t   = HearMed_Portal::table( 'appointments' );
     $id  = intval( $_POST['appointment_id'] );
-    $sid = intval( $_POST['service_id'] );
-    // Get duration from PostgreSQL services table
-    $dur = intval( $_POST['duration'] ?? 0 );
-    if ( ! $dur && $sid ) {
-        $svc_dur = HearMed_DB::get_var( "SELECT duration FROM hearmed_reference.services WHERE id = $1", [ $sid ] );
-        $dur = intval( $svc_dur ) ?: 30;
+
+    $data = [ 'updated_at' => current_time( 'mysql' ) ];
+
+    // Status-only update (from popover buttons)
+    if ( isset( $_POST['status'] ) ) {
+        $data['status'] = sanitize_text_field( $_POST['status'] );
     }
-    if ( ! $dur ) $dur = 30;
-    $st  = sanitize_text_field( $_POST['start_time'] );
-    $sp  = explode( ':', $st );
-    $em  = intval( $sp[0] ) * 60 + intval( $sp[1] ) + $dur;
-    $et  = sprintf( '%02d:%02d', floor( $em / 60 ), $em % 60 );
-    $data = [
-        'updated_at'       => current_time( 'mysql' ),
-        'patient_id'       => intval( $_POST['patient_id']   ?? 0 ),
-        'dispenser_id'     => intval( $_POST['dispenser_id'] ),
-        'clinic_id'        => intval( $_POST['clinic_id']    ?? 0 ),
-        'service_id'       => $sid,
-        'appointment_date' => sanitize_text_field( $_POST['appointment_date'] ),
-        'start_time'       => $st, 'end_time' => $et, 'duration' => $dur,
-        'status'           => sanitize_text_field( $_POST['status']        ?? 'Confirmed' ),
-        'location_type'    => sanitize_text_field( $_POST['location_type'] ?? 'Clinic' ),
-        'notes'            => sanitize_textarea_field( $_POST['notes']     ?? '' ),
-    ];
+
+    // Full edit fields — only set if actually sent
+    if ( isset( $_POST['appointment_date'] ) ) $data['appointment_date'] = sanitize_text_field( $_POST['appointment_date'] );
+    if ( isset( $_POST['location_type'] ) )    $data['location_type'] = sanitize_text_field( $_POST['location_type'] );
+    if ( isset( $_POST['notes'] ) )            $data['notes'] = sanitize_textarea_field( $_POST['notes'] );
+    if ( isset( $_POST['patient_id'] ) )       $data['patient_id'] = intval( $_POST['patient_id'] );
+    if ( isset( $_POST['dispenser_id'] ) )     $data['dispenser_id'] = intval( $_POST['dispenser_id'] );
+    if ( isset( $_POST['clinic_id'] ) )        $data['clinic_id'] = intval( $_POST['clinic_id'] );
+
+    // Service + duration + time recalculation (only when start_time or service changes)
+    if ( isset( $_POST['start_time'] ) ) {
+        $sid = intval( $_POST['service_id'] ?? 0 );
+        // If no service_id sent, look up from existing appointment
+        if ( ! $sid ) {
+            $sid = (int) HearMed_DB::get_var( "SELECT service_id FROM hearmed_core.appointments WHERE id = $1", [ $id ] );
+        }
+        $dur = intval( $_POST['duration'] ?? 0 );
+        if ( ! $dur && $sid ) {
+            $svc_dur = HearMed_DB::get_var( "SELECT COALESCE(duration_minutes, duration, 30) FROM hearmed_reference.services WHERE id = $1", [ $sid ] );
+            $dur = intval( $svc_dur ) ?: 30;
+        }
+        if ( ! $dur ) $dur = 30;
+        $st  = sanitize_text_field( $_POST['start_time'] );
+        $sp  = explode( ':', $st );
+        $em  = intval( $sp[0] ) * 60 + intval( $sp[1] ) + $dur;
+        $et  = sprintf( '%02d:%02d', floor( $em / 60 ), $em % 60 );
+        $data['service_id']  = $sid;
+        $data['start_time']  = $st;
+        $data['end_time']    = $et;
+        $data['duration']    = $dur;
+    }
+
     if ( isset( $_POST['outcome_id'] ) )            $data['outcome_id']            = intval( $_POST['outcome_id'] );
     if ( isset( $_POST['outcome_banner_colour'] ) ) $data['outcome_banner_colour'] = sanitize_text_field( $_POST['outcome_banner_colour'] );
     HearMed_DB::update( $t, $data, [ 'id' => $id ] );
@@ -827,6 +849,103 @@ function hm_ajax_create_patient_from_calendar() {
         wp_send_json_success( [ 'id' => $id ] );
     } catch ( Throwable $e ) {
         error_log( '[HearMed] create_patient_from_calendar error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+// ================================================================
+// OUTCOME TEMPLATES — GET for a specific service
+// ================================================================
+function hm_ajax_get_outcome_templates() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    try {
+    $sid = intval( $_POST['service_id'] ?? 0 );
+    if ( ! $sid ) { wp_send_json_success( [] ); return; }
+    $rows = HearMed_DB::get_results(
+        "SELECT id, outcome_name, outcome_color, is_invoiceable, requires_note,
+                triggers_followup, triggers_reminder
+         FROM hearmed_core.outcome_templates
+         WHERE service_id = $1
+         ORDER BY outcome_name",
+        [ $sid ]
+    );
+    $d = [];
+    foreach ( ($rows ?: []) as $r ) {
+        $d[] = [
+            'id'              => (int) $r->id,
+            'outcome_name'    => $r->outcome_name,
+            'outcome_color'   => $r->outcome_color ?: '#6b7280',
+            'is_invoiceable'  => (bool) $r->is_invoiceable,
+            'requires_note'   => (bool) $r->requires_note,
+            'triggers_followup'=> (bool) $r->triggers_followup,
+            'triggers_reminder'=> (bool) $r->triggers_reminder,
+        ];
+    }
+    wp_send_json_success( $d );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] get_outcome_templates error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+// ================================================================
+// SAVE APPOINTMENT OUTCOME — sets outcome + banner on appointment
+// ================================================================
+function hm_ajax_save_appointment_outcome() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    try {
+    $appt_id    = intval( $_POST['appointment_id'] );
+    $outcome_id = intval( $_POST['outcome_id'] ?? 0 );
+    $note       = sanitize_textarea_field( $_POST['outcome_note'] ?? '' );
+    if ( ! $appt_id ) { wp_send_json_error( 'Invalid appointment' ); return; }
+
+    // Get outcome template details
+    $ot = null;
+    if ( $outcome_id ) {
+        $ot = HearMed_DB::get_row(
+            "SELECT outcome_name, outcome_color FROM hearmed_core.outcome_templates WHERE id = $1",
+            [ $outcome_id ]
+        );
+    }
+
+    // Update the appointment with outcome
+    $data = [
+        'outcome_id'            => $outcome_id,
+        'outcome_banner_colour' => $ot ? $ot->outcome_color : '',
+        'status'                => 'Completed',
+        'updated_at'            => current_time( 'mysql' ),
+    ];
+    HearMed_DB::update( HearMed_Portal::table( 'appointments' ), $data, [ 'id' => $appt_id ] );
+
+    // Also save to appointment_outcomes table for history
+    $ao_data = [
+        'appointment_id' => $appt_id,
+        'outcome_name'   => $ot ? $ot->outcome_name : 'Completed',
+        'outcome_color'  => $ot ? $ot->outcome_color : '#6b7280',
+        'notes'          => $note,
+        'created_at'     => current_time( 'mysql' ),
+        'created_by'     => get_current_user_id(),
+    ];
+    // Try insert into appointment_outcomes (table may not exist yet)
+    try {
+        HearMed_DB::insert( 'hearmed_core.appointment_outcomes', $ao_data );
+    } catch ( Throwable $ignored ) {
+        // Table might not exist — that's OK, appointment is still updated
+    }
+
+    HearMed_Portal::log( 'outcome_set', 'appointment', $appt_id, [
+        'outcome_id'   => $outcome_id,
+        'outcome_name' => $ot ? $ot->outcome_name : 'Completed',
+    ] );
+
+    wp_send_json_success( [
+        'id'                    => $appt_id,
+        'outcome_name'          => $ot ? $ot->outcome_name : 'Completed',
+        'outcome_banner_colour' => $ot ? $ot->outcome_color : '',
+    ] );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] save_appointment_outcome error: ' . $e->getMessage() );
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
     }
 }

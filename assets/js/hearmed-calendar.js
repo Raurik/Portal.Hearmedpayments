@@ -210,6 +210,68 @@ var Cal={
             });
         });
 
+        // Close Off — show outcome selection
+        $(document).on('click','.hm-pop-closeoff',function(){
+            var sid=$(this).data('sid'),aid=$(this).data('aid');
+            $('#hm-pop-actions').hide();
+            $('#hm-pop-outcome-area').show();
+            self._selectedOutcome=null;
+            post('get_outcome_templates',{service_id:sid}).then(function(r){
+                if(!r.success||!r.data||!r.data.length){
+                    $('#hm-pop-outcome-list').html('<div style="color:#94a3b8;font-size:12px;padding:8px 0">No outcomes configured for this appointment type.<br><span style="font-size:11px">Add outcomes in Admin → Appointment Types → Edit.</span></div>');
+                    return;
+                }
+                var oh='';
+                r.data.forEach(function(o){
+                    oh+='<button class="hm-outcome-opt" data-oid="'+o.id+'" data-color="'+esc(o.outcome_color)+'" data-name="'+esc(o.outcome_name)+'" data-note="'+(o.requires_note?'1':'0')+'" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:#334155;transition:all .15s">';
+                    oh+='<span style="width:12px;height:12px;border-radius:3px;background:'+esc(o.outcome_color)+';flex-shrink:0"></span>';
+                    oh+=esc(o.outcome_name);
+                    if(o.is_invoiceable)oh+='<span style="margin-left:auto;font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:3px">£</span>';
+                    oh+='</button>';
+                });
+                $('#hm-pop-outcome-list').html(oh);
+            }).fail(function(){
+                $('#hm-pop-outcome-list').html('<div style="color:#ef4444;font-size:12px">Failed to load outcomes</div>');
+            });
+        });
+
+        // Outcome option click
+        $(document).on('click','.hm-outcome-opt',function(){
+            $('.hm-outcome-opt').css({borderColor:'#e2e8f0',background:'#fff'});
+            var $o=$(this);
+            $o.css({borderColor:$o.data('color'),background:$o.data('color')+'15'});
+            self._selectedOutcome={id:$o.data('oid'),color:$o.data('color'),name:$o.data('name')};
+            $('.hm-pop-outcome-save').prop('disabled',false);
+            if($o.data('note')==='1'||$o.data('note')===1){$('#hm-pop-outcome-note').show();}else{$('#hm-pop-outcome-note').hide();}
+        });
+
+        // Outcome cancel
+        $(document).on('click','.hm-pop-outcome-cancel',function(){
+            $('#hm-pop-outcome-area').hide();
+            $('#hm-pop-actions').show();
+            self._selectedOutcome=null;
+        });
+
+        // Save outcome
+        $(document).on('click','.hm-pop-outcome-save',function(){
+            var o=self._selectedOutcome,a=self._popAppt;
+            if(!o||!a)return;
+            var $btn=$(this);$btn.prop('disabled',true).text('Saving...');
+            post('save_appointment_outcome',{
+                appointment_id:a._ID,
+                outcome_id:o.id,
+                outcome_note:$('#hm-outcome-note').val()||''
+            }).then(function(r){
+                if(r.success){
+                    $('#hm-pop').removeClass('open');
+                    self.refresh();
+                } else {
+                    $btn.prop('disabled',false).text('Save Outcome');
+                    alert(r.data&&r.data.message?r.data.message:'Failed to save outcome');
+                }
+            }).fail(function(){$btn.prop('disabled',false).text('Save Outcome');alert('Network error');});
+        });
+
         // Resize
         var rt;$(window).on('resize',function(){clearTimeout(rt);rt=setTimeout(function(){self.refresh();},150);});
         $(document).on('keydown',function(e){if(e.key==='Escape'){$('#hm-pop').removeClass('open');$('#hm-tooltip').hide();}});
@@ -384,8 +446,10 @@ var Cal={
 
             var si=Math.floor((aMn-cfg.startH*60)/cfg.slotMin);
             var off=((aMn-cfg.startH*60)%cfg.slotMin)/cfg.slotMin*slotH;
-            var dur=parseInt(a.duration)||30;
-            var h=Math.max(slotH*0.7-2,(dur/cfg.slotMin)*slotH*0.7-2);
+            var dur=parseInt(a.duration)||parseInt(a.service_duration)||30;
+            // Height = number of slots the appointment spans × slot height (px)
+            var spanSlots=dur/cfg.slotMin;
+            var h=Math.max(slotH*0.8, spanSlots*slotH - 2);
 
             var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+a.dispenser_id+'"]');
             if(!$t.length)return;
@@ -524,6 +588,7 @@ var Cal={
         var clinic=this.clinics.find(function(c){return parseInt(c.id)===parseInt(a.clinic_id);});
         var st=STATUS_MAP[a.status]||STATUS_MAP.Confirmed;
         var hasOutcome=a.outcome_banner_colour&&a.outcome_name;
+        var isCompleted=a.status==='Completed';
 
         var h='<div class="hm-pop-bar" style="background:'+col+'"></div>';
         if(hasOutcome){
@@ -537,8 +602,20 @@ var Cal={
         h+='<div class="hm-pop-row"><span class="hm-pop-svc-dot" style="background:'+col+'"></span> <span>'+esc(a.service_name)+'</span></div>';
         h+='<div class="hm-pop-row">'+IC.user+' <span>'+esc(disp?disp.name:'—')+' · '+esc(clinic?clinic.name:'')+'</span></div>';
         h+='</div>';
-        h+='<div class="hm-pop-actions">';
+
+        // Outcome selection area (hidden by default, shown when "Close Off" clicked)
+        h+='<div class="hm-pop-outcome-area" id="hm-pop-outcome-area" style="display:none">';
+        h+='<div style="font-size:11px;font-weight:700;color:#334155;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.3px">Select Outcome</div>';
+        h+='<div id="hm-pop-outcome-list" style="display:flex;flex-direction:column;gap:4px"><div style="color:#94a3b8;font-size:12px;padding:8px 0">Loading outcomes...</div></div>';
+        h+='<div id="hm-pop-outcome-note" style="display:none;margin-top:8px"><textarea class="hm-inp" id="hm-outcome-note" rows="2" placeholder="Outcome note..." style="font-size:12px"></textarea></div>';
+        h+='<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end"><button class="hm-pop-act hm-pop-outcome-cancel" style="font-size:11px">Cancel</button><button class="hm-pop-act hm-pop-act--primary hm-pop-outcome-save" style="font-size:11px" disabled>Save Outcome</button></div>';
+        h+='</div>';
+
+        h+='<div class="hm-pop-actions" id="hm-pop-actions">';
         h+='<button class="hm-pop-act hm-pop-act--primary hm-pop-edit">Edit</button>';
+        if(!isCompleted && !hasOutcome){
+            h+='<button class="hm-pop-act hm-pop-act--teal hm-pop-closeoff" data-sid="'+a.service_id+'" data-aid="'+a._ID+'">Close Off</button>';
+        }
         h+='<button class="hm-pop-act hm-pop-act--green hm-pop-status" data-status="Arrived">Arrived</button>';
         h+='<button class="hm-pop-act hm-pop-act--red hm-pop-status" data-status="No Show">No Show</button>';
         h+='</div>';
