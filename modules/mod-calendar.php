@@ -580,6 +580,47 @@ function hm_ajax_create_appointment() {
         }
     }
 
+    // ── EXCLUSION OVERLAP CHECK ──
+    // Warn (but allow override) if booking into an exclusion window for this dispenser or clinic
+    $skip_excl = ! empty( $_POST['skip_exclusion_check'] );
+    if ( ! $skip_excl ) {
+        $excl_table = 'hearmed_core.exclusion_instances';
+        $excl_exists = HearMed_DB::get_var( "SELECT to_regclass('{$excl_table}')" );
+        if ( $excl_exists !== null ) {
+            // Check non-repeating exclusions that overlap this date/time + dispenser (or all-staff)
+            $excl_hits = HearMed_DB::get_results(
+                "SELECT ei.id, et.type_name, ei.scope, ei.start_time AS ex_start, ei.end_time AS ex_end,
+                        ei.staff_id, ei.reason
+                 FROM {$excl_table} ei
+                 LEFT JOIN hearmed_reference.exclusion_types et ON et.id = ei.exclusion_type_id
+                 WHERE ei.is_active = true
+                   AND ei.repeat_type = 'none'
+                   AND ei.start_date <= $1 AND ei.end_date >= $1
+                   AND (ei.staff_id IS NULL OR ei.staff_id = 0 OR ei.staff_id = $2)
+                   AND (
+                       ei.scope = 'full_day'
+                       OR (ei.start_time < $3 AND ei.end_time > $4)
+                   )",
+                [ $appt_date, $staff_id, $et, $st ]
+            );
+            if ( ! empty( $excl_hits ) ) {
+                $ex = $excl_hits[0];
+                $who = ( $ex->staff_id && intval( $ex->staff_id ) ) ? 'this dispenser' : 'this clinic';
+                $excl_name = $ex->type_name ?: 'Exclusion';
+                $excl_msg  = "{$excl_name} is active for {$who} on this date";
+                if ( $ex->scope !== 'full_day' && $ex->ex_start && $ex->ex_end ) {
+                    $excl_msg .= ' (' . substr( $ex->ex_start, 0, 5 ) . ' – ' . substr( $ex->ex_end, 0, 5 ) . ')';
+                }
+                $excl_msg .= ".\n\nAre you sure you want to book this appointment?";
+                wp_send_json_error( [
+                    'code'    => 'exclusion_conflict',
+                    'message' => $excl_msg,
+                ] );
+                return;
+            }
+        }
+    }
+
     // ── DISPENSER DOUBLE-BOOK CHECK ──
     // If not explicitly confirmed, return conflict info so JS can prompt
     if ( ! $skip_dbl && $staff_id ) {

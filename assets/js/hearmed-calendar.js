@@ -838,9 +838,9 @@ var Cal={
                     var etMn=parseInt(etParts[0])*60+parseInt(etParts[1]);
                     var dur=etMn-stMn;if(dur<=0)return;
 
-                    var off=((stMn-cfg.startH*60)/cfg.slotMin)*slotH;
-                    var h=(dur/cfg.slotMin)*slotH;
                     var si=Math.floor((stMn-cfg.startH*60)/cfg.slotMin);
+                    var off=((stMn-cfg.startH*60)%cfg.slotMin)/cfg.slotMin*slotH;
+                    var h=(dur/cfg.slotMin)*slotH;
                     if(si<0)si=0;
 
                     var $slot=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+disps[pi].id+'"]');
@@ -1713,9 +1713,10 @@ var Cal={
     },
 
     // ── Submit new appointment with double-book handling ──
-    _submitNewAppt:function(data,skipDoubleCheck){
+    _submitNewAppt:function(data,skipDoubleCheck,skipExclCheck){
         var self=this;
         if(skipDoubleCheck) data.skip_double_book_check='1';
+        if(skipExclCheck) data.skip_exclusion_check='1';
         post('create_appointment',data).then(function(r){
             console.log('[HearMed] create_appointment response:',r);
             if(r.success){
@@ -1729,6 +1730,13 @@ var Cal={
                 self._showDoubleBookAlert(r.data.message,false);
                 return;
             }
+            // Exclusion conflict — soft warning with confirm
+            if(r.data&&r.data.code==='exclusion_conflict'){
+                self._showExclConflictConfirm(r.data.message,function(){
+                    self._submitNewAppt(data,skipDoubleCheck,true);
+                });
+                return;
+            }
             // Dispenser double-book — soft warning with confirm
             if(r.data&&r.data.code==='double_book_conflict'){
                 var conflicts=r.data.conflicts||[];
@@ -1738,7 +1746,7 @@ var Cal={
                 });
                 msg+='\nAre you sure you want to double book?';
                 self._showDoubleBookConfirm(msg,function(){
-                    self._submitNewAppt(data,true);
+                    self._submitNewAppt(data,true,skipExclCheck);
                 });
                 return;
             }
@@ -1790,6 +1798,31 @@ var Cal={
         });
         $(document).off('click.dblcyes').on('click.dblcyes','.hm-dblc-yes',function(e){
             e.stopPropagation();$('.hm-dbl-confirm').remove();$(document).off('.dblcclose .dblcyes');
+            if(onConfirm)onConfirm();
+        });
+    },
+
+    // ── Exclusion conflict confirm (soft warning — user can override) ──
+    _showExclConflictConfirm:function(msg,onConfirm){
+        var h='<div class="hm-modal-bg hm-modal-bg--top hm-excl-confirm open">';
+        h+='<div class="hm-modal" style="max-width:440px">';
+        h+='<div class="hm-modal-hd" style="background:#f59e0b;color:#fff;border-radius:12px 12px 0 0;padding:14px 20px">';
+        h+='<div><h3 style="margin:0;color:#fff;font-size:15px">Exclusion Warning</h3></div>';
+        h+='<button class="hm-close hm-exclc-close" style="color:#fff">'+IC.x+'</button></div>';
+        h+='<div class="hm-modal-body" style="padding:20px">';
+        h+='<div style="display:flex;gap:12px;align-items:flex-start">';
+        h+='<span style="font-size:28px;flex-shrink:0">&#9888;</span>';
+        h+='<div style="font-size:13px;color:#334155;line-height:1.5;white-space:pre-line">'+esc(msg)+'</div></div></div>';
+        h+='<div class="hm-modal-ft" style="padding:12px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px">';
+        h+='<button class="hm-btn hm-exclc-close">Cancel</button>';
+        h+='<button class="hm-btn hm-btn--primary hm-exclc-yes" style="background:#f59e0b">Book Anyway</button>';
+        h+='</div></div></div>';
+        $('body').append(h);
+        $(document).off('click.exclcclose').on('click.exclcclose','.hm-exclc-close',function(e){
+            e.stopPropagation();$('.hm-excl-confirm').remove();$(document).off('.exclcclose .exclcyes');
+        });
+        $(document).off('click.exclcyes').on('click.exclcyes','.hm-exclc-yes',function(e){
+            e.stopPropagation();$('.hm-excl-confirm').remove();$(document).off('.exclcclose .exclcyes');
             if(onConfirm)onConfirm();
         });
     },
