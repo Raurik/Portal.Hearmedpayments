@@ -717,7 +717,7 @@ var Cal={
             if(cfg.showTime&&h>36&&!cfg.hideEndTime)card+='<div class="hm-appt-tm" style="color:'+(cfg.apptTime||'#38bdf8')+';font-family:'+cFF+',sans-serif;font-size:'+(cFS-2)+'px;font-weight:'+cFW+'">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>';
             else if(cfg.showTime&&h>36)card+='<div class="hm-appt-tm" style="color:'+(cfg.apptTime||'#38bdf8')+';font-family:'+cFF+',sans-serif;font-size:'+(cFS-2)+'px;font-weight:'+cFW+'">'+a.start_time.substring(0,5)+'</div>';
             // Badges row
-            if(cfg.showBadges&&h>44){
+            if(cfg.showBadges&&h>44&&!isRescheduled){
                 var badges='';
                 if(cfg.showStatusBadge){
                     var st2=STATUS_MAP[a.status]||STATUS_MAP['Not Confirmed'];
