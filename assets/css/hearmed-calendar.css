@@ -372,7 +372,6 @@
 
 /* ── Grid Slots ── */
 .hm-slot {
-  border-bottom: 1px solid var(--hm-border-light, #f1f5f9);
   border-right: 3px double #cbd5e1;
   position: relative;
   cursor: pointer;
@@ -381,7 +380,6 @@
 
 .hm-slot.hr {
   border-top: 1px solid var(--hm-cal-grid, #e2e8f0);
-  border-bottom: 1px solid var(--hm-border-light, #f1f5f9);
 }
 
 .hm-slot.dl {
