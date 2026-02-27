@@ -368,9 +368,11 @@ function hm_ajax_get_appointments() {
     $dp    = intval( $_POST['dispenser'] ?? 0 );
 
     // Build query with JOINs — fully PostgreSQL, no get_post_meta
-    // Real column names: staff_id, appointment_type_id, appointment_status
-    $sql = "SELECT a.id, a.patient_id, a.staff_id, a.clinic_id, a.appointment_type_id,
+    // The appointments table has BOTH service_id AND appointment_type_id — COALESCE them
+    $sql = "SELECT a.id, a.patient_id, a.staff_id, a.clinic_id,
+                   COALESCE(a.appointment_type_id, a.service_id) AS resolved_service_id,
                    a.appointment_date, a.start_time, a.end_time,
+                   a.duration_minutes,
                    a.appointment_status, a.location_type, a.notes,
                    a.created_by,
                    p.first_name AS patient_first, p.last_name AS patient_last, p.patient_number,
@@ -378,13 +380,13 @@ function hm_ajax_get_appointments() {
                    c.clinic_name,
                    sv.service_name,
                    COALESCE(sv.service_color, sv.colour, '#3B82F6') AS service_colour,
-                   COALESCE(sv.duration_minutes, sv.duration, 30) AS service_duration
+                   COALESCE(a.duration_minutes, sv.duration_minutes, sv.duration, 30) AS service_duration
             FROM hearmed_core.appointments a
             LEFT JOIN hearmed_core.patients p ON a.patient_id = p.id
             LEFT JOIN hearmed_reference.staff st ON a.staff_id = st.id
             LEFT JOIN hearmed_reference.clinics c ON a.clinic_id = c.id
-            LEFT JOIN hearmed_reference.services sv ON sv.id = a.appointment_type_id
-            WHERE a.appointment_date >= $1 AND a.appointment_date <= $2";
+            LEFT JOIN hearmed_reference.services sv ON sv.id = COALESCE(a.appointment_type_id, a.service_id)
+            WHERE a.appointment_date >= \$1 AND a.appointment_date <= \$2";
     $params = [ $start, $end ];
     $pi = 3;
     if ( $cl ) {
@@ -444,7 +446,7 @@ function hm_ajax_get_appointments() {
             'dispenser_name'        => $r->dispenser_name ?? '',
             'clinic_id'             => (int) ($r->clinic_id ?: 0),
             'clinic_name'           => $r->clinic_name ?? '',
-            'service_id'            => (int) ($r->appointment_type_id ?: 0),
+            'service_id'            => (int) ($r->resolved_service_id ?: 0),
             'service_name'          => $r->service_name ?? '',
             'service_colour'        => $r->service_colour ?: '#3B82F6',
             'appointment_date'      => $r->appointment_date,
@@ -489,7 +491,9 @@ function hm_ajax_create_appointment() {
         'patient_id'          => intval( $_POST['patient_id']   ?? 0 ),
         'staff_id'            => intval( $_POST['dispenser_id'] ),
         'clinic_id'           => intval( $_POST['clinic_id']    ?? 0 ),
+        'service_id'          => $sid,
         'appointment_type_id' => $sid,
+        'duration_minutes'    => $dur,
         'appointment_date'    => sanitize_text_field( $_POST['appointment_date'] ),
         'start_time'          => $st,
         'end_time'            => $et,
@@ -536,7 +540,7 @@ function hm_ajax_update_appointment() {
         $sid = intval( $_POST['service_id'] ?? 0 );
         // If no service_id sent, look up from existing appointment
         if ( ! $sid ) {
-            $sid = (int) HearMed_DB::get_var( "SELECT appointment_type_id FROM hearmed_core.appointments WHERE id = $1", [ $id ] );
+            $sid = (int) HearMed_DB::get_var( "SELECT COALESCE(appointment_type_id, service_id) FROM hearmed_core.appointments WHERE id = $1", [ $id ] );
         }
         $dur = intval( $_POST['duration'] ?? 0 );
         if ( ! $dur && $sid ) {
@@ -548,7 +552,9 @@ function hm_ajax_update_appointment() {
         $sp  = explode( ':', $st );
         $em  = intval( $sp[0] ) * 60 + intval( $sp[1] ) + $dur;
         $et  = sprintf( '%02d:%02d', floor( $em / 60 ), $em % 60 );
+        $data['service_id']          = $sid;
         $data['appointment_type_id'] = $sid;
+        $data['duration_minutes']    = $dur;
         $data['start_time']  = $st;
         $data['end_time']    = $et;
     }
