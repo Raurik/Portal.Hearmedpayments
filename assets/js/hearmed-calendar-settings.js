@@ -99,8 +99,8 @@ var SettingsPage = {
         $(document).on('change', '#hs-cardStyle, #hs-bannerStyle, #hs-bannerSize, #hs-slotH', function(){
             self.renderPreview();
         });
-        // Colour pickers (including badge colour inputs)
-        $(document).on('input', '.hm-color-inp', function(){
+        // Colour pickers (including badge colour inputs) — listen to both input + change
+        $(document).on('input change', '.hm-color-inp', function(){
             self.renderPreview();
         });
         // Card Content toggles (Card 6)
@@ -163,28 +163,24 @@ var SettingsPage = {
         var cardH = htMap[slotH] || 75;
 
         // Card style rendering
-        var bgStyle = '', fontColor = font;
+        var bgStyle = '';
         if (cs === 'solid') {
             bgStyle = 'background:'+col;
-            fontColor = font;
         } else if (cs === 'tinted') {
             var r=parseInt(col.slice(1,3),16), g=parseInt(col.slice(3,5),16), b=parseInt(col.slice(5,7),16);
             var tAlpha = (tintPct / 100).toFixed(2);
             bgStyle = 'background:rgba('+r+','+g+','+b+','+tAlpha+');border-left:3.5px solid '+col;
-            fontColor = col;
         } else if (cs === 'outline') {
             bgStyle = 'background:#fff;border:1.5px solid '+(borderCol||col)+';border-left:3.5px solid '+col;
-            fontColor = col;
         } else if (cs === 'minimal') {
             bgStyle = 'background:transparent;border-left:3px solid '+col;
-            fontColor = '#334155';
         }
 
-        // Determine text colours based on card style
-        var ptColor = (cs === 'solid') ? font : fontColor;
-        var svcColor = (cs === 'solid') ? nameCol : col;
-        var tmColor = (cs === 'solid') ? timeCol : col;
-        var mtColor = (cs === 'solid') ? metaCol : '#94a3b8';
+        // Text colours — always use configured pickers so preview is responsive
+        var ptColor = font;
+        var svcColor = nameCol;
+        var tmColor = timeCol;
+        var mtColor = metaCol;
 
         // Banner (only shown for outcome-bearing statuses: Completed)
         var bannerH = '';
@@ -224,10 +220,10 @@ var SettingsPage = {
         if (showBadges && cardH > 50) {
             var badges = '';
             if (showStatusBadge) badges += '<span style="display:inline-block;padding:0 5px;border-radius:9999px;font-size:7px;font-weight:700;line-height:14px;background:'+st.bg+';color:'+st.color+';border:1px solid '+st.border+'">'+status+'</span>';
-            if (showDispIni) badges += '<span style="display:inline-block;padding:0 5px;border-radius:9999px;font-size:7px;font-weight:700;line-height:14px;background:rgba(0,0,0,.08);color:'+ptColor+'">JS</span>';
+            if (showDispIni) badges += '<span style="display:inline-block;padding:0 5px;border-radius:9999px;font-size:7px;font-weight:700;line-height:14px;background:'+badgeBg+';color:'+badgeFont+'">JS</span>';
             if (badges) h += '<div style="display:flex;gap:3px;margin-top:1px">'+badges+'</div>';
         }
-        if (showClinic && cardH > 56) h += '<div style="font-size:8px;color:'+mtColor+';line-height:1.3;white-space:nowrap">Main Clinic</div>';
+        if (showClinic && cardH > 56) h += '<div style="font-size:8px;color:'+metaCol+';line-height:1.3;white-space:nowrap">Main Clinic</div>';
         h += '</div>';
         if (isCancelled || isNoShow) h += '<div class="hm-prev-overlay">'+(isCancelled?'Cancelled':'No Show')+'</div>';
         h += '</div>';

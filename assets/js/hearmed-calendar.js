@@ -484,16 +484,15 @@ var Cal={
 
             // Card style
             var cs=cfg.cardStyle||'solid';
-            var bgStyle='',borderStyle='',fontColor=font;
-            if(cs==='solid'){bgStyle='background:'+col;fontColor=font;}
+            var bgStyle='',fontColor=font;
+            if(cs==='solid'){bgStyle='background:'+col;}
             else if(cs==='tinted'){
                 var r=parseInt(col.slice(1,3),16),g2=parseInt(col.slice(3,5),16),b=parseInt(col.slice(5,7),16);
                 var tA=(cfg.tintOpacity||12)/100;
                 bgStyle='background:rgba('+r+','+g2+','+b+','+tA+');border-left:3.5px solid '+col;
-                fontColor=col;
             }
-            else if(cs==='outline'){var bdrCol=cfg.borderColor||col;bgStyle='background:'+cfg.calBg+';border:1.5px solid '+bdrCol+';border-left:3.5px solid '+col;fontColor=col;}
-            else if(cs==='minimal'){bgStyle='background:transparent;border-left:3px solid '+col;fontColor='var(--hm-text)';}
+            else if(cs==='outline'){var bdrCol=cfg.borderColor||col;bgStyle='background:'+cfg.calBg+';border:1.5px solid '+bdrCol+';border-left:3.5px solid '+col;}
+            else if(cs==='minimal'){bgStyle='background:transparent;border-left:3px solid '+col;}
 
             // Banner style
             var bStyle=cfg.bannerStyle||'default';
@@ -516,10 +515,10 @@ var Cal={
             var card='<div class="hm-appt hm-appt--'+cs+stCls+'" data-id="'+a._ID+'" style="'+bgStyle+';height:'+h+'px;top:'+off+'px;color:'+fontColor+cardOpacity+'">';
             card+=bannerHtml;
             card+='<div class="hm-appt-inner">';
-            if(cfg.showApptType)card+='<div class="hm-appt-svc" style="color:'+(cs==='solid'?(cfg.apptName||font):col)+'">'+esc(a.service_name)+'</div>';
+            if(cfg.showApptType)card+='<div class="hm-appt-svc" style="color:'+(cfg.apptName||font)+'">'+esc(a.service_name)+'</div>';
             card+='<div class="hm-appt-pt" style="color:'+fontColor+'">'+tmLbl+esc(a.patient_name||'No patient')+'</div>';
-            if(cfg.showTime&&h>36&&!cfg.hideEndTime)card+='<div class="hm-appt-tm" style="color:'+(cs==='solid'?(cfg.apptTime||'#38bdf8'):col)+'">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>';
-            else if(cfg.showTime&&h>36)card+='<div class="hm-appt-tm" style="color:'+(cs==='solid'?(cfg.apptTime||'#38bdf8'):col)+'">'+a.start_time.substring(0,5)+'</div>';
+            if(cfg.showTime&&h>36&&!cfg.hideEndTime)card+='<div class="hm-appt-tm" style="color:'+(cfg.apptTime||'#38bdf8')+'">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>';
+            else if(cfg.showTime&&h>36)card+='<div class="hm-appt-tm" style="color:'+(cfg.apptTime||'#38bdf8')+'">'+a.start_time.substring(0,5)+'</div>';
             // Badges row
             if(cfg.showBadges&&h>44){
                 var badges='';
@@ -536,7 +535,7 @@ var Cal={
             if(h>50){
                 var metaParts=[];
                 if(cfg.showClinic)metaParts.push(esc(a.clinic_name||''));
-                if(metaParts.length)card+='<div class="hm-appt-meta" style="color:'+(cs==='solid'?(cfg.apptMeta||'#38bdf8'):'var(--hm-text-muted)')+'">'+metaParts.join(' · ')+'</div>';
+                if(metaParts.length)card+='<div class="hm-appt-meta" style="color:'+(cfg.apptMeta||'#38bdf8')+'">'+metaParts.join(' · ')+'</div>';
             }
             card+='</div>';
             // Cancelled / No Show overlay
