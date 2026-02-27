@@ -3,7 +3,7 @@
  * HearMed QBO — QuickBooks Online Direct API Integration
  * OAuth 2.0 + full bidirectional sync
  *
- * Replaces the old Make.com webhook approach entirely.
+ * Direct OAuth 2.0 integration — no third-party middleware.
  *
  * ═══════════════════════════════════════════════════════════
  * REQUIRES IN wp-config.php

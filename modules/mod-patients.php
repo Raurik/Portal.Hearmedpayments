@@ -105,6 +105,7 @@ add_action( 'wp_ajax_hm_export_patient_data',      'hm_ajax_export_patient_data'
 // Case History & AI (integrates with admin AI Settings)
 add_action( 'wp_ajax_hm_save_case_history',   'hm_ajax_save_case_history' );
 add_action( 'wp_ajax_hm_save_ai_transcript',  'hm_ajax_save_ai_transcript' );
+add_action( 'wp_ajax_hm_transcribe_audio',    'hm_ajax_transcribe_audio' );
 
 // Activity / Audit
 add_action( 'wp_ajax_hm_get_patient_audit',   'hm_ajax_get_patient_audit' );
@@ -1754,6 +1755,111 @@ function hm_ajax_save_case_history() {
     ]);
 
     wp_send_json_success( [ 'id' => $id ] );
+}
+
+/**
+ * Receive base64-encoded audio from browser, send to Groq Whisper,
+ * return transcript text. Audio never touches disk.
+ */
+function hm_ajax_transcribe_audio() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+
+    $audio_b64 = $_POST['audio'] ?? '';
+    if ( empty( $audio_b64 ) ) {
+        wp_send_json_error( 'No audio data received' );
+    }
+
+    // Get Groq settings from Postgres
+    $api_key = HearMed_Settings::get( 'hm_groq_api_key', '' );
+    $model   = HearMed_Settings::get( 'hm_groq_whisper_model', 'whisper-large-v3-turbo' );
+
+    if ( empty( $api_key ) ) {
+        wp_send_json_error( 'Groq API key not configured. Go to Admin Settings → AI.' );
+    }
+
+    // Decode base64 audio
+    $audio_binary = base64_decode( $audio_b64 );
+    if ( $audio_binary === false || strlen( $audio_binary ) < 100 ) {
+        wp_send_json_error( 'Invalid audio data' );
+    }
+
+    // Check size — Groq limit is 25MB
+    $size_mb = strlen( $audio_binary ) / ( 1024 * 1024 );
+    if ( $size_mb > 25 ) {
+        wp_send_json_error( 'Audio too large (' . round( $size_mb, 1 ) . 'MB). Max 25MB.' );
+    }
+
+    // Build multipart form data for Groq API
+    $boundary = wp_generate_password( 24, false );
+    $body  = '';
+    $body .= "--{$boundary}\r\n";
+    $body .= "Content-Disposition: form-data; name=\"file\"; filename=\"recording.webm\"\r\n";
+    $body .= "Content-Type: audio/webm\r\n\r\n";
+    $body .= $audio_binary . "\r\n";
+    $body .= "--{$boundary}\r\n";
+    $body .= "Content-Disposition: form-data; name=\"model\"\r\n\r\n";
+    $body .= $model . "\r\n";
+    $body .= "--{$boundary}\r\n";
+    $body .= "Content-Disposition: form-data; name=\"language\"\r\n\r\n";
+    $body .= "en\r\n";
+    $body .= "--{$boundary}\r\n";
+    $body .= "Content-Disposition: form-data; name=\"response_format\"\r\n\r\n";
+    $body .= "verbose_json\r\n";
+    $body .= "--{$boundary}\r\n";
+    $body .= "Content-Disposition: form-data; name=\"temperature\"\r\n\r\n";
+    $body .= "0.0\r\n";
+    $body .= "--{$boundary}\r\n";
+    $body .= "Content-Disposition: form-data; name=\"prompt\"\r\n\r\n";
+    $body .= "Audiology consultation. Terms: audiogram, tympanometry, otoscopy, hearing aid, " .
+             "tinnitus, sensorineural, conductive, presbycusis, cerumen, otovent, " .
+             "microsuction, REM, real ear measurement, PRSI, ENT, GP referral.\r\n";
+    $body .= "--{$boundary}--\r\n";
+
+    $start_time = microtime( true );
+
+    $response = wp_remote_post( 'https://api.groq.com/openai/v1/audio/transcriptions', [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $api_key,
+            'Content-Type'  => 'multipart/form-data; boundary=' . $boundary,
+        ],
+        'body'    => $body,
+        'timeout' => 120,
+    ] );
+
+    $duration_ms = round( ( microtime( true ) - $start_time ) * 1000 );
+
+    if ( is_wp_error( $response ) ) {
+        HearMed_Logger::log( 'transcription', 'Groq error: ' . $response->get_error_message() );
+        wp_send_json_error( 'Transcription failed: ' . $response->get_error_message() );
+    }
+
+    $status_code = wp_remote_retrieve_response_code( $response );
+    $resp_body   = json_decode( wp_remote_retrieve_body( $response ), true );
+
+    if ( $status_code !== 200 ) {
+        $err = $resp_body['error']['message'] ?? "HTTP {$status_code}";
+        HearMed_Logger::log( 'transcription', "Groq HTTP error: {$err}" );
+        wp_send_json_error( 'Transcription failed: ' . $err );
+    }
+
+    $transcript    = $resp_body['text'] ?? '';
+    $duration_secs = isset( $resp_body['duration'] ) ? round( $resp_body['duration'] ) : 0;
+
+    if ( empty( trim( $transcript ) ) ) {
+        wp_send_json_error( 'No speech detected in audio' );
+    }
+
+    // Log success
+    HearMed_Logger::log( 'transcription', sprintf(
+        'Groq transcription: model=%s, audio_duration=%ds, api_time=%dms, words=%d',
+        $model, $duration_secs, $duration_ms, str_word_count( $transcript )
+    ) );
+
+    wp_send_json_success( [
+        'transcript'     => $transcript,
+        'duration_secs'  => $duration_secs,
+        'word_count'     => str_word_count( $transcript ),
+    ] );
 }
 
 function hm_ajax_save_ai_transcript() {

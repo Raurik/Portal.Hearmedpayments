@@ -65,22 +65,25 @@ class HearMed_Admin_Settings {
             'title' => 'AI Settings',
             'fields' => [
                 ['key' => 'hm_ai_enabled', 'label' => 'AI Features Enabled', 'type' => 'toggle', 'default' => '0'],
-                ['key' => 'hm_make_webhook_transcription', 'label' => 'Make.com Webhook — AI Transcription', 'type' => 'text', 'default' => ''],
-                ['key' => 'hm_make_webhook_summary', 'label' => 'Make.com Webhook — Smart Summary', 'type' => 'text', 'default' => ''],
-                ['key' => 'hm_make_webhook_brief', 'label' => 'Make.com Webhook — Appointment Brief', 'type' => 'text', 'default' => ''],
-                ['key' => 'hm_make_webhook_flagging', 'label' => 'Make.com Webhook — Intelligent Flagging', 'type' => 'text', 'default' => ''],
-                ['key' => 'hm_ai_auto_save', 'label' => 'Auto-save Transcriptions (skip review)', 'type' => 'toggle', 'default' => '0'],
+
+                // ── Transcription (Groq Whisper) ──
+                ['key' => 'hm_groq_api_key', 'label' => 'Groq API Key', 'type' => 'password', 'default' => ''],
+                ['key' => 'hm_groq_whisper_model', 'label' => 'Transcription Model', 'type' => 'select', 'default' => 'whisper-large-v3-turbo', 'options' => [
+                    'whisper-large-v3-turbo' => 'Whisper Large V3 Turbo ($0.04/hr — Recommended)',
+                    'whisper-large-v3'       => 'Whisper Large V3 ($0.111/hr — Highest Accuracy)',
+                    'distil-whisper-large-v3-en' => 'Distil-Whisper ($0.02/hr — Cheapest, English Only)',
+                ]],
+
+                // ── AI Extraction (OpenRouter / Claude) ──
                 ['key' => 'hm_openrouter_api_key', 'label' => 'OpenRouter API Key', 'type' => 'password', 'default' => ''],
                 ['key' => 'hm_openrouter_model', 'label' => 'AI Extraction Model', 'type' => 'select', 'default' => 'anthropic/claude-sonnet-4-20250514', 'options' => [
                     'anthropic/claude-sonnet-4-20250514' => 'Claude Sonnet 4 (Recommended)',
                     'anthropic/claude-haiku-4-5-20251001' => 'Claude Haiku 4.5 (Faster/Cheaper)',
                     'anthropic/claude-opus-4-5-20250929' => 'Claude Opus 4.5 (Most Capable)',
-                    'openai/gpt-4o' => 'GPT-4o (OpenAI)',
-                    'openai/gpt-4o-mini' => 'GPT-4o Mini (Cheaper)',
                 ]],
                 ['key' => 'hm_ai_extraction_enabled', 'label' => 'Auto-extract After Transcription', 'type' => 'toggle', 'default' => '1'],
                 ['key' => 'hm_ai_max_retries', 'label' => 'Max AI Retries on Failure', 'type' => 'number', 'default' => '2'],
-                ['key' => 'hm_ai_mock_mode', 'label' => 'Mock AI Mode (Testing)', 'type' => 'toggle', 'default' => '0'],
+                ['key' => 'hm_ai_mock_mode', 'label' => 'Mock AI Mode (Testing — No API Calls)', 'type' => 'toggle', 'default' => '0'],
             ],
         ],
         'hearmed_pusher_settings' => [
@@ -99,7 +102,7 @@ class HearMed_Admin_Settings {
                 ['key' => 'hm_retention_patient_years', 'label' => 'Patient Record Retention (years)', 'type' => 'number', 'default' => '8'],
                 ['key' => 'hm_retention_financial_years', 'label' => 'Financial Record Retention (years)', 'type' => 'number', 'default' => '6'],
                 ['key' => 'hm_retention_sms_years', 'label' => 'SMS Log Retention (years)', 'type' => 'number', 'default' => '2'],
-                ['key' => 'hm_data_processors', 'label' => 'Third-Party Data Processors (one per line)', 'type' => 'textarea', 'default' => "WordPress.com (Automattic) — Hosting\nMake.com — Automations\nOpenRouter — AI Processing\nTwilio — SMS\nQuickBooks (Intuit) — Accounting"],
+                ['key' => 'hm_data_processors', 'label' => 'Third-Party Data Processors (one per line)', 'type' => 'textarea', 'default' => "WordPress.com (Automattic) — Hosting\nGroq — Audio Transcription\nOpenRouter — AI Processing\nTwilio — SMS\nQuickBooks (Intuit) — Accounting"],
             ],
         ],
         'hearmed_admin_alerts' => [

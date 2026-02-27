@@ -908,7 +908,7 @@ function initProfile(){
             '</div></div>'+
             '<div class="hm-ai-notice"><div class="hm-ai-notice-icon">'+HM_ICONS.warning+'</div><div style="flex:1;">'+
                 '<strong>AI Processing Notice</strong>'+
-                '<p>This consultation will be processed by an AI system (OpenRouter via Make.com). The patient must be informed before recording begins.</p>'+
+                '<p>This consultation will be recorded and transcribed by AI. The transcript will be reviewed before saving. The patient must be informed before recording begins.</p>'+
                 '<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin-top:10px;"><input type="checkbox" id="hm-ai-consent" style="margin-top:2px;flex-shrink:0;"><span>I confirm the patient has been informed that this consultation will be processed by AI.</span></label>'+
                 '<button class="hm-btn hm-btn--primary" id="hm-start-recording" disabled style="margin-top:12px;">'+HM_ICONS.mic+'<span>Start Recording</span></button>'+
             '</div></div>'+
@@ -934,7 +934,7 @@ function initProfile(){
                 mr.ondataavailable=function(e){chunks.push(e.data);};
                 mr.onstop=function(){stream.getTracks().forEach(function(t){t.stop();});isRec=false;$('#hm-rec-status').html('<div style="color:#94a3b8;font-size:13px;">Processing…</div>').show();
                     var blob=new Blob(chunks,{type:'audio/webm'}),reader=new FileReader();
-                    reader.onloadend=function(){var wh=(typeof HM!=='undefined'&&HM.ai_webhook)?HM.ai_webhook:'';if(!wh){showTx('[AI webhook not configured — transcript would appear here]');return;}$.ajax({url:wh,method:'POST',data:JSON.stringify({audio:reader.result.split(',')[1],patient_id:pid}),contentType:'application/json',success:function(res){showTx(res.transcript||JSON.stringify(res));},error:function(){$('#hm-rec-status').html('<div style="color:#e53e3e;font-size:13px;">Transcription failed</div>');}});};
+                    reader.onloadend=function(){var b64=reader.result.split(',')[1];$('#hm-rec-status').html('<div style="display:flex;align-items:center;gap:10px;"><span class="hm-spinner"></span><span style="font-size:13px;color:#64748b;">Transcribing audio…</span></div>').show();$.post(_hm.ajax,{action:'hm_transcribe_audio',nonce:_hm.nonce,audio:b64},function(r){if(r.success&&r.data.transcript){showTx(r.data.transcript);}else{$('#hm-rec-status').html('<div style="color:#e53e3e;font-size:13px;">'+(r.data||'Transcription failed')+'</div>');}}).fail(function(){$('#hm-rec-status').html('<div style="color:#e53e3e;font-size:13px;">Transcription request failed</div>');});};
                     reader.readAsDataURL(blob);
                 };
                 mr.start();
@@ -943,7 +943,7 @@ function initProfile(){
         });
         $c.on('click','#hm-stop-rec',function(){if(mr&&mr.state!=='inactive')mr.stop();});
         function showTx(txt){$('#hm-rec-status').hide();$('#hm-transcript-wrap').html('<div class="hm-card"><div class="hm-card-hd">Transcript — review before saving</div><div class="hm-card-body"><textarea class="hm-textarea" id="ai-tx-text" rows="8">'+esc(txt)+'</textarea><div style="margin-top:12px;display:flex;gap:10px;"><button class="hm-btn hm-btn--primary" id="ai-save-tx">Save to Case History</button><button class="hm-btn hm-btn--secondary" id="ai-discard-tx">Discard</button></div></div></div>').show();}
-        $c.on('click','#ai-save-tx',function(){var t=$.trim($('#ai-tx-text').val());if(!t){toast('Empty','error');return;}$(this).prop('disabled',true).text('Saving…');$.post(_hm.ajax,{action:'hm_save_ai_transcript',nonce:_hm.nonce,patient_id:pid,transcript:t,appointment_id:latestApptId||0},function(r){if(r.success){toast('Saved');$('#hm-transcript-wrap').hide();if(r.data&&r.data.clinical_doc_id){var $btn=$('<a href="?page=clinical-review&doc_id='+r.data.clinical_doc_id+'" class="hm-btn hm-btn--primary" style="margin-top:8px;display:inline-block;">Review Clinical Document</a>');$('#hm-transcript-wrap').after($btn);}}else toast('Error','error');});});
+        $c.on('click','#ai-save-tx',function(){var t=$.trim($('#ai-tx-text').val());if(!t){toast('Empty','error');return;}$(this).prop('disabled',true).text('Saving…');$.post(_hm.ajax,{action:'hm_save_ai_transcript',nonce:_hm.nonce,patient_id:pid,appointment_id:window.hmCurrentApptId||latestApptId||0,transcript:t},function(r){if(r.success){toast('Saved');$('#hm-transcript-wrap').hide();if(r.data&&r.data.clinical_doc_id){$('#hm-transcript-wrap').after('<a href="?page=clinical-review&doc_id='+r.data.clinical_doc_id+'" class="hm-btn" style="margin-top:8px;background:#0BB4C4;color:#fff;text-decoration:none;">Review Clinical Document</a>');}}else toast(r.data||'Error','error');});}); 
         $c.on('click','#ai-discard-tx',function(){$('#hm-transcript-wrap').hide();});
     }
 
