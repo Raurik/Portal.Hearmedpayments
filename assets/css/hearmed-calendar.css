@@ -405,7 +405,7 @@
   overflow: hidden;
   z-index: 2;
   font-family: var(--hm-font, 'Source Sans 3', sans-serif);
-  transition: box-shadow 0.15s ease, transform 0.1s ease;
+  transition: box-shadow 0.15s ease;
   display: flex;
   flex-direction: column;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -414,7 +414,6 @@
 .hm-appt:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   z-index: 3;
-  transform: scale(1.01);
 }
 
 /* Card content container */
@@ -428,7 +427,7 @@
 /* Service/appointment type name */
 .hm-appt-svc {
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   font-family: var(--hm-font-btn, 'Plus Jakarta Sans', sans-serif);
   letter-spacing: 0.2px;
   text-transform: uppercase;
@@ -441,7 +440,7 @@
 /* Patient name */
 .hm-appt-pt {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
@@ -452,7 +451,7 @@
 /* Time display */
 .hm-appt-tm {
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 600;
   font-family: var(--hm-font-btn, 'Plus Jakarta Sans', sans-serif);
   line-height: 1.3;
   margin-top: 1px;
