@@ -649,11 +649,10 @@ function hm_ajax_update_appointment_status() {
             return;
         }
 
-        $db  = HearMed_DB::instance();
         $t   = HearMed_Portal::table( 'appointments' );
 
         // Fetch current appointment for context
-        $appt = $db->get_row(
+        $appt = HearMed_DB::get_row(
             "SELECT a.*, p.first_name AS patient_first, p.last_name AS patient_last,
                     p.patient_number,
                     sv.service_name,
@@ -680,7 +679,15 @@ function hm_ajax_update_appointment_status() {
 
         // --- Update status ---
         $update = [ 'appointment_status' => $status, 'updated_at' => current_time( 'mysql' ) ];
-        $db->update( $t, $update, [ 'id' => $id ] );
+        $affected = HearMed_DB::update( $t, $update, [ 'id' => $id ] );
+
+        if ( $affected === false ) {
+            $db_err = HearMed_DB::last_error();
+            error_log( '[HearMed] update_appointment_status UPDATE FAILED — id: ' . $id . ' status: ' . $status . ' | error: ' . $db_err );
+            wp_send_json_error( [ 'message' => 'Database update failed: ' . $db_err ] );
+            return;
+        }
+
         HearMed_Portal::log( 'status_change', 'appointment', $id, [ 'status' => $status ] );
 
         // --- Per-status side-effects ---
@@ -689,7 +696,7 @@ function hm_ajax_update_appointment_status() {
             case 'Confirmed':
                 // Add note to patient file
                 if ( $patient_id ) {
-                    $db->insert( 'hearmed_core.patient_notes', [
+                    HearMed_DB::insert( 'patient_notes', [
                         'patient_id' => $patient_id,
                         'note_type'  => 'Appointment',
                         'note_text'  => "Appointment confirmed — {$svc_name} on {$appt_date} at {$appt_time}",
@@ -728,7 +735,7 @@ function hm_ajax_update_appointment_status() {
                 }
                 // Add note to patient file
                 if ( $patient_id && $note ) {
-                    $db->insert( 'hearmed_core.patient_notes', [
+                    HearMed_DB::insert( 'patient_notes', [
                         'patient_id' => $patient_id,
                         'note_type'  => 'Appointment',
                         'note_text'  => "Running late — {$svc_name} on {$appt_date} at {$appt_time}. {$note}",
@@ -758,7 +765,7 @@ function hm_ajax_update_appointment_status() {
                 if ( $patient_id ) {
                     $note_text = "Appointment rescheduled — {$svc_name} on {$appt_date} at {$appt_time}.";
                     if ( $note ) $note_text .= " {$note}";
-                    $db->insert( 'hearmed_core.patient_notes', [
+                    HearMed_DB::insert( 'patient_notes', [
                         'patient_id' => $patient_id,
                         'note_type'  => 'Appointment',
                         'note_text'  => $note_text,
@@ -773,7 +780,7 @@ function hm_ajax_update_appointment_status() {
                     $sp  = explode( ':', $new_time );
                     $em  = intval( $sp[0] ) * 60 + intval( $sp[1] ?? 0 ) + $dur;
                     $et  = sprintf( '%02d:%02d', floor( $em / 60 ), $em % 60 );
-                    $new_id = $db->insert( $t, [
+                    $new_id = HearMed_DB::insert( $t, [
                         'patient_id'         => $patient_id,
                         'staff_id'           => $staff_id,
                         'clinic_id'          => (int) ( $appt->clinic_id ?? 0 ),
@@ -798,7 +805,7 @@ function hm_ajax_update_appointment_status() {
                 if ( $patient_id ) {
                     $note_text = "Appointment cancelled — {$svc_name} on {$appt_date} at {$appt_time}.";
                     if ( $note ) $note_text .= " {$note}";
-                    $db->insert( 'hearmed_core.patient_notes', [
+                    HearMed_DB::insert( 'patient_notes', [
                         'patient_id' => $patient_id,
                         'note_type'  => 'Appointment',
                         'note_text'  => $note_text,

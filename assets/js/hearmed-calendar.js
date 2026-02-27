@@ -830,7 +830,9 @@ var Cal={
         var data={appointment_id:a._ID,status:status,note:note||''};
         if(extra)$.extend(data,extra);
         var self=this;
+        console.log('[HearMed] doStatusChange →',{id:a._ID,status:status,note:note||''});
         post('update_appointment_status',data).then(function(r){
+            console.log('[HearMed] update_appointment_status response:',r);
             if(r.success){
                 self.refresh();
                 // Show a brief toast
