@@ -497,25 +497,12 @@ var Cal={
             var card='<div class="hm-appt hm-appt--'+cs+stCls+'" data-id="'+a._ID+'" style="'+bgStyle+';height:'+h+'px;top:'+off+'px;color:'+fontColor+cardOpacity+'">';
             card+=bannerHtml;
             card+='<div class="hm-appt-inner">';
-            // 1. Patient name (bold) — always shown
-            card+='<div class="hm-appt-pt" style="color:'+fontColor+';font-weight:700">'+esc(a.patient_name||'No patient')+'</div>';
-            // 2. Time — shown if card has enough height
-            if(cfg.showTime&&h>28){
-                card+='<div class="hm-appt-tm" style="color:'+(cs==='solid'?fontColor:col)+'">'+a.start_time.substring(0,5)+'</div>';
-            }
-            // 3. Service name + location type  (e.g. "Hearing Test - Clinic")
-            if(cfg.showApptType&&h>44){
-                var svcLbl=esc(a.service_name||'');
-                if(a.location_type&&a.location_type!=='Clinic')svcLbl+=' - '+esc(a.location_type);
-                else if(a.location_type)svcLbl+=' - '+esc(a.location_type);
-                card+='<div class="hm-appt-svc" style="color:'+(cs==='solid'?(cfg.apptMeta||'rgba(255,255,255,0.85)'):col)+'">'+svcLbl+'</div>';
-            }
-            // 4. Clinic name — always show if card has enough height
-            if(h>56&&a.clinic_name){
-                card+='<div class="hm-appt-meta" style="color:'+(cs==='solid'?(cfg.apptMeta||'rgba(255,255,255,0.8)'):'var(--hm-text-muted)')+'">'+esc(a.clinic_name)+'</div>';
-            }
-            // Status badge row (only on tall cards)
-            if(cfg.showBadges&&h>68){
+            if(cfg.showApptType)card+='<div class="hm-appt-svc" style="color:'+(cs==='solid'?font:col)+'">'+esc(a.service_name)+'</div>';
+            card+='<div class="hm-appt-pt" style="color:'+fontColor+'">'+tmLbl+esc(a.patient_name||'No patient')+'</div>';
+            if(cfg.showTime&&h>36&&!cfg.hideEndTime)card+='<div class="hm-appt-tm" style="color:'+(cs==='solid'?(cfg.apptMeta||'#38bdf8'):col)+'">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>';
+            else if(cfg.showTime&&h>36)card+='<div class="hm-appt-tm" style="color:'+(cs==='solid'?(cfg.apptMeta||'#38bdf8'):col)+'">'+a.start_time.substring(0,5)+'</div>';
+            // Badges row
+            if(cfg.showBadges&&h>44){
                 var badges='';
                 if(cfg.showStatusBadge){
                     var st2=STATUS_MAP[a.status]||STATUS_MAP.Confirmed;
@@ -526,6 +513,11 @@ var Cal={
                     if(dd2)badges+='<span class="hm-appt-badge hm-appt-badge--ini">'+(dd2.initials||'')+'</span>';
                 }
                 if(badges)card+='<div class="hm-appt-badges">'+badges+'</div>';
+            }
+            if(h>50){
+                var metaParts=[];
+                if(cfg.showClinic)metaParts.push(esc(a.clinic_name||''));
+                if(metaParts.length)card+='<div class="hm-appt-meta" style="color:'+(cs==='solid'?(cfg.apptMeta||'#38bdf8'):'var(--hm-text-muted)')+'">'+metaParts.join(' · ')+'</div>';
             }
             card+='</div>';
             // Cancelled / No Show overlay

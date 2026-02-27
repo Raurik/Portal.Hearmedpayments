@@ -368,24 +368,62 @@ function hm_ajax_get_appointments() {
     $dp    = intval( $_POST['dispenser'] ?? 0 );
 
     // Build query with JOINs — fully PostgreSQL, no get_post_meta
-    // The appointments table has BOTH service_id AND appointment_type_id — COALESCE them
-    $sql = "SELECT a.id, a.patient_id, a.staff_id, a.clinic_id,
-                   COALESCE(a.appointment_type_id, a.service_id) AS resolved_service_id,
+    // Detect which columns exist on the appointments table (service_id vs appointment_type_id, etc.)
+    $appt_cols = [];
+    try {
+        $col_rows = HearMed_DB::get_results(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'appointments'"
+        );
+        foreach ( ($col_rows ?: []) as $cr ) {
+            $appt_cols[] = $cr->column_name;
+        }
+    } catch ( Throwable $ignored ) {}
+
+    $has_service_id          = in_array( 'service_id', $appt_cols );
+    $has_appointment_type_id = in_array( 'appointment_type_id', $appt_cols );
+    $has_duration_minutes    = in_array( 'duration_minutes', $appt_cols );
+    $has_appointment_status  = in_array( 'appointment_status', $appt_cols );
+    $has_status              = in_array( 'status', $appt_cols );
+
+    // Resolve the service column name for JOIN and SELECT
+    if ( $has_appointment_type_id && $has_service_id ) {
+        $svc_col     = 'COALESCE(a.appointment_type_id, a.service_id)';
+    } elseif ( $has_appointment_type_id ) {
+        $svc_col     = 'a.appointment_type_id';
+    } elseif ( $has_service_id ) {
+        $svc_col     = 'a.service_id';
+    } else {
+        $svc_col     = 'NULL';
+    }
+
+    // Resolve status column
+    $status_col = $has_appointment_status ? 'a.appointment_status' : ( $has_status ? 'a.status' : "'Confirmed'" );
+
+    // Resolve duration
+    $dur_select = $has_duration_minutes
+        ? "COALESCE(a.duration_minutes, sv.duration_minutes, sv.duration, 30)"
+        : "COALESCE(sv.duration_minutes, sv.duration, 30)";
+
+    // Resolve staff filter column
+    $staff_col = in_array( 'staff_id', $appt_cols ) ? 'a.staff_id' : 'a.dispenser_id';
+
+    $sql = "SELECT a.id, a.patient_id, {$staff_col} AS staff_id, a.clinic_id,
+                   {$svc_col} AS resolved_service_id,
                    a.appointment_date, a.start_time, a.end_time,
-                   a.duration_minutes,
-                   a.appointment_status, a.location_type, a.notes,
+                   {$status_col} AS appointment_status, a.location_type, a.notes,
                    a.created_by,
                    p.first_name AS patient_first, p.last_name AS patient_last, p.patient_number,
                    (st.first_name || ' ' || st.last_name) AS dispenser_name,
                    c.clinic_name,
                    sv.service_name,
                    COALESCE(sv.service_color, sv.colour, '#3B82F6') AS service_colour,
-                   COALESCE(a.duration_minutes, sv.duration_minutes, sv.duration, 30) AS service_duration
+                   {$dur_select} AS service_duration
             FROM hearmed_core.appointments a
             LEFT JOIN hearmed_core.patients p ON a.patient_id = p.id
-            LEFT JOIN hearmed_reference.staff st ON a.staff_id = st.id
+            LEFT JOIN hearmed_reference.staff st ON {$staff_col} = st.id
             LEFT JOIN hearmed_reference.clinics c ON a.clinic_id = c.id
-            LEFT JOIN hearmed_reference.services sv ON sv.id = COALESCE(a.appointment_type_id, a.service_id)
+            LEFT JOIN hearmed_reference.services sv ON sv.id = {$svc_col}
             WHERE a.appointment_date >= \$1 AND a.appointment_date <= \$2";
     $params = [ $start, $end ];
     $pi = 3;
@@ -395,7 +433,7 @@ function hm_ajax_get_appointments() {
         $pi++;
     }
     if ( $dp ) {
-        $sql .= " AND a.staff_id = \${$pi}";
+        $sql .= " AND {$staff_col} = \${$pi}";
         $params[] = $dp;
         $pi++;
     }
@@ -475,6 +513,19 @@ function hm_ajax_create_appointment() {
     try {
     $t   = HearMed_Portal::table( 'appointments' );
     $sid = intval( $_POST['service_id'] );
+
+    // Detect which columns exist on the appointments table
+    $appt_cols = [];
+    try {
+        $col_rows = HearMed_DB::get_results(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'appointments'"
+        );
+        foreach ( ($col_rows ?: []) as $cr ) {
+            $appt_cols[] = $cr->column_name;
+        }
+    } catch ( Throwable $ignored ) {}
+
     // Get duration from PostgreSQL services table
     $dur = intval( $_POST['duration'] ?? 0 );
     if ( ! $dur && $sid ) {
@@ -486,22 +537,37 @@ function hm_ajax_create_appointment() {
     $sp  = explode( ':', $st );
     $em  = intval( $sp[0] ) * 60 + intval( $sp[1] ) + $dur;
     $et  = sprintf( '%02d:%02d', floor( $em / 60 ), $em % 60 );
-    $new_id = HearMed_DB::insert( $t, [
-        'created_at'          => current_time( 'mysql' ),
-        'patient_id'          => intval( $_POST['patient_id']   ?? 0 ),
-        'staff_id'            => intval( $_POST['dispenser_id'] ),
-        'clinic_id'           => intval( $_POST['clinic_id']    ?? 0 ),
-        'service_id'          => $sid,
-        'appointment_type_id' => $sid,
-        'duration_minutes'    => $dur,
-        'appointment_date'    => sanitize_text_field( $_POST['appointment_date'] ),
-        'start_time'          => $st,
-        'end_time'            => $et,
-        'appointment_status'  => sanitize_text_field( $_POST['status'] ?? 'Confirmed' ),
-        'location_type'       => sanitize_text_field( $_POST['location_type'] ?? 'Clinic' ),
-        'notes'               => sanitize_textarea_field( $_POST['notes']     ?? '' ),
-        'created_by'          => get_current_user_id(),
-    ] );
+
+    // Build insert data using only columns that actually exist
+    $insert_data = [
+        'created_at'       => current_time( 'mysql' ),
+        'patient_id'       => intval( $_POST['patient_id'] ?? 0 ),
+        'clinic_id'        => intval( $_POST['clinic_id']  ?? 0 ),
+        'appointment_date' => sanitize_text_field( $_POST['appointment_date'] ),
+        'start_time'       => $st,
+        'end_time'         => $et,
+        'location_type'    => sanitize_text_field( $_POST['location_type'] ?? 'Clinic' ),
+        'notes'            => sanitize_textarea_field( $_POST['notes']     ?? '' ),
+        'created_by'       => get_current_user_id(),
+    ];
+
+    // Staff column
+    if ( in_array( 'staff_id', $appt_cols ) )           $insert_data['staff_id'] = intval( $_POST['dispenser_id'] );
+    elseif ( in_array( 'dispenser_id', $appt_cols ) )   $insert_data['dispenser_id'] = intval( $_POST['dispenser_id'] );
+
+    // Service columns — write whichever exist
+    if ( in_array( 'service_id', $appt_cols ) )          $insert_data['service_id'] = $sid;
+    if ( in_array( 'appointment_type_id', $appt_cols ) ) $insert_data['appointment_type_id'] = $sid;
+
+    // Duration
+    if ( in_array( 'duration_minutes', $appt_cols ) )    $insert_data['duration_minutes'] = $dur;
+    elseif ( in_array( 'duration', $appt_cols ) )        $insert_data['duration'] = $dur;
+
+    // Status
+    if ( in_array( 'appointment_status', $appt_cols ) )  $insert_data['appointment_status'] = sanitize_text_field( $_POST['status'] ?? 'Confirmed' );
+    elseif ( in_array( 'status', $appt_cols ) )          $insert_data['status'] = sanitize_text_field( $_POST['status'] ?? 'Confirmed' );
+
+    $new_id = HearMed_DB::insert( $t, $insert_data );
     HearMed_Portal::log( 'created', 'appointment', $new_id ?: 0, [
         'patient_id' => intval( $_POST['patient_id'] ?? 0 ),
         'date'       => sanitize_text_field( $_POST['appointment_date'] ),
@@ -520,11 +586,27 @@ function hm_ajax_update_appointment() {
     $t   = HearMed_Portal::table( 'appointments' );
     $id  = intval( $_POST['appointment_id'] );
 
+    // Detect which columns exist
+    $appt_cols = [];
+    try {
+        $col_rows = HearMed_DB::get_results(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'appointments'"
+        );
+        foreach ( ($col_rows ?: []) as $cr ) {
+            $appt_cols[] = $cr->column_name;
+        }
+    } catch ( Throwable $ignored ) {}
+
     $data = [ 'updated_at' => current_time( 'mysql' ) ];
 
     // Status update (from popover buttons or edit modal)
     if ( isset( $_POST['status'] ) ) {
-        $data['appointment_status'] = sanitize_text_field( $_POST['status'] );
+        if ( in_array( 'appointment_status', $appt_cols ) ) {
+            $data['appointment_status'] = sanitize_text_field( $_POST['status'] );
+        } elseif ( in_array( 'status', $appt_cols ) ) {
+            $data['status'] = sanitize_text_field( $_POST['status'] );
+        }
     }
 
     // Full edit fields — only set if actually sent
@@ -532,15 +614,26 @@ function hm_ajax_update_appointment() {
     if ( isset( $_POST['location_type'] ) )    $data['location_type'] = sanitize_text_field( $_POST['location_type'] );
     if ( isset( $_POST['notes'] ) )            $data['notes'] = sanitize_textarea_field( $_POST['notes'] );
     if ( isset( $_POST['patient_id'] ) )       $data['patient_id'] = intval( $_POST['patient_id'] );
-    if ( isset( $_POST['dispenser_id'] ) )     $data['staff_id'] = intval( $_POST['dispenser_id'] );
     if ( isset( $_POST['clinic_id'] ) )        $data['clinic_id'] = intval( $_POST['clinic_id'] );
+
+    // Staff column
+    if ( isset( $_POST['dispenser_id'] ) ) {
+        if ( in_array( 'staff_id', $appt_cols ) )         $data['staff_id'] = intval( $_POST['dispenser_id'] );
+        elseif ( in_array( 'dispenser_id', $appt_cols ) ) $data['dispenser_id'] = intval( $_POST['dispenser_id'] );
+    }
 
     // Service + duration + time recalculation (only when start_time or service changes)
     if ( isset( $_POST['start_time'] ) ) {
         $sid = intval( $_POST['service_id'] ?? 0 );
-        // If no service_id sent, look up from existing appointment
         if ( ! $sid ) {
-            $sid = (int) HearMed_DB::get_var( "SELECT COALESCE(appointment_type_id, service_id) FROM hearmed_core.appointments WHERE id = $1", [ $id ] );
+            // Look up from existing appointment — try whichever column exists
+            if ( in_array( 'appointment_type_id', $appt_cols ) && in_array( 'service_id', $appt_cols ) ) {
+                $sid = (int) HearMed_DB::get_var( "SELECT COALESCE(appointment_type_id, service_id) FROM hearmed_core.appointments WHERE id = $1", [ $id ] );
+            } elseif ( in_array( 'appointment_type_id', $appt_cols ) ) {
+                $sid = (int) HearMed_DB::get_var( "SELECT appointment_type_id FROM hearmed_core.appointments WHERE id = $1", [ $id ] );
+            } elseif ( in_array( 'service_id', $appt_cols ) ) {
+                $sid = (int) HearMed_DB::get_var( "SELECT service_id FROM hearmed_core.appointments WHERE id = $1", [ $id ] );
+            }
         }
         $dur = intval( $_POST['duration'] ?? 0 );
         if ( ! $dur && $sid ) {
@@ -552,25 +645,23 @@ function hm_ajax_update_appointment() {
         $sp  = explode( ':', $st );
         $em  = intval( $sp[0] ) * 60 + intval( $sp[1] ) + $dur;
         $et  = sprintf( '%02d:%02d', floor( $em / 60 ), $em % 60 );
-        $data['service_id']          = $sid;
-        $data['appointment_type_id'] = $sid;
-        $data['duration_minutes']    = $dur;
+
+        if ( in_array( 'service_id', $appt_cols ) )          $data['service_id'] = $sid;
+        if ( in_array( 'appointment_type_id', $appt_cols ) ) $data['appointment_type_id'] = $sid;
+        if ( in_array( 'duration_minutes', $appt_cols ) )    $data['duration_minutes'] = $dur;
+        elseif ( in_array( 'duration', $appt_cols ) )        $data['duration'] = $dur;
         $data['start_time']  = $st;
         $data['end_time']    = $et;
     }
 
     // outcome_id / outcome_banner_colour — only if columns exist
-    if ( isset( $_POST['outcome_id'] ) || isset( $_POST['outcome_banner_colour'] ) ) {
-        try {
-            $has_oid = HearMed_DB::get_var(
-                "SELECT 1 FROM information_schema.columns WHERE table_schema='hearmed_core' AND table_name='appointments' AND column_name='outcome_id'"
-            );
-            if ( $has_oid ) {
-                if ( isset( $_POST['outcome_id'] ) )            $data['outcome_id']            = intval( $_POST['outcome_id'] );
-                if ( isset( $_POST['outcome_banner_colour'] ) ) $data['outcome_banner_colour'] = sanitize_text_field( $_POST['outcome_banner_colour'] );
-            }
-        } catch ( Throwable $ignored ) {}
+    if ( isset( $_POST['outcome_id'] ) && in_array( 'outcome_id', $appt_cols ) ) {
+        $data['outcome_id'] = intval( $_POST['outcome_id'] );
     }
+    if ( isset( $_POST['outcome_banner_colour'] ) && in_array( 'outcome_banner_colour', $appt_cols ) ) {
+        $data['outcome_banner_colour'] = sanitize_text_field( $_POST['outcome_banner_colour'] );
+    }
+
     HearMed_DB::update( $t, $data, [ 'id' => $id ] );
     HearMed_Portal::log( 'updated', 'appointment', $id );
     wp_send_json_success( [ 'id' => $id ] );
@@ -952,20 +1043,27 @@ function hm_ajax_save_appointment_outcome() {
     }
 
     // Update the appointment with outcome
-    $data = [
-        'appointment_status' => 'Completed',
-        'updated_at'         => current_time( 'mysql' ),
-    ];
-    // outcome_id / outcome_banner_colour columns may not exist yet — add safely
+    // Detect which columns exist
+    $appt_cols = [];
     try {
-        $has_oid = HearMed_DB::get_var(
-            "SELECT 1 FROM information_schema.columns WHERE table_schema='hearmed_core' AND table_name='appointments' AND column_name='outcome_id'"
+        $col_rows = HearMed_DB::get_results(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'appointments'"
         );
-        if ( $has_oid ) {
-            $data['outcome_id']            = $outcome_id;
-            $data['outcome_banner_colour'] = $ot ? $ot->outcome_color : '';
+        foreach ( ($col_rows ?: []) as $cr ) {
+            $appt_cols[] = $cr->column_name;
         }
     } catch ( Throwable $ignored ) {}
+
+    $data = [ 'updated_at' => current_time( 'mysql' ) ];
+    if ( in_array( 'appointment_status', $appt_cols ) ) $data['appointment_status'] = 'Completed';
+    elseif ( in_array( 'status', $appt_cols ) )         $data['status'] = 'Completed';
+
+    if ( in_array( 'outcome_id', $appt_cols ) )            $data['outcome_id']            = $outcome_id;
+    if ( in_array( 'outcome_banner_colour', $appt_cols ) ) $data['outcome_banner_colour'] = $ot ? $ot->outcome_color : '';
+    // Also try 'outcome' varchar column
+    if ( in_array( 'outcome', $appt_cols ) )               $data['outcome'] = $ot ? $ot->outcome_name : 'Completed';
+
     HearMed_DB::update( HearMed_Portal::table( 'appointments' ), $data, [ 'id' => $appt_id ] );
 
     // Also save to appointment_outcomes table for history
