@@ -190,24 +190,28 @@
   color:#92400e;
 }
 
-/* ── Status Badge Colours — full-width compact grid ───── */
-#hm-app .hm-badge-grid {
-  display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
-  gap:10px 24px;
-}
+/* ── Status Badge Colours — compact stacked rows ───── */
 #hm-app .hm-badge-row {
   display:flex;
   align-items:center;
-  gap:10px;
-  padding:6px 0;
+  gap:8px;
+  padding:7px 0;
   border-bottom:1px solid #f1f5f9;
+  flex-wrap:wrap;
 }
+#hm-app .hm-badge-row:last-child { border-bottom:none; }
 #hm-app .hm-badge-row-label {
   font-size:12px;
   font-weight:700;
   color:#334155;
-  min-width:100px;
+  width:100%;
+  margin-bottom:2px;
+}
+#hm-app .hm-badge-picks {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  width:100%;
 }
 #hm-app .hm-badge-pick {
   font-size:11px;
