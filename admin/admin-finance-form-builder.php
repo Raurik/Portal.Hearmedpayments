@@ -52,8 +52,8 @@ class HearMed_Admin_Finance_Form_Builder {
                 <div class="hm-ffb-logo-right">
                     <div style="font-size:11px;font-weight:600;color:var(--hm-text);margin-bottom:4px;">Company Logo</div>
                     <p style="font-size:11px;color:var(--hm-muted);margin-bottom:8px;">This logo appears on all printed documents — invoices, orders, repair dockets, credit notes, reports and case histories.</p>
-                    <a href="<?php echo esc_url(home_url('/admin-settings/?tab=report_layout')); ?>" class="hm-btn hm-btn--sm">
-                        <?php echo $global_logo_url ? 'Change Logo in Settings' : 'Upload Logo in Settings'; ?> →
+                    <a href="<?php echo esc_url(home_url('/admin-console/global-settings/')); ?>" class="hm-btn hm-btn--sm">
+                        <?php echo $global_logo_url ? 'Change Logo in Global Settings' : 'Upload Logo in Global Settings'; ?> →
                     </a>
                 </div>
             </div>

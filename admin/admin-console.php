@@ -63,6 +63,7 @@ class HearMed_Admin_Console {
                 ['GDPR Settings', 'gdpr-settings'],
             ]],
             ['System', [
+                ['Global Settings', 'global-settings'],
                 ['AI Settings', 'ai-settings'],
                 ['Alerts Settings', 'alerts'],
                 ['Roles', 'roles'],
