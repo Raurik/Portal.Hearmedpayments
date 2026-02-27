@@ -91,7 +91,7 @@
             if (x.status !== 'Received' && x.days_open && x.days_open > 14) overdue++;
         });
         function card(val, label) {
-            return '<div class="hm-repair-stat"><div class="hm-repair-stat-val">' + val + '</div><div class="hm-repair-stat-lbl">' + label + '</div></div>';
+            return '<div class="hm-stat"><div class="hm-stat-val">' + val + '</div><div class="hm-stat-label">' + label + '</div></div>';
         }
         $('#hm-repairs-stats').html(
             card(booked, 'Booked') +
@@ -133,7 +133,7 @@
                 if (x.days_open > 14) rowClass = ' class="hm-repair-overdue"';
                 else if (x.days_open > 10) rowClass = ' class="hm-repair-warning"';
             }
-            var actions = '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-r-docket" data-id="' + x._ID + '" title="Print Docket" style="padding:4px 8px;">🖨</button> ';
+            var actions = '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-r-docket" data-id="' + x._ID + '" title="Print Docket" style="padding:4px 8px;">Print</button> ';
             if (x.status === 'Booked') actions += '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-r-send" data-id="' + x._ID + '" data-name="' + esc(x.patient_name) + '">Mark Sent</button>';
             else if (x.status === 'Sent') actions += '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-r-recv" data-id="' + x._ID + '">Received</button>';
 

@@ -248,7 +248,7 @@ class HearMed_Forms {
                     <div class="hm-modal-hd">
                         <h3>Form Record</h3>
                         <div style="display:flex;gap:8px;">
-                            <button class="hm-btn hm-btn--ghost hm-btn--sm" onclick="hmForms.printForm()">🖨 Print</button>
+                            <button class="hm-btn hm-btn--ghost hm-btn--sm" onclick="hmForms.printForm()">Print</button>
                             <button class="hm-close" onclick="hmForms.closeView()">×</button>
                         </div>
                     </div>

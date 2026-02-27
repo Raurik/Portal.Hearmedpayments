@@ -498,7 +498,7 @@ function initProfile(){
             var n=r.data,tc={clinical:'var(--hm-teal)',admin:'#64748b',cancellation:'#e53e3e',system:'#3b82f6','follow-up':'#d97706',manual:'var(--hm-teal)'};
             var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Notes ('+n.length+')</h3><button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-add-note-btn">+ Add Note</button></div>';
             if(!n.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.note+'</div><div class="hm-empty-text">No notes</div></div>';
-            else n.forEach(function(x){var c=tc[x.note_type.toLowerCase()]||'var(--hm-teal)';var pinCls=x.is_pinned?' hm-note-pinned':'';var pinIcon=x.is_pinned?'📌 ':'';h+='<div class="hm-note-card'+pinCls+'" style="border-left-color:'+c+';">'+(x.is_pinned?'<div class="hm-note-pin-badge">📌 Pinned</div>':'')+'<div class="hm-note-type"><span class="hm-badge hm-badge--sm" style="background:'+c+';color:#fff;">'+esc(x.note_type)+'</span></div><div class="hm-note-text">'+esc(x.note_text)+'</div><div style="display:flex;gap:16px;align-items:center;margin-top:8px;"><div class="hm-note-meta">By '+esc(x.created_by)+' at '+fmtDateTime(x.created_at)+'</div>'+(x.can_edit?'<a href="#" class="hm-pin-note" data-id="'+x._ID+'" data-pinned="'+(x.is_pinned?'1':'0')+'" style="font-size:12px;color:#d97706;">'+(x.is_pinned?'Unpin':'Pin')+'</a><a href="#" class="hm-edit-note" data-id="'+x._ID+'" data-text="'+esc(x.note_text)+'" data-type="'+esc(x.note_type)+'" style="font-size:12px;color:var(--hm-teal);">Edit</a><a href="#" class="hm-delete-note" data-id="'+x._ID+'" style="font-size:12px;color:#e53e3e;">Delete</a>':'')+'</div></div>';});
+            else n.forEach(function(x){var c=tc[x.note_type.toLowerCase()]||'var(--hm-teal)';var pinCls=x.is_pinned?' hm-note-pinned':'';var pinIcon=x.is_pinned?'':'';h+='<div class="hm-note-card'+pinCls+'" style="border-left-color:'+c+';">'+(x.is_pinned?'<div class="hm-note-pin-badge">Pinned</div>':'')+'<div class="hm-note-type"><span class="hm-badge hm-badge--sm" style="background:'+c+';color:#fff;">'+esc(x.note_type)+'</span></div><div class="hm-note-text">'+esc(x.note_text)+'</div><div style="display:flex;gap:16px;align-items:center;margin-top:8px;"><div class="hm-note-meta">By '+esc(x.created_by)+' at '+fmtDateTime(x.created_at)+'</div>'+(x.can_edit?'<a href="#" class="hm-pin-note" data-id="'+x._ID+'" data-pinned="'+(x.is_pinned?'1':'0')+'" style="font-size:12px;color:#d97706;">'+(x.is_pinned?'Unpin':'Pin')+'</a><a href="#" class="hm-edit-note" data-id="'+x._ID+'" data-text="'+esc(x.note_text)+'" data-type="'+esc(x.note_type)+'" style="font-size:12px;color:var(--hm-teal);">Edit</a><a href="#" class="hm-delete-note" data-id="'+x._ID+'" style="font-size:12px;color:#e53e3e;">Delete</a>':'')+'</div></div>';});
             $c.html(h+'</div>');
         });
         $c.off('click','#hm-add-note-btn').on('click','#hm-add-note-btn',function(){showNoteModal();});
@@ -778,12 +778,11 @@ function initProfile(){
             '<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--sm">'+
             '<div class="hm-modal-hd"><span>Repair Logged</span><button class="hm-close">&times;</button></div>'+
             '<div class="hm-modal-body" style="text-align:center;padding:24px 20px;">'+
-                '<div style="font-size:40px;margin-bottom:12px;">🔧</div>'+
                 '<p style="font-size:14px;color:#334155;margin-bottom:4px;">Repair <strong>'+esc(repairNum||'')+'</strong> created successfully.</p>'+
                 '<p style="font-size:13px;color:#64748b;margin-bottom:20px;">Print a repair docket to send with the device to the manufacturer.</p>'+
                 '<div style="display:flex;gap:10px;justify-content:center;">'+
                     '<button class="hm-btn hm-btn--secondary hm-close" style="min-width:80px;">Close</button>'+
-                    '<button class="hm-btn hm-btn--primary" id="hm-print-docket" style="min-width:140px;">🖨 Print Docket</button>'+
+                    '<button class="hm-btn hm-btn--primary" id="hm-print-docket" style="min-width:140px;">Print Docket</button>'+
                 '</div>'+
             '</div></div></div>'
         );
@@ -839,7 +838,7 @@ function initProfile(){
                     if(x.days_open>14)rowClass=' class="hm-repair-overdue"';
                     else if(x.days_open>10)rowClass=' class="hm-repair-warning"';
                 }
-                var actions='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-repair-print" data-id="'+x._ID+'" title="Print Docket">🖨</button> ';
+                var actions='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-repair-print" data-id="'+x._ID+'" title="Print Docket">Print</button> ';
                 if(x.status==='Booked')actions+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-repair-send" data-id="'+x._ID+'">Mark Sent</button>';
                 else if(x.status==='Sent')actions+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-repair-receive" data-id="'+x._ID+'">Received Back</button>';
                 h+='<tr'+rowClass+'><td><code class="hm-pt-hnum">'+esc(x.repair_number||'—')+'</code></td><td>'+esc(x.product_name)+(x.manufacturer_name?' <span style="color:#94a3b8;font-size:12px;">('+esc(x.manufacturer_name)+')</span>':'')+'</td><td style="font-size:13px;">'+esc(x.repair_reason||'—')+'</td><td>'+fmtDate(x.date_booked)+'</td><td><span class="hm-badge hm-badge--sm '+sc+'">'+esc(x.status)+'</span></td><td style="text-align:center;">'+(x.days_open||'—')+'</td><td>'+(x.under_warranty?'<span class="hm-badge hm-badge--sm hm-badge--green"><span class="hm-dot-green"></span> Yes</span>':'<span class="hm-badge hm-badge--sm hm-badge--red"><span class="hm-dot-red"></span> '+(x.warranty_status||'No')+'</span>')+'</td><td>'+actions+'</td></tr>'+
@@ -1255,7 +1254,6 @@ function initProfile(){
             '<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--sm">'+
             '<div class="hm-modal-hd"><span>Create Order?</span><button class="hm-close">&times;</button></div>'+
             '<div class="hm-modal-body" style="text-align:center;padding:24px 20px;">'+
-                '<div style="font-size:40px;margin-bottom:12px;">📋</div>'+
                 '<p style="font-size:14px;color:#334155;margin-bottom:4px;">Hearing aid <strong>'+esc(prodName)+'</strong> added successfully.</p>'+
                 '<p style="font-size:13px;color:#64748b;margin-bottom:20px;">Would you like to create an order for this device?</p>'+
                 '<div style="display:flex;gap:10px;justify-content:center;">'+

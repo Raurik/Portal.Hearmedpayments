@@ -121,7 +121,7 @@ class HearMed_Admin_Appointment_Type_Detail {
         #hm-app .hm-outcome-row:hover { background:#f8fafc; }
         .hm-days-grid            { display:flex; flex-wrap:wrap; gap:8px; }
         </style>
-        <div id="hm-app" class="hm-calendar" data-module="calendar" data-view="settings">
+        <div class="hm-calendar" data-module="calendar" data-view="settings">
         <div class="hm-page" data-service-id="<?php echo $service_id; ?>">
 
             <a href="<?php echo esc_url(home_url('/appointment-types/')); ?>" class="hm-back">← Back</a>

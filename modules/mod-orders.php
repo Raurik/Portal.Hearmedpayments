@@ -618,7 +618,7 @@ class HearMed_Orders {
                     <!-- STAGE 1→2: C-Level Approval -->
                     <?php if ($can_approve) : ?>
                     <div class="hm-card hm-card--action">
-                        <h3 class="hm-card-title">⏳ Awaiting Your Approval</h3>
+                        <h3 class="hm-card-title">Awaiting Your Approval</h3>
                         <p class="hm-form__hint">Review the order then approve or reject.</p>
                         <textarea id="hm-approval-note" class="hm-input hm-input--textarea" rows="2"
                                   placeholder="Optional note..."></textarea>
@@ -642,10 +642,10 @@ class HearMed_Orders {
                     <!-- STAGE 2→3: Admin places order -->
                     <?php if ($can_order) : ?>
                     <div class="hm-card hm-card--action">
-                        <h3 class="hm-card-title">📋 Place Order with Supplier</h3>
+                        <h3 class="hm-card-title">Place Order with Supplier</h3>
                         <a href="<?php echo esc_url($base.'?hm_action=print&order_id='.$order_id); ?>"
                            target="_blank" class="hm-btn hm-btn--secondary hm-btn--block" style="margin-bottom:0.75rem;">
-                            🖨 Print Order Sheet
+                            Print Order Sheet
                         </a>
                         <p class="hm-form__hint">Once placed with the supplier, click below.</p>
                         <button class="hm-btn hm-btn--primary hm-btn--block hm-order-action"
@@ -660,13 +660,13 @@ class HearMed_Orders {
                     <!-- STAGE 3→4: Received in clinic -->
                     <?php if ($can_receive) : ?>
                     <div class="hm-card hm-card--action">
-                        <h3 class="hm-card-title">📦 Aids Arrived?</h3>
+                        <h3 class="hm-card-title">Aids Arrived?</h3>
                         <p class="hm-form__hint">Mark received. Dispenser will be notified to enter serial numbers.</p>
                         <button class="hm-btn hm-btn--primary hm-btn--block hm-order-action"
                                 data-ajax="hm_mark_received" data-order-id="<?php echo $order_id; ?>"
                                 data-nonce="<?php echo esc_attr($nonce); ?>"
                                 data-confirm="Mark this order as received in clinic?">
-                            📦 Received in Clinic
+                            Received in Clinic
                         </button>
                     </div>
                     <?php endif; ?>
@@ -674,7 +674,7 @@ class HearMed_Orders {
                     <!-- STAGE 4→5: Serial numbers -->
                     <?php if ($can_serials) : ?>
                     <div class="hm-card hm-card--action">
-                        <h3 class="hm-card-title">🔢 Enter Serial Numbers</h3>
+                        <h3 class="hm-card-title">Enter Serial Numbers</h3>
                         <p class="hm-form__hint">Record serials before the patient is fitted.</p>
                         <a href="<?php echo esc_url($base.'?hm_action=serials&order_id='.$order_id); ?>"
                            class="hm-btn hm-btn--primary hm-btn--block">
@@ -686,7 +686,7 @@ class HearMed_Orders {
                     <!-- STAGE 5→6: Fitting + Payment -->
                     <?php if ($can_complete) : ?>
                     <div class="hm-card hm-card--action">
-                        <h3 class="hm-card-title">🎉 Patient is Here — Fit + Pay</h3>
+                        <h3 class="hm-card-title">Patient is Here — Fit + Pay</h3>
                         <p class="hm-form__hint">
                             Finalises invoice as Paid, logs in patient file, fires to QuickBooks.
                         </p>
@@ -701,7 +701,7 @@ class HearMed_Orders {
                     <div class="hm-card">
                         <a href="<?php echo esc_url($base.'?hm_action=print&order_id='.$order_id); ?>"
                            target="_blank" class="hm-btn hm-btn--secondary hm-btn--block">
-                            🖨 Print Order Sheet
+                            Print Order Sheet
                         </a>
                     </div>
                     <?php endif; ?>

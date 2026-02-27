@@ -59,7 +59,7 @@ class HearMed_Accounting {
             <div class="hm-page-header__actions">
                 <a href="<?php echo esc_url($base.'?hm_action=supplier-new'); ?>" class="hm-btn hm-btn--secondary">+ Supplier Invoice</a>
                 <a href="<?php echo esc_url($base.'?hm_action=qbo'); ?>" class="hm-btn <?php echo $qbo['connected'] ? 'hm-btn--ghost' : 'hm-btn--primary'; ?>">
-                    <?php echo $qbo['connected'] ? '✓ QuickBooks Connected' : '⚡ Connect QuickBooks'; ?>
+                    <?php echo $qbo['connected'] ? '✓ QuickBooks Connected' : 'Connect QuickBooks'; ?>
                 </a>
             </div>
         </div>
@@ -71,7 +71,7 @@ class HearMed_Accounting {
         <div class="hm-notice hm-notice--warning" style="margin-bottom:1.5rem;">⚠ <?php echo $qf; ?> QuickBooks sync failure(s) this week. <a href="<?php echo esc_url($base.'?hm_action=qbo'); ?>">View and retry →</a></div>
         <?php endif; ?>
         <?php if ($qp > 0) : ?>
-        <div class="hm-notice hm-notice--info" style="margin-bottom:1.5rem;">📋 <?php echo $qp; ?> invoice(s) queued for QuickBooks — batch runs Friday night. <a href="<?php echo esc_url($base.'?hm_action=qbo'); ?>">Push now →</a></div>
+        <div class="hm-notice hm-notice--info" style="margin-bottom:1.5rem;"><?php echo $qp; ?> invoice(s) queued for QuickBooks — batch runs Friday night. <a href="<?php echo esc_url($base.'?hm_action=qbo'); ?>">Push now →</a></div>
         <?php endif; ?>
 
         <div class="hm-kpi-grid">

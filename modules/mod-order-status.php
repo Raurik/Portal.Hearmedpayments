@@ -88,7 +88,7 @@ function hm_render_order_status_page() {
     .hmos-alert-red{background:#fee2e2;color:#991b1b;}
     </style>
 
-    <div id="hm-app" class="hm-calendar" data-module="admin" data-view="order-status">
+    <div class="hm-calendar" data-module="admin" data-view="order-status">
         <div class="hm-page">
             <div class="hm-page-header">
                 <h1 class="hm-page-title">Order Status</h1>
@@ -159,7 +159,7 @@ function hm_render_order_status_page() {
                 if (r.success) {
                     hmOrderStatus.renderApproved(r.data.orders);
                 } else {
-                    el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#9888;</div>Error loading data.</div>';
+                    el.innerHTML = '<div class="hm-empty">Error loading data.</div>';
                 }
             });
         },
@@ -167,7 +167,7 @@ function hm_render_order_status_page() {
         renderApproved: function(orders) {
             var el = document.getElementById('hmos-approved-content');
             if (!orders || orders.length === 0) {
-                el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#10004;</div>No orders awaiting placement.</div>';
+                el.innerHTML = '<div class="hm-empty">No orders awaiting placement.</div>';
                 return;
             }
 
@@ -192,7 +192,7 @@ function hm_render_order_status_page() {
                 html += '<td>' + (o.hearing_aid_class ? '<span class="hmos-class-badge ' + clsClass + '">' + hmOsE(clsLabel) + '</span>' : '\u2014') + '</td>';
                 html += '<td>' + hmOsE(o.approved_date) + '</td>';
                 html += '<td style="text-align:right;white-space:nowrap;">';
-                html += '<button class="hm-btn hm-btn-pdf" onclick="hmOrderStatus.downloadPDF(' + o.id + ')" title="Download order sheet">&#128196; PDF</button> ';
+                html += '<button class="hm-btn hm-btn-pdf" onclick="hmOrderStatus.downloadPDF(' + o.id + ')" title="Download order sheet">PDF</button> ';
                 html += '<button class="hm-btn hm-btn-order" onclick="hmOrderStatus.markOrdered(' + o.id + ')">Ordered &rarr;</button>';
                 html += '</td>';
                 html += '</tr>';
@@ -213,7 +213,7 @@ function hm_render_order_status_page() {
                 if (r.success) {
                     hmOrderStatus.renderOrdered(r.data.orders);
                 } else {
-                    el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#9888;</div>Error loading data.</div>';
+                    el.innerHTML = '<div class="hm-empty">Error loading data.</div>';
                 }
             });
         },
@@ -221,7 +221,7 @@ function hm_render_order_status_page() {
         renderOrdered: function(orders) {
             var el = document.getElementById('hmos-ordered-content');
             if (!orders || orders.length === 0) {
-                el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#128230;</div>No orders out for delivery.</div>';
+                el.innerHTML = '<div class="hm-empty">No orders out for delivery.</div>';
                 return;
             }
 

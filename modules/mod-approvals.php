@@ -21,7 +21,7 @@ add_shortcode( 'hearmed_approvals', 'hm_render_approvals_page' );
 function hm_render_approvals_page() {
     if ( ! is_user_logged_in() ) return '<p>Please log in.</p>';
     if ( ! hm_user_can_approve() ) {
-        return '<div id="hm-app" class="hm-admin"><p style="padding:2rem;color:var(--hm-text-muted);">You do not have permission to view this page.</p></div>';
+        return '<div class="hm-admin"><p style="padding:2rem;color:var(--hm-text-muted);">You do not have permission to view this page.</p></div>';
     }
 
     $db = HearMed_DB::instance();
@@ -59,7 +59,7 @@ function hm_render_approvals_page() {
     .hma-flag-amber{background:#fef3cd;color:#92400e;}
     </style>
 
-    <div id="hm-app" class="hm-calendar" data-module="admin" data-view="approvals">
+    <div class="hm-calendar" data-module="admin" data-view="approvals">
         <div class="hm-page">
             <div class="hm-page-header">
                 <div>
@@ -68,7 +68,6 @@ function hm_render_approvals_page() {
                 </div>
                 <?php if ($pending_count > 0): ?>
                 <div class="hm-notice hm-notice--warning" style="display:flex;align-items:center;gap:8px;">
-                    <span>&#9888;</span>
                     <span><?php echo $pending_count; ?> order<?php echo $pending_count !== 1 ? 's' : ''; ?> awaiting approval</span>
                 </div>
                 <?php endif; ?>
@@ -117,7 +116,7 @@ function hm_render_approvals_page() {
                 if (r.success) {
                     self.render(r.data);
                 } else {
-                    el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#9888;</div>Error loading data.</div>';
+                    el.innerHTML = '<div class="hm-empty">Error loading data.</div>';
                 }
             });
         },
@@ -125,7 +124,7 @@ function hm_render_approvals_page() {
         render: function(data) {
             var el = document.getElementById('hma-content');
             if (!data.orders || data.orders.length === 0) {
-                el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#10004;</div>No orders awaiting approval &mdash; all clear!</div>';
+                el.innerHTML = '<div class="hm-empty">No orders awaiting approval &mdash; all clear!</div>';
                 return;
             }
 

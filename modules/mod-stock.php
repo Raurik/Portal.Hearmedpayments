@@ -27,7 +27,7 @@ function hm_stock_render() {
                 <input type="text" id="hm-stock-search" class="hm-inp" style="width:200px;" placeholder="Search model…">
             </div>
         </div>
-        <div id="hm-stock-stats" style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;"></div>
+        <div id="hm-stock-stats" class="hm-stats"></div>
         <div id="hm-stock-table" style="margin-top:12px;">
             <div class="hm-empty"><div class="hm-empty-text">Loading stock…</div></div>
         </div>

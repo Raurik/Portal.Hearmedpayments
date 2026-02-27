@@ -117,8 +117,11 @@ function hm_render_fitting_page() {
     .hmf-summary-cell-sub{font-size:10px;color:var(--hm-text-muted);margin-top:2px;}
     </style>
 
-    <div id="hm-app" class="hm-calendar" data-module="admin" data-view="fitting">
+    <div class="hm-calendar" data-module="admin" data-view="fitting">
         <div class="hm-page">
+            <div class="hm-page-header">
+                <h1 class="hm-page-title">Awaiting Fitting</h1>
+            </div>
 
             <!-- Stats -->
             <div class="hm-stats">
@@ -254,7 +257,7 @@ function hm_render_fitting_page() {
                 <p style="font-size:14px;font-weight:600;color:#065f46;margin:0 0 6px;">Paid in Full</p>
                 <p style="font-size:12px;color:var(--hm-text-light);margin:0 0 16px;" id="hmf-receipt-summary"></p>
                 <button class="hm-btn hm-btn-receipt" onclick="hmFitting.printReceipt()" style="padding:10px 24px;font-size:13px;">
-                    &#128424; Print Receipt
+                    Print Receipt
                 </button>
             </div>
             <div class="hm-modal-ft">
@@ -373,7 +376,7 @@ function hm_render_fitting_page() {
             var orders = data.orders || [];
 
             if (!orders.length) {
-                el.innerHTML = '<div class="hm-empty"><div class="hm-empty-icon">&#128588;</div>No hearing aid orders in the pipeline — all clear!</div>';
+                el.innerHTML = '<div class="hm-empty">No hearing aid orders in the pipeline — all clear!</div>';
                 document.getElementById('hmf-totals').style.display = 'none';
                 return;
             }
@@ -415,9 +418,9 @@ function hm_render_fitting_page() {
 
                 var actions = '';
                 if (o.current_status === 'Ordered') {
-                    actions = '<button class="hm-btn hm-btn-receive" onclick="hmFitting.openSerial(' + o.id + ')">&#128230; Receive in Branch</button>';
+                    actions = '<button class="hm-btn hm-btn-receive" onclick="hmFitting.openSerial(' + o.id + ')">Receive in Branch</button>';
                 } else if (o.current_status === 'Awaiting Fitting') {
-                    actions = '<button class="hm-btn hm-btn-fitted" onclick="hmFitting.openPayment(' + o.id + ')">&#9989; Fitted</button>';
+                    actions = '<button class="hm-btn hm-btn-fitted" onclick="hmFitting.openPayment(' + o.id + ')">Fitted</button>';
                 } else {
                     actions = '<span style="color:var(--hm-text-muted);font-size:11px;">Awaiting finance</span>';
                 }

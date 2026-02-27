@@ -108,7 +108,7 @@ class HearMed_Admin_ChatLogs {
 
         ob_start();
         ?>
-        <div id="hm-app" data-view="hearmed_chat_logs">
+        <div data-view="hearmed_chat_logs">
             <div class="hm-page-header">
                 <h1 class="hm-page-title">Chat Logs</h1>
                 <p class="hm-page-subtitle">Full audit trail of all team chat messages. Access to these logs is restricted to administrators and logged for GDPR compliance.</p>
@@ -129,7 +129,7 @@ class HearMed_Admin_ChatLogs {
                                     <?php
                                     $label = $ch->channel_type === 'company'
                                         ? '# ' . ( $ch->channel_name ?: 'Company' )
-                                        : '👤 DM ' . $ch->id;
+                                        : 'DM ' . $ch->id;
                                     echo esc_html( $label );
                                     ?>
                                 </option>
@@ -196,7 +196,7 @@ class HearMed_Admin_ChatLogs {
 
                                 $ch_label = $msg->channel_type === 'company'
                                     ? '# ' . ( $msg->channel_name ?: 'Company' )
-                                    : '👤 DM';
+                                    : 'DM';
                             ?>
                                 <tr>
                                     <td class="hm-chat-log-time">

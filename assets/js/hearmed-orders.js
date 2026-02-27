@@ -716,7 +716,7 @@
                     '</div></div>' +
                     margin +
                     (o.notes ? '<div style="margin-top:12px;padding:10px 14px;background:#f8fafc;border-radius:8px;font-size:.875rem;"><strong>Notes: </strong>' + esc(o.notes) + '</div>' : '') +
-                    (o.duplicate_flag ? '<div style="margin-top:10px;padding:10px;background:#fff7ed;border:1px solid #f59e0b;border-radius:8px;font-size:.85rem;color:#92400e;">⚠️ <strong>Duplicate flag:</strong> ' + esc(o.duplicate_flag_reason) + '</div>' : '');
+                    (o.duplicate_flag ? '<div style="margin-top:10px;padding:10px;background:#fff7ed;border:1px solid #f59e0b;border-radius:8px;font-size:.85rem;color:#92400e;"><strong>Duplicate flag:</strong> ' + esc(o.duplicate_flag_reason) + '</div>' : '');
 
                 $('#hm-order-detail-title').text('Order ' + o.order_number);
                 $('#hm-order-detail-body').html(html);
@@ -985,7 +985,7 @@
                     var fd   = new Date(row.fitting_date);
                     var past = fd < today;
                     fittingCell = '<span style="color:' + (past ? '#dc2626' : '#151B33') + ';">' +
-                        fmtDate(row.fitting_date) + (past ? ' ⚠️' : '') + '</span>';
+                        fmtDate(row.fitting_date) + (past ? ' !' : '') + '</span>';
                 } else {
                     fittingCell = '<span style="color:#d97706;">Not scheduled</span>';
                 }

@@ -97,7 +97,7 @@ class HearMed_Admin_Roles {
         .hm-perm-group-label:first-child{margin-top:0;}
         @media(max-width:700px){.hm-perms-grid{grid-template-columns:1fr 1fr;}}
         </style>
-        <div id="hm-app" class="hm-calendar" data-module="admin" data-view="roles">
+        <div class="hm-calendar" data-module="admin" data-view="roles">
             <div class="hm-page">
                 <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">← Back</a>
                 <div class="hm-page-header">

@@ -70,7 +70,7 @@
 
                 $status
                     .addClass('hm-debug-ok')
-                    .text('✅ OK — ' + count + ' record(s)  [HTTP ' + httpCode + ']');
+                    .text('OK — ' + count + ' record(s)  [HTTP ' + httpCode + ']');
 
                 var preview = 'No data returned.';
                 if (Array.isArray(data) && data.length > 0) {
@@ -98,7 +98,7 @@
 
                 $status
                     .addClass('hm-debug-err')
-                    .text('❌ Failed — ' + errMsg + '  [HTTP ' + httpCode + ']');
+                    .text('Failed — ' + errMsg + '  [HTTP ' + httpCode + ']');
                 $result.text(jqXHR.responseText ? String(jqXHR.responseText).substring(0, 400) : '(empty response)').show();
             });
     }

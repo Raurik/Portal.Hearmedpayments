@@ -148,15 +148,15 @@ class HearMed_Admin_Availability {
             <!-- Summary bar -->
             <div class="hm-stats">
                 <div class="hm-stat">
-                    <span class="hm-stat-val" style="color:var(--hm-green,#22c55e);"><?php echo $available_count; ?></span>
+                    <span class="hm-stat-val green"><?php echo $available_count; ?></span>
                     <span class="hm-stat-label">Available</span>
                 </div>
                 <div class="hm-stat">
-                    <span class="hm-stat-val" style="color:var(--hm-red,#ef4444);"><?php echo $away_count; ?></span>
+                    <span class="hm-stat-val red"><?php echo $away_count; ?></span>
                     <span class="hm-stat-label">On Leave</span>
                 </div>
                 <div class="hm-stat">
-                    <span class="hm-stat-val" style="color:var(--hm-navy);"><?php echo count($rows); ?></span>
+                    <span class="hm-stat-val"><?php echo count($rows); ?></span>
                     <span class="hm-stat-label">Total Staff</span>
                 </div>
             </div>

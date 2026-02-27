@@ -17,7 +17,7 @@ function hm_repairs_render() {
         </div>
 
         <div class="hm-repairs-toolbar">
-            <div id="hm-repairs-stats" class="hm-repairs-stats-row"></div>
+            <div id="hm-repairs-stats" class="hm-stats"></div>
             <div class="hm-repairs-filters">
                 <input type="text" id="hm-repair-search" class="hm-tf-search" placeholder="Search patient or HMREP…">
                 <select id="hm-repair-filter-status" class="hm-tf-perpage">

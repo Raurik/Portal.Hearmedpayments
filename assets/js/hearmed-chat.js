@@ -115,7 +115,7 @@
                 item.className = 'hm-chat-channel-item';
                 item.dataset.channelId = ch.id;
 
-                const icon = isCompany ? '#' : isDm ? '👤' : '🔒';
+                const icon = isCompany ? '#' : isDm ? 'DM' : '🔒';
                 const preview = ch.last_message
                     ? escHtml(ch.last_message.substring(0, 40)) + (ch.last_message.length > 40 ? '…' : '')
                     : '';
@@ -303,7 +303,7 @@
 
         const deleteBtn = (msg.is_mine)
             ? `<div class="hm-chat-msg-actions">
-                   <button class="hm-chat-msg-delete-btn" data-msg-id="${msg.id}" title="Delete message">🗑</button>
+                   <button class="hm-chat-msg-delete-btn" data-msg-id="${msg.id}" title="Delete message">×</button>
                </div>`
             : '';
 
@@ -486,7 +486,7 @@
                     channelMap[ch.id] = ch;
                     const isDm      = ch.type === 'dm';
                     const isCompany = ch.type === 'company';
-                    const icon      = isCompany ? '#' : isDm ? '👤' : '🔒';
+                    const icon      = isCompany ? '#' : isDm ? 'DM' : '🔒';
                     const preview   = ch.last_message
                         ? escHtml(ch.last_message.substring(0, 40)) + (ch.last_message.length > 40 ? '…' : '')
                         : '';

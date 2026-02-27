@@ -79,7 +79,7 @@ class HearMed_Admin_Calendar_Settings {
 
         ob_start();
         ?>
-        <div id="hm-app" class="hm-calendar" data-module="calendar" data-view="settings">
+        <div class="hm-calendar" data-module="calendar" data-view="settings">
             <div class="hm-page">
                 <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">&larr; Back to Console</a>
                 <div class="hm-page-header">
