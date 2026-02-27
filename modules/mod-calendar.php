@@ -61,6 +61,7 @@ add_action( 'wp_ajax_hm_update_appointment_status', 'hm_ajax_update_appointment_
 add_action( 'wp_ajax_hm_save_exclusion',           'hm_ajax_save_exclusion' );
 add_action( 'wp_ajax_hm_delete_exclusion',         'hm_ajax_delete_exclusion' );
 add_action( 'wp_ajax_hm_get_exclusions',           'hm_ajax_get_exclusions' );
+add_action( 'wp_ajax_hm_purge_appointment',        'hm_ajax_purge_appointment' );
 
 // ================================================================
 // CALENDAR SETTINGS
@@ -922,6 +923,43 @@ function hm_ajax_delete_appointment() {
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
     }
 }
+
+// ================================================================
+// PURGE APPOINTMENT — permanent delete, no audit trail
+// Admin / C-Level / Finance only
+// ================================================================
+function hm_ajax_purge_appointment() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+
+    // Strict role check — only admin, c-level, finance, hm_admin
+    $user  = wp_get_current_user();
+    $allowed = array_intersect( [ 'administrator', 'hm_clevel', 'hm_admin', 'hm_finance' ], (array) $user->roles );
+    if ( empty( $allowed ) ) {
+        wp_send_json_error( 'Permission denied — admin role required' );
+        return;
+    }
+
+    $id = intval( $_POST['appointment_id'] ?? 0 );
+    if ( ! $id ) {
+        wp_send_json_error( 'Missing appointment ID' );
+        return;
+    }
+
+    try {
+        // Delete related outcome records first
+        HearMed_DB::get_results(
+            "DELETE FROM hearmed_core.appointment_outcomes WHERE appointment_id = $1",
+            [ $id ]
+        );
+        // Delete the appointment — no log, no record
+        HearMed_DB::delete( HearMed_Portal::table( 'appointments' ), [ 'id' => $id ] );
+        wp_send_json_success();
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] purge_appointment error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
 // ================================================================
 // HOLIDAYS — GET, SAVE, DELETE
 // ================================================================

@@ -41,6 +41,7 @@ var IC={
     note:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>',
     pound:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20H6c0-4 2-8 2-12a4 4 0 0 1 8 0"/><path d="M6 14h8"/></svg>',
     edit:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+    trash:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
 };
 
 // Status pill colours — defaults, overridden by calendar settings
@@ -255,6 +256,11 @@ var Cal={
             // Edit Appointment
             m+='<div class="hm-ctx-sep"></div>';
             m+='<div class="hm-ctx-item hm-ctx-edit">'+IC.edit+' Edit Appointment</div>';
+            // Delete Appointment — admin / c-level / finance only
+            if(HM.is_admin){
+                m+='<div class="hm-ctx-sep"></div>';
+                m+='<div class="hm-ctx-item hm-ctx-delete" style="color:#dc2626">'+IC.trash+' Delete Appointment</div>';
+            }
             m+='</div>';
             $('body').append(m);
         });
@@ -294,6 +300,17 @@ var Cal={
         $(document).on('click','.hm-ctx-edit',function(e){
             e.stopPropagation();$('.hm-ctx-menu').remove();
             Cal.editPop();
+        });
+
+        // Context menu → delete (admin only, permanent)
+        $(document).on('click','.hm-ctx-delete',function(e){
+            e.stopPropagation();$('.hm-ctx-menu').remove();
+            var a=Cal._popAppt;if(!a)return;
+            if(!confirm('Permanently delete this appointment for '+a.patient_name+'?\n\nThis action cannot be undone — no record will remain.'))return;
+            post('purge_appointment',{appointment_id:a._ID}).then(function(r){
+                if(r.success){Cal.toast('Appointment permanently deleted');Cal.refresh();}
+                else{alert(r.data&&r.data.message?r.data.message:'Delete failed.');}
+            }).fail(function(){alert('Network error.');});
         });
 
         // Slot double-click
