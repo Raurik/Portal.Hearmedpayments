@@ -1217,7 +1217,7 @@ function hm_ajax_get_exclusion_types() {
         $check = HearMed_DB::get_var( "SELECT to_regclass('hearmed_reference.exclusion_types')" );
         if ( $check === null ) { wp_send_json_success( [] ); return; }
         $rows = HearMed_DB::get_results(
-            "SELECT id, type_name, color, description
+            "SELECT id, type_name, color, text_color, description
              FROM hearmed_reference.exclusion_types
              WHERE is_active = true
              ORDER BY sort_order, type_name"
@@ -1589,7 +1589,7 @@ function hm_ajax_get_exclusions() {
 
         // Fetch non-repeating exclusions that overlap the date range
         $rows = HearMed_DB::get_results( HearMed_DB::prepare(
-            "SELECT ei.id, ei.exclusion_type_id, et.type_name, et.color,
+            "SELECT ei.id, ei.exclusion_type_id, et.type_name, et.color, et.text_color,
                     ei.staff_id, ei.scope, ei.start_date, ei.end_date,
                     ei.start_time, ei.end_time, ei.reason, ei.repeat_type, ei.repeat_days, ei.repeat_until
              FROM {$t} ei

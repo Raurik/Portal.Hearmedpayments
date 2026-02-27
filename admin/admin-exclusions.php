@@ -53,11 +53,12 @@ class HearMed_Admin_Exclusions {
                     $row = json_encode((array) $e, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
                     $color = $e->color ?: '#6b7280';
                 ?>
+                <?php $textColor = !empty($e->text_color) ? $e->text_color : $color; ?>
                 <div class="hm-settings-panel" style="border-left:4px solid <?php echo esc_attr($color); ?>;padding:16px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                         <div style="display:flex;align-items:center;gap:8px;">
                             <span style="width:16px;height:16px;border-radius:4px;background:<?php echo esc_attr($color); ?>;display:inline-block;"></span>
-                            <strong style="font-size:15px;"><?php echo esc_html($e->type_name); ?></strong>
+                            <strong style="font-size:15px;color:<?php echo esc_attr($textColor); ?>"><?php echo esc_html($e->type_name); ?></strong>
                         </div>
                         <?php echo $e->is_active ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Inactive</span>'; ?>
                     </div>
@@ -88,6 +89,10 @@ class HearMed_Admin_Exclusions {
                             <div class="hm-form-group" style="flex:1">
                                 <label>Colour *</label>
                                 <input type="color" id="hme-color" value="#6b7280" class="hm-color-box" style="width:100%;height:38px;">
+                            </div>
+                            <div class="hm-form-group" style="flex:1">
+                                <label>Text Colour</label>
+                                <input type="color" id="hme-textcolor" value="#ffffff" class="hm-color-box" style="width:100%;height:38px;">
                             </div>
                         </div>
                         <div class="hm-form-group">
@@ -124,6 +129,7 @@ class HearMed_Admin_Exclusions {
                 document.getElementById('hme-id').value    = isEdit ? data.id : '';
                 document.getElementById('hme-name').value  = isEdit ? (data.type_name || '') : '';
                 document.getElementById('hme-color').value = isEdit ? (data.color || '#6b7280') : '#6b7280';
+                document.getElementById('hme-textcolor').value = isEdit ? (data.text_color || '#ffffff') : '#ffffff';
                 document.getElementById('hme-desc').value  = isEdit ? (data.description || '') : '';
                 document.getElementById('hme-sort').value  = isEdit ? (data.sort_order || 0) : 0;
                 document.getElementById('hme-active').checked = isEdit ? !!data.is_active : true;
@@ -144,6 +150,7 @@ class HearMed_Admin_Exclusions {
                     id: document.getElementById('hme-id').value,
                     type_name: name,
                     color: document.getElementById('hme-color').value,
+                    text_color: document.getElementById('hme-textcolor').value,
                     description: document.getElementById('hme-desc').value,
                     sort_order: document.getElementById('hme-sort').value,
                     is_active: document.getElementById('hme-active').checked ? 1 : 0
@@ -176,6 +183,7 @@ class HearMed_Admin_Exclusions {
         $data = [
             'type_name'   => $name,
             'color'       => sanitize_hex_color($_POST['color'] ?? '#6b7280') ?: '#6b7280',
+            'text_color'  => sanitize_hex_color($_POST['text_color'] ?? '') ?: null,
             'description' => sanitize_text_field($_POST['description'] ?? ''),
             'sort_order'  => intval($_POST['sort_order'] ?? 0),
             'is_active'   => intval($_POST['is_active'] ?? 1),

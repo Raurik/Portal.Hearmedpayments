@@ -789,6 +789,7 @@ var Cal={
         var self=this;
         this.exclusions.forEach(function(ex){
             var col=ex.color||'#6b7280';
+            var textCol=ex.text_color||col;
             var exDate=ex.start_date;
 
             // Find which day index this exclusion falls on
@@ -825,6 +826,7 @@ var Cal={
                         '<span class="hm-excl-label">'+esc(ex.type_name||'Exclusion')+'</span>'+
                     '</div>');
                     block[0].style.setProperty('--excl-color',col);
+                    block[0].style.setProperty('--excl-text-color',textCol);
                     block[0].style.setProperty('--excl-r',r);
                     block[0].style.setProperty('--excl-g',g);
                     block[0].style.setProperty('--excl-b',b);
@@ -851,6 +853,7 @@ var Cal={
                         '<span class="hm-excl-label">'+esc(ex.type_name||'Exclusion')+'</span>'+
                     '</div>');
                     block[0].style.setProperty('--excl-color',col);
+                    block[0].style.setProperty('--excl-text-color',textCol);
                     block[0].style.setProperty('--excl-r',r);
                     block[0].style.setProperty('--excl-g',g);
                     block[0].style.setProperty('--excl-b',b);
