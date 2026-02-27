@@ -188,6 +188,7 @@ class HearMed_Enqueue {
                 (array) $user->roles 
             )),
             'logout_url' => wp_logout_url( home_url() ),
+            'home_url'   => home_url(),
             'plugin_url' => HEARMED_URL,
             'settings'   => $settings,
         ]);

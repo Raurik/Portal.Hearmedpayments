@@ -406,7 +406,7 @@ class HearMed_Admin_Document_Templates {
                 });
             },
             configure: function(id) {
-                window.location.href = HM.home_url + '/document-template-editor/?doc_type_id=' + id;
+                window.location.href = '<?php echo esc_url( home_url( "/document-template-editor/" ) ); ?>?doc_type_id=' + id;
             }
         };
         </script>
