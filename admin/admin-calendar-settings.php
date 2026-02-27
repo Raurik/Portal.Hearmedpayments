@@ -1,8 +1,8 @@
 <?php
 /**
- * Calendar Settings v3.1 — 8-card layout rendered server-side.
+ * Calendar Settings v3.1 — 8-card layout using hearmed-core.css design system.
  * JS save / live-preview handled by hearmed-calendar-settings.js
- * Styles in assets/css/calendar-settings.css
+ * Styles in assets/css/calendar-settings.css (minimal — only what core doesn't provide)
  */
 if (!defined('ABSPATH')) exit;
 
@@ -26,18 +26,20 @@ class HearMed_Admin_Calendar_Settings {
             $saved['time_interval'] = $saved['time_interval_minutes'];
         }
 
+        // Text field helper
         $s = function($key, $default) use ($saved) {
             if (!isset($saved[$key]) || $saved[$key] === '' || $saved[$key] === null) return $default;
             return $saved[$key];
         };
 
+        // Boolean field helper (handles PostgreSQL t/f)
         $cb = function($key, $default = false) use ($saved) {
             if (!isset($saved[$key])) return $default;
             $v = $saved[$key];
             return ($v === true || $v === 't' || $v === '1' || $v === 'on' || $v === 'true' || $v === 1);
         };
 
-        // Load dispensers for the Calendar Order card
+        // Load dispensers for Calendar Order card
         $dispensers = [];
         try {
             $rows = HearMed_DB::get_results(
@@ -62,64 +64,84 @@ class HearMed_Admin_Calendar_Settings {
         ?>
         <div id="hm-app" class="hm-calendar" data-module="calendar" data-view="settings">
             <div class="hm-page">
-                <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">&larr; Back</a>
+                <a href="<?php echo esc_url(home_url("/admin-console/")); ?>" class="hm-back">&larr; Back to Console</a>
                 <div class="hm-page-header">
-                    <h1 class="hm-page-title">Calendar Settings</h1>
-                    <div class="hm-page-subtitle">Adjust your scheduling, display and appearance preferences.</div>
+                    <div>
+                        <h1 class="hm-page-title">Calendar Settings</h1>
+                        <div class="hm-page-subtitle">Adjust your scheduling, display and appearance preferences.</div>
+                    </div>
                 </div>
 
                 <form id="hm-settings-form" autocomplete="off">
                 <div class="hm-settings-grid">
 
                     <!-- ═══ LEFT COLUMN ═══ -->
-                    <div class="hm-settings-left">
+                    <div class="hm-settings-col">
 
                         <!-- Card 1 — Time & View -->
                         <div class="hm-card">
-                            <div class="hm-card-hd"><span class="hm-card-hd-icon">🕐</span><h3>Time &amp; View</h3></div>
+                            <div class="hm-card-hd"><h3 class="hm-card-title">Time &amp; View</h3></div>
                             <div class="hm-card-body">
-                                <div class="hm-srow"><span class="hm-slbl">Start time</span><span class="hm-sval"><input id="hs-start" name="start_time" class="hm-inp" type="time" value="<?php echo esc_attr($s('start_time','09:00')); ?>"></span></div>
-                                <div class="hm-srow"><span class="hm-slbl">End time</span><span class="hm-sval"><input id="hs-end" name="end_time" class="hm-inp" type="time" value="<?php echo esc_attr($s('end_time','18:00')); ?>"></span></div>
+                                <div class="hm-srow"><span class="hm-slbl">Start time</span><span class="hm-sval"><input id="hs-start" name="start_time" type="time" value="<?php echo esc_attr($s('start_time','09:00')); ?>"></span></div>
+                                <div class="hm-srow"><span class="hm-slbl">End time</span><span class="hm-sval"><input id="hs-end" name="end_time" type="time" value="<?php echo esc_attr($s('end_time','18:00')); ?>"></span></div>
                                 <div class="hm-srow"><span class="hm-slbl">Time interval</span><span class="hm-sval">
-                                    <select id="hs-interval" name="time_interval" class="hm-dd"><?php foreach ([15=>'15 min',20=>'20 min',30=>'30 min',45=>'45 min',60=>'60 min'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected($s('time_interval','30'),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
+                                    <select id="hs-interval" name="time_interval"><?php foreach ([15=>'15 min',20=>'20 min',30=>'30 min',45=>'45 min',60=>'60 min'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected($s('time_interval','30'),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
                                 </span></div>
                                 <div class="hm-srow"><span class="hm-slbl">Slot height</span><span class="hm-sval">
-                                    <select id="hs-slotH" name="slot_height" class="hm-dd"><?php foreach (['compact'=>'Compact','regular'=>'Regular','large'=>'Large'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected($s('slot_height','regular'),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
+                                    <select id="hs-slotH" name="slot_height"><?php foreach (['compact'=>'Compact','regular'=>'Regular','large'=>'Large'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected($s('slot_height','regular'),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
                                 </span></div>
                                 <div class="hm-srow"><span class="hm-slbl">Default timeframe</span><span class="hm-sval">
-                                    <select id="hs-view" name="default_view" class="hm-dd"><?php foreach (['day'=>'Day','week'=>'Week'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected($s('default_view','week'),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
+                                    <select id="hs-view" name="default_view"><?php foreach (['day'=>'Day','week'=>'Week'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected($s('default_view','week'),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
                                 </span></div>
                             </div>
                         </div>
 
-                        <!-- Card 2 — Card Appearance -->
+                        <!-- Card 2 — Card Appearance + Live Preview -->
                         <div class="hm-card">
-                            <div class="hm-card-hd"><span class="hm-card-hd-icon">🎨</span><h3>Card Appearance</h3></div>
+                            <div class="hm-card-hd"><h3 class="hm-card-title">Card Appearance</h3></div>
                             <div class="hm-card-body">
                                 <div class="hm-srow"><span class="hm-slbl">Card style</span><span class="hm-sval">
-                                    <select id="hs-cardStyle" name="card_style" class="hm-dd"><?php foreach (['solid'=>'Solid','tinted'=>'Tinted','outline'=>'Outline','minimal'=>'Minimal'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected($s('card_style','tinted'),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
+                                    <select id="hs-cardStyle" name="card_style"><?php foreach (['solid'=>'Solid','tinted'=>'Tinted','outline'=>'Outline','minimal'=>'Minimal'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected($s('card_style','tinted'),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
                                 </span></div>
-                                <div class="hm-srow"><span class="hm-slbl">Colour source</span><span class="hm-sval">
-                                    <select id="hs-colorSource" name="color_source" class="hm-dd"><?php foreach (['appointment_type'=>'Appointment Type','clinic'=>'Clinic','dispenser'=>'Dispenser','global'=>'Global (single colour)'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected($s('color_source','appointment_type'),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
+                                <div class="hm-srow"><span class="hm-slbl">Banner style</span><span class="hm-sval">
+                                    <select id="hs-bannerStyle" name="banner_style"><?php foreach (['default'=>'Default','gradient'=>'Gradient','stripe'=>'Striped','none'=>'None'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected($s('banner_style','default'),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
                                 </span></div>
-                                <div class="hm-srow-help"><strong>Solid:</strong> filled colour, white text. <strong>Tinted:</strong> light colour wash + accent bar. <strong>Outline:</strong> border only. <strong>Minimal:</strong> left bar only.</div>
+                                <div class="hm-srow"><span class="hm-slbl">Banner size</span><span class="hm-sval">
+                                    <select id="hs-bannerSize" name="banner_size"><?php foreach (['small'=>'Small','default'=>'Default','large'=>'Large'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected($s('banner_size','default'),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
+                                </span></div>
+                                <div class="hm-srow-help">Colour is driven by appointment type. <strong>Solid:</strong> filled, white text. <strong>Tinted:</strong> light wash + accent bar. <strong>Outline:</strong> border only. <strong>Minimal:</strong> left bar only.</div>
+
+                                <!-- Live Preview -->
+                                <div class="hm-preview-wrap">
+                                    <div class="hm-preview-label">Live Preview</div>
+                                    <div class="hm-preview-status-bar">
+                                        <button type="button" class="hm-prev-status on" data-status="Confirmed">Confirmed</button>
+                                        <button type="button" class="hm-prev-status" data-status="Arrived">Arrived</button>
+                                        <button type="button" class="hm-prev-status" data-status="Completed">Completed</button>
+                                        <button type="button" class="hm-prev-status" data-status="Cancelled">Cancelled</button>
+                                        <button type="button" class="hm-prev-status" data-status="No Show">No Show</button>
+                                    </div>
+                                    <div class="hm-preview-card" id="hm-preview-card">
+                                        <!-- JS renders preview card here -->
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Card 3 — Rules & Safety -->
                         <div class="hm-card">
-                            <div class="hm-card-hd"><span class="hm-card-hd-icon">🛡</span><h3>Rules &amp; Safety</h3></div>
+                            <div class="hm-card-hd"><h3 class="hm-card-title">Rules &amp; Safety</h3></div>
                             <div class="hm-card-body">
-                                <div class="hm-srow"><span class="hm-slbl">Require cancellation reason</span><label class="hm-tog"><input type="checkbox" id="hs-cancelReason" name="require_cancel_reason" value="1" <?php if($cb('require_cancel_reason',true)) echo 'checked';?>><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>
-                                <div class="hm-srow"><span class="hm-slbl">Hide cancelled appointments</span><label class="hm-tog"><input type="checkbox" id="hs-hideCancelled" name="hide_cancelled" value="1" <?php if($cb('hide_cancelled',true)) echo 'checked';?>><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>
-                                <div class="hm-srow"><span class="hm-slbl">Require reschedule note</span><label class="hm-tog"><input type="checkbox" id="hs-reschedNote" name="require_reschedule_note" value="1" <?php if($cb('require_reschedule_note')) echo 'checked';?>><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>
-                                <div class="hm-srow"><span class="hm-slbl">Prevent mismatched location bookings</span><label class="hm-tog"><input type="checkbox" id="hs-locMismatch" name="prevent_location_mismatch" value="1" <?php if($cb('prevent_location_mismatch')) echo 'checked';?>><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Require cancellation reason</span><label class="hm-toggle"><input type="checkbox" name="require_cancel_reason" value="1" <?php if($cb('require_cancel_reason',true)) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Hide cancelled appointments</span><label class="hm-toggle"><input type="checkbox" name="hide_cancelled" value="1" <?php if($cb('hide_cancelled',true)) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Require reschedule note</span><label class="hm-toggle"><input type="checkbox" name="require_reschedule_note" value="1" <?php if($cb('require_reschedule_note')) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Prevent mismatched location bookings</span><label class="hm-toggle"><input type="checkbox" name="prevent_location_mismatch" value="1" <?php if($cb('prevent_location_mismatch')) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
                             </div>
                         </div>
 
                         <!-- Card 4 — Working Days -->
                         <div class="hm-card">
-                            <div class="hm-card-hd"><span class="hm-card-hd-icon">📅</span><h3>Working Days</h3></div>
+                            <div class="hm-card-hd"><h3 class="hm-card-title">Working Days</h3></div>
                             <div class="hm-card-body">
                                 <div class="hm-srow hm-srow--col"><span class="hm-slbl">Enabled days</span>
                                     <div class="hm-day-pills">
@@ -128,19 +150,19 @@ class HearMed_Admin_Calendar_Settings {
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
-                                <div class="hm-srow"><span class="hm-slbl">Apply clinic colour to working times</span><label class="hm-tog"><input type="checkbox" id="hs-clinicColour" name="apply_clinic_colour" value="1" <?php if($cb('apply_clinic_colour')) echo 'checked';?>><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Apply clinic colour to working times</span><label class="hm-toggle"><input type="checkbox" name="apply_clinic_colour" value="1" <?php if($cb('apply_clinic_colour')) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
                             </div>
                         </div>
 
                         <!-- Card 5 — Calendar Order -->
                         <div class="hm-card">
-                            <div class="hm-card-hd"><span class="hm-card-hd-icon">⠿</span><h3>Calendar Order</h3></div>
+                            <div class="hm-card-hd"><h3 class="hm-card-title">Calendar Order</h3></div>
                             <div class="hm-card-body">
                                 <div class="hm-srow-help" style="margin-bottom:10px">Drag to reorder how dispensers appear on the calendar.</div>
                                 <ul class="hm-sort-list" id="hs-sortList">
                                     <?php foreach($dispensers as $dd): ?>
                                     <li class="hm-sort-item" data-id="<?php echo $dd['id'];?>">
-                                        <span class="hm-sort-grip">⠿</span>
+                                        <span class="hm-sort-grip">&#x2801;</span>
                                         <span class="hm-sort-avatar"><?php echo esc_html($dd['initials']);?></span>
                                         <span class="hm-sort-info">
                                             <span class="hm-sort-name"><?php echo esc_html($dd['name']);?></span>
@@ -155,20 +177,21 @@ class HearMed_Admin_Calendar_Settings {
                     </div><!-- end left -->
 
                     <!-- ═══ RIGHT COLUMN ═══ -->
-                    <div class="hm-settings-right">
+                    <div class="hm-settings-col">
 
                         <!-- Card 6 — Card Content -->
                         <div class="hm-card">
-                            <div class="hm-card-hd"><span class="hm-card-hd-icon">👁</span><h3>Card Content</h3></div>
+                            <div class="hm-card-hd"><h3 class="hm-card-title">Card Content</h3></div>
                             <div class="hm-card-body">
-                                <div class="hm-srow"><span class="hm-slbl">Show appointment type</span><label class="hm-tog"><input type="checkbox" id="hs-showApptType" name="show_appointment_type" value="1" <?php if($cb('show_appointment_type',true)) echo 'checked';?>><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>
-                                <div class="hm-srow"><span class="hm-slbl">Show time on card</span><label class="hm-tog"><input type="checkbox" id="hs-showTime" name="show_time" value="1" <?php if($cb('show_time',true)) echo 'checked';?>><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>
-                                <div class="hm-srow"><span class="hm-slbl">Show clinic name</span><label class="hm-tog"><input type="checkbox" id="hs-showClinic" name="show_clinic" value="1" <?php if($cb('show_clinic')) echo 'checked';?>><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>
-                                <div class="hm-srow"><span class="hm-slbl">Show dispenser initials</span><label class="hm-tog"><input type="checkbox" id="hs-showDispIni" name="show_dispenser_initials" value="1" <?php if($cb('show_dispenser_initials',true)) echo 'checked';?>><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>
-                                <div class="hm-srow"><span class="hm-slbl">Show status badge</span><label class="hm-tog"><input type="checkbox" id="hs-showStatusBadge" name="show_status_badge" value="1" <?php if($cb('show_status_badge',true)) echo 'checked';?>><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>
-                                <div class="hm-srow"><span class="hm-slbl">Display full name (vs first name only)</span><label class="hm-tog"><input type="checkbox" id="hs-fullName" name="display_full_name" value="1" <?php if($cb('display_full_name')) echo 'checked';?>><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>
-                                <div class="hm-srow"><span class="hm-slbl">Display time inline with patient name</span><label class="hm-tog"><input type="checkbox" id="hs-timeInline" name="show_time_inline" value="1" <?php if($cb('show_time_inline')) echo 'checked';?>><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>
-                                <div class="hm-srow"><span class="hm-slbl">Hide appointment end time</span><label class="hm-tog"><input type="checkbox" id="hs-hideEnd" name="hide_end_time" value="1" <?php if($cb('hide_end_time',true)) echo 'checked';?>><span class="hm-tog-track"></span><span class="hm-tog-thumb"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Show appointment type</span><label class="hm-toggle"><input type="checkbox" name="show_appointment_type" value="1" <?php if($cb('show_appointment_type',true)) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Show time on card</span><label class="hm-toggle"><input type="checkbox" name="show_time" value="1" <?php if($cb('show_time',true)) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Show clinic name</span><label class="hm-toggle"><input type="checkbox" name="show_clinic" value="1" <?php if($cb('show_clinic')) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Show dispenser initials</span><label class="hm-toggle"><input type="checkbox" name="show_dispenser_initials" value="1" <?php if($cb('show_dispenser_initials',true)) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Show status badge</span><label class="hm-toggle"><input type="checkbox" name="show_status_badge" value="1" <?php if($cb('show_status_badge',true)) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Show badges (type, initials)</span><label class="hm-toggle"><input type="checkbox" name="show_badges" value="1" <?php if($cb('show_badges',true)) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Display full name (vs first name only)</span><label class="hm-toggle"><input type="checkbox" name="display_full_name" value="1" <?php if($cb('display_full_name')) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Display time inline with patient name</span><label class="hm-toggle"><input type="checkbox" name="show_time_inline" value="1" <?php if($cb('show_time_inline')) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
+                                <div class="hm-srow"><span class="hm-slbl">Hide appointment end time</span><label class="hm-toggle"><input type="checkbox" name="hide_end_time" value="1" <?php if($cb('hide_end_time',true)) echo 'checked';?>><span class="hm-toggle-track"></span></label></div>
                                 <div class="hm-srow hm-srow--col"><span class="hm-slbl">Outcome style</span>
                                     <div class="hm-radio-pills">
                                         <?php foreach (['default'=>'Default','small'=>'Small','tag'=>'Tag','popover'=>'Popover'] as $v=>$l): ?>
@@ -181,9 +204,9 @@ class HearMed_Admin_Calendar_Settings {
 
                         <!-- Card 7 — Card Colours -->
                         <div class="hm-card">
-                            <div class="hm-card-hd"><span class="hm-card-hd-icon">🎭</span><h3>Card Colours</h3></div>
+                            <div class="hm-card-hd"><h3 class="hm-card-title">Card Colours</h3></div>
                             <div class="hm-card-body">
-                                <div class="hm-srow-help" style="margin-bottom:10px">These apply when colour source is <strong>Global</strong>, or as fallback colours.</div>
+                                <div class="hm-srow-help" style="margin-bottom:10px">These colours are used as fallback when the appointment type has no colour assigned.</div>
                                 <?php
                                 $colors = [
                                     ['Card background',  'hs-apptBg',       'appt_bg_color',       '#0BB4C4'],
@@ -200,7 +223,7 @@ class HearMed_Admin_Calendar_Settings {
 
                         <!-- Card 8 — Calendar Theme -->
                         <div class="hm-card">
-                            <div class="hm-card-hd"><span class="hm-card-hd-icon">🖌</span><h3>Calendar Theme</h3></div>
+                            <div class="hm-card-hd"><h3 class="hm-card-title">Calendar Theme</h3></div>
                             <div class="hm-card-body">
                                 <?php
                                 $theme = [

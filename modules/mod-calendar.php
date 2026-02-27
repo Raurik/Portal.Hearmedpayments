@@ -93,17 +93,18 @@ function hm_ajax_save_settings() {
             'start_time', 'end_time', 'slot_height', 'default_view', 'default_mode',
             'outcome_style', 'enabled_days', 'calendar_order', 'appointment_statuses',
             'appt_bg_color', 'appt_font_color', 'appt_badge_color', 'appt_badge_font_color', 'appt_meta_color',
-            'card_style', 'color_source', 'indicator_color', 'today_highlight_color',
+            'card_style', 'banner_style', 'banner_size', 'indicator_color', 'today_highlight_color',
             'grid_line_color', 'cal_bg_color', 'working_days',
         ];
         
-        // Checkbox fields (need explicit false when not in POST)
+        // Checkbox fields — JS sends explicit '1' or '0'
         $checkbox_fields = [
             'show_time_inline', 'hide_end_time', 'require_cancel_reason',
             'hide_cancelled', 'require_reschedule_note', 'apply_clinic_colour', 'display_full_name',
             'prevent_location_mismatch', 'double_booking_warning', 'show_patient',
             'show_service', 'show_initials', 'show_status',
             'show_clinic', 'show_time', 'show_dispenser_initials', 'show_status_badge', 'show_appointment_type',
+            'show_badges',
         ];
         
         $data = [];
@@ -120,8 +121,12 @@ function hm_ajax_save_settings() {
         }
         
         foreach ( $checkbox_fields as $f ) {
-            $val = isset( $_POST[ $f ] ) ? $_POST[ $f ] : null;
-            $data[ $f ] = ( $val === '1' || $val === 1 || $val === 'yes' || $val === true || $val === 'true' || $val === 't' );
+            if ( isset( $_POST[ $f ] ) ) {
+                $val = $_POST[ $f ];
+                $data[ $f ] = ( $val === '1' || $val === 1 || $val === 'yes' || $val === true || $val === 'true' || $val === 't' );
+            } else {
+                $data[ $f ] = false;
+            }
         }
         
         // Check if record exists

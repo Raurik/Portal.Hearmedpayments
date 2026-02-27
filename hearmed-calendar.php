@@ -3,7 +3,7 @@
  * Plugin Name: HearMed Portal
  * Plugin URI:  https://portal.hearmedpayments.net
  * Description: HearMed patient and staff portal - PostgreSQL Migration v5.0
- * Version:     5.2.0
+ * Version:     5.3.0
  * Author:      HearMed
  * Text Domain: hearmed-portal
  * 

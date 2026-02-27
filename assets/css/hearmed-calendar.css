@@ -514,12 +514,61 @@
 /* No Show / Cancelled opacity */
 .hm-appt.noshow,
 .hm-appt.cancelled {
-  opacity: 0.5;
+  opacity: 0.55;
 }
 
 .hm-appt.noshow:hover,
 .hm-appt.cancelled:hover {
   opacity: 0.7;
+}
+
+/* ── Badges row ── */
+.hm-appt-badges {
+  display: flex;
+  gap: 3px;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+.hm-appt-badge {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 9999px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 15px;
+  white-space: nowrap;
+}
+.hm-appt-badge--ini {
+  background: rgba(0,0,0,0.12);
+  color: inherit;
+  border: none;
+  font-size: 8px;
+}
+
+/* ── Cancelled / No Show diagonal overlay ── */
+.hm-appt-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.hm-appt-overlay--cancel {
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(239,68,68,0.10),
+    rgba(239,68,68,0.10) 5px,
+    transparent 5px,
+    transparent 10px
+  );
+}
+.hm-appt-overlay--noshow {
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(245,158,11,0.08),
+    rgba(245,158,11,0.08) 5px,
+    transparent 5px,
+    transparent 10px
+  );
 }
 
 

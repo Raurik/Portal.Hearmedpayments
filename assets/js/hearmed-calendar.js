@@ -1,5 +1,5 @@
 /**
- * HearMed Calendar v3.1
+ * HearMed Calendar v3.1 — Settings v3.1 rebuild
  * ─────────────────────────────────────────────────────
  * Renders views based on #hm-app[data-view]
  *   calendar  → Cal
@@ -92,13 +92,15 @@ var Cal={
             enabledDays:(s.enabled_days||'mon,tue,wed,thu,fri').split(','),
             // Card appearance
             cardStyle:s.card_style||'solid',
-            colorSource:s.color_source||'appointment_type',
+            bannerStyle:s.banner_style||'default',
+            bannerSize:s.banner_size||'default',
             // Card content toggles
             showApptType:bv(s.show_appointment_type,true),
             showTime:bv(s.show_time,true),
             showClinic:bv(s.show_clinic,false),
             showDispIni:bv(s.show_dispenser_initials,true),
             showStatusBadge:bv(s.show_status_badge,true),
+            showBadges:bv(s.show_badges,true),
             // Card colours
             apptBg:s.appt_bg_color||'#0BB4C4',
             apptFont:s.appt_font_color||'#ffffff',
@@ -388,16 +390,12 @@ var Cal={
             var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+a.dispenser_id+'"]');
             if(!$t.length)return;
 
-            var col=a.service_colour||'#3B82F6';
-            // Color source: which colour drives the card?
-            if(cfg.colorSource==='clinic'){col=a.clinic_colour||col;}
-            else if(cfg.colorSource==='dispenser'){
-                var dd=Cal.dispensers.find(function(x){return parseInt(x.id)===parseInt(a.dispenser_id);});
-                col=(dd&&(dd.staff_color||dd.color))?(dd.staff_color||dd.color):col;
-            }else if(cfg.colorSource==='global'){col=cfg.apptBg||'#0BB4C4';}
-            // else appointment_type — already set from service_colour
+            var col=a.service_colour||cfg.apptBg||'#3B82F6';
+            // Color source: always appointment_type (locked)
 
-            var stCls=a.status==='Cancelled'?' cancelled':a.status==='No Show'?' noshow':'';
+            var isCancelled=a.status==='Cancelled';
+            var isNoShow=a.status==='No Show';
+            var stCls=isCancelled?' cancelled':isNoShow?' noshow':'';
             var tmLbl=cfg.showTimeInline?(a.start_time.substring(0,5)+' '):'';
             var hasOutcome=a.outcome_banner_colour&&a.outcome_name;
             var font=cfg.apptFont||'#fff';
@@ -407,7 +405,6 @@ var Cal={
             var bgStyle='',borderStyle='',fontColor=font;
             if(cs==='solid'){bgStyle='background:'+col;fontColor=font;}
             else if(cs==='tinted'){
-                // 12% opacity tint
                 var r=parseInt(col.slice(1,3),16),g2=parseInt(col.slice(3,5),16),b=parseInt(col.slice(5,7),16);
                 bgStyle='background:rgba('+r+','+g2+','+b+',0.12);border-left:3.5px solid '+col;
                 fontColor=col;
@@ -415,23 +412,54 @@ var Cal={
             else if(cs==='outline'){bgStyle='background:'+cfg.calBg+';border:1.5px solid '+col+';border-left:3.5px solid '+col;fontColor=col;}
             else if(cs==='minimal'){bgStyle='background:transparent;border-left:3px solid '+col;fontColor='var(--hm-text)';}
 
-            var card='<div class="hm-appt hm-appt--'+cs+stCls+'" data-id="'+a._ID+'" style="'+bgStyle+';height:'+h+'px;top:'+off+'px;color:'+fontColor+'">';
-            // Outcome banner
-            if(hasOutcome){
-                card+='<div class="hm-appt-outcome" style="background:linear-gradient(90deg,'+a.outcome_banner_colour+','+a.outcome_banner_colour+'cc)">'+esc(a.outcome_name)+'</div>';
+            // Banner style
+            var bStyle=cfg.bannerStyle||'default';
+            var bSize=cfg.bannerSize||'default';
+            var bannerHtml='';
+            if(bStyle!=='none'&&hasOutcome){
+                var bHMap={small:'14px',default:'18px',large:'24px'};
+                var bH=bHMap[bSize]||'18px';
+                var bannerBg=a.outcome_banner_colour;
+                if(bStyle==='gradient')bannerBg='linear-gradient(90deg,'+a.outcome_banner_colour+','+a.outcome_banner_colour+'88)';
+                else if(bStyle==='stripe')bannerBg='repeating-linear-gradient(135deg,'+a.outcome_banner_colour+','+a.outcome_banner_colour+' 4px,'+a.outcome_banner_colour+'cc 4px,'+a.outcome_banner_colour+'cc 8px)';
+                bannerHtml='<div class="hm-appt-outcome" style="background:'+bannerBg+';height:'+bH+';font-size:'+(bSize==='small'?'9px':'10px')+'">'+esc(a.outcome_name)+'</div>';
+            } else if(bStyle!=='none'&&!hasOutcome){
+                // No outcome — show a thin colour banner at top for non-solid styles
             }
+
+            // Cancelled / No Show opacity
+            var cardOpacity=(isCancelled||isNoShow)?';opacity:.55':'';
+
+            var card='<div class="hm-appt hm-appt--'+cs+stCls+'" data-id="'+a._ID+'" style="'+bgStyle+';height:'+h+'px;top:'+off+'px;color:'+fontColor+cardOpacity+'">';
+            card+=bannerHtml;
             card+='<div class="hm-appt-inner">';
             if(cfg.showApptType)card+='<div class="hm-appt-svc" style="color:'+(cs==='solid'?font:col)+'">'+esc(a.service_name)+'</div>';
             card+='<div class="hm-appt-pt" style="color:'+fontColor+'">'+tmLbl+esc(a.patient_name||'No patient')+'</div>';
             if(cfg.showTime&&h>36&&!cfg.hideEndTime)card+='<div class="hm-appt-tm" style="color:'+(cs==='solid'?(cfg.apptMeta||'#38bdf8'):col)+'">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>';
             else if(cfg.showTime&&h>36)card+='<div class="hm-appt-tm" style="color:'+(cs==='solid'?(cfg.apptMeta||'#38bdf8'):col)+'">'+a.start_time.substring(0,5)+'</div>';
+            // Badges row
+            if(cfg.showBadges&&h>44){
+                var badges='';
+                if(cfg.showStatusBadge){
+                    var st2=STATUS_MAP[a.status]||STATUS_MAP.Confirmed;
+                    badges+='<span class="hm-appt-badge" style="background:'+st2.bg+';color:'+st2.color+';border:1px solid '+st2.border+'">'+esc(a.status)+'</span>';
+                }
+                if(cfg.showDispIni){
+                    var dd2=Cal.dispensers.find(function(x){return parseInt(x.id)===parseInt(a.dispenser_id);});
+                    if(dd2)badges+='<span class="hm-appt-badge hm-appt-badge--ini">'+(dd2.initials||'')+'</span>';
+                }
+                if(badges)card+='<div class="hm-appt-badges">'+badges+'</div>';
+            }
             if(h>50){
                 var metaParts=[];
-                if(cfg.showApptType)metaParts.push(esc(a.service_name));
                 if(cfg.showClinic)metaParts.push(esc(a.clinic_name||''));
                 if(metaParts.length)card+='<div class="hm-appt-meta" style="color:'+(cs==='solid'?(cfg.apptMeta||'#38bdf8'):'var(--hm-text-muted)')+'">'+metaParts.join(' · ')+'</div>';
             }
-            card+='</div></div>';
+            card+='</div>';
+            // Cancelled / No Show overlay
+            if(isCancelled)card+='<div class="hm-appt-overlay hm-appt-overlay--cancel"></div>';
+            else if(isNoShow)card+='<div class="hm-appt-overlay hm-appt-overlay--noshow"></div>';
+            card+='</div>';
 
             var el=$(card);
             $t.append(el);
