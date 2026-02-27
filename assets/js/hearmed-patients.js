@@ -1102,14 +1102,20 @@ function initProfile(){
                 },function(r){
                     if(r.success){
                         toast('Transcript saved — AI extraction triggered');
-                        $('#hm-transcript-wrap').hide();
-                        checkReady();
                         loadPastTranscripts();
+                        /* Replace transcript editor with success message + review link */
+                        var successHtml='<div class="hm-card"><div class="hm-card-body" style="text-align:center;padding:24px;">'+
+                            '<div style="font-size:32px;margin-bottom:8px;">'+HM_ICONS.check+'</div>'+
+                            '<h3 style="margin:0 0 6px;color:#334155;font-size:15px;font-weight:600;">Transcript Saved</h3>'+
+                            '<p style="color:#64748b;font-size:13px;margin:0 0 14px;">AI extraction has been triggered.</p>';
                         if(r.data&&r.data.clinical_doc_id){
-                            $('#hm-transcript-wrap').after(
-                                '<div style="margin-top:10px;"><a href="'+(_hm.home_url||'')+'/clinical-review/?doc_id='+r.data.clinical_doc_id+'" class="hm-btn" style="background:#0BB4C4;color:#fff;text-decoration:none;">'+HM_ICONS.note+' Review Clinical Document</a></div>'
-                            );
+                            successHtml+='<a href="'+(_hm.home_url||'')+'/clinical-review/?doc_id='+r.data.clinical_doc_id+'" class="hm-btn hm-btn--primary" style="text-decoration:none;">'+HM_ICONS.note+' Review Clinical Document</a>';
+                        } else {
+                            successHtml+='<p style="color:#94a3b8;font-size:12px;margin:0;">The document will appear in the transcripts list once processing completes.</p>';
                         }
+                        successHtml+='</div></div>';
+                        $('#hm-transcript-wrap').html(successHtml);
+                        checkReady();
                     }else{
                         toast(r.data||'Error','error');
                         $('#ai-save-tx').prop('disabled',false).html(HM_ICONS.check+' Save &amp; Process');
