@@ -580,7 +580,20 @@
 }
 
 
-/* ── Rescheduled overlay ── */
+/* ── Faded content for cancelled / no-show / rescheduled ── */
+.hm-appt.cancelled .hm-appt-inner,
+.hm-appt.cancelled .hm-appt-outcome,
+.hm-appt.cancelled .hm-appt-kebab,
+.hm-appt.noshow .hm-appt-inner,
+.hm-appt.noshow .hm-appt-outcome,
+.hm-appt.noshow .hm-appt-kebab,
+.hm-appt.rescheduled .hm-appt-inner,
+.hm-appt.rescheduled .hm-appt-outcome,
+.hm-appt.rescheduled .hm-appt-kebab {
+  opacity: .35;
+}
+.hm-appt.cancelled,
+.hm-appt.noshow,
 .hm-appt.rescheduled {
   opacity: 1;
 }
