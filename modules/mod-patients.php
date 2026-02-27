@@ -1864,12 +1864,37 @@ function hm_ajax_transcribe_audio() {
     ] );
 }
 
+/**
+ * Ensure appointment_transcripts has the columns the code expects.
+ * The original migration used staff_id / transcript_hash / duration_secs
+ * but the INSERT code uses created_by / checksum_hash / duration_seconds.
+ * This adds the code-expected aliases so both old and new rows work.
+ */
+function hm_ensure_transcript_columns() {
+    static $done = false;
+    if ( $done ) return;
+    $done = true;
+
+    $exists = HearMed_DB::get_var( "SELECT to_regclass('hearmed_admin.appointment_transcripts')" );
+    if ( $exists === null ) return; // table doesn't exist yet
+
+    @HearMed_DB::query(
+        "ALTER TABLE hearmed_admin.appointment_transcripts
+         ADD COLUMN IF NOT EXISTS created_by       INTEGER,
+         ADD COLUMN IF NOT EXISTS checksum_hash    VARCHAR(64),
+         ADD COLUMN IF NOT EXISTS duration_seconds INTEGER DEFAULT 0"
+    );
+}
+
 function hm_ajax_save_ai_transcript() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid  = intval( $_POST['patient_id'] ?? 0 );
     $text = sanitize_textarea_field( $_POST['transcript'] ?? '' );
 
     if ( ! $pid || ! $text ) wp_send_json_error( 'Patient ID and transcript required' );
+
+    /* Auto-migrate transcript table columns (runs once per request) */
+    hm_ensure_transcript_columns();
 
     $db             = HearMed_DB::instance();
     $staff_id       = hm_patient_staff_id();
@@ -1962,12 +1987,13 @@ function hm_ajax_get_patient_transcripts() {
     $db   = HearMed_DB::instance();
     $rows = $db->get_results(
         "SELECT t.id, t.appointment_id, t.transcript_text,
-                t.duration_seconds, t.source, t.created_at,
+                COALESCE(t.duration_seconds, t.duration_secs, 0) AS duration_seconds,
+                t.source, t.created_at,
                 COALESCE(CONCAT(s.first_name, ' ', s.last_name), 'System') AS created_by_name,
                 cd.id AS clinical_doc_id, cd.status AS doc_status,
                 dt.name AS template_name
          FROM hearmed_admin.appointment_transcripts t
-         LEFT JOIN hearmed_reference.staff s ON s.id = t.created_by
+         LEFT JOIN hearmed_reference.staff s ON s.id = COALESCE(t.created_by, t.staff_id)
          LEFT JOIN hearmed_admin.appointment_clinical_docs cd ON cd.transcript_id = t.id
          LEFT JOIN hearmed_admin.document_templates dt ON dt.id = cd.template_id
          WHERE t.patient_id = \$1
@@ -2303,6 +2329,11 @@ function hm_ajax_create_exchange() {
 function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id, $transcript_text, $template_id = 0 ) {
     $db = HearMed_DB::instance();
 
+    /* Ensure clinical docs table has all required columns */
+    if ( function_exists( 'hm_clinical_docs_ensure_table' ) ) {
+        hm_clinical_docs_ensure_table();
+    }
+
     /* ── 1. Determine template ── */
     $template = null;
 
@@ -2551,7 +2582,7 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
         'template_id'      => $template->id,
         'template_version' => $template->current_version ?? 1,
         'schema_snapshot'  => wp_json_encode( $sections ),
-        'structured_json'  => wp_json_encode( $extracted ),
+        'extracted_json'   => wp_json_encode( $extracted ),
         'missing_fields'   => wp_json_encode( $missing ),
         'anonymised_text'  => $anon_text,
         'ai_model'         => $ai_model,

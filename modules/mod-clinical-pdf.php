@@ -34,25 +34,38 @@ function hm_clinical_docs_ensure_table() {
     $done = true;
 
     $exists = HearMed_DB::get_var( "SELECT to_regclass('hearmed_admin.appointment_clinical_docs')" );
-    if ( $exists !== null ) return;
-
-    HearMed_DB::query( "CREATE TABLE IF NOT EXISTS hearmed_admin.appointment_clinical_docs (
-        id               SERIAL PRIMARY KEY,
-        appointment_id   INTEGER,
-        patient_id       INTEGER NOT NULL,
-        template_id      INTEGER REFERENCES hearmed_admin.document_templates(id),
-        template_version INTEGER DEFAULT 1,
-        transcript_id    INTEGER,
-        status           VARCHAR(20) DEFAULT 'draft',
-        extracted_json   JSONB   DEFAULT '{}'::jsonb,
-        reviewed_json    JSONB   DEFAULT '{}'::jsonb,
-        pdf_path         VARCHAR(500),
-        reviewed_by      INTEGER,
-        reviewed_at      TIMESTAMP,
-        created_by       INTEGER,
-        created_at       TIMESTAMP DEFAULT NOW(),
-        updated_at       TIMESTAMP DEFAULT NOW()
-    )" );
+    if ( $exists === null ) {
+        HearMed_DB::query( "CREATE TABLE IF NOT EXISTS hearmed_admin.appointment_clinical_docs (
+            id               SERIAL PRIMARY KEY,
+            appointment_id   INTEGER,
+            patient_id       INTEGER NOT NULL,
+            template_id      INTEGER REFERENCES hearmed_admin.document_templates(id),
+            template_version INTEGER DEFAULT 1,
+            transcript_id    INTEGER,
+            status           VARCHAR(20) DEFAULT 'draft',
+            extracted_json   JSONB   DEFAULT '{}'::jsonb,
+            reviewed_json    JSONB   DEFAULT '{}'::jsonb,
+            schema_snapshot  JSONB   DEFAULT '[]'::jsonb,
+            missing_fields   JSONB   DEFAULT '[]'::jsonb,
+            anonymised_text  TEXT    DEFAULT '',
+            ai_model         VARCHAR(100) DEFAULT 'mock',
+            ai_tokens_used   INTEGER DEFAULT 0,
+            pdf_path         VARCHAR(500),
+            reviewed_by      INTEGER,
+            reviewed_at      TIMESTAMP,
+            created_by       INTEGER,
+            created_at       TIMESTAMP DEFAULT NOW(),
+            updated_at       TIMESTAMP DEFAULT NOW()
+        )" );
+    } else {
+        /* Auto-add columns that may be missing from older schema */
+        HearMed_DB::query( "ALTER TABLE hearmed_admin.appointment_clinical_docs
+            ADD COLUMN IF NOT EXISTS schema_snapshot  JSONB   DEFAULT '[]'::jsonb,
+            ADD COLUMN IF NOT EXISTS missing_fields   JSONB   DEFAULT '[]'::jsonb,
+            ADD COLUMN IF NOT EXISTS anonymised_text  TEXT    DEFAULT '',
+            ADD COLUMN IF NOT EXISTS ai_model        VARCHAR(100) DEFAULT 'mock',
+            ADD COLUMN IF NOT EXISTS ai_tokens_used  INTEGER DEFAULT 0" );
+    }
 }
 
 /* ════════════════════════════════════════════════════════════════════════

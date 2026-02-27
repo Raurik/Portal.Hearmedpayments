@@ -172,8 +172,49 @@ class HearMed_Core {
      * System ready callback
      */
     public function system_ready() {
+        // Ensure required portal pages exist
+        $this->ensure_portal_pages();
+
         // Hook for when system is fully initialized
         do_action( 'hearmed_system_ready' );
+    }
+
+    /**
+     * Auto-create required WordPress pages if they don't exist.
+     * Each page maps a slug → shortcode for portal routing.
+     * Only runs the check once (flag stored in settings).
+     */
+    public function ensure_portal_pages() {
+        $version = 'v2'; // bump to re-check when new pages are added
+        if ( HearMed_Settings::get( 'hm_pages_ensured_' . $version, '' ) ) {
+            return;
+        }
+
+        $pages = [
+            'clinical-review' => [
+                'title'     => 'Clinical Review',
+                'shortcode' => '[hearmed_clinical_review]',
+            ],
+        ];
+
+        foreach ( $pages as $slug => $info ) {
+            $existing = get_page_by_path( $slug );
+            if ( $existing ) continue;
+
+            wp_insert_post( [
+                'post_title'   => $info['title'],
+                'post_name'    => $slug,
+                'post_content' => $info['shortcode'],
+                'post_status'  => 'publish',
+                'post_type'    => 'page',
+                'meta_input'   => [
+                    '_wp_page_template'       => 'elementor_canvas',
+                    '_elementor_page_settings' => [ 'template' => 'elementor_canvas' ],
+                ],
+            ] );
+        }
+
+        HearMed_Settings::set( 'hm_pages_ensured_' . $version, '1' );
     }
 
     /**

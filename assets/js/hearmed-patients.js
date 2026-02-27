@@ -1107,7 +1107,7 @@ function initProfile(){
                         loadPastTranscripts();
                         if(r.data&&r.data.clinical_doc_id){
                             $('#hm-transcript-wrap').after(
-                                '<div style="margin-top:10px;"><a href="?page=clinical-review&doc_id='+r.data.clinical_doc_id+'" class="hm-btn" style="background:#0BB4C4;color:#fff;text-decoration:none;">'+HM_ICONS.note+' Review Clinical Document</a></div>'
+                                '<div style="margin-top:10px;"><a href="'+(_hm.home_url||'')+'/clinical-review/?doc_id='+r.data.clinical_doc_id+'" class="hm-btn" style="background:#0BB4C4;color:#fff;text-decoration:none;">'+HM_ICONS.note+' Review Clinical Document</a></div>'
                             );
                         }
                     }else{
@@ -1152,7 +1152,7 @@ function initProfile(){
                             '<span style="font-size:12px;color:#94a3b8;margin-left:auto;">'+esc(tx.created_by)+' · '+dur+'</span>'+
                         '</div>'+
                         '<p style="font-size:13px;color:#64748b;margin:6px 0 0;line-height:1.5;">'+esc(preview)+'</p>'+
-                        (tx.clinical_doc_id?'<a href="?page=clinical-review&doc_id='+tx.clinical_doc_id+'" class="hm-btn hm-btn--sm hm-btn--outline" style="margin-top:8px;">'+HM_ICONS.note+' View Document</a>':'')+
+                        (tx.clinical_doc_id?'<a href="'+(_hm.home_url||'')+'/clinical-review/?doc_id='+tx.clinical_doc_id+'" class="hm-btn hm-btn--sm hm-btn--outline" style="margin-top:8px;">'+HM_ICONS.note+' View Document</a>':'')+
                     '</div>';
                 });
                 h+='</div>';
