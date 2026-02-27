@@ -530,7 +530,7 @@ var Cal={
             h+='<span class="hm-day-lbl">'+DAYS[d.getDay()]+'</span> <span class="hm-day-num">'+d.getDate()+'</span> <span class="hm-day-lbl">'+MO[d.getMonth()]+'</span>';
             h+='<div class="hm-prov-row">';
             disps.forEach(function(p){
-                var lbl=Cal.cfg.displayFull?esc(p.name):esc(p.initials);
+                var lbl=esc(p.initials);
                 var onHol=Cal.isDispOnHoliday(p.id,d);
                 var dotCls=onHol?'hm-dot hm-dot--red':'hm-dot hm-dot--green';
                 h+='<div class="hm-prov-cell"><div class="hm-prov-ini"><span class="'+dotCls+' hm-dot--sm"'+(onHol?' title="On holiday / unavailable"':' title="Available"')+'></span>'+lbl+'</div></div>';
