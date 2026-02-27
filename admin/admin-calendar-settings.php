@@ -287,48 +287,6 @@ class HearMed_Admin_Calendar_Settings {
                             </div>
                         </div>
 
-                        <!-- Card 9 — Status Badge Colours -->
-                        <div class="hm-card">
-                            <div class="hm-card-hd"><h3 class="hm-card-title">Status Badge Colours</h3></div>
-                            <div class="hm-card-body">
-                                <div class="hm-srow-help" style="margin-bottom:10px">Customise the badge colours for each appointment status.</div>
-                                <?php
-                                $badge_defaults = [
-                                    'Not Confirmed'=>['bg'=>'#fefce8','color'=>'#854d0e','border'=>'#fde68a'],
-                                    'Confirmed'   => ['bg'=>'#eff6ff','color'=>'#1e40af','border'=>'#bfdbfe'],
-                                    'Arrived'     => ['bg'=>'#ecfdf5','color'=>'#065f46','border'=>'#a7f3d0'],
-                                    'In Progress' => ['bg'=>'#fff7ed','color'=>'#9a3412','border'=>'#fed7aa'],
-                                    'Completed'   => ['bg'=>'#f9fafb','color'=>'#6b7280','border'=>'#e5e7eb'],
-                                    'No Show'     => ['bg'=>'#fef2f2','color'=>'#991b1b','border'=>'#fecaca'],
-                                    'Late'        => ['bg'=>'#fffbeb','color'=>'#92400e','border'=>'#fde68a'],
-                                    'Pending'     => ['bg'=>'#f5f3ff','color'=>'#5b21b6','border'=>'#ddd6fe'],
-                                    'Cancelled'   => ['bg'=>'#fef2f2','color'=>'#991b1b','border'=>'#fecaca'],
-                                    'Rescheduled' => ['bg'=>'#f0f9ff','color'=>'#0c4a6e','border'=>'#bae6fd'],
-                                ];
-                                $saved_badges = is_array($saved['status_badge_colours'] ?? null) ? $saved['status_badge_colours'] : $badge_defaults;
-                                foreach ($badge_defaults as $status => $defs):
-                                    $slug = strtolower(str_replace(' ', '_', $status));
-                                    $cur = $saved_badges[$status] ?? $defs;
-                                ?>
-                                <div class="hm-status-badge-row" style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #f1f5f9;">
-                                    <div style="font-size:12px;font-weight:700;color:#334155;margin-bottom:6px;"><?php echo esc_html($status); ?></div>
-                                    <div style="display:flex;gap:16px;align-items:center;">
-                                        <label style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">Bg
-                                            <input type="color" class="hm-color-inp hm-badge-inp" name="sbadge_<?php echo $slug; ?>_bg" value="<?php echo esc_attr($cur['bg'] ?? $defs['bg']); ?>" style="width:28px;height:22px;padding:0;border:1px solid #e2e8f0;border-radius:4px;">
-                                        </label>
-                                        <label style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">Text
-                                            <input type="color" class="hm-color-inp hm-badge-inp" name="sbadge_<?php echo $slug; ?>_color" value="<?php echo esc_attr($cur['color'] ?? $defs['color']); ?>" style="width:28px;height:22px;padding:0;border:1px solid #e2e8f0;border-radius:4px;">
-                                        </label>
-                                        <label style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;">Border
-                                            <input type="color" class="hm-color-inp hm-badge-inp" name="sbadge_<?php echo $slug; ?>_border" value="<?php echo esc_attr($cur['border'] ?? $defs['border']); ?>" style="width:28px;height:22px;padding:0;border:1px solid #e2e8f0;border-radius:4px;">
-                                        </label>
-                                        <span class="hm-prev-badge" style="background:<?php echo esc_attr($cur['bg'] ?? $defs['bg']); ?>;color:<?php echo esc_attr($cur['color'] ?? $defs['color']); ?>;border:1px solid <?php echo esc_attr($cur['border'] ?? $defs['border']); ?>;padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;"><?php echo esc_html($status); ?></span>
-                                    </div>
-                                </div>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-
                         <!-- Save button -->
                         <div class="hm-settings-save-wrap">
                             <button type="button" class="hm-btn hm-btn--primary" id="hm-settings-save">Save Settings</button>
@@ -337,6 +295,42 @@ class HearMed_Admin_Calendar_Settings {
                     </div><!-- end right -->
 
                 </div><!-- end grid -->
+
+                <!-- ═══ FULL-WIDTH: Status Badge Colours ═══ -->
+                <div class="hm-card" style="margin-top:20px;">
+                    <div class="hm-card-hd"><h3 class="hm-card-title">Status Badge Colours</h3></div>
+                    <div class="hm-card-body">
+                        <div class="hm-srow-help" style="margin-bottom:12px">Customise the badge colours for each appointment status.</div>
+                        <div class="hm-badge-grid">
+                            <?php
+                            $badge_defaults = [
+                                'Not Confirmed'=>['bg'=>'#fefce8','color'=>'#854d0e','border'=>'#fde68a'],
+                                'Confirmed'   => ['bg'=>'#eff6ff','color'=>'#1e40af','border'=>'#bfdbfe'],
+                                'Arrived'     => ['bg'=>'#ecfdf5','color'=>'#065f46','border'=>'#a7f3d0'],
+                                'In Progress' => ['bg'=>'#fff7ed','color'=>'#9a3412','border'=>'#fed7aa'],
+                                'Completed'   => ['bg'=>'#f9fafb','color'=>'#6b7280','border'=>'#e5e7eb'],
+                                'No Show'     => ['bg'=>'#fef2f2','color'=>'#991b1b','border'=>'#fecaca'],
+                                'Late'        => ['bg'=>'#fffbeb','color'=>'#92400e','border'=>'#fde68a'],
+                                'Pending'     => ['bg'=>'#f5f3ff','color'=>'#5b21b6','border'=>'#ddd6fe'],
+                                'Cancelled'   => ['bg'=>'#fef2f2','color'=>'#991b1b','border'=>'#fecaca'],
+                                'Rescheduled' => ['bg'=>'#f0f9ff','color'=>'#0c4a6e','border'=>'#bae6fd'],
+                            ];
+                            $saved_badges = is_array($saved['status_badge_colours'] ?? null) ? $saved['status_badge_colours'] : $badge_defaults;
+                            foreach ($badge_defaults as $status => $defs):
+                                $slug = strtolower(str_replace(' ', '_', $status));
+                                $cur = $saved_badges[$status] ?? $defs;
+                            ?>
+                            <div class="hm-badge-row">
+                                <span class="hm-badge-row-label"><?php echo esc_html($status); ?></span>
+                                <label class="hm-badge-pick">Bg <input type="color" class="hm-color-inp hm-badge-inp" name="sbadge_<?php echo $slug; ?>_bg" value="<?php echo esc_attr($cur['bg'] ?? $defs['bg']); ?>"></label>
+                                <label class="hm-badge-pick">Text <input type="color" class="hm-color-inp hm-badge-inp" name="sbadge_<?php echo $slug; ?>_color" value="<?php echo esc_attr($cur['color'] ?? $defs['color']); ?>"></label>
+                                <label class="hm-badge-pick">Border <input type="color" class="hm-color-inp hm-badge-inp" name="sbadge_<?php echo $slug; ?>_border" value="<?php echo esc_attr($cur['border'] ?? $defs['border']); ?>"></label>
+                                <span class="hm-prev-badge" style="background:<?php echo esc_attr($cur['bg'] ?? $defs['bg']); ?>;color:<?php echo esc_attr($cur['color'] ?? $defs['color']); ?>;border:1px solid <?php echo esc_attr($cur['border'] ?? $defs['border']); ?>;"><?php echo esc_html($status); ?></span>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
                 </form>
             </div>
         </div>

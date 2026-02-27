@@ -61,10 +61,12 @@ class HearMed_Enqueue {
      */
     public function enqueue_foundation() {
         // Google Fonts — Cormorant Garamond (titles), Bricolage Grotesque (subtitles),
-        // Source Sans 3 (body), Plus Jakarta Sans (buttons)
+        // Source Sans 3 (body), Plus Jakarta Sans (buttons),
+        // + all card typography options: Inter, Roboto, Open Sans, Lato, Poppins,
+        //   Montserrat, Nunito, Raleway, Source Sans Pro
         wp_enqueue_style(
             'hearmed-google-fonts',
-            'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Source+Sans+3:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap',
+            'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Source+Sans+3:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;500;600;700;800&family=Lato:wght@300;400;700&family=Poppins:wght@300;400;500;600;700;800&family=Montserrat:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700;800&family=Raleway:wght@300;400;500;600;700;800&family=Source+Sans+Pro:wght@300;400;600;700&display=swap',
             [],
             null
         );

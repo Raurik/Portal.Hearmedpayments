@@ -696,7 +696,7 @@ var Cal={
                 var bannerBg=outcomeColor;
                 if(bStyle==='gradient')bannerBg='linear-gradient(90deg,'+outcomeColor+','+outcomeColor+'88)';
                 else if(bStyle==='stripe')bannerBg='repeating-linear-gradient(135deg,'+outcomeColor+','+outcomeColor+' 4px,'+outcomeColor+'cc 4px,'+outcomeColor+'cc 8px)';
-                bannerHtml='<div class="hm-appt-outcome" style="background:'+bannerBg+';height:'+bH+';font-size:'+cfg.outcomeFontSize+'px;font-weight:'+cfg.outcomeFontWeight+';font-family:'+cfg.outcomeFontFamily+',sans-serif">'+esc(a.outcome_name)+'</div>';
+                bannerHtml='<div class="hm-appt-outcome" style="background:'+bannerBg+';height:'+bH+';font-size:'+cfg.outcomeFontSize+'px;font-weight:'+cfg.outcomeFontWeight+';font-family:\''+cfg.outcomeFontFamily+'\',sans-serif">'+esc(a.outcome_name)+'</div>';
             } else if(bStyle!=='none'&&!hasOutcome){
                 // No outcome — show a thin colour banner at top for non-solid styles
             }

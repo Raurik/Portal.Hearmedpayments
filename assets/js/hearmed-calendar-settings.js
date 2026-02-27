@@ -109,7 +109,7 @@ var SettingsPage = {
         $(document).on('change', '#hs-cardFontFamily, #hs-cardFontWeight, #hs-outcomeFontFamily, #hs-outcomeFontWeight', function(){
             self.renderPreview();
         });
-        $(document).on('input', '.hm-typo-inp', function(){
+        $(document).on('input change', '.hm-typo-inp', function(){
             var id = $(this).attr('id');
             var v = $(this).val();
             if(id==='hs-cardFontSize') $('#hm-cardSize-val').text(v+'px');
