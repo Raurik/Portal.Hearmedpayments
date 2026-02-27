@@ -372,6 +372,7 @@
 
 /* ── Grid Slots ── */
 .hm-slot {
+  border-bottom: 1px dotted rgba(203, 213, 225, 0.3);
   border-right: 3px double #cbd5e1;
   position: relative;
   cursor: pointer;
