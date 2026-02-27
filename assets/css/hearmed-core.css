@@ -414,6 +414,10 @@
 #hm-app .hm-dot--blue::before   { background: #3b82f6; }
 #hm-app .hm-dot--grey::before   { background: #94a3b8; }
 
+/* Small variant for compact header cells */
+#hm-app .hm-dot--sm { gap: 3px; font-size: inherit; font-weight: inherit; color: inherit; }
+#hm-app .hm-dot--sm::before { width: 6px; height: 6px; }
+
 /* ── Modals — teal accent bar ── */
 #hm-app .hm-modal-bg {
   position: fixed;

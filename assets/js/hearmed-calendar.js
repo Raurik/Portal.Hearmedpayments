@@ -299,8 +299,39 @@ var Cal={
             this.loadClinics(),
             this.loadDispensers(),
             this.loadServices(),
-            this.loadExclusionTypes()
+            this.loadExclusionTypes(),
+            this.loadHolidays()
         ).always(function(){ self.refresh(); });
+    },
+    loadHolidays:function(){
+        return post('get_holidays').then(function(r){
+            if(r.success) Cal.holidays=r.data||[];
+        }).fail(function(){ Cal.holidays=[]; });
+    },
+    /* Check if a dispenser is on holiday/unavailable for a given date */
+    isDispOnHoliday:function(dispId,date){
+        var ds=fmt(date);
+        return this.holidays.some(function(h){
+            if(parseInt(h.dispenser_id)!==parseInt(dispId)) return false;
+            if(h.repeats&&h.repeats!=='no'){
+                /* For repeating holidays, check if the day-of-year / week / month matches */
+                var sd=new Date(h.start_date+'T00:00:00'), ed=new Date(h.end_date+'T00:00:00');
+                if(h.repeats==='yearly'){
+                    var m=date.getMonth(), d2=date.getDate();
+                    var sm=sd.getMonth(), sd2=sd.getDate(), em=ed.getMonth(), ed2=ed.getDate();
+                    return (m>sm||(m===sm&&d2>=sd2))&&(m<em||(m===em&&d2<=ed2));
+                }
+                if(h.repeats==='weekly'){
+                    var dow=date.getDay(), sdow=sd.getDay(), edow=ed.getDay();
+                    return dow>=sdow&&dow<=edow;
+                }
+                if(h.repeats==='monthly'){
+                    var dd=date.getDate();
+                    return dd>=sd.getDate()&&dd<=ed.getDate();
+                }
+            }
+            return ds>=h.start_date&&ds<=h.end_date;
+        });
     },
     loadClinics:function(){
         return post('get_clinics').then(function(r){
@@ -417,7 +448,9 @@ var Cal={
             h+='<div class="hm-prov-row">';
             disps.forEach(function(p){
                 var lbl=Cal.cfg.displayFull?esc(p.name):esc(p.initials);
-                h+='<div class="hm-prov-cell"><div class="hm-prov-ini">'+lbl+'</div></div>';
+                var onHol=Cal.isDispOnHoliday(p.id,d);
+                var dotCls=onHol?'hm-dot hm-dot--red':'hm-dot hm-dot--green';
+                h+='<div class="hm-prov-cell"><div class="hm-prov-ini"><span class="'+dotCls+' hm-dot--sm"'+(onHol?' title="On holiday / unavailable"':' title="Available"')+'></span>'+lbl+'</div></div>';
             });
             h+='</div></div>';
         });
