@@ -122,6 +122,8 @@ function hm_ajax_save_settings() {
             'border_color', 'tint_opacity',
             'card_style', 'banner_style', 'banner_size', 'indicator_color', 'today_highlight_color',
             'grid_line_color', 'cal_bg_color',
+            'card_font_family', 'card_font_size', 'card_font_weight',
+            'outcome_font_family', 'outcome_font_size', 'outcome_font_weight',
         ];
 
         // JSONB fields — must be stored as valid JSON strings, not sanitized as text

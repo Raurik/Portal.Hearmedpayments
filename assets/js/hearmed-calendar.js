@@ -125,6 +125,13 @@ var Cal={
             gridLineColor:s.grid_line_color||'#e2e8f0',
             calBg:s.cal_bg_color||'#ffffff',
             workingDays:(s.working_days||'1,2,3,4,5').split(',').map(function(x){return parseInt(x.trim());}),
+            // Card typography
+            cardFontFamily:s.card_font_family||'Plus Jakarta Sans',
+            cardFontSize:parseInt(s.card_font_size)||11,
+            cardFontWeight:parseInt(s.card_font_weight)||600,
+            outcomeFontFamily:s.outcome_font_family||'Plus Jakarta Sans',
+            outcomeFontSize:parseInt(s.outcome_font_size)||9,
+            outcomeFontWeight:parseInt(s.outcome_font_weight)||600,
         };
         // Override STATUS_MAP with saved per-status badge colours
         if(s.status_badge_colours&&typeof s.status_badge_colours==='object'){
@@ -689,7 +696,7 @@ var Cal={
                 var bannerBg=outcomeColor;
                 if(bStyle==='gradient')bannerBg='linear-gradient(90deg,'+outcomeColor+','+outcomeColor+'88)';
                 else if(bStyle==='stripe')bannerBg='repeating-linear-gradient(135deg,'+outcomeColor+','+outcomeColor+' 4px,'+outcomeColor+'cc 4px,'+outcomeColor+'cc 8px)';
-                bannerHtml='<div class="hm-appt-outcome" style="background:'+bannerBg+';height:'+bH+';font-size:'+(bSize==='small'?'9px':'10px')+'">'+esc(a.outcome_name)+'</div>';
+                bannerHtml='<div class="hm-appt-outcome" style="background:'+bannerBg+';height:'+bH+';font-size:'+cfg.outcomeFontSize+'px;font-weight:'+cfg.outcomeFontWeight+';font-family:'+cfg.outcomeFontFamily+',sans-serif">'+esc(a.outcome_name)+'</div>';
             } else if(bStyle!=='none'&&!hasOutcome){
                 // No outcome — show a thin colour banner at top for non-solid styles
             }
@@ -702,10 +709,13 @@ var Cal={
             // Kebab (3-dot) menu button
             card+='<button class="hm-appt-kebab" data-id="'+a._ID+'">'+IC.dots+'</button>';
             card+='<div class="hm-appt-inner">';
-            if(cfg.showApptType)card+='<div class="hm-appt-svc" style="color:'+(cfg.apptName||font)+'">'+esc(a.service_name)+'</div>';
-            card+='<div class="hm-appt-pt" style="color:'+fontColor+'">'+tmLbl+esc(a.patient_name||'No patient')+'</div>';
-            if(cfg.showTime&&h>36&&!cfg.hideEndTime)card+='<div class="hm-appt-tm" style="color:'+(cfg.apptTime||'#38bdf8')+'">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>';
-            else if(cfg.showTime&&h>36)card+='<div class="hm-appt-tm" style="color:'+(cfg.apptTime||'#38bdf8')+'">'+a.start_time.substring(0,5)+'</div>';
+            var cFF=cfg.cardFontFamily||'Plus Jakarta Sans';
+            var cFS=cfg.cardFontSize||11;
+            var cFW=cfg.cardFontWeight||600;
+            if(cfg.showApptType)card+='<div class="hm-appt-svc" style="color:'+(cfg.apptName||font)+';font-family:'+cFF+',sans-serif;font-size:'+(cFS-1)+'px;font-weight:'+cFW+'">'+esc(a.service_name)+'</div>';
+            card+='<div class="hm-appt-pt" style="color:'+fontColor+';font-family:'+cFF+',sans-serif;font-size:'+cFS+'px;font-weight:'+cFW+'">'+tmLbl+esc(a.patient_name||'No patient')+'</div>';
+            if(cfg.showTime&&h>36&&!cfg.hideEndTime)card+='<div class="hm-appt-tm" style="color:'+(cfg.apptTime||'#38bdf8')+';font-family:'+cFF+',sans-serif;font-size:'+(cFS-2)+'px;font-weight:'+cFW+'">'+a.start_time.substring(0,5)+' – '+(a.end_time||'').substring(0,5)+'</div>';
+            else if(cfg.showTime&&h>36)card+='<div class="hm-appt-tm" style="color:'+(cfg.apptTime||'#38bdf8')+';font-family:'+cFF+',sans-serif;font-size:'+(cFS-2)+'px;font-weight:'+cFW+'">'+a.start_time.substring(0,5)+'</div>';
             // Badges row
             if(cfg.showBadges&&h>44){
                 var badges='';

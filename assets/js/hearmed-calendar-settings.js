@@ -105,6 +105,17 @@ var SettingsPage = {
         $(document).on('input change', '.hm-color-inp', function(){
             self.renderPreview();
         });
+        // Typography selectors & range sliders
+        $(document).on('change', '#hs-cardFontFamily, #hs-cardFontWeight, #hs-outcomeFontFamily, #hs-outcomeFontWeight', function(){
+            self.renderPreview();
+        });
+        $(document).on('input', '.hm-typo-inp', function(){
+            var id = $(this).attr('id');
+            var v = $(this).val();
+            if(id==='hs-cardFontSize') $('#hm-cardSize-val').text(v+'px');
+            if(id==='hs-outcomeFontSize') $('#hm-outcomeSize-val').text(v+'px');
+            self.renderPreview();
+        });
         // Card Content toggles (Card 6)
         $(document).on('change', 'input[name="show_appointment_type"], input[name="show_time"], input[name="show_clinic"], input[name="show_dispenser_initials"], input[name="show_status_badge"], input[name="show_badges"], input[name="display_full_name"], input[name="show_time_inline"], input[name="hide_end_time"]', function(){
             self.renderPreview();
@@ -145,6 +156,14 @@ var SettingsPage = {
         var badgeFont = $('#hs-apptBadgeFont').val() || '#ffffff';
         var borderCol = $('#hs-borderColor').val() || col;
         var tintPct = parseInt($('#hs-tintOpacity').val()) || 12;
+
+        // Typography
+        var cardFF = $('#hs-cardFontFamily').val() || 'Plus Jakarta Sans';
+        var cardFS = parseInt($('#hs-cardFontSize').val()) || 11;
+        var cardFW = parseInt($('#hs-cardFontWeight').val()) || 600;
+        var outcomeFF = $('#hs-outcomeFontFamily').val() || 'Plus Jakarta Sans';
+        var outcomeFS = parseInt($('#hs-outcomeFontSize').val()) || 9;
+        var outcomeFW = parseInt($('#hs-outcomeFontWeight').val()) || 600;
 
         // Read Card Content toggles
         var showApptType = self._cb('show_appointment_type');
@@ -193,7 +212,7 @@ var SettingsPage = {
             var bannerBg = '#10b981';
             if (bs === 'gradient') bannerBg = 'linear-gradient(90deg,#10b981,#10b98188)';
             else if (bs === 'stripe') bannerBg = 'repeating-linear-gradient(135deg,#10b981,#10b981 4px,#10b981cc 4px,#10b981cc 8px)';
-            bannerH = '<div style="height:'+hPx+';background:'+bannerBg+';font-size:8px;color:#fff;font-weight:700;letter-spacing:.3px;text-transform:uppercase;line-height:'+hPx+';padding:0 6px;white-space:nowrap;overflow:hidden">Aided</div>';
+            bannerH = '<div style="height:'+hPx+';background:'+bannerBg+';font-size:'+outcomeFS+'px;color:#fff;font-weight:'+outcomeFW+';font-family:\''+outcomeFF+'\',sans-serif;letter-spacing:.3px;text-transform:uppercase;line-height:'+hPx+';padding:0 6px;white-space:nowrap;overflow:hidden">Aided</div>';
         }
 
         // Status badge — use per-status colours from inputs
@@ -212,11 +231,11 @@ var SettingsPage = {
         var h = '<div class="hm-prev-card'+overlayClass+'" style="'+bgStyle+';border-radius:6px;position:relative;overflow:hidden;height:'+cardH+'px">';
         h += bannerH;
         h += '<div style="padding:3px 6px;overflow:hidden">';
-        if (showApptType) h += '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.2px;color:'+svcColor+';line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Follow-up</div>';
-        h += '<div style="font-size:11px;font-weight:700;color:'+ptColor+';line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+timePre+ptName+'</div>';
+        if (showApptType) h += '<div style="font-size:'+(cardFS-1)+'px;font-weight:'+cardFW+';font-family:\''+cardFF+'\',sans-serif;text-transform:uppercase;letter-spacing:.2px;color:'+svcColor+';line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Follow-up</div>';
+        h += '<div style="font-size:'+cardFS+'px;font-weight:'+cardFW+';font-family:\''+cardFF+'\',sans-serif;color:'+ptColor+';line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+timePre+ptName+'</div>';
         if (showTime && cardH > 44) {
             var timeStr = hideEndTime ? '09:30' : '09:30 – 10:00';
-            h += '<div style="font-size:9px;font-weight:600;color:'+tmColor+';line-height:1.3">'+timeStr+'</div>';
+            h += '<div style="font-size:'+(cardFS-2)+'px;font-weight:'+cardFW+';font-family:\''+cardFF+'\',sans-serif;color:'+tmColor+';line-height:1.3">'+timeStr+'</div>';
         }
         // Badges row
         if (showBadges && cardH > 50) {
@@ -280,7 +299,9 @@ var SettingsPage = {
             'appt_bg_color', 'appt_font_color', 'appt_name_color', 'appt_time_color',
             'appt_badge_color', 'appt_badge_font_color', 'appt_meta_color',
             'border_color', 'tint_opacity',
-            'indicator_color', 'today_highlight_color', 'grid_line_color', 'cal_bg_color'
+            'indicator_color', 'today_highlight_color', 'grid_line_color', 'cal_bg_color',
+            'card_font_family', 'card_font_size', 'card_font_weight',
+            'outcome_font_family', 'outcome_font_size', 'outcome_font_weight'
         ];
         textFields.forEach(function(name){
             var $el = $('[name="'+name+'"]');

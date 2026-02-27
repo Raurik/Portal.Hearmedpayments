@@ -223,6 +223,32 @@ class HearMed_Admin_Calendar_Settings {
                             </div>
                         </div>
 
+                        <!-- Card — Card Typography -->
+                        <div class="hm-card">
+                            <div class="hm-card-hd"><h3 class="hm-card-title">Card Typography</h3></div>
+                            <div class="hm-card-body">
+                                <div class="hm-srow-help" style="margin-bottom:10px">Customise the font used on appointment cards and outcome banners.</div>
+
+                                <div style="font-size:12px;font-weight:700;color:#334155;margin-bottom:8px;">Card Text</div>
+                                <div class="hm-srow"><span class="hm-slbl">Font family</span><span class="hm-sval">
+                                    <select id="hs-cardFontFamily" name="card_font_family"><?php foreach (['Plus Jakarta Sans'=>'Plus Jakarta Sans','Inter'=>'Inter','Roboto'=>'Roboto','Open Sans'=>'Open Sans','Lato'=>'Lato','Poppins'=>'Poppins','Montserrat'=>'Montserrat','Nunito'=>'Nunito','Raleway'=>'Raleway','Source Sans Pro'=>'Source Sans Pro','system-ui'=>'System Default'] as $v=>$l): ?><option value="<?php echo esc_attr($v);?>" <?php selected($s('card_font_family','Plus Jakarta Sans'),$v);?>><?php echo esc_html($l);?></option><?php endforeach;?></select>
+                                </span></div>
+                                <div class="hm-srow"><span class="hm-slbl">Font size</span><span class="hm-sval"><div class="hm-range-wrap"><input type="range" class="hm-range hm-typo-inp" id="hs-cardFontSize" name="card_font_size" min="8" max="16" value="<?php echo intval($s('card_font_size','11')); ?>"><span class="hm-range-val" id="hm-cardSize-val"><?php echo intval($s('card_font_size','11')); ?>px</span></div></span></div>
+                                <div class="hm-srow"><span class="hm-slbl">Font weight</span><span class="hm-sval">
+                                    <select id="hs-cardFontWeight" name="card_font_weight"><?php foreach ([300=>'Light',400=>'Regular',500=>'Medium',600=>'Semi-bold',700=>'Bold',800=>'Extra Bold'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected(intval($s('card_font_weight','600')),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
+                                </span></div>
+
+                                <div style="font-size:12px;font-weight:700;color:#334155;margin:14px 0 8px;">Outcome Banner Text</div>
+                                <div class="hm-srow"><span class="hm-slbl">Font family</span><span class="hm-sval">
+                                    <select id="hs-outcomeFontFamily" name="outcome_font_family"><?php foreach (['Plus Jakarta Sans'=>'Plus Jakarta Sans','Inter'=>'Inter','Roboto'=>'Roboto','Open Sans'=>'Open Sans','Lato'=>'Lato','Poppins'=>'Poppins','Montserrat'=>'Montserrat','Nunito'=>'Nunito','Raleway'=>'Raleway','Source Sans Pro'=>'Source Sans Pro','system-ui'=>'System Default'] as $v=>$l): ?><option value="<?php echo esc_attr($v);?>" <?php selected($s('outcome_font_family','Plus Jakarta Sans'),$v);?>><?php echo esc_html($l);?></option><?php endforeach;?></select>
+                                </span></div>
+                                <div class="hm-srow"><span class="hm-slbl">Font size</span><span class="hm-sval"><div class="hm-range-wrap"><input type="range" class="hm-range hm-typo-inp" id="hs-outcomeFontSize" name="outcome_font_size" min="7" max="14" value="<?php echo intval($s('outcome_font_size','9')); ?>"><span class="hm-range-val" id="hm-outcomeSize-val"><?php echo intval($s('outcome_font_size','9')); ?>px</span></div></span></div>
+                                <div class="hm-srow"><span class="hm-slbl">Font weight</span><span class="hm-sval">
+                                    <select id="hs-outcomeFontWeight" name="outcome_font_weight"><?php foreach ([300=>'Light',400=>'Regular',500=>'Medium',600=>'Semi-bold',700=>'Bold',800=>'Extra Bold'] as $v=>$l): ?><option value="<?php echo $v;?>" <?php selected(intval($s('outcome_font_weight','600')),$v);?>><?php echo $l;?></option><?php endforeach;?></select>
+                                </span></div>
+                            </div>
+                        </div>
+
                         <!-- Card 7 — Card Colours -->
                         <div class="hm-card">
                             <div class="hm-card-hd"><h3 class="hm-card-title">Card Colours</h3></div>
