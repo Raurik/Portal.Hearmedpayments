@@ -691,6 +691,14 @@
 .hm-ctx-parent:hover > .hm-ctx-sub {
   display: block;
 }
+/* Flip submenu to left when menu is near right edge */
+.hm-ctx-flip .hm-ctx-sub {
+  left: auto;
+  right: 100%;
+}
+.hm-ctx-flip .hm-ctx-arrow {
+  transform: scaleX(-1);
+}
 
 /* ── Toast notification ── */
 .hm-toast {

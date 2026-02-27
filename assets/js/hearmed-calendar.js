@@ -229,7 +229,13 @@ var Cal={
             if(!a)return;
             Cal._popAppt=a;
             var rect=$btn[0].getBoundingClientRect();
-            var m='<div class="hm-ctx-menu" style="left:'+Math.min(rect.left,window.innerWidth-180)+'px;top:'+(rect.bottom+4)+'px">';
+            var menuW=190,menuH=220,subW=170;
+            var spaceRight=window.innerWidth-rect.left;
+            var spaceBelow=window.innerHeight-rect.bottom;
+            var left=spaceRight<menuW+subW?rect.right-menuW:rect.left;
+            var top=spaceBelow<menuH?rect.top-menuH:rect.bottom+4;
+            var flipSub=spaceRight<menuW+subW+10?'hm-ctx-flip':'';
+            var m='<div class="hm-ctx-menu '+flipSub+'" style="left:'+left+'px;top:'+top+'px">';
             // Status submenu
             m+='<div class="hm-ctx-parent">';
             m+='<div class="hm-ctx-item hm-ctx-has-sub">'+IC.clock+' Status <span class="hm-ctx-arrow">›</span></div>';
