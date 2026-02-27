@@ -532,8 +532,8 @@ function hm_ajax_get_patient() {
     }
 
     // Admin settings integration
-    $show_balance = get_option( 'hm_patient_show_balance', '1' );
-    $show_prsi    = get_option( 'hm_patient_show_prsi', '1' );
+    $show_balance = HearMed_Settings::get( 'hm_patient_show_balance', '1' );
+    $show_prsi    = HearMed_Settings::get( 'hm_patient_show_prsi', '1' );
     $is_admin     = hm_patient_is_admin();
 
     // Warranty status for active devices (green/yellow/red)
@@ -1156,7 +1156,7 @@ function hm_ajax_get_patient_invoices() {
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
-    $show_balance = get_option( 'hm_patient_show_balance', '1' );
+    $show_balance = HearMed_Settings::get( 'hm_patient_show_balance', '1' );
     if ( $show_balance !== '1' && ! hm_patient_is_admin() ) {
         wp_send_json_error( 'Access denied — finance info restricted' );
     }
@@ -1323,7 +1323,7 @@ function hm_ajax_create_patient_repair() {
     if ( ! $id ) wp_send_json_error( 'Failed to create repair — ' . HearMed_DB::last_error() );
 
     // Generate HMREP number — try sequence, fallback to MAX+1
-    $prefix = get_option( 'hm_repair_prefix', 'HMREP' );
+    $prefix = HearMed_Settings::get( 'hm_repair_prefix', 'HMREP' );
     $seq    = $db->get_var( "SELECT nextval('hearmed_core.repair_number_seq')" );
     if ( ! $seq ) {
         // Sequence may not exist yet — fallback
@@ -1494,7 +1494,7 @@ function hm_ajax_get_form_templates() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
 
     // Pull from admin Form Settings (set via admin console)
-    $templates = get_option( 'hm_form_templates', '' );
+    $templates = HearMed_Settings::get( 'hm_form_templates', '' );
     if ( $templates && is_string( $templates ) ) {
         $templates = json_decode( $templates, true );
     }
@@ -1780,20 +1780,16 @@ function hm_ajax_save_ai_transcript() {
 
     /* ── 2. Save to appointment_transcripts (new clinical pipeline) ── */
     $transcript_id = null;
-    $t_exists = HearMed_DB::get_var( "SELECT to_regclass('hearmed_admin.appointment_transcripts')" );
-    if ( $t_exists !== null ) {
-        $transcript_id = $db->insert( 'hearmed_admin.appointment_transcripts', [
-            'appointment_id'  => $appointment_id ?: null,
-            'patient_id'      => $pid,
-            'staff_id'        => $staff_id ?: null,
-            'transcript_text' => $text,
-            'transcript_hash' => $hash,
-            'word_count'      => $word_count,
-            'duration_secs'   => $duration_secs,
-            'source'          => 'whisper',
-            'created_at'      => current_time( 'mysql' ),
-        ]);
-    }
+    $transcript_id = $db->insert( 'hearmed_admin.appointment_transcripts', [
+        'appointment_id'  => $appointment_id ?: null,
+        'patient_id'      => $pid,
+        'created_by'      => $staff_id ?: null,
+        'transcript_text' => $text,
+        'checksum_hash'   => $hash,
+        'duration_seconds' => $duration_secs ?: null,
+        'source'          => 'whisper',
+        'created_at'      => current_time( 'mysql' ),
+    ]);
 
     hm_patient_audit( 'SAVE_AI_TRANSCRIPT', 'patient_note', $note_id, [
         'patient_id'     => $pid,
@@ -1803,13 +1799,15 @@ function hm_ajax_save_ai_transcript() {
     ]);
 
     /* ── 3. Trigger AI extraction (Job 7) ── */
+    $clinical_doc_id = null;
     if ( $transcript_id && $appointment_id ) {
-        hm_trigger_ai_extraction( $pid, $appointment_id, $transcript_id, $text );
+        $clinical_doc_id = hm_trigger_ai_extraction( $pid, $appointment_id, $transcript_id, $text );
     }
 
     wp_send_json_success( [
-        'id'            => $note_id,
-        'transcript_id' => $transcript_id,
+        'id'              => $note_id,
+        'transcript_id'   => $transcript_id,
+        'clinical_doc_id' => $clinical_doc_id,
     ] );
 }
 
@@ -2067,7 +2065,7 @@ function hm_ajax_create_exchange() {
             'updated_at'     => date( 'c' ),
         ], [ 'id' => $device_id ] );
 
-        $cn_prefix = get_option( 'hm_credit_note_prefix', 'HMCN' );
+        $cn_prefix = HearMed_Settings::get( 'hm_credit_note_prefix', 'HMCN' );
         $cn_seq    = $db->get_var( "SELECT COALESCE(MAX(id), 0) + 1 FROM hearmed_core.credit_notes" );
         $cn_number = $cn_prefix . '-' . str_pad( $cn_seq, 4, '0', STR_PAD_LEFT );
 
@@ -2130,7 +2128,7 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
     $template = null;
     if ( $appt && $appt->appointment_type_id ) {
         $apt_type = $db->get_row(
-            "SELECT name FROM hearmed_reference.appointment_types WHERE id = $1",
+            "SELECT type_name FROM hearmed_reference.appointment_types WHERE id = $1",
             [ $appt->appointment_type_id ]
         );
         if ( $apt_type ) {
@@ -2139,7 +2137,7 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
                 "SELECT * FROM hearmed_admin.document_templates 
                  WHERE LOWER(name) = LOWER($1) AND is_active = true AND ai_enabled = true
                  LIMIT 1",
-                [ $apt_type->name ]
+                [ $apt_type->type_name ]
             );
         }
     }
@@ -2156,29 +2154,42 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
     if ( ! $template ) {
         // No AI template found — skip extraction
         HearMed_Logger::log( 'ai_extraction', 'No AI template found for appointment ' . $appointment_id );
-        return;
+        return null;
     }
 
     /* ── 2. Anonymise transcript ── */
     $patient = $db->get_row(
-        "SELECT first_name, last_name, h_number FROM hearmed_core.patients WHERE id = $1",
+        "SELECT first_name, last_name, patient_number FROM hearmed_core.patients WHERE id = $1",
         [ $patient_id ]
     );
 
     $anon_text = $transcript_text;
     if ( $patient ) {
-        // Replace patient name with H-number
+        // Replace patient name with placeholder
+        $full_name = trim( ( $patient->first_name ?? '' ) . ' ' . ( $patient->last_name ?? '' ) );
+        if ( strlen( $full_name ) > 2 ) {
+            $anon_text = str_ireplace( $full_name, '[PATIENT]', $anon_text );
+        }
         $names = array_filter( [ $patient->first_name ?? '', $patient->last_name ?? '' ] );
         foreach ( $names as $name ) {
             if ( strlen( $name ) > 1 ) {
                 $anon_text = str_ireplace( $name, '[PATIENT]', $anon_text );
             }
         }
-        $full_name = trim( ( $patient->first_name ?? '' ) . ' ' . ( $patient->last_name ?? '' ) );
-        if ( strlen( $full_name ) > 2 ) {
-            $anon_text = str_ireplace( $full_name, '[PATIENT]', $anon_text );
-        }
     }
+
+    // Strip DOB patterns (DD/MM/YYYY, DD-MM-YYYY, D Month YYYY)
+    $anon_text = preg_replace( '/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/', '[DOB removed]', $anon_text );
+    $anon_text = preg_replace( '/\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b/i', '[DOB removed]', $anon_text );
+
+    // Strip Irish phone numbers (08x, 01x, landlines)
+    $anon_text = preg_replace( '/\b0[1-9]\d[\s-]?\d{3}[\s-]?\d{3,4}\b/', '[phone removed]', $anon_text );
+
+    // Strip email addresses
+    $anon_text = preg_replace( '/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', '[email removed]', $anon_text );
+
+    // Strip Irish eircodes (letter+digit+digit + space + 4 chars)
+    $anon_text = preg_replace( '/\b[A-Za-z]\d{2}\s?[A-Za-z0-9]{4}\b/', '[eircode removed]', $anon_text );
 
     /* ── 3. Build extraction schema from template sections ── */
     $sections = json_decode( $template->sections_json ?: '[]', true );
@@ -2196,6 +2207,9 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
                     $fs = [ 'type' => $f['format'] ?? 'text' ];
                     if ( ! empty( $f['ai_instruction'] ) ) {
                         $fs['instruction'] = $f['ai_instruction'];
+                    }
+                    if ( ! empty( $f['required'] ) ) {
+                        $fs['required'] = true;
                     }
                     $fields_schema[ $f['key'] ?? '' ] = $fs;
                 }
@@ -2219,47 +2233,17 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
     $user_prompt .= "TRANSCRIPT:\n" . $anon_text;
 
     /* ── 5. Call AI API or use MOCK mode ── */
-    $ai_mode = get_option( 'hm_ai_extraction_mode', 'mock' ); // 'mock' | 'openai' | 'off'
-    $extracted = [];
+    $mock_mode  = HearMed_Settings::get( 'hm_ai_mock_mode', '0' );
+    $enabled    = HearMed_Settings::get( 'hm_ai_extraction_enabled', '1' );
+    $extracted  = [];
+    $ai_model   = 'mock';
+    $ai_tokens  = 0;
 
-    if ( $ai_mode === 'off' ) {
-        // Create doc with empty extraction
-        $extracted = [];
-    } elseif ( $ai_mode === 'openai' ) {
-        $api_key = get_option( 'hm_openai_api_key', '' );
-        if ( $api_key ) {
-            $response = wp_remote_post( 'https://api.openai.com/v1/chat/completions', [
-                'headers' => [
-                    'Content-Type'  => 'application/json',
-                    'Authorization' => 'Bearer ' . $api_key,
-                ],
-                'body'    => wp_json_encode( [
-                    'model'       => get_option( 'hm_openai_model', 'gpt-4o-mini' ),
-                    'messages'    => [
-                        [ 'role' => 'system', 'content' => $system_prompt ],
-                        [ 'role' => 'user',   'content' => $user_prompt ],
-                    ],
-                    'temperature' => 0.2,
-                    'max_tokens'  => 2000,
-                ] ),
-                'timeout' => 60,
-            ] );
+    if ( $enabled !== '1' ) {
+        return null; // Extraction disabled
+    }
 
-            if ( ! is_wp_error( $response ) ) {
-                $body = json_decode( wp_remote_retrieve_body( $response ), true );
-                $content = $body['choices'][0]['message']['content'] ?? '';
-                // Strip markdown code fences if present
-                $content = preg_replace( '/^```(?:json)?\s*/m', '', $content );
-                $content = preg_replace( '/```\s*$/m', '', $content );
-                $parsed  = json_decode( trim( $content ), true );
-                if ( is_array( $parsed ) ) {
-                    $extracted = $parsed;
-                }
-            } else {
-                HearMed_Logger::log( 'ai_extraction', 'OpenAI error: ' . $response->get_error_message() );
-            }
-        }
-    } else {
+    if ( $mock_mode === '1' ) {
         /* MOCK mode — generate placeholder data from schema */
         foreach ( $schema as $sec_key => $sec_info ) {
             $extracted[ $sec_key ] = [];
@@ -2269,29 +2253,122 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
                 }
             }
         }
+        $ai_model  = 'mock';
+        $ai_tokens = 0;
+    } else {
+        /* LIVE mode — call OpenRouter */
+        $api_key = HearMed_Settings::get( 'hm_openrouter_api_key', '' );
+        $model   = HearMed_Settings::get( 'hm_openrouter_model', 'anthropic/claude-sonnet-4-20250514' );
+
+        if ( empty( $api_key ) ) {
+            HearMed_Logger::log( 'ai_extraction', 'OpenRouter API key not configured' );
+            return null;
+        }
+
+        $max_retries = intval( HearMed_Settings::get( 'hm_ai_max_retries', '2' ) );
+        $attempt     = 0;
+        $success     = false;
+
+        while ( $attempt <= $max_retries && ! $success ) {
+            $attempt++;
+            $start_time = microtime( true );
+
+            $response = wp_remote_post( 'https://openrouter.ai/api/v1/chat/completions', [
+                'headers' => [
+                    'Content-Type'  => 'application/json',
+                    'Authorization' => 'Bearer ' . $api_key,
+                    'HTTP-Referer'  => home_url(),
+                    'X-Title'       => 'HearMed Clinical Extraction',
+                ],
+                'body' => wp_json_encode( [
+                    'model'       => $model,
+                    'messages'    => [
+                        [ 'role' => 'system', 'content' => $system_prompt ],
+                        [ 'role' => 'user',   'content' => $user_prompt ],
+                    ],
+                    'temperature'    => 0.1,
+                    'max_tokens'     => 4000,
+                    'response_format' => [ 'type' => 'json_object' ],
+                ] ),
+                'timeout' => 60,
+            ] );
+
+            $duration_ms = round( ( microtime( true ) - $start_time ) * 1000 );
+
+            if ( is_wp_error( $response ) ) {
+                HearMed_Logger::log( 'ai_extraction', "OpenRouter error (attempt {$attempt}): " . $response->get_error_message() );
+                continue;
+            }
+
+            $status_code = wp_remote_retrieve_response_code( $response );
+            $body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+            if ( $status_code !== 200 ) {
+                $err_msg = $body['error']['message'] ?? "HTTP {$status_code}";
+                HearMed_Logger::log( 'ai_extraction', "OpenRouter HTTP error (attempt {$attempt}): {$err_msg}" );
+                continue;
+            }
+
+            $content = $body['choices'][0]['message']['content'] ?? '';
+            $ai_tokens = $body['usage']['total_tokens'] ?? 0;
+            $ai_model  = $model;
+
+            // Strip markdown code fences if present
+            $content = preg_replace( '/^```(?:json)?\s*/m', '', $content );
+            $content = preg_replace( '/```\s*$/m', '', $content );
+            $parsed  = json_decode( trim( $content ), true );
+
+            if ( is_array( $parsed ) ) {
+                $extracted = $parsed;
+                $success   = true;
+
+                HearMed_Logger::log( 'ai_extraction', "OpenRouter success: model={$model}, tokens={$ai_tokens}, duration={$duration_ms}ms, attempt={$attempt}" );
+            } else {
+                HearMed_Logger::log( 'ai_extraction', "OpenRouter JSON parse failed (attempt {$attempt})" );
+            }
+        }
+
+        if ( ! $success ) {
+            HearMed_Logger::log( 'ai_extraction', "AI extraction failed after {$max_retries} retries for appointment #{$appointment_id}" );
+            // Still create a draft doc with empty extraction so the review page works
+        }
     }
 
-    /* ── 6. Create clinical_docs record ── */
-    $cd_exists = HearMed_DB::get_var( "SELECT to_regclass('hearmed_admin.appointment_clinical_docs')" );
-    if ( $cd_exists === null ) return;
+    /* ── 6. Detect missing required fields ── */
+    $missing = [];
+    foreach ( $schema as $sec_key => $sec_info ) {
+        if ( ! empty( $sec_info['fields'] ) ) {
+            foreach ( $sec_info['fields'] as $fkey => $finfo ) {
+                $is_required = ! empty( $finfo['required'] );
+                $value = $extracted[ $sec_key ][ $fkey ] ?? null;
+                if ( $is_required && ( $value === null || $value === '' ) ) {
+                    $missing[] = $sec_key . '.' . $fkey;
+                }
+            }
+        }
+    }
 
+    /* ── 7. Create clinical_docs record ── */
     $doc_id = $db->insert( 'hearmed_admin.appointment_clinical_docs', [
         'appointment_id'   => $appointment_id,
         'patient_id'       => $patient_id,
+        'transcript_id'    => $transcript_id,
         'template_id'      => $template->id,
         'template_version' => $template->current_version ?? 1,
-        'transcript_id'    => $transcript_id,
-        'status'           => ! empty( $extracted ) ? 'extracted' : 'draft',
-        'extracted_json'   => wp_json_encode( $extracted ),
-        'reviewed_json'    => '{}',
-        'created_by'       => get_current_user_id() ?: null,
+        'schema_snapshot'  => wp_json_encode( $sections ),
+        'structured_json'  => wp_json_encode( $extracted ),
+        'missing_fields'   => wp_json_encode( $missing ),
+        'anonymised_text'  => $anon_text,
+        'ai_model'         => $ai_model,
+        'ai_tokens_used'   => $ai_tokens,
+        'status'           => 'draft',
         'created_at'       => current_time( 'mysql' ),
         'updated_at'       => current_time( 'mysql' ),
     ] );
 
-    if ( class_exists( 'HearMed_Logger' ) ) {
-        HearMed_Logger::log( 'ai_extraction', "Created clinical doc #{$doc_id} for appointment #{$appointment_id}, mode={$ai_mode}" );
-    }
+    HearMed_Logger::log( 'ai_extraction', "Created clinical doc #{$doc_id} for appointment #{$appointment_id}, model={$ai_model}" );
+
+    return $doc_id;
 }
 
 

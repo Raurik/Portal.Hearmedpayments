@@ -73,8 +73,8 @@ class HearMed_TeamChat {
             ? trim( $staff->first_name . ' ' . $staff->last_name )
             : $user->display_name; // fallback to WP if no staff record
 
-        $pusher_key     = get_option( 'hm_pusher_app_key', '' );
-        $pusher_cluster = get_option( 'hm_pusher_cluster', 'eu' );
+        $pusher_key     = HearMed_Settings::get( 'hm_pusher_app_key', '' );
+        $pusher_cluster = HearMed_Settings::get( 'hm_pusher_cluster', 'eu' );
 
         // Ensure the company-wide channel exists
         self::ensure_company_channel();
@@ -228,10 +228,10 @@ class HearMed_TeamChat {
      */
     private static function get_pusher_creds(): array {
         return [
-            'app_id'  => get_option( 'hm_pusher_app_id', '' ),
-            'key'     => get_option( 'hm_pusher_app_key', '' ),
-            'secret'  => get_option( 'hm_pusher_app_secret', '' ),
-            'cluster' => get_option( 'hm_pusher_cluster', 'eu' ),
+            'app_id'  => HearMed_Settings::get( 'hm_pusher_app_id', '' ),
+            'key'     => HearMed_Settings::get( 'hm_pusher_app_key', '' ),
+            'secret'  => HearMed_Settings::get( 'hm_pusher_app_secret', '' ),
+            'cluster' => HearMed_Settings::get( 'hm_pusher_cluster', 'eu' ),
         ];
     }
 

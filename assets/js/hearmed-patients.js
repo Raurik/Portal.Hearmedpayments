@@ -251,7 +251,7 @@ function showCreateModal(){
 
 /* ════ PATIENT PROFILE ════ */
 function initProfile(){
-    var $el=$('#hm-patient-profile'),pid=$el.data('patient-id'),patient=null,activeTab='overview';
+    var $el=$('#hm-patient-profile'),pid=$el.data('patient-id'),patient=null,activeTab='overview',latestApptId=0;
     var TABS=[
         {id:'overview',label:'Overview'},{id:'details',label:'Details'},{id:'appointments',label:'Appointments'},
         {id:'notes',label:'Notes'},{id:'documents',label:'Documents'},{id:'orders',label:'Orders'},
@@ -369,6 +369,7 @@ function initProfile(){
         $.post(_hm.ajax,{action:'hm_get_patient_appointments',nonce:_hm.nonce,patient_id:pid},function(r){
             var $w=$('#hm-ov-appts');if(!r.success||!r.data.length){$w.find('div').last().text('No appointments');return;}
             var today=new Date().toISOString().split('T')[0],past=r.data.filter(function(a){return a.appointment_date<=today;}),fut=r.data.filter(function(a){return a.appointment_date>today;});
+            if(past[0]&&past[0].id)latestApptId=past[0].id;
             var h='';if(past[0]){var a=past[0];h+='<div style="margin-bottom:10px;"><div style="font-size:11px;color:#94a3b8;text-transform:uppercase;">Last</div><div style="font-size:14px;font-weight:500;">'+esc(a.service_name)+'</div><div style="font-size:12px;color:#64748b;">'+fmtDate(a.appointment_date)+' · '+esc(a.clinic_name)+'</div></div>';}
             if(fut.length){var b=fut[fut.length-1];h+='<div style="padding-top:10px;border-top:1px solid #f1f5f9;"><div style="font-size:11px;color:#94a3b8;text-transform:uppercase;">Next</div><div style="font-size:14px;font-weight:500;">'+esc(b.service_name)+'</div><div style="font-size:12px;color:#64748b;">'+fmtDate(b.appointment_date)+' at '+(b.start_time||'—').substr(0,5)+'</div></div>';}
             else h+='<div style="padding-top:10px;border-top:1px solid #f1f5f9;font-size:13px;color:#94a3b8;">No upcoming appointments</div>';
@@ -942,7 +943,7 @@ function initProfile(){
         });
         $c.on('click','#hm-stop-rec',function(){if(mr&&mr.state!=='inactive')mr.stop();});
         function showTx(txt){$('#hm-rec-status').hide();$('#hm-transcript-wrap').html('<div class="hm-card"><div class="hm-card-hd">Transcript — review before saving</div><div class="hm-card-body"><textarea class="hm-textarea" id="ai-tx-text" rows="8">'+esc(txt)+'</textarea><div style="margin-top:12px;display:flex;gap:10px;"><button class="hm-btn hm-btn--primary" id="ai-save-tx">Save to Case History</button><button class="hm-btn hm-btn--secondary" id="ai-discard-tx">Discard</button></div></div></div>').show();}
-        $c.on('click','#ai-save-tx',function(){var t=$.trim($('#ai-tx-text').val());if(!t){toast('Empty','error');return;}$(this).prop('disabled',true).text('Saving…');$.post(_hm.ajax,{action:'hm_save_ai_transcript',nonce:_hm.nonce,patient_id:pid,transcript:t},function(r){if(r.success){toast('Saved');$('#hm-transcript-wrap').hide();}else toast('Error','error');});});
+        $c.on('click','#ai-save-tx',function(){var t=$.trim($('#ai-tx-text').val());if(!t){toast('Empty','error');return;}$(this).prop('disabled',true).text('Saving…');$.post(_hm.ajax,{action:'hm_save_ai_transcript',nonce:_hm.nonce,patient_id:pid,transcript:t,appointment_id:latestApptId||0},function(r){if(r.success){toast('Saved');$('#hm-transcript-wrap').hide();if(r.data&&r.data.clinical_doc_id){var $btn=$('<a href="?page=clinical-review&doc_id='+r.data.clinical_doc_id+'" class="hm-btn hm-btn--primary" style="margin-top:8px;display:inline-block;">Review Clinical Document</a>');$('#hm-transcript-wrap').after($btn);}}else toast('Error','error');});});
         $c.on('click','#ai-discard-tx',function(){$('#hm-transcript-wrap').hide();});
     }
 

@@ -22,15 +22,15 @@ class HearMed_Invoice {
     // ═══════════════════════════════════════════════════════════════════════
 
     private static function get_invoice_prefix() {
-        return get_option( 'hm_invoice_prefix', 'HMIN' );
+        return HearMed_Settings::get( 'hm_invoice_prefix', 'HMIN' );
     }
 
     private static function get_credit_note_prefix() {
-        return get_option( 'hm_credit_note_prefix', 'HMCN' );
+        return HearMed_Settings::get( 'hm_credit_note_prefix', 'HMCN' );
     }
 
     private static function get_prsi_per_ear() {
-        return floatval( get_option( 'hm_prsi_amount_per_ear', 500 ) );
+        return floatval( HearMed_Settings::get( 'hm_prsi_amount_per_ear', '500' ) );
     }
 
     /**
@@ -39,14 +39,14 @@ class HearMed_Invoice {
      */
     private static function vat_rate_for_category( $category ) {
         $map = [
-            'Hearing Aids'       => floatval( get_option( 'hm_vat_hearing_aids', 0 ) ),
-            'Accessories'        => floatval( get_option( 'hm_vat_accessories',  0 ) ),
-            'Services'           => floatval( get_option( 'hm_vat_services',    13.5 ) ),
-            'Consumables'        => floatval( get_option( 'hm_vat_consumables', 23 ) ),
-            'Bundled Items'      => floatval( get_option( 'hm_vat_bundled',     0 ) ),
-            'Other Audiological' => floatval( get_option( 'hm_vat_other_aud',  13.5 ) ),
+            'Hearing Aids'       => floatval( HearMed_Settings::get( 'hm_vat_hearing_aids', '0' ) ),
+            'Accessories'        => floatval( HearMed_Settings::get( 'hm_vat_accessories',  '0' ) ),
+            'Services'           => floatval( HearMed_Settings::get( 'hm_vat_services',    '13.5' ) ),
+            'Consumables'        => floatval( HearMed_Settings::get( 'hm_vat_consumables', '23' ) ),
+            'Bundled Items'      => floatval( HearMed_Settings::get( 'hm_vat_bundled',     '0' ) ),
+            'Other Audiological' => floatval( HearMed_Settings::get( 'hm_vat_other_aud',  '13.5' ) ),
         ];
-        return $map[ $category ] ?? floatval( get_option( 'hm_vat_consumables', 23 ) );
+        return $map[ $category ] ?? floatval( HearMed_Settings::get( 'hm_vat_consumables', '23' ) );
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -394,8 +394,8 @@ class HearMed_Invoice {
         $is_paid  = $invoice->payment_status === 'Paid';
         $prsi     = floatval( $invoice->prsi_amount );
         $vat_bd   = $invoice->vat_breakdown ?? [];
-        $company  = get_option( 'hm_report_company_name', 'HearMed Acoustic Health Care Ltd' );
-        $vat_num  = $invoice->vat_number ?? get_option( 'hm_vat_number', '' );
+        $company  = HearMed_Settings::get( 'hm_report_company_name', 'HearMed Acoustic Health Care Ltd' );
+        $vat_num  = $invoice->vat_number ?? HearMed_Settings::get( 'hm_vat_number', '' );
 
         ob_start(); ?>
 <!DOCTYPE html>

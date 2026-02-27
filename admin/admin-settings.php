@@ -70,6 +70,17 @@ class HearMed_Admin_Settings {
                 ['key' => 'hm_make_webhook_brief', 'label' => 'Make.com Webhook — Appointment Brief', 'type' => 'text', 'default' => ''],
                 ['key' => 'hm_make_webhook_flagging', 'label' => 'Make.com Webhook — Intelligent Flagging', 'type' => 'text', 'default' => ''],
                 ['key' => 'hm_ai_auto_save', 'label' => 'Auto-save Transcriptions (skip review)', 'type' => 'toggle', 'default' => '0'],
+                ['key' => 'hm_openrouter_api_key', 'label' => 'OpenRouter API Key', 'type' => 'password', 'default' => ''],
+                ['key' => 'hm_openrouter_model', 'label' => 'AI Extraction Model', 'type' => 'select', 'default' => 'anthropic/claude-sonnet-4-20250514', 'options' => [
+                    'anthropic/claude-sonnet-4-20250514' => 'Claude Sonnet 4 (Recommended)',
+                    'anthropic/claude-haiku-4-5-20251001' => 'Claude Haiku 4.5 (Faster/Cheaper)',
+                    'anthropic/claude-opus-4-5-20250929' => 'Claude Opus 4.5 (Most Capable)',
+                    'openai/gpt-4o' => 'GPT-4o (OpenAI)',
+                    'openai/gpt-4o-mini' => 'GPT-4o Mini (Cheaper)',
+                ]],
+                ['key' => 'hm_ai_extraction_enabled', 'label' => 'Auto-extract After Transcription', 'type' => 'toggle', 'default' => '1'],
+                ['key' => 'hm_ai_max_retries', 'label' => 'Max AI Retries on Failure', 'type' => 'number', 'default' => '2'],
+                ['key' => 'hm_ai_mock_mode', 'label' => 'Mock AI Mode (Testing)', 'type' => 'toggle', 'default' => '0'],
             ],
         ],
         'hearmed_pusher_settings' => [
@@ -346,7 +357,7 @@ class HearMed_Admin_Settings {
        ============================= */
     public function render_form_settings($tag, $page) {
         $v = function($key, $default = '') {
-            return get_option($key, $default);
+            return HearMed_Settings::get($key, $default);
         };
 
         $sig_method = $v('hm_signature_method', 'wacom');
@@ -477,7 +488,7 @@ class HearMed_Admin_Settings {
        ============================= */
     public function render_finance($tag, $page) {
         $v = function($key, $default = '') {
-            return get_option($key, $default);
+            return HearMed_Settings::get($key, $default);
         };
 
         ob_start(); ?>
@@ -655,7 +666,7 @@ class HearMed_Admin_Settings {
        ============================= */
     public function render_report_layout($tag, $page) {
         $v = function($key, $default = '') {
-            return get_option($key, $default);
+            return HearMed_Settings::get($key, $default);
         };
 
         $logo_url = $v('hm_report_logo_url', '');
@@ -843,7 +854,7 @@ class HearMed_Admin_Settings {
 
         foreach ($settings as $key => $val) {
             if (in_array($key, $valid_keys)) {
-                update_option($key, sanitize_text_field($val));
+                HearMed_Settings::set($key, sanitize_text_field($val));
             }
         }
 
@@ -855,7 +866,7 @@ class HearMed_Admin_Settings {
             $settings = $this->get_gdpr_settings();
             return $settings[$key] ?? $default;
         }
-        return get_option($key, $default);
+        return HearMed_Settings::get($key, $default);
     }
 
     private function get_gdpr_settings() {
@@ -967,7 +978,7 @@ class HearMed_Admin_Settings {
         }
 
         // Save the URL immediately
-        update_option('hm_report_logo_url', $movefile['url']);
+        HearMed_Settings::set('hm_report_logo_url', $movefile['url']);
         wp_send_json_success(['url' => $movefile['url']]);
     }
 }

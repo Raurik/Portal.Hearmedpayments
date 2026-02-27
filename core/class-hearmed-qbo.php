@@ -40,7 +40,7 @@ class HearMed_QBO {
 
     public static function get_auth_url() {
         $state = wp_create_nonce('qbo_oauth_state');
-        update_option('hearmed_qbo_oauth_state', $state);
+        HearMed_Settings::set('hearmed_qbo_oauth_state', $state);
         return self::AUTH_URL . '?' . http_build_query([
             'client_id'     => HEARMED_QBO_CLIENT_ID,
             'response_type' => 'code',
@@ -55,7 +55,7 @@ class HearMed_QBO {
         $code  = sanitize_text_field($_GET['code']    ?? '');
         $realm = sanitize_text_field($_GET['realmId'] ?? '');
 
-        if ( $state !== get_option('hearmed_qbo_oauth_state','') ) {
+        if ( $state !== HearMed_Settings::get('hearmed_qbo_oauth_state','') ) {
             wp_die('QuickBooks connection failed: invalid state.');
         }
         if ( ! $code || ! $realm ) {

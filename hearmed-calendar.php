@@ -61,6 +61,7 @@ function hearmed_fix_old_domain( $url ) {
 require_once HEARMED_PATH . 'core/class-hearmed-logger.php';
 require_once HEARMED_PATH . 'core/class-hearmed-pg.php';
 require_once HEARMED_PATH . 'core/class-hearmed-db.php';  // Main database abstraction
+require_once HEARMED_PATH . 'core/class-hearmed-settings.php';
 
 // Add AJAX handlers
 require_once HEARMED_PATH . 'includes/ajax-handlers.php';

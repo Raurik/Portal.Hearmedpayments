@@ -447,7 +447,7 @@ class HearMed_Admin_Document_Templates {
 
         $field_formats = [ 'text', 'textarea', 'date', 'email', 'phone', 'number', 'select', 'boolean' ];
 
-        $privacy_url       = get_option( 'hm_privacy_policy_url', '' );
+        $privacy_url       = HearMed_Settings::get( 'hm_privacy_policy_url', '' );
         $ai_system_prompt  = $doc->ai_system_prompt ?? '';
         $current_version   = (int) ( $doc->current_version ?? 1 );
 

@@ -37,12 +37,12 @@ class HearMed_Admin_Products {
     /** Build VAT options dynamically from finance settings */
     private static function get_vat_options() {
         $rates = [
-            'Hearing Aids'       => get_option('hm_vat_hearing_aids', '0'),
-            'Services'           => get_option('hm_vat_services', '13.5'),
-            'Bundled Items'      => get_option('hm_vat_bundled', '0'),
-            'Accessories'        => get_option('hm_vat_accessories', '0'),
-            'Consumables'        => get_option('hm_vat_consumables', '23'),
-            'Other Audiological' => get_option('hm_vat_other_aud', '13.5'),
+            'Hearing Aids'       => HearMed_Settings::get('hm_vat_hearing_aids', '0'),
+            'Services'           => HearMed_Settings::get('hm_vat_services', '13.5'),
+            'Bundled Items'      => HearMed_Settings::get('hm_vat_bundled', '0'),
+            'Accessories'        => HearMed_Settings::get('hm_vat_accessories', '0'),
+            'Consumables'        => HearMed_Settings::get('hm_vat_consumables', '23'),
+            'Other Audiological' => HearMed_Settings::get('hm_vat_other_aud', '13.5'),
         ];
         $options = [];
         foreach ($rates as $label => $rate) {
@@ -62,7 +62,7 @@ class HearMed_Admin_Products {
             'consumable' => ['Consumables',    'hm_vat_consumables', '23'],
         ];
         $info = $map[$item_type] ?? $map['product'];
-        $rate = get_option($info[1], $info[2]);
+        $rate = HearMed_Settings::get($info[1], $info[2]);
         $r = rtrim(rtrim(number_format((float) $rate, 2), '0'), '.');
         return $info[0] . ' (' . $r . '%)';
     }

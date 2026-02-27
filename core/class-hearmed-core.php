@@ -183,7 +183,7 @@ class HearMed_Core {
      * Runs once then sets an option flag so it never runs again.
      */
     public function repair_elementor_page_settings() {
-        if ( get_option( 'hm_elementor_meta_repaired_v1' ) ) {
+        if ( HearMed_Settings::get( 'hm_elementor_meta_repaired_v1', '' ) ) {
             return;
         }
 
@@ -210,7 +210,7 @@ class HearMed_Core {
             }
         }
 
-        update_option( 'hm_elementor_meta_repaired_v1', 1 );
+        HearMed_Settings::set( 'hm_elementor_meta_repaired_v1', '1' );
     }
     
     /**
