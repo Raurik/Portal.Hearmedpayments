@@ -406,6 +406,15 @@ function hm_ajax_get_appointments() {
     }
     $sql .= " ORDER BY a.appointment_date, a.start_time";
     $rows = HearMed_DB::get_results( $sql, $params );
+
+    if ( empty( $rows ) ) {
+        $db_err = HearMed_DB::last_error();
+        if ( $db_err ) {
+            error_log( '[HearMed] get_appointments QUERY FAILED: ' . $db_err );
+            error_log( '[HearMed] get_appointments SQL: ' . $sql );
+        }
+    }
+
     $d = [];
 
     foreach ( ($rows ?: []) as $r ) {
@@ -492,7 +501,16 @@ function hm_ajax_create_appointment() {
     ];
 
     $new_id = HearMed_DB::insert( $t, $insert_data );
-    HearMed_Portal::log( 'created', 'appointment', $new_id ?: 0, [
+
+    if ( $new_id === false ) {
+        $db_err = HearMed_DB::last_error();
+        error_log( '[HearMed] create_appointment INSERT FAILED — table: ' . $t . ' | error: ' . $db_err );
+        error_log( '[HearMed] create_appointment INSERT DATA: ' . wp_json_encode( $insert_data ) );
+        wp_send_json_error( [ 'message' => 'Database insert failed: ' . $db_err ] );
+        return;
+    }
+
+    HearMed_Portal::log( 'created', 'appointment', $new_id, [
         'patient_id' => intval( $_POST['patient_id'] ?? 0 ),
         'date'       => sanitize_text_field( $_POST['appointment_date'] ),
     ] );

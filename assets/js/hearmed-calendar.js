@@ -316,7 +316,10 @@ var Cal={
     loadAppts:function(){
         var dates=this.visDates();
         return post('get_appointments',{start:fmt(dates[0]),end:fmt(dates[dates.length-1]),clinic:0})
-            .then(function(r){if(r.success)Cal.appts=r.data;});
+            .then(function(r){
+                console.log('[HearMed] get_appointments response:', r.success, 'count:', r.data?r.data.length:0, r.data);
+                if(r.success)Cal.appts=r.data;
+            });
     },
 
     // ── Multi-select rendering ──
@@ -762,9 +765,10 @@ var Cal={
                 referring_source:$('#hmn-refsource').val(),
                 notes:$('#hmn-notes').val()
             }).then(function(r){
+                console.log('[HearMed] create_appointment response:', r);
                 if(r.success){$('.hm-modal-bg').remove();$(document).off('.newmodal .newclose .newbg .newsave');self.refresh();}
                 else{alert(r.data&&r.data.message?r.data.message:'Error creating appointment');}
-            }).fail(function(){ alert('Network error — please try again.'); });
+            }).fail(function(xhr){ console.error('[HearMed] create_appointment AJAX fail:', xhr.status, xhr.responseText); alert('Network error — please try again.'); });
         });
     },
 
