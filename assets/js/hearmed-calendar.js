@@ -669,37 +669,95 @@ var Cal={
         });
     },
 
-    /* ── Quick-Add Patient popup ── */
+    /* ── New Patient popup (full form) ── */
     openQuickPatientModal:function(onCreated){
-        var h='<div class="hm-modal-bg hm-modal-bg--top open"><div class="hm-modal hm-modal--sm">'+
-            '<div class="hm-modal-hd"><h3>Quick Add Patient</h3><button class="hm-close hm-qp-close">'+IC.x+'</button></div>'+
-            '<div class="hm-modal-body">'+
-                '<div class="hm-row"><div class="hm-fld"><label>First name *</label><input class="hm-inp" id="hmqp-fn" placeholder="First name" autofocus></div>'+
-                '<div class="hm-fld"><label>Last name *</label><input class="hm-inp" id="hmqp-ln" placeholder="Last name"></div></div>'+
-                '<div class="hm-row"><div class="hm-fld"><label>Phone</label><input class="hm-inp" id="hmqp-phone" placeholder="Phone"></div>'+
-                '<div class="hm-fld"><label>Email</label><input class="hm-inp" id="hmqp-email" placeholder="Email" type="email"></div></div>'+
+        var self=this;
+        var h='<div class="hm-modal-bg hm-modal-bg--top open"><div class="hm-modal hm-modal--md">'+
+            '<div class="hm-modal-hd"><h3>New Patient</h3><button class="hm-close hm-qp-close">'+IC.x+'</button></div>'+
+            '<div class="hm-modal-body" style="max-height:75vh;overflow-y:auto">'+
+                /* Row 1: Title, First, Last */
+                '<div class="hm-row"><div class="hm-fld" style="flex:0 0 90px"><label>Title</label>'+
+                    '<select class="hm-inp" id="hmqp-title"><option value="">—</option><option>Mr</option><option>Mrs</option><option>Ms</option><option>Miss</option><option>Dr</option><option>Other</option></select></div>'+
+                '<div class="hm-fld"><label>First name *</label><input class="hm-inp" id="hmqp-fn" autofocus></div>'+
+                '<div class="hm-fld"><label>Last name *</label><input class="hm-inp" id="hmqp-ln"></div></div>'+
+                /* Row 2: DOB, Phone, Mobile */
+                '<div class="hm-row"><div class="hm-fld"><label>Date of birth</label><input type="date" class="hm-inp" id="hmqp-dob"></div>'+
+                '<div class="hm-fld"><label>Phone</label><input class="hm-inp" id="hmqp-phone"></div>'+
+                '<div class="hm-fld"><label>Mobile</label><input class="hm-inp" id="hmqp-mobile"></div></div>'+
+                /* Email */
+                '<div class="hm-fld"><label>Email</label><input type="email" class="hm-inp" id="hmqp-email"></div>'+
+                /* Address */
+                '<div class="hm-fld"><label>Address</label><textarea class="hm-inp" id="hmqp-address" rows="2"></textarea></div>'+
+                /* Row 3: Eircode, PPS */
+                '<div class="hm-row"><div class="hm-fld"><label>Eircode</label><input class="hm-inp" id="hmqp-eircode"></div>'+
+                '<div class="hm-fld"><label>PPS number</label><input class="hm-inp" id="hmqp-pps" placeholder="e.g. 1234567AB"></div></div>'+
+                /* Row 4: Referral source, Dispenser */
+                '<div class="hm-row"><div class="hm-fld"><label>Referral source</label><select class="hm-inp" id="hmqp-ref"><option value="">— Select —</option></select></div>'+
+                '<div class="hm-fld"><label>Dispenser</label><select class="hm-inp" id="hmqp-disp"><option value="">— Select —</option></select></div></div>'+
+                /* Clinic */
+                '<div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hmqp-clinic"><option value="">— Select —</option></select></div>'+
+                /* Marketing checkboxes */
+                '<div style="display:flex;gap:20px;flex-wrap:wrap;margin:10px 0">'+
+                    '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="hmqp-memail"> Email marketing</label>'+
+                    '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="hmqp-msms"> SMS marketing</label>'+
+                    '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="hmqp-mphone"> Phone marketing</label>'+
+                '</div>'+
+                /* GDPR consent */
+                '<div style="margin-top:12px;padding:14px 16px;background:#f0fdfa;border:1px solid var(--hm-teal);border-radius:8px">'+
+                    '<p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#151B33">GDPR Consent — Required</p>'+
+                    '<label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer">'+
+                        '<input type="checkbox" id="hmqp-gdpr" style="margin-top:2px;flex-shrink:0">'+
+                        '<span>I confirm this patient has provided informed consent for HearMed to store and process their personal and health data in accordance with our Privacy Policy.</span>'+
+                    '</label>'+
+                '</div>'+
             '</div>'+
-            '<div class="hm-modal-ft"><span class="hm-qp-err" style="color:#ef4444;font-size:12px"></span><div class="hm-modal-acts"><button class="hm-btn hm-qp-close">Cancel</button><button class="hm-btn hm-btn--primary hm-qp-save">Add Patient</button></div></div>'+
+            '<div class="hm-modal-ft"><span class="hm-qp-err" style="color:#ef4444;font-size:12px"></span><div class="hm-modal-acts"><button class="hm-btn hm-qp-close">Cancel</button><button class="hm-btn hm-btn--primary hm-qp-save" disabled>Create Patient</button></div></div>'+
         '</div></div>';
         $('body').append(h);
-        $(document).off('click.qpclose').on('click.qpclose','.hm-qp-close',function(e){e.stopPropagation();$('.hm-modal-bg--top').remove();$(document).off('.qpclose .qpsave');});
+
+        /* Enable save only when GDPR ticked */
+        $(document).on('change.qpgdpr','#hmqp-gdpr',function(){$('.hm-qp-save').prop('disabled',!this.checked);});
+
+        /* Populate dropdowns from DB */
+        post('get_referral_sources').then(function(r){if(r.success&&r.data)r.data.forEach(function(s){$('#hmqp-ref').append('<option value="'+s.id+'">'+esc(s.name)+'</option>');});});
+        post('get_staff_list').then(function(r){if(r.success&&r.data)r.data.forEach(function(d){$('#hmqp-disp').append('<option value="'+d.id+'">'+esc(d.name)+'</option>');});});
+        /* Clinics - use already-loaded data if available */
+        if(self.clinics.length){self.clinics.forEach(function(c){$('#hmqp-clinic').append('<option value="'+c.id+'">'+esc(c.name)+'</option>');});}
+        else{post('get_clinics').then(function(r){if(r.success&&r.data)r.data.forEach(function(c){$('#hmqp-clinic').append('<option value="'+c.id+'">'+esc(c.name)+'</option>');});});}
+
+        $(document).off('click.qpclose').on('click.qpclose','.hm-qp-close',function(e){e.stopPropagation();$('.hm-modal-bg--top').remove();$(document).off('.qpclose .qpsave .qpgdpr');});
         $(document).off('click.qpsave').on('click.qpsave','.hm-qp-save',function(){
             var fn=$('#hmqp-fn').val().trim(),ln=$('#hmqp-ln').val().trim();
             if(!fn||!ln){$('.hm-qp-err').text('First and last name are required.');return;}
-            var $btn=$(this);$btn.prop('disabled',true).text('Adding...');
+            var ph=$('#hmqp-phone').val().trim(),mb=$('#hmqp-mobile').val().trim();
+            if(!ph&&!mb){$('.hm-qp-err').text('Phone or mobile number is required.');return;}
+            var $btn=$(this);$btn.prop('disabled',true).text('Creating...');
             post('create_patient',{
+                patient_title:$('#hmqp-title').val(),
                 first_name:fn,last_name:ln,
-                patient_phone:$('#hmqp-phone').val().trim(),
-                patient_email:$('#hmqp-email').val().trim()
+                dob:$('#hmqp-dob').val(),
+                patient_phone:ph,
+                patient_mobile:mb,
+                patient_email:$('#hmqp-email').val().trim(),
+                patient_address:$('#hmqp-address').val().trim(),
+                patient_eircode:$('#hmqp-eircode').val().trim(),
+                pps_number:$('#hmqp-pps').val().trim(),
+                referral_source_id:$('#hmqp-ref').val(),
+                assigned_dispenser_id:$('#hmqp-disp').val(),
+                assigned_clinic_id:$('#hmqp-clinic').val(),
+                marketing_email:$('#hmqp-memail').is(':checked')?'1':'0',
+                marketing_sms:$('#hmqp-msms').is(':checked')?'1':'0',
+                marketing_phone:$('#hmqp-mphone').is(':checked')?'1':'0',
+                gdpr_consent:$('#hmqp-gdpr').is(':checked')?'1':'0'
             }).then(function(r){
                 if(r.success){
-                    $('.hm-modal-bg--top').remove();$(document).off('.qpclose .qpsave');
+                    $('.hm-modal-bg--top').remove();$(document).off('.qpclose .qpsave .qpgdpr');
                     if(onCreated)onCreated(r.data.id,fn+' '+ln);
                 } else {
-                    $btn.prop('disabled',false).text('Add Patient');
-                    $('.hm-qp-err').text(r.data&&r.data.message?r.data.message:'Failed to add patient.');
+                    $btn.prop('disabled',false).text('Create Patient');
+                    $('.hm-qp-err').text(r.data&&r.data.message?r.data.message:(typeof r.data==='string'?r.data:'Failed to add patient.'));
                 }
-            }).fail(function(){ $btn.prop('disabled',false).text('Add Patient');$('.hm-qp-err').text('Network error.'); });
+            }).fail(function(){ $btn.prop('disabled',false).text('Create Patient');$('.hm-qp-err').text('Network error.'); });
         });
     },
 

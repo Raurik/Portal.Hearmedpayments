@@ -286,21 +286,17 @@ function hm_ajax_get_dispensers() {
 function hm_ajax_get_services() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     try {
+    // Query only guaranteed columns first; optional columns handled below
     $ps = HearMed_DB::get_results(
-        "SELECT id, service_name, colour, duration, is_active, sales_opportunity, income_bearing, appointment_category FROM hearmed_reference.services WHERE is_active = true ORDER BY service_name"
+        "SELECT id, service_name, colour, duration, is_active FROM hearmed_reference.services WHERE is_active = true ORDER BY service_name"
     );
     $d = [];
     foreach ( $ps as $p ) {
         $d[] = [
-            'id'                   => (int) $p->id,
-            'name'                 => $p->service_name,
-            'colour'               => $p->colour ?: '#3B82F6',
-            'duration'             => (int) ($p->duration ?: 30),
-            'sales_opportunity'    => (bool) $p->sales_opportunity,
-            'income_bearing'       => (bool) $p->income_bearing,
-            'appointment_category' => $p->appointment_category,
-            'send_reminders'       => true,
-            'send_confirmation'    => true,
+            'id'       => (int) $p->id,
+            'name'     => $p->service_name,
+            'colour'   => $p->colour ?: '#3B82F6',
+            'duration' => (int) ($p->duration ?: 30),
         ];
     }
     wp_send_json_success( $d );
@@ -317,29 +313,40 @@ function hm_ajax_search_patients() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $q = sanitize_text_field( $_POST['q'] ?? $_POST['query'] ?? '' );
     if ( strlen( $q ) < 2 ) { wp_send_json_success( [] ); return; }
-    
+
+    try {
     // PostgreSQL source of truth: hearmed_core.patients
     $search_term = '%' . $q . '%';
     $results = HearMed_DB::get_results(
-        "SELECT id, patient_number, first_name, last_name, phone
+        "SELECT id, patient_number, first_name, last_name, phone, mobile, email
          FROM hearmed_core.patients
-         WHERE first_name ILIKE %s OR last_name ILIKE %s OR patient_number ILIKE %s
+         WHERE is_active = true
+           AND (first_name ILIKE $1 OR last_name ILIKE $2
+                OR (first_name || ' ' || last_name) ILIKE $3
+                OR patient_number ILIKE $4
+                OR phone ILIKE $5 OR mobile ILIKE $6)
          ORDER BY last_name, first_name
          LIMIT 20",
-        $search_term, $search_term, $search_term
+        [ $search_term, $search_term, $search_term, $search_term, $search_term, $search_term ]
     );
-    
+
     $d = [];
-    foreach ( $results as $p ) {
-        $d[] = [
-            'id'             => $p->id,
-            'name'           => "{$p->first_name} {$p->last_name}",
-            'label'          => ( $p->patient_number ? "{$p->patient_number} — " : '' ) . "{$p->first_name} {$p->last_name}",
-            'phone'          => $p->phone ?? '',
-            'patient_number' => $p->patient_number,
-        ];
+    if ( $results ) {
+        foreach ( $results as $p ) {
+            $d[] = [
+                'id'             => (int) $p->id,
+                'name'           => "{$p->first_name} {$p->last_name}",
+                'label'          => ( $p->patient_number ? "{$p->patient_number} — " : '' ) . "{$p->first_name} {$p->last_name}",
+                'phone'          => $p->phone ?? $p->mobile ?? '',
+                'patient_number' => $p->patient_number ?? '',
+            ];
+        }
     }
     wp_send_json_success( $d );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] search_patients error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
 }
 
 // ================================================================
@@ -390,6 +397,7 @@ function hm_ajax_get_appointments() {
         }
         $d[] = [
             'id'                    => (int) $r->id,
+            '_ID'                   => (int) $r->id,
             'patient_id'            => (int) ($r->patient_id ?: 0),
             'patient_name'          => $pname,
             'patient_number'        => $r->patient_number ?? '',
@@ -750,19 +758,60 @@ function hm_ajax_create_patient_from_calendar() {
         $fn = sanitize_text_field( $_POST['first_name'] ?? '' );
         $ln = sanitize_text_field( $_POST['last_name']  ?? '' );
         if ( ! $fn || ! $ln ) { wp_send_json_error( [ 'message' => 'First and last name are required.' ] ); return; }
+
+        // Generate patient number
         $data = [
             'patient_number' => 'P' . str_pad( mt_rand( 1, 999999 ), 6, '0', STR_PAD_LEFT ),
             'first_name'     => $fn,
             'last_name'      => $ln,
             'is_active'      => true,
             'created_at'     => current_time( 'mysql' ),
+            'marketing_email' => ( $_POST['marketing_email'] ?? '0' ) === '1',
+            'marketing_sms'   => ( $_POST['marketing_sms'] ?? '0' ) === '1',
+            'marketing_phone' => ( $_POST['marketing_phone'] ?? '0' ) === '1',
+            'gdpr_consent'    => ( $_POST['gdpr_consent'] ?? '0' ) === '1',
         ];
+
+        // Optional fields — only add if provided
+        $title = sanitize_text_field( $_POST['patient_title'] ?? '' );
+        $dob   = sanitize_text_field( $_POST['dob'] ?? '' );
         $phone = sanitize_text_field( $_POST['patient_phone'] ?? '' );
+        $mobile = sanitize_text_field( $_POST['patient_mobile'] ?? '' );
         $email = sanitize_email( $_POST['patient_email'] ?? '' );
-        if ( $phone ) $data['phone']  = $phone;
-        if ( $email ) $data['email']  = $email;
+        $addr  = sanitize_textarea_field( $_POST['patient_address'] ?? '' );
+        $eir   = sanitize_text_field( $_POST['patient_eircode'] ?? '' );
+        $pps   = sanitize_text_field( $_POST['pps_number'] ?? '' );
+        $ref   = intval( $_POST['referral_source_id'] ?? 0 );
+        $disp  = intval( $_POST['assigned_dispenser_id'] ?? 0 );
+        $clinic = intval( $_POST['assigned_clinic_id'] ?? 0 );
+
+        if ( $title )  $data['patient_title'] = $title;
+        if ( $dob )    $data['date_of_birth'] = $dob;
+        if ( $phone )  $data['phone']         = $phone;
+        if ( $mobile ) $data['mobile']        = $mobile;
+        if ( $email )  $data['email']         = $email;
+        if ( $addr )   $data['address_line1'] = $addr;
+        if ( $eir )    $data['eircode']       = $eir;
+        if ( $pps )    $data['prsi_number']   = $pps;
+        if ( $ref )    $data['referral_source_id']     = $ref;
+        if ( $disp )   $data['assigned_dispenser_id']  = $disp;
+        if ( $clinic ) $data['assigned_clinic_id']     = $clinic;
+
+        // GDPR consent metadata
+        if ( ( $_POST['gdpr_consent'] ?? '0' ) === '1' ) {
+            $data['gdpr_consent_date']    = date( 'Y-m-d H:i:s' );
+            $data['gdpr_consent_version'] = '1.0';
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+            if ( $ip ) $data['gdpr_consent_ip'] = $ip;
+        }
+
         $id = HearMed_DB::insert( 'hearmed_core.patients', $data );
-        if ( ! $id ) { wp_send_json_error( [ 'message' => 'Failed to create patient.' ] ); return; }
+        if ( ! $id ) {
+            $err = HearMed_DB::last_error();
+            error_log( '[HearMed] create_patient_from_calendar failed: ' . $err );
+            wp_send_json_error( [ 'message' => 'Failed to create patient.' . ( $err ? ' DB: ' . $err : '' ) ] );
+            return;
+        }
         wp_send_json_success( [ 'id' => $id ] );
     } catch ( Throwable $e ) {
         error_log( '[HearMed] create_patient_from_calendar error: ' . $e->getMessage() );
