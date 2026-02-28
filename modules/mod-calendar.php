@@ -1429,6 +1429,8 @@ function hm_ajax_get_order_products() {
             "SELECT p.id, p.product_name, p.item_type, p.style, p.tech_level,
                     p.retail_price, p.cost_price, p.vat_category, p.hearing_aid_class,
                     p.power_type, p.product_code,
+                    p.bundled_category, p.speaker_length, p.speaker_power,
+                    p.dome_type, p.dome_size,
                     m.id AS manufacturer_id, m.name AS manufacturer_name
              FROM hearmed_reference.products p
              LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id

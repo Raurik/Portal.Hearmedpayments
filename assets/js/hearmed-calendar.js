@@ -1480,10 +1480,10 @@ var Cal={
             h+='<div class="hm-modal" style="max-width:640px;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">';
 
             // Header
-            h+='<div style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center">';
-            h+='<div><div style="font-size:16px;font-weight:700;margin:0">New Order</div>';
-            h+='<div style="font-size:12px;opacity:.85;margin-top:2px">'+esc(a.patient_name||'')+' — '+esc(outcome.name)+'</div></div>';
-            h+='<button class="hm-close hm-oo-close" style="color:#fff;font-size:20px;background:none;border:none;cursor:pointer">×</button></div>';
+            h+='<div class="hm-modal-hd" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center">';
+            h+='<div><h3 style="margin:0;font-size:16px">New Order</h3>';
+            h+='<div style="font-size:12px;color:var(--hm-font-sub);margin-top:2px">'+esc(a.patient_name||'')+' — '+esc(outcome.name)+'</div></div>';
+            h+='<button class="hm-close hm-oo-close">×</button></div>';
 
             // Body
             h+='<div style="padding:20px;max-height:70vh;overflow-y:auto;background:#fff">';
@@ -1526,26 +1526,46 @@ var Cal={
             h+='<div id="hm-oo-charger-wrap" style="display:none;margin-bottom:14px;padding:12px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px">';
             h+='<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:#92400e;font-weight:600"><input type="checkbox" id="hm-oo-charger"> Include Charger</label></div>';
 
-            // Speaker (hearing aids only)
+            // Speaker (hearing aids only) — options from bundled products
+            var speakerProds=allProducts.filter(function(p){return p.item_type==='bundled'&&p.bundled_category==='Speaker';});
+            var spkSizes={},spkPowers={};
+            speakerProds.forEach(function(p){
+                if(p.speaker_length!==null&&p.speaker_length!=='')spkSizes[p.speaker_length]=1;
+                if(p.speaker_power)spkPowers[p.speaker_power]=1;
+            });
             h+='<div id="hm-oo-speaker-wrap" style="display:none;margin-bottom:14px">';
             h+='<div style="display:flex;gap:10px">';
             h+='<div style="flex:1"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Speaker Size</label>';
             h+='<select id="hm-oo-speaker-size" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
-            h+='<option value="">—</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>';
+            h+='<option value="">—</option>';
+            Object.keys(spkSizes).sort(function(a,b){return Number(a)-Number(b);}).forEach(function(v){h+='<option value="'+v+'">'+v+'</option>';});
+            h+='</select></div>';
             h+='<div style="flex:1"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Speaker Type</label>';
             h+='<select id="hm-oo-speaker-type" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
-            h+='<option value="">—</option><option value="Standard">Standard</option><option value="Power">Power</option><option value="Super Power">Super Power</option></select></div>';
+            h+='<option value="">—</option>';
+            Object.keys(spkPowers).sort().forEach(function(v){h+='<option value="'+esc(v)+'">'+esc(v)+'</option>';});
+            h+='</select></div>';
             h+='</div></div>';
 
-            // Dome (hearing aids only)
+            // Dome (hearing aids only) — options from bundled products
+            var domeProds=allProducts.filter(function(p){return p.item_type==='bundled'&&p.bundled_category==='Dome';});
+            var dmSizes={},dmTypes={};
+            domeProds.forEach(function(p){
+                if(p.dome_size)dmSizes[p.dome_size]=1;
+                if(p.dome_type)dmTypes[p.dome_type]=1;
+            });
             h+='<div id="hm-oo-dome-wrap" style="display:none;margin-bottom:14px">';
             h+='<div style="display:flex;gap:10px">';
             h+='<div style="flex:1"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Dome Size</label>';
             h+='<select id="hm-oo-dome-size" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
-            h+='<option value="">—</option><option value="Small">Small</option><option value="Medium">Medium</option><option value="Large">Large</option><option value="X-Large">X-Large</option></select></div>';
+            h+='<option value="">—</option>';
+            Object.keys(dmSizes).sort().forEach(function(v){h+='<option value="'+esc(v)+'">'+esc(v)+'</option>';});
+            h+='</select></div>';
             h+='<div style="flex:1"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Dome Type</label>';
             h+='<select id="hm-oo-dome-type" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
-            h+='<option value="">—</option><option value="Open">Open</option><option value="Closed">Closed</option><option value="Power">Power</option><option value="Tulip">Tulip</option><option value="Bass">Bass</option><option value="Custom Mold">Custom Mold</option><option value="SlimTip">SlimTip</option></select></div>';
+            h+='<option value="">—</option>';
+            Object.keys(dmTypes).sort().forEach(function(v){h+='<option value="'+esc(v)+'">'+esc(v)+'</option>';});
+            h+='</select></div>';
             h+='</div></div>';
 
             // Add Item button
@@ -1555,8 +1575,8 @@ var Cal={
             // Items Table
             h+='<div id="hm-oo-items" style="margin-bottom:14px"></div>';
 
-            // Discount — toggle % / € (hidden until items added)
-            h+='<div id="hm-oo-disc-wrap" style="display:none;margin-bottom:14px">';
+            // Discount — toggle % / €
+            h+='<div id="hm-oo-disc-wrap" style="margin-bottom:14px">';
             h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
             h+='<label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px">Discount</label>';
             h+='<div style="display:inline-flex;border:1.5px solid #e2e8f0;border-radius:6px;overflow:hidden">';
@@ -1569,8 +1589,8 @@ var Cal={
             h+='<span id="hm-oo-disc-unit" style="font-size:13px;font-weight:600;color:#64748b;min-width:14px">%</span>';
             h+='</div></div>';
 
-            // PRSI — hidden until items added
-            h+='<div id="hm-oo-prsi-wrap" style="display:none;margin-bottom:14px">';
+            // PRSI Grant
+            h+='<div id="hm-oo-prsi-wrap" style="margin-bottom:14px">';
             h+='<div style="padding:12px 14px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px">';
             h+='<label style="font-size:11px;font-weight:700;color:#0e7490;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:8px">PRSI Grant</label>';
             h+='<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">';
@@ -1794,14 +1814,8 @@ var Cal={
             function renderItems(){
                 if(!orderItems.length){
                     $('#hm-oo-items').html('<div style="color:#94a3b8;font-size:12px;padding:12px 0;text-align:center">No items added yet.</div>');
-                    $('#hm-oo-prsi-wrap,#hm-oo-disc-wrap').hide();
                     return;
                 }
-                // Show discount after items added
-                $('#hm-oo-disc-wrap').show();
-                // Only show PRSI if hearing aid in order
-                var hasHA=orderItems.some(function(it){return it.type==='product';});
-                if(hasHA){$('#hm-oo-prsi-wrap').show();}else{$('#hm-oo-prsi-wrap').hide();}
 
                 var th='<table style="width:100%;font-size:12px;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden"><thead><tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0">';
                 th+='<th style="text-align:left;padding:6px 8px;font-weight:600;color:#334155">Item</th>';
@@ -1882,12 +1896,7 @@ var Cal={
                 e.stopPropagation();$('.hm-modal-bg--top').remove();
                 $(document).off('.oocat .oomfr .oostyle .ooprod .ooadditem .oorem .ooclose .oosave .oopay .ooprsi .oodisc .ooslider .oodiscmode');
             });
-            $(document).off('click.oobg').on('click.oobg','.hm-modal-bg--top',function(e){
-                if($(e.target).hasClass('hm-modal-bg--top')){
-                    $('.hm-modal-bg--top').remove();
-                    $(document).off('.oocat .oomfr .oostyle .ooprod .ooadditem .oorem .ooclose .oosave .oopay .oobg .ooprsi .oodisc .ooslider .oodiscmode');
-                }
-            });
+            // Click-away disabled — use Cancel or × to close
 
             // ── Submit Order ──
             $(document).off('click.oosave').on('click.oosave','.hm-oo-save',function(){
@@ -1963,10 +1972,10 @@ var Cal={
         var h='<div class="hm-modal-bg hm-modal-bg--top open" style="z-index:100001">';
         h+='<div class="hm-modal" style="max-width:420px;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">';
 
-        h+='<div style="background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center">';
-        h+='<div><div style="font-size:16px;font-weight:700">Take Payment</div>';
-        h+='<div style="font-size:12px;opacity:.85;margin-top:2px">'+esc(patientName)+' — '+esc(orderNumber)+'</div></div>';
-        h+='<button class="hm-close hm-pay-close" style="color:#fff;font-size:20px;background:none;border:none;cursor:pointer">×</button></div>';
+        h+='<div class="hm-modal-hd" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center">';
+        h+='<div><h3 style="margin:0;font-size:16px">Take Payment</h3>';
+        h+='<div style="font-size:12px;color:var(--hm-font-sub);margin-top:2px">'+esc(patientName)+' — '+esc(orderNumber)+'</div></div>';
+        h+='<button class="hm-close hm-pay-close">×</button></div>';
 
         h+='<div style="padding:20px;background:#fff">';
         h+='<div style="text-align:center;margin-bottom:16px"><div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.3px">Total Due</div>';
