@@ -1436,16 +1436,26 @@ var Cal={
                 self.refresh();
                 self.toast('Outcome saved: '+o.name);
 
-                // Chain: if invoiceable → open new order modal
-                if(o.is_invoiceable && a.patient_id){
+                // Determine order flow based on service flags
+                var isSalesOpp=!!a.sales_opportunity;
+                var isIncomeBearing=!!a.income_bearing;
+                var hasOrderFlow=false;
+
+                if(isSalesOpp && o.is_invoiceable && a.patient_id){
+                    // Sales Opportunity → forces new order creation
                     self._openOutcomeOrderModal(a,o);
+                    hasOrderFlow=true;
+                } else if(isIncomeBearing && a.patient_id){
+                    // Income Bearing → order picker (existing orders or create new)
+                    self._openOrderSelectModal(a,o);
+                    hasOrderFlow=true;
                 }
 
                 // Chain: if follow-up required → open follow-up booking
                 if(fuSvcId && a.patient_id){
                     setTimeout(function(){
                         self._openFollowUpBooking(a,fuSvcId);
-                    }, o.is_invoiceable ? 500 : 100);
+                    }, hasOrderFlow ? 500 : 100);
                 }
             }).fail(function(){
                 $btn.prop('disabled',false).text('Save Outcome');
@@ -2027,6 +2037,107 @@ var Cal={
                 $btn.prop('disabled',false).text('Confirm Payment');
                 $('#hm-pay-err').text('Network error');
             });
+        });
+    },
+
+    // ── Order Select Modal (Income-Bearing appointments) ──
+    _openOrderSelectModal:function(a,outcome){
+        var self=this;
+
+        // Fetch patient's existing orders in pipeline
+        post('get_patient_orders',{patient_id:a.patient_id}).then(function(r){
+            if(!r.success){self.toast('Failed to load orders');return;}
+            var orders=r.data||[];
+
+            var h='<div class="hm-modal-bg hm-modal-bg--top open" style="z-index:100000">';
+            h+='<div class="hm-modal" style="max-width:560px;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">';
+
+            // Header
+            h+='<div class="hm-modal-hd" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center">';
+            h+='<div><h3 style="margin:0;font-size:16px">Select or Create Order</h3>';
+            h+='<div style="font-size:12px;color:var(--hm-font-sub);margin-top:2px">'+esc(a.patient_name||'')+' — '+esc(outcome.name)+'</div></div>';
+            h+='<button class="hm-close hm-osel-close">×</button></div>';
+
+            // Body
+            h+='<div style="padding:20px;max-height:70vh;overflow-y:auto;background:#fff">';
+
+            if(orders.length){
+                h+='<div style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Existing Orders (Awaiting Fitting)</div>';
+                orders.forEach(function(ord){
+                    var bal=parseFloat(ord.balance_due)||0;
+                    h+='<div class="hm-osel-order" data-oid="'+ord.id+'" data-onum="'+esc(ord.order_number)+'" data-total="'+ord.grand_total+'" data-bal="'+bal+'" ';
+                    h+='style="border:1.5px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .15s;background:#fff">';
+                    h+='<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+                    h+='<div>';
+                    h+='<div style="font-size:14px;font-weight:700;color:#0f172a">'+esc(ord.order_number)+'</div>';
+                    h+='<div style="font-size:11px;color:#64748b;margin-top:2px">'+esc(ord.order_date)+' — <span style="font-weight:600;color:#0369a1">'+esc(ord.status)+'</span></div>';
+                    h+='<div style="font-size:12px;color:#475569;margin-top:4px;max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(ord.items_summary)+'</div>';
+                    h+='</div>';
+                    h+='<div style="text-align:right;flex-shrink:0">';
+                    h+='<div style="font-size:14px;font-weight:700;color:#0f172a">€'+parseFloat(ord.grand_total).toFixed(2)+'</div>';
+                    if(parseFloat(ord.deposit)>0){
+                        h+='<div style="font-size:11px;color:#059669;margin-top:2px">Paid: €'+parseFloat(ord.deposit).toFixed(2)+'</div>';
+                    }
+                    h+='<div style="font-size:11px;color:#dc2626;margin-top:1px">Due: €'+bal.toFixed(2)+'</div>';
+                    h+='</div></div></div>';
+                });
+                h+='<div style="border-top:1px solid #e2e8f0;margin:16px 0 12px"></div>';
+            } else {
+                h+='<div style="text-align:center;padding:20px 0;color:#94a3b8;font-size:13px">No existing orders awaiting fitting for this patient.</div>';
+            }
+
+            // Create New button
+            h+='<button id="hm-osel-new" class="hm-btn hm-btn--primary" style="width:100%;padding:10px;font-size:13px;font-weight:600;border-radius:6px">+ Create New Order</button>';
+
+            h+='</div>'; // end body
+
+            // Footer
+            h+='<div style="padding:12px 20px;border-top:1px solid #e2e8f0;background:#fff;text-align:right">';
+            h+='<button class="hm-btn hm-osel-close" style="font-size:13px">Cancel</button>';
+            h+='</div>';
+
+            h+='</div></div>';
+            $('body').append(h);
+
+            // Hover effect on order cards
+            $(document).off('mouseenter.osel mouseleave.osel').on('mouseenter.osel','.hm-osel-order',function(){
+                $(this).css({'border-color':'#3b82f6','background':'#eff6ff'});
+            }).on('mouseleave.osel','.hm-osel-order',function(){
+                $(this).css({'border-color':'#e2e8f0','background':'#fff'});
+            });
+
+            // Select existing order → open payment modal
+            $(document).off('click.oselorder').on('click.oselorder','.hm-osel-order',function(){
+                var $card=$(this);
+                var ordId=$card.data('oid');
+                var ordNum=$card.data('onum');
+                var bal=parseFloat($card.data('bal'))||0;
+
+                // Close this modal
+                $('.hm-modal-bg--top').remove();
+                $(document).off('.oselorder .oselnew .oselclose .osel');
+
+                // Open payment modal for this existing order
+                self._openPaymentModal(ordId,ordNum,bal,a.patient_name||'');
+            });
+
+            // Create new order
+            $(document).off('click.oselnew').on('click.oselnew','#hm-osel-new',function(){
+                // Close this modal
+                $('.hm-modal-bg--top').remove();
+                $(document).off('.oselorder .oselnew .oselclose .osel');
+
+                // Open the full order creation modal
+                self._openOutcomeOrderModal(a,outcome);
+            });
+
+            // Close
+            $(document).off('click.oselclose').on('click.oselclose','.hm-osel-close',function(e){
+                e.stopPropagation();$('.hm-modal-bg--top').remove();
+                $(document).off('.oselorder .oselnew .oselclose .osel');
+            });
+        }).fail(function(){
+            self.toast('Failed to load patient orders');
         });
     },
 

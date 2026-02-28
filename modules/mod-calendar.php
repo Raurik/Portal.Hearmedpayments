@@ -59,6 +59,7 @@ add_action( 'wp_ajax_hm_save_appointment_outcome', 'hm_ajax_save_appointment_out
 add_action( 'wp_ajax_hm_create_outcome_order',  'hm_ajax_create_outcome_order' );
 add_action( 'wp_ajax_hm_get_order_products',    'hm_ajax_get_order_products' );
 add_action( 'wp_ajax_hm_record_order_payment',  'hm_ajax_record_order_payment' );
+add_action( 'wp_ajax_hm_get_patient_orders',    'hm_ajax_get_patient_orders' );
 add_action( 'wp_ajax_hm_update_appointment_status', 'hm_ajax_update_appointment_status' );
 add_action( 'wp_ajax_hm_save_exclusion',           'hm_ajax_save_exclusion' );
 add_action( 'wp_ajax_hm_delete_exclusion',         'hm_ajax_delete_exclusion' );
@@ -450,6 +451,8 @@ function hm_ajax_get_appointments() {
                    COALESCE(sv.service_color, '#3B82F6') AS service_colour,
                    COALESCE(sv.text_color, '#FFFFFF') AS service_text_color,
                    COALESCE(a.duration_minutes, sv.duration_minutes, 30) AS service_duration,
+                   COALESCE(sv.sales_opportunity, false) AS sales_opportunity,
+                   COALESCE(sv.income_bearing, false) AS income_bearing,
                    COALESCE(ao.outcome_color, '') AS outcome_banner_colour,
                    COALESCE(ao.outcome_name, a.outcome, '') AS resolved_outcome_name
             FROM hearmed_core.appointments a
@@ -518,6 +521,8 @@ function hm_ajax_get_appointments() {
             'outcome_name'          => $r->resolved_outcome_name ?: ($r->outcome ?? ''),
             'outcome_banner_colour' => $r->outcome_banner_colour ?: '',
             'created_by'            => (int) ($r->created_by ?? 0),
+            'sales_opportunity'     => !empty($r->sales_opportunity) && $r->sales_opportunity !== 'f',
+            'income_bearing'        => !empty($r->income_bearing) && $r->income_bearing !== 'f',
         ];
 
         // Fallback: if outcome name exists but no banner colour, look up from templates
@@ -1524,6 +1529,52 @@ function hm_ajax_record_order_payment() {
             'message' => 'Payment of €' . number_format( $amount, 2 ) . ' recorded.',
             'balance' => $balance,
         ]);
+    } catch ( Throwable $e ) {
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+// ================================================================
+// GET PATIENT ORDERS — for income-bearing appointment order picker
+// ================================================================
+function hm_ajax_get_patient_orders() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+
+    try {
+        $patient_id = intval( $_POST['patient_id'] ?? 0 );
+        if ( ! $patient_id ) { wp_send_json_error( [ 'message' => 'No patient specified.' ] ); return; }
+
+        $db = HearMed_DB::instance();
+
+        $rows = $db->get_results(
+            "SELECT o.id, o.order_number, o.order_date, o.current_status, o.grand_total,
+                    o.deposit_amount, o.prsi_amount, o.discount_total,
+                    COALESCE(o.grand_total, 0) - COALESCE(o.deposit_amount, 0) AS balance_due,
+                    (SELECT string_agg(oi.product_name, ', ' ORDER BY oi.id)
+                     FROM hearmed_core.order_items oi WHERE oi.order_id = o.id) AS items_summary
+             FROM hearmed_core.orders o
+             WHERE o.patient_id = \$1
+               AND o.current_status IN ('Awaiting Fitting', 'Approved', 'Ordered', 'Received')
+             ORDER BY o.order_date DESC",
+            [ $patient_id ]
+        );
+
+        $list = [];
+        foreach ( ( $rows ?: [] ) as $r ) {
+            $list[] = [
+                'id'            => (int) $r->id,
+                'order_number'  => $r->order_number,
+                'order_date'    => $r->order_date,
+                'status'        => $r->current_status,
+                'grand_total'   => (float) $r->grand_total,
+                'deposit'       => (float) ( $r->deposit_amount ?? 0 ),
+                'balance_due'   => (float) max( 0, $r->balance_due ?? $r->grand_total ),
+                'items_summary' => $r->items_summary ?: '—',
+            ];
+        }
+
+        wp_send_json_success( $list );
     } catch ( Throwable $e ) {
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
     }
