@@ -59,7 +59,7 @@ add_action( 'wp_ajax_hm_save_appointment_outcome', 'hm_ajax_save_appointment_out
 add_action( 'wp_ajax_hm_create_outcome_order',  'hm_ajax_create_outcome_order' );
 add_action( 'wp_ajax_hm_get_order_products',    'hm_ajax_get_order_products' );
 add_action( 'wp_ajax_hm_record_order_payment',  'hm_ajax_record_order_payment' );
-add_action( 'wp_ajax_hm_get_patient_orders',    'hm_ajax_get_patient_orders' );
+add_action( 'wp_ajax_hm_get_patient_pipeline_orders',    'hm_ajax_get_patient_pipeline_orders' );
 add_action( 'wp_ajax_hm_update_appointment_status', 'hm_ajax_update_appointment_status' );
 add_action( 'wp_ajax_hm_save_exclusion',           'hm_ajax_save_exclusion' );
 add_action( 'wp_ajax_hm_delete_exclusion',         'hm_ajax_delete_exclusion' );
@@ -1537,7 +1537,7 @@ function hm_ajax_record_order_payment() {
 // ================================================================
 // GET PATIENT ORDERS — for income-bearing appointment order picker
 // ================================================================
-function hm_ajax_get_patient_orders() {
+function hm_ajax_get_patient_pipeline_orders() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
 

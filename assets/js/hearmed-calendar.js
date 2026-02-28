@@ -2045,7 +2045,7 @@ var Cal={
         var self=this;
 
         // Fetch patient's existing orders in pipeline
-        post('get_patient_orders',{patient_id:a.patient_id}).then(function(r){
+        post('get_patient_pipeline_orders',{patient_id:a.patient_id}).then(function(r){
             if(!r.success){self.toast('Failed to load orders');return;}
             var orders=r.data||[];
 
