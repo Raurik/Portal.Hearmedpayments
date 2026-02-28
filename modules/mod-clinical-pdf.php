@@ -58,13 +58,21 @@ function hm_clinical_docs_ensure_table() {
             updated_at       TIMESTAMP DEFAULT NOW()
         )" );
     } else {
-        /* Auto-add columns that may be missing from older schema */
+        /* Auto-add ALL columns that may be missing from older schema */
         HearMed_DB::query( "ALTER TABLE hearmed_admin.appointment_clinical_docs
+            ADD COLUMN IF NOT EXISTS template_version INTEGER DEFAULT 1,
+            ADD COLUMN IF NOT EXISTS transcript_id    INTEGER,
+            ADD COLUMN IF NOT EXISTS extracted_json   JSONB   DEFAULT '{}'::jsonb,
+            ADD COLUMN IF NOT EXISTS reviewed_json    JSONB   DEFAULT '{}'::jsonb,
             ADD COLUMN IF NOT EXISTS schema_snapshot  JSONB   DEFAULT '[]'::jsonb,
             ADD COLUMN IF NOT EXISTS missing_fields   JSONB   DEFAULT '[]'::jsonb,
             ADD COLUMN IF NOT EXISTS anonymised_text  TEXT    DEFAULT '',
-            ADD COLUMN IF NOT EXISTS ai_model        VARCHAR(100) DEFAULT 'mock',
-            ADD COLUMN IF NOT EXISTS ai_tokens_used  INTEGER DEFAULT 0" );
+            ADD COLUMN IF NOT EXISTS ai_model         VARCHAR(100) DEFAULT 'mock',
+            ADD COLUMN IF NOT EXISTS ai_tokens_used   INTEGER DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS pdf_path         VARCHAR(500),
+            ADD COLUMN IF NOT EXISTS reviewed_by      INTEGER,
+            ADD COLUMN IF NOT EXISTS reviewed_at      TIMESTAMP,
+            ADD COLUMN IF NOT EXISTS created_by       INTEGER" );
     }
 }
 

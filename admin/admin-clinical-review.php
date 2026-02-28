@@ -23,6 +23,11 @@ class HearMed_Admin_Clinical_Review {
         $doc_id = intval( $_GET['doc_id'] ?? 0 );
         if ( ! $doc_id ) return '<p>No clinical document selected.</p>';
 
+        // Ensure all columns exist before querying
+        if ( function_exists( 'hm_clinical_docs_ensure_table' ) ) {
+            hm_clinical_docs_ensure_table();
+        }
+
         // Fetch clinical doc
         $doc = HearMed_DB::get_row(
             "SELECT cd.*, dt.name as template_name, dt.sections_json, dt.ai_enabled
@@ -40,6 +45,10 @@ class HearMed_Admin_Clinical_Review {
                 "SELECT transcript_text, word_count, created_at FROM hearmed_admin.appointment_transcripts WHERE id = $1",
                 [ $doc->transcript_id ]
             );
+            // If word_count is 0/null but text exists, calculate it on the fly
+            if ( $transcript && empty( $transcript->word_count ) && ! empty( $transcript->transcript_text ) ) {
+                $transcript->word_count = str_word_count( $transcript->transcript_text );
+            }
         }
 
         // Fetch patient
