@@ -976,16 +976,16 @@ class HearMed_KPI {
                     TO_CHAR(a.appointment_date, 'DD Mon YYYY') AS date,
                     TO_CHAR(a.start_time, 'HH24:MI') AS time,
                     CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
-                    COALESCE(s.service_name, at.type_name, '—') AS service_name,
+                    COALESCE(s.service_name, '—') AS service_name,
                     a.appointment_status AS status
              FROM hearmed_core.appointments a
              LEFT JOIN hearmed_core.patients p ON p.id = a.patient_id
              LEFT JOIN hearmed_reference.services s ON s.id = a.service_id
-             LEFT JOIN hearmed_reference.appointment_types at ON at.id = a.appointment_type_id
              WHERE a.staff_id = $1
                AND a.appointment_date BETWEEN $2 AND $3
                AND a.appointment_date < CURRENT_DATE
-               AND a.appointment_status NOT IN ('Cancelled', 'No Show')
+               AND a.appointment_status NOT IN ('Cancelled', 'No Show', 'Completed')
+               AND (a.outcome IS NULL OR TRIM(a.outcome) = '')
                AND NOT EXISTS (
                    SELECT 1 FROM hearmed_core.appointment_outcomes ao WHERE ao.appointment_id = a.id
                )
@@ -1185,13 +1185,16 @@ class HearMed_KPI {
         );
 
         // ── Unclosed appointments: past appointments with no outcome recorded ──
+        // An appointment is unclosed if: date is before today, not cancelled/no-show,
+        // AND has no outcome (neither in appointment_outcomes table nor in appointments.outcome column)
         $unclosed = (int) HearMed_DB::get_var(
             "SELECT COUNT(*)
              FROM hearmed_core.appointments a
              WHERE a.staff_id = $1
                AND a.appointment_date BETWEEN $2 AND $3
                AND a.appointment_date < CURRENT_DATE
-               AND a.appointment_status NOT IN ('Cancelled', 'No Show')
+               AND a.appointment_status NOT IN ('Cancelled', 'No Show', 'Completed')
+               AND (a.outcome IS NULL OR TRIM(a.outcome) = '')
                AND NOT EXISTS (
                    SELECT 1 FROM hearmed_core.appointment_outcomes ao
                    WHERE ao.appointment_id = a.id

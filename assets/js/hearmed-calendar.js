@@ -262,6 +262,13 @@ var Cal={
             var top=spaceBelow<menuH?rect.top-menuH:rect.bottom+4;
             var flipSub=spaceRight<menuW+subW+10?'hm-ctx-flip':'';
             var m='<div class="hm-ctx-menu '+flipSub+'" style="left:'+left+'px;top:'+top+'px">';
+            var aLocked=a.status==='Completed'||!!(a.outcome_name);
+            if(aLocked){
+                // Locked appointment — view only
+                m+='<div class="hm-ctx-item hm-ctx-edit">'+IC.edit+' View Details</div>';
+                m+='<div class="hm-ctx-sep"></div>';
+                m+='<div class="hm-ctx-item" style="opacity:0.4;cursor:default;font-size:11px;color:#059669">Appointment closed — read only</div>';
+            } else {
             // Status submenu
             m+='<div class="hm-ctx-parent">';
             m+='<div class="hm-ctx-item hm-ctx-has-sub">'+IC.clock+' Status <span class="hm-ctx-arrow">›</span></div>';
@@ -285,6 +292,7 @@ var Cal={
             if(HM.is_admin){
                 m+='<div class="hm-ctx-sep"></div>';
                 m+='<div class="hm-ctx-item hm-ctx-delete" style="color:#dc2626">'+IC.trash+' Delete Appointment</div>';
+            }
             }
             m+='</div>';
             $('body').append(m);
@@ -998,6 +1006,7 @@ var Cal={
         var hasOutcome=!!(a.outcome_name);
         var popOutcomeColor=a.outcome_banner_colour||'#6b7280';
         var isCompleted=a.status==='Completed';
+        var isLocked=isCompleted||hasOutcome;
 
         var h='<div class="hm-pop-bar" style="background:'+col+'"></div>';
         if(hasOutcome){
@@ -1021,8 +1030,11 @@ var Cal={
         h+='</div>';
 
         h+='<div class="hm-pop-actions" id="hm-pop-actions">';
-        h+='<button class="hm-pop-act hm-pop-act--primary hm-pop-edit">Edit</button>';
-        if(!isCompleted && !hasOutcome){
+        if(isLocked){
+            h+='<button class="hm-pop-act hm-pop-act--primary hm-pop-edit">View Details</button>';
+            h+='<div style="font-size:11px;color:#059669;margin-top:4px;display:flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Appointment closed — read only</div>';
+        } else {
+            h+='<button class="hm-pop-act hm-pop-act--primary hm-pop-edit">Edit</button>';
             h+='<button class="hm-pop-act hm-pop-act--teal hm-pop-closeoff" data-sid="'+a.service_id+'" data-aid="'+a._ID+'">Close Off</button>';
         }
         h+='</div>';
@@ -1052,24 +1064,34 @@ var Cal={
     },
     _buildEditModal:function(a){
         var self=this;
+        var isLocked=a.status==='Completed'||!!(a.outcome_name);
         var svcOpts=self.services.map(function(s){return'<option value="'+s.id+'"'+(parseInt(s.id)===parseInt(a.service_id)?' selected':'')+'>'+esc(s.name)+'</option>';}).join('');
         var cliOpts=self.clinics.map(function(c){return'<option value="'+c.id+'"'+(parseInt(c.id)===parseInt(a.clinic_id)?' selected':'')+'>'+esc(c.name)+'</option>';}).join('');
         var dispOpts=self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(parseInt(d.id)===parseInt(a.dispenser_id)?' selected':'')+'>'+esc(d.name)+'</option>';}).join('');
+        var title=isLocked?'Appointment Details':'Edit Appointment';
+        var dis=isLocked?' disabled':'';
         var html='<div class="hm-modal-bg open"><div class="hm-modal hm-modal--md">'+
-            '<div class="hm-modal-hd"><h3>Edit Appointment</h3><button class="hm-close hm-edit-close">'+IC.x+'</button></div>'+
-            '<div class="hm-modal-body">'+
-                '<div class="hm-row"><div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hme-service">'+svcOpts+'</select></div>'+
-                '<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hme-disp">'+dispOpts+'</select></div></div>'+
-                '<div class="hm-row"><div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hme-clinic">'+cliOpts+'</select></div>'+
-                '<div class="hm-fld"><label>Location</label><select class="hm-inp" id="hme-loc"><option>Clinic</option><option>Home</option></select></div></div>'+
-                '<div class="hm-row"><div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hme-date" value="'+a.appointment_date+'"></div>'+
-                '<div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hme-time" value="'+(a.start_time||'').substring(0,5)+'"></div></div>'+
-                '<div class="hm-row"><div class="hm-fld"><label>Status</label><select class="hm-inp" id="hme-status"><option>Not Confirmed</option><option>Confirmed</option><option>Arrived</option><option>In Progress</option><option>Completed</option><option>Late</option><option>No Show</option><option>Cancelled</option><option>Rescheduled</option><option>Pending</option></select></div>'+
+            '<div class="hm-modal-hd"><h3>'+title+'</h3><button class="hm-close hm-edit-close">'+IC.x+'</button></div>'+
+            '<div class="hm-modal-body">';
+        if(isLocked){
+            html+='<div style="margin-bottom:12px;padding:10px 14px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;font-size:12px;color:#065f46;display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><strong>Closed</strong> — This appointment has been completed with outcome: <strong>'+esc(a.outcome_name||'Completed')+'</strong></div>';
+        }
+        html+='<div class="hm-row"><div class="hm-fld"><label>Appointment Type</label><select class="hm-inp" id="hme-service"'+dis+'>'+svcOpts+'</select></div>'+
+                '<div class="hm-fld"><label>Assignee</label><select class="hm-inp" id="hme-disp"'+dis+'>'+dispOpts+'</select></div></div>'+
+                '<div class="hm-row"><div class="hm-fld"><label>Clinic</label><select class="hm-inp" id="hme-clinic"'+dis+'>'+cliOpts+'</select></div>'+
+                '<div class="hm-fld"><label>Location</label><select class="hm-inp" id="hme-loc"'+dis+'><option>Clinic</option><option>Home</option></select></div></div>'+
+                '<div class="hm-row"><div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hme-date" value="'+a.appointment_date+'"'+dis+'></div>'+
+                '<div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hme-time" value="'+(a.start_time||'').substring(0,5)+'"'+dis+'></div></div>'+
+                '<div class="hm-row"><div class="hm-fld"><label>Status</label><select class="hm-inp" id="hme-status" disabled><option>Not Confirmed</option><option>Confirmed</option><option>Arrived</option><option>In Progress</option><option>Completed</option><option>Late</option><option>No Show</option><option>Cancelled</option><option>Rescheduled</option><option>Pending</option></select></div>'+
                 '<div class="hm-fld"></div></div>'+
-                '<div class="hm-fld"><label>Notes</label><textarea class="hm-inp" id="hme-notes" rows="3">'+esc(a.notes||'')+'</textarea></div>'+
-            '</div>'+
-            '<div class="hm-modal-ft"><button class="hm-btn hm-btn--danger hm-edit-del">Delete</button><div class="hm-modal-acts"><button class="hm-btn hm-edit-close">Cancel</button><button class="hm-btn hm-btn--primary hm-edit-save">Save</button></div></div>'+
-        '</div></div>';
+                '<div class="hm-fld"><label>Notes</label><textarea class="hm-inp" id="hme-notes" rows="3"'+dis+'>'+esc(a.notes||'')+'</textarea></div>'+
+            '</div>';
+        if(isLocked){
+            html+='<div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hm-edit-close">Close</button></div></div>';
+        } else {
+            html+='<div class="hm-modal-ft"><button class="hm-btn hm-btn--danger hm-edit-del">Delete</button><div class="hm-modal-acts"><button class="hm-btn hm-edit-close">Cancel</button><button class="hm-btn hm-btn--primary hm-edit-save">Save</button></div></div>';
+        }
+        html+='</div></div>';
         $('body').append(html);
         $('#hme-status').val(a.status||'Not Confirmed');
         $('#hme-loc').val(a.location_type||'Clinic');
@@ -1192,6 +1214,12 @@ var Cal={
     // ═══════════════════════════════════════════════════════
     openOutcomeModal:function(a){
         var self=this;
+        // If appointment is locked (completed/has outcome), open view-only modal instead
+        if(a.status==='Completed'||!!(a.outcome_name)){
+            self._popAppt=a;
+            self.editPop();
+            return;
+        }
         $('#hm-pop').removeClass('open');$('#hm-tooltip').hide();
         var col=a.service_colour||'#3B82F6';
         var disp=this.dispensers.find(function(d){return parseInt(d.id)===parseInt(a.dispenser_id);});
