@@ -64,6 +64,11 @@ class HearMed_Admin_Clinical_Review {
 
         $p_name = $patient ? trim( ( $patient->first_name ?? '' ) . ' ' . ( $patient->last_name ?? '' ) ) : 'Unknown';
 
+        // Fetch all active AI-enabled templates for re-extract dropdown
+        $all_templates = HearMed_DB::get_results(
+            "SELECT id, name FROM hearmed_admin.document_templates WHERE is_active = true AND ai_enabled = true ORDER BY name"
+        );
+
         $status_badges = [
             'draft'     => 'grey',
             'extracted' => 'blue',
@@ -91,6 +96,18 @@ class HearMed_Admin_Clinical_Review {
                             (<?php echo esc_html( $patient->h_number ?? '' ); ?>)
                         </span>
                     </div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <select id="hm-cr-template-select" style="font-size:12px;padding:4px 8px;border:1px solid var(--hm-border);border-radius:6px;background:var(--hm-bg);color:var(--hm-text);">
+                        <?php foreach ( $all_templates as $tpl ): ?>
+                        <option value="<?php echo (int) $tpl->id; ?>"<?php selected( $tpl->id, $doc->template_id ); ?>>
+                            <?php echo esc_html( $tpl->name ); ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button class="hm-btn" id="hm-cr-reextract-btn" onclick="hmCR.reExtract()" style="font-size:12px;border-color:#7c3aed;color:#7c3aed;">
+                        &#x21bb; Re-extract
+                    </button>
                 </div>
             </div>
 
@@ -328,6 +345,34 @@ class HearMed_Admin_Clinical_Review {
                                 }
                             });
                         });
+                    });
+                },
+
+                reExtract: function() {
+                    var sel = document.getElementById('hm-cr-template-select');
+                    var templateId = sel ? sel.value : 0;
+                    var templateName = sel ? sel.options[sel.selectedIndex].text.trim() : '';
+                    var msg = 'Re-extract this document using template "' + templateName + '"?\n\nThis will overwrite the current extracted data and clear any reviewed edits.';
+                    if (!confirm(msg)) return;
+
+                    var btn = document.getElementById('hm-cr-reextract-btn');
+                    btn.textContent = 'Extracting\u2026'; btn.disabled = true;
+
+                    jQuery.post(HM.ajax_url, {
+                        action: 'hm_reextract_clinical_doc',
+                        nonce: HM.nonce,
+                        doc_id: _docId,
+                        template_id: templateId
+                    }, function(r) {
+                        if (r.success) {
+                            location.reload();
+                        } else {
+                            alert(r.data || 'Re-extraction failed');
+                            btn.innerHTML = '&#x21bb; Re-extract'; btn.disabled = false;
+                        }
+                    }).fail(function() {
+                        alert('Network error during re-extraction');
+                        btn.innerHTML = '&#x21bb; Re-extract'; btn.disabled = false;
                     });
                 }
             };
