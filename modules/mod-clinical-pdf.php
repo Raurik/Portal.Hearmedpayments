@@ -309,6 +309,7 @@ function hm_ajax_reextract_clinical_doc() {
         $max_retries = intval( HearMed_Settings::get( 'hm_ai_max_retries', '2' ) );
         $attempt     = 0;
         $success     = false;
+        $last_error  = '';
 
         while ( $attempt <= $max_retries && ! $success ) {
             $attempt++;
@@ -333,16 +334,23 @@ function hm_ajax_reextract_clinical_doc() {
             ] );
 
             if ( is_wp_error( $response ) ) {
+                $last_error = 'Network/cURL error: ' . $response->get_error_message();
                 HearMed_Logger::log( 'ai_extraction', "Re-extract OpenRouter error (attempt {$attempt}): " . $response->get_error_message() );
                 continue;
             }
 
             $status_code = wp_remote_retrieve_response_code( $response );
-            $body        = json_decode( wp_remote_retrieve_body( $response ), true );
+            $raw_body    = wp_remote_retrieve_body( $response );
+            $body        = json_decode( $raw_body, true );
 
             if ( $status_code !== 200 ) {
-                $err_msg = $body['error']['message'] ?? "HTTP {$status_code}";
-                HearMed_Logger::log( 'ai_extraction', "Re-extract HTTP error (attempt {$attempt}): {$err_msg}" );
+                $err_msg = $body['error']['message'] ?? ( $body['error']['code'] ?? "HTTP {$status_code}" );
+                $last_error = "OpenRouter HTTP {$status_code}: {$err_msg}";
+                HearMed_Logger::log( 'ai_extraction', "Re-extract HTTP error (attempt {$attempt}): {$err_msg}", [
+                    'status'   => $status_code,
+                    'model'    => $model,
+                    'raw_body' => substr( $raw_body, 0, 500 ),
+                ] );
                 continue;
             }
 
@@ -359,13 +367,16 @@ function hm_ajax_reextract_clinical_doc() {
                 $success   = true;
                 HearMed_Logger::log( 'ai_extraction', "Re-extract success: doc_id={$doc_id}, model={$model}, tokens={$ai_tokens}, attempt={$attempt}" );
             } else {
-                HearMed_Logger::log( 'ai_extraction', "Re-extract JSON parse failed (attempt {$attempt})" );
+                $last_error = 'AI returned non-JSON response (len=' . strlen( $content ) . ')';
+                HearMed_Logger::log( 'ai_extraction', "Re-extract JSON parse failed (attempt {$attempt})", [
+                    'content_preview' => substr( $content, 0, 300 ),
+                ] );
             }
         }
 
         if ( ! $success ) {
-            HearMed_Logger::log( 'ai_extraction', "Re-extract failed after {$max_retries} retries for doc #{$doc_id}" );
-            wp_send_json_error( 'AI extraction failed after ' . $max_retries . ' retries' );
+            HearMed_Logger::log( 'ai_extraction', "Re-extract failed after {$max_retries} retries for doc #{$doc_id}: {$last_error}" );
+            wp_send_json_error( 'AI extraction failed after ' . $max_retries . ' retries. Last error: ' . $last_error );
         }
     }
 

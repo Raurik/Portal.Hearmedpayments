@@ -2509,6 +2509,7 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
         $max_retries = intval( HearMed_Settings::get( 'hm_ai_max_retries', '2' ) );
         $attempt     = 0;
         $success     = false;
+        $last_error  = '';
 
         while ( $attempt <= $max_retries && ! $success ) {
             $attempt++;
@@ -2537,16 +2538,23 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
             $duration_ms = round( ( microtime( true ) - $start_time ) * 1000 );
 
             if ( is_wp_error( $response ) ) {
+                $last_error = 'Network/cURL error: ' . $response->get_error_message();
                 HearMed_Logger::log( 'ai_extraction', "OpenRouter error (attempt {$attempt}): " . $response->get_error_message() );
                 continue;
             }
 
             $status_code = wp_remote_retrieve_response_code( $response );
-            $body = json_decode( wp_remote_retrieve_body( $response ), true );
+            $raw_body    = wp_remote_retrieve_body( $response );
+            $body        = json_decode( $raw_body, true );
 
             if ( $status_code !== 200 ) {
-                $err_msg = $body['error']['message'] ?? "HTTP {$status_code}";
-                HearMed_Logger::log( 'ai_extraction', "OpenRouter HTTP error (attempt {$attempt}): {$err_msg}" );
+                $err_msg = $body['error']['message'] ?? ( $body['error']['code'] ?? "HTTP {$status_code}" );
+                $last_error = "OpenRouter HTTP {$status_code}: {$err_msg}";
+                HearMed_Logger::log( 'ai_extraction', "OpenRouter HTTP error (attempt {$attempt}): {$err_msg}", [
+                    'status'   => $status_code,
+                    'model'    => $model,
+                    'raw_body' => substr( $raw_body, 0, 500 ),
+                ] );
                 continue;
             }
 
@@ -2565,12 +2573,15 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
 
                 HearMed_Logger::log( 'ai_extraction', "OpenRouter success: model={$model}, tokens={$ai_tokens}, duration={$duration_ms}ms, attempt={$attempt}" );
             } else {
-                HearMed_Logger::log( 'ai_extraction', "OpenRouter JSON parse failed (attempt {$attempt})" );
+                $last_error = 'AI returned non-JSON response (len=' . strlen( $content ) . ')';
+                HearMed_Logger::log( 'ai_extraction', "OpenRouter JSON parse failed (attempt {$attempt})", [
+                    'content_preview' => substr( $content, 0, 300 ),
+                ] );
             }
         }
 
         if ( ! $success ) {
-            HearMed_Logger::log( 'ai_extraction', "AI extraction failed after {$max_retries} retries for appointment #{$appointment_id}" );
+            HearMed_Logger::log( 'ai_extraction', "AI extraction failed after {$max_retries} retries for appointment #{$appointment_id}: {$last_error}" );
             // Still create a draft doc with empty extraction so the review page works
         }
     }
