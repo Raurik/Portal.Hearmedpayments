@@ -2499,7 +2499,7 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
     } else {
         /* LIVE mode — call OpenRouter */
         $api_key = HearMed_Settings::get( 'hm_openrouter_api_key', '' );
-        $model   = HearMed_Settings::get( 'hm_openrouter_model', 'anthropic/claude-sonnet-4-20250514' );
+        $model   = HearMed_Settings::get( 'hm_openrouter_model', 'anthropic/claude-3.5-sonnet' );
 
         if ( empty( $api_key ) ) {
             HearMed_Logger::log( 'ai_extraction', 'OpenRouter API key not configured' );

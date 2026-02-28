@@ -11,7 +11,7 @@ INSERT INTO hearmed_admin.settings (setting_key, setting_value) VALUES
   ('hm_form_templates', ''),
   ('hm_ai_extraction_mode', 'mock'),
   ('hm_openrouter_api_key', ''),
-  ('hm_openrouter_model', 'anthropic/claude-sonnet-4-20250514'),
+  ('hm_openrouter_model', 'anthropic/claude-3.5-sonnet'),
   ('hm_ai_extraction_enabled', '1'),
   ('hm_ai_max_retries', '2'),
   ('hm_ai_mock_mode', '0')

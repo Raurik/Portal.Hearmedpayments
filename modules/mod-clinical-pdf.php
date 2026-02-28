@@ -302,7 +302,7 @@ function hm_ajax_reextract_clinical_doc() {
         }
     } else {
         $api_key = HearMed_Settings::get( 'hm_openrouter_api_key', '' );
-        $model   = HearMed_Settings::get( 'hm_openrouter_model', 'anthropic/claude-sonnet-4-20250514' );
+        $model   = HearMed_Settings::get( 'hm_openrouter_model', 'anthropic/claude-3.5-sonnet' );
 
         if ( empty( $api_key ) ) wp_send_json_error( 'OpenRouter API key not configured' );
 

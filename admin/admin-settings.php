@@ -76,10 +76,10 @@ class HearMed_Admin_Settings {
 
                 // ── AI Extraction (OpenRouter / Claude) ──
                 ['key' => 'hm_openrouter_api_key', 'label' => 'OpenRouter API Key', 'type' => 'password', 'default' => ''],
-                ['key' => 'hm_openrouter_model', 'label' => 'AI Extraction Model', 'type' => 'select', 'default' => 'anthropic/claude-sonnet-4-20250514', 'options' => [
-                    'anthropic/claude-sonnet-4-20250514' => 'Claude Sonnet 4 (Recommended)',
-                    'anthropic/claude-haiku-4-5-20251001' => 'Claude Haiku 4.5 (Faster/Cheaper)',
-                    'anthropic/claude-opus-4-5-20250929' => 'Claude Opus 4.5 (Most Capable)',
+                ['key' => 'hm_openrouter_model', 'label' => 'AI Extraction Model', 'type' => 'select', 'default' => 'anthropic/claude-3.5-sonnet', 'options' => [
+                    'anthropic/claude-3.5-sonnet' => 'Claude 3.5 Sonnet (Recommended)',
+                    'anthropic/claude-3-haiku'    => 'Claude 3 Haiku (Faster/Cheaper)',
+                    'anthropic/claude-3-opus'     => 'Claude 3 Opus (Most Capable)',
                 ]],
                 ['key' => 'hm_ai_extraction_enabled', 'label' => 'Auto-extract After Transcription', 'type' => 'toggle', 'default' => '1'],
                 ['key' => 'hm_ai_max_retries', 'label' => 'Max AI Retries on Failure', 'type' => 'number', 'default' => '2'],
