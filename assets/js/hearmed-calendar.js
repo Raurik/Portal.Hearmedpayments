@@ -1429,102 +1429,459 @@ var Cal={
     // ── Outcome → New Order Modal ──
     _openOutcomeOrderModal:function(a,outcome){
         var self=this;
-        // Ensure services loaded
-        var ready=$.Deferred();
-        if(!self.services.length){self.loadServices().always(function(){ready.resolve();});}
-        else ready.resolve();
 
-        ready.then(function(){
-            // Build a lightweight inline order modal pre-filled with patient
-            var h='<div class="hm-modal-bg hm-modal-bg--top open"><div class="hm-modal hm-modal--md" style="max-width:600px">';
-            h+='<div class="hm-modal-hd" style="background:#f59e0b;color:#fff;border-radius:12px 12px 0 0;padding:14px 20px">';
-            h+='<div><h3 style="margin:0;color:#fff;font-size:16px">New Order — '+esc(outcome.name)+'</h3>';
-            h+='<div style="font-size:12px;opacity:.85;margin-top:2px">'+esc(a.patient_name||'')+'</div></div>';
-            h+='<button class="hm-close hm-oo-close" style="color:#fff">'+IC.x+'</button></div>';
-            h+='<div class="hm-modal-body" style="padding:20px;max-height:70vh;overflow-y:auto">';
+        // Load all products from DB for cascading dropdowns
+        post('get_order_products',{}).then(function(r){
+            if(!r.success){self.toast('Failed to load products');return;}
+            var allProducts=r.data.products||[];
+            var allServices=r.data.services||[];
+            var allRanges=r.data.ranges||[];
 
-            h+='<div class="hm-fld"><label>Patient</label><input class="hm-inp" value="'+esc(a.patient_name||'')+'" readonly style="background:#f8fafc"></div>';
+            // Category map: item_type → display label
+            var catMap={product:'Hearing Aid',service:'Service',accessory:'Accessory',consumable:'Consumable',bundled:'Bundled Item'};
+            // Get distinct categories from products
+            var categories={};
+            allProducts.forEach(function(p){
+                var cat=p.item_type||'product';
+                if(!categories[cat])categories[cat]=catMap[cat]||cat;
+            });
+            if(allServices.length)categories['service']='Service';
+
+            // ── Build Modal HTML ──
+            var h='<div class="hm-modal-bg hm-modal-bg--top open" style="z-index:100000">';
+            h+='<div class="hm-modal" style="max-width:640px;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">';
+
+            // Header
+            h+='<div style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center">';
+            h+='<div><div style="font-size:16px;font-weight:700;margin:0">New Order</div>';
+            h+='<div style="font-size:12px;opacity:.85;margin-top:2px">'+esc(a.patient_name||'')+' — '+esc(outcome.name)+'</div></div>';
+            h+='<button class="hm-close hm-oo-close" style="color:#fff;font-size:20px;background:none;border:none;cursor:pointer">×</button></div>';
+
+            // Body
+            h+='<div style="padding:20px;max-height:70vh;overflow-y:auto;background:#fff">';
+
+            // Hidden fields
             h+='<input type="hidden" id="hm-oo-pid" value="'+a.patient_id+'">';
             h+='<input type="hidden" id="hm-oo-aid" value="'+a._ID+'">';
 
-            // Product picker
-            h+='<div class="hm-fld"><label>Add Product / Service</label>';
-            h+='<select class="hm-inp" id="hm-oo-product"><option value="">— select a product —</option>';
-            self.services.forEach(function(s){
-                h+='<option value="svc-'+s.id+'" data-name="'+esc(s.name)+'" data-price="'+(s.default_price||0)+'">'+esc(s.name)+' (Service)</option>';
+            // Step 1: Product Type
+            h+='<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Product Type</label>';
+            h+='<select id="hm-oo-cat" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%"><option value="">— Select Category —</option>';
+            Object.keys(categories).forEach(function(k){
+                h+='<option value="'+k+'">'+esc(categories[k])+'</option>';
             });
             h+='</select></div>';
 
-            // Items table
-            h+='<div id="hm-oo-items" style="margin:12px 0"></div>';
-            h+='<div style="display:flex;justify-content:flex-end;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:12px">Total: <span id="hm-oo-total" style="margin-left:8px">€0.00</span></div>';
+            // Step 2: Manufacturer (hearing aids only)
+            h+='<div id="hm-oo-mfr-wrap" style="display:none;margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Manufacturer</label>';
+            h+='<select id="hm-oo-mfr" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%"><option value="">— Select Manufacturer —</option></select></div>';
+
+            // Step 3: Style (hearing aids only)
+            h+='<div id="hm-oo-style-wrap" style="display:none;margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Style</label>';
+            h+='<select id="hm-oo-style" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%"><option value="">— Select Style —</option></select></div>';
+
+            // Step 4: Product Name
+            h+='<div id="hm-oo-prod-wrap" style="display:none;margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Product Name</label>';
+            h+='<select id="hm-oo-prod" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%"><option value="">— Select Product —</option></select></div>';
+
+            // Step 5: Tech Level (auto-shown for hearing aids)
+            h+='<div id="hm-oo-tech-wrap" style="display:none;margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Tech Level</label>';
+            h+='<div id="hm-oo-tech" style="font-size:13px;font-weight:600;color:#0f172a;padding:8px 10px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0">—</div></div>';
+
+            // Ear Side
+            h+='<div id="hm-oo-ear-wrap" style="display:none;margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Ear</label>';
+            h+='<select id="hm-oo-ear" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
+            h+='<option value="">— Select —</option><option value="Left">Left</option><option value="Right">Right</option><option value="Binaural">Binaural (both)</option>';
+            h+='</select></div>';
+
+            // Add Item button
+            h+='<div id="hm-oo-add-wrap" style="display:none;margin-bottom:16px;text-align:right">';
+            h+='<button type="button" id="hm-oo-add-item" class="hm-btn hm-btn--secondary" style="font-size:12px;padding:6px 14px;border-radius:6px">+ Add to Order</button></div>';
+
+            // Items Table
+            h+='<div id="hm-oo-items" style="margin-bottom:14px"></div>';
+
+            // PRSI
+            h+='<div style="margin-bottom:14px;padding:12px 14px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px">';
+            h+='<label style="font-size:11px;font-weight:700;color:#0e7490;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:8px">PRSI Grant</label>';
+            h+='<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">';
+            h+='<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:#334155"><input type="checkbox" id="hm-oo-prsi-l"> Left ear — €500</label>';
+            h+='<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:#334155"><input type="checkbox" id="hm-oo-prsi-r"> Right ear — €500</label>';
+            h+='</div></div>';
+
+            // Discount
+            h+='<div style="margin-bottom:14px;display:flex;gap:12px;align-items:flex-end">';
+            h+='<div style="flex:1"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Discount (%)</label>';
+            h+='<input type="number" id="hm-oo-disc" class="hm-inp" value="0" min="0" max="100" step="1" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%"></div>';
+            h+='</div>';
+
+            // Totals
+            h+='<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:14px">';
+            h+='<div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b;margin-bottom:4px"><span>Subtotal</span><span id="hm-oo-sub">€0.00</span></div>';
+            h+='<div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b;margin-bottom:4px"><span>VAT</span><span id="hm-oo-vat">€0.00</span></div>';
+            h+='<div style="display:flex;justify-content:space-between;font-size:13px;color:#dc2626;margin-bottom:4px" id="hm-oo-disc-row" style="display:none"><span>Discount</span><span id="hm-oo-disc-amt">−€0.00</span></div>';
+            h+='<div style="display:flex;justify-content:space-between;font-size:13px;color:#059669;margin-bottom:4px" id="hm-oo-prsi-row"><span>PRSI Deduction</span><span id="hm-oo-prsi-amt">−€0.00</span></div>';
+            h+='<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:#0f172a;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px"><span>Patient Pays</span><span id="hm-oo-total">€0.00</span></div>';
+            h+='</div>';
 
             // Notes
-            h+='<div class="hm-fld"><label>Order Notes</label><textarea class="hm-inp" id="hm-oo-notes" rows="2" placeholder="Optional notes..."></textarea></div>';
+            h+='<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Order Notes</label>';
+            h+='<textarea id="hm-oo-notes" class="hm-inp" rows="2" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%;resize:vertical" placeholder="Dome size, speaker requirements..."></textarea></div>';
 
-            h+='</div>';
-            h+='<div class="hm-modal-ft" style="padding:12px 20px;border-top:1px solid #e2e8f0"><span id="hm-oo-err" style="color:#ef4444;font-size:12px"></span><div class="hm-modal-acts"><button class="hm-btn hm-oo-close">Cancel</button><button class="hm-btn hm-btn--primary hm-oo-save">Create Order</button></div></div>';
+            h+='</div>'; // end body
+
+            // Footer
+            h+='<div style="padding:12px 20px;border-top:1px solid #e2e8f0;background:#fff;display:flex;justify-content:space-between;align-items:center">';
+            h+='<span id="hm-oo-err" style="color:#ef4444;font-size:12px"></span>';
+            h+='<div style="display:flex;gap:8px">';
+            h+='<button class="hm-btn hm-oo-close" style="font-size:13px">Cancel</button>';
+            h+='<button class="hm-btn" id="hm-oo-pay" style="font-size:13px;background:#059669;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">Take Payment</button>';
+            h+='<button class="hm-btn hm-btn--primary hm-oo-save" style="font-size:13px;padding:8px 16px">Submit Order</button>';
+            h+='</div></div>';
+
             h+='</div></div>';
 
             $('body').append(h);
 
-            // Internal item list
+            // ── State ──
             var orderItems=[];
-            var renderItems=function(){
-                if(!orderItems.length){$('#hm-oo-items').html('<div style="color:#94a3b8;font-size:12px;padding:8px 0">No items added yet.</div>');$('#hm-oo-total').text('€0.00');return;}
-                var th='<table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="border-bottom:1px solid #e2e8f0"><th style="text-align:left;padding:4px 6px">Item</th><th style="text-align:right;padding:4px 6px">Price</th><th style="width:40px"></th></tr></thead><tbody>';
-                var tot=0;
+            var selectedProduct=null;
+
+            // ── Cascading Logic ──
+
+            // Category change
+            $(document).off('change.oocat').on('change.oocat','#hm-oo-cat',function(){
+                var cat=$(this).val();
+                // Reset downstream
+                $('#hm-oo-mfr-wrap,#hm-oo-style-wrap,#hm-oo-prod-wrap,#hm-oo-tech-wrap,#hm-oo-ear-wrap,#hm-oo-add-wrap').hide();
+                $('#hm-oo-mfr,#hm-oo-style,#hm-oo-prod').val('');
+                selectedProduct=null;
+
+                if(!cat)return;
+
+                if(cat==='product'){
+                    // Hearing Aid: show manufacturer dropdown
+                    var mfrs={};
+                    allProducts.filter(function(p){return p.item_type==='product';}).forEach(function(p){
+                        if(p.manufacturer_id&&p.manufacturer_name)mfrs[p.manufacturer_id]=p.manufacturer_name;
+                    });
+                    var opts='<option value="">— Select Manufacturer —</option>';
+                    Object.keys(mfrs).sort(function(a,b){return mfrs[a].localeCompare(mfrs[b]);}).forEach(function(id){
+                        opts+='<option value="'+id+'">'+esc(mfrs[id])+'</option>';
+                    });
+                    $('#hm-oo-mfr').html(opts);
+                    $('#hm-oo-mfr-wrap').show();
+                } else if(cat==='service'){
+                    // Service: show product name dropdown directly with services
+                    var opts='<option value="">— Select Service —</option>';
+                    allServices.forEach(function(s){
+                        opts+='<option value="svc-'+s.id+'" data-name="'+esc(s.service_name)+'" data-price="'+(s.default_price||0)+'" data-vat="13.5">'+esc(s.service_name)+' — €'+(parseFloat(s.default_price)||0).toFixed(2)+'</option>';
+                    });
+                    $('#hm-oo-prod').html(opts);
+                    $('#hm-oo-prod-wrap').show();
+                } else {
+                    // Accessory / Consumable / Bundled: show product name dropdown
+                    var filtered=allProducts.filter(function(p){return p.item_type===cat;});
+                    var opts='<option value="">— Select Product —</option>';
+                    filtered.forEach(function(p){
+                        var nm=(p.manufacturer_name?p.manufacturer_name+' ':'')+(p.product_name||'');
+                        opts+='<option value="'+p.id+'" data-name="'+esc(nm)+'" data-price="'+(p.retail_price||0)+'" data-vat="'+(p.vat_category==='Consumables'?23:0)+'">'+esc(nm)+' — €'+(parseFloat(p.retail_price)||0).toFixed(2)+'</option>';
+                    });
+                    $('#hm-oo-prod').html(opts);
+                    $('#hm-oo-prod-wrap').show();
+                }
+            });
+
+            // Manufacturer change (hearing aids)
+            $(document).off('change.oomfr').on('change.oomfr','#hm-oo-mfr',function(){
+                var mfr=$(this).val();
+                $('#hm-oo-style-wrap,#hm-oo-prod-wrap,#hm-oo-tech-wrap,#hm-oo-ear-wrap,#hm-oo-add-wrap').hide();
+                $('#hm-oo-style,#hm-oo-prod').val('');
+                selectedProduct=null;
+                if(!mfr)return;
+
+                // Get distinct styles for this manufacturer
+                var styles={};
+                allProducts.filter(function(p){return p.item_type==='product'&&String(p.manufacturer_id)===String(mfr);}).forEach(function(p){
+                    if(p.style)styles[p.style]=1;
+                });
+                var opts='<option value="">— Select Style —</option>';
+                Object.keys(styles).sort().forEach(function(s){
+                    opts+='<option value="'+esc(s)+'">'+esc(s)+'</option>';
+                });
+                $('#hm-oo-style').html(opts);
+                $('#hm-oo-style-wrap').show();
+            });
+
+            // Style change (hearing aids)
+            $(document).off('change.oostyle').on('change.oostyle','#hm-oo-style',function(){
+                var style=$(this).val();
+                var mfr=$('#hm-oo-mfr').val();
+                $('#hm-oo-prod-wrap,#hm-oo-tech-wrap,#hm-oo-ear-wrap,#hm-oo-add-wrap').hide();
+                $('#hm-oo-prod').val('');
+                selectedProduct=null;
+                if(!style)return;
+
+                // Get products matching this manufacturer + style
+                var filtered=allProducts.filter(function(p){
+                    return p.item_type==='product'&&String(p.manufacturer_id)===String(mfr)&&p.style===style;
+                });
+                var opts='<option value="">— Select Product —</option>';
+                filtered.forEach(function(p){
+                    var nm=(p.manufacturer_name?p.manufacturer_name+' ':'')+(p.product_name||'')+' '+(p.style||'')+' ('+(p.tech_level||'—')+')';
+                    opts+='<option value="'+p.id+'" data-name="'+esc(nm)+'" data-price="'+(p.retail_price||0)+'" data-tech="'+esc(p.tech_level||'')+'" data-vat="0">'+esc(nm)+' — €'+(parseFloat(p.retail_price)||0).toFixed(2)+'</option>';
+                });
+                $('#hm-oo-prod').html(opts);
+                $('#hm-oo-prod-wrap').show();
+            });
+
+            // Product selection
+            $(document).off('change.ooprod').on('change.ooprod','#hm-oo-prod',function(){
+                var val=$(this).val();
+                if(!val){
+                    $('#hm-oo-tech-wrap,#hm-oo-ear-wrap,#hm-oo-add-wrap').hide();
+                    selectedProduct=null;
+                    return;
+                }
+                var opt=$(this).find('option:selected');
+                var cat=$('#hm-oo-cat').val();
+                selectedProduct={
+                    id:val,
+                    type:val.toString().indexOf('svc-')===0?'service':(cat||'product'),
+                    name:opt.data('name')||opt.text(),
+                    unit_price:parseFloat(opt.data('price'))||0,
+                    vat_rate:parseFloat(opt.data('vat'))||0,
+                    tech_level:opt.data('tech')||'',
+                    ear:''
+                };
+
+                // Show tech level for hearing aids
+                if(cat==='product'&&selectedProduct.tech_level){
+                    $('#hm-oo-tech').text(selectedProduct.tech_level);
+                    $('#hm-oo-tech-wrap').show();
+                } else {
+                    $('#hm-oo-tech-wrap').hide();
+                }
+
+                // Show ear selector for hearing aids
+                if(cat==='product'){
+                    $('#hm-oo-ear-wrap').show();
+                } else {
+                    $('#hm-oo-ear-wrap').hide();
+                }
+
+                $('#hm-oo-add-wrap').show();
+            });
+
+            // Add item button
+            $(document).off('click.ooadditem').on('click.ooadditem','#hm-oo-add-item',function(){
+                if(!selectedProduct){$('#hm-oo-err').text('Select a product first.');return;}
+                var cat=$('#hm-oo-cat').val();
+                var ear=$('#hm-oo-ear').val()||'';
+                if(cat==='product'&&!ear){$('#hm-oo-err').text('Please select which ear.');return;}
+                $('#hm-oo-err').text('');
+
+                var item=$.extend({},selectedProduct);
+                item.ear=ear;
+                item.qty=cat==='product'&&ear==='Binaural'?2:1;
+                item.vat_amount=parseFloat(((item.unit_price*item.qty)*(item.vat_rate/100)).toFixed(2));
+                item.line_total=parseFloat(((item.unit_price*item.qty)+item.vat_amount).toFixed(2));
+                item._uid=Date.now()+Math.random();
+                orderItems.push(item);
+                renderItems();
+                updateTotals();
+
+                // Reset selectors for next item
+                selectedProduct=null;
+                $('#hm-oo-cat').val('').trigger('change.oocat');
+            });
+
+            function renderItems(){
+                if(!orderItems.length){
+                    $('#hm-oo-items').html('<div style="color:#94a3b8;font-size:12px;padding:12px 0;text-align:center">No items added yet.</div>');
+                    return;
+                }
+                var th='<table style="width:100%;font-size:12px;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden"><thead><tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0">';
+                th+='<th style="text-align:left;padding:6px 8px;font-weight:600;color:#334155">Item</th>';
+                th+='<th style="text-align:center;padding:6px 8px;font-weight:600;color:#334155">Ear</th>';
+                th+='<th style="text-align:center;padding:6px 8px;font-weight:600;color:#334155">Qty</th>';
+                th+='<th style="text-align:right;padding:6px 8px;font-weight:600;color:#334155">Price</th>';
+                th+='<th style="width:36px"></th></tr></thead><tbody>';
                 orderItems.forEach(function(it,idx){
-                    th+='<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:6px">'+esc(it.name)+'</td><td style="text-align:right;padding:6px">€'+parseFloat(it.price).toFixed(2)+'</td><td><button class="hm-oo-rem" data-idx="'+idx+'" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:14px">&times;</button></td></tr>';
-                    tot+=parseFloat(it.price);
+                    th+='<tr style="border-bottom:1px solid #f1f5f9">';
+                    th+='<td style="padding:6px 8px;color:#0f172a">'+esc(it.name)+'</td>';
+                    th+='<td style="padding:6px 8px;text-align:center;color:#64748b">'+(it.ear||'—')+'</td>';
+                    th+='<td style="padding:6px 8px;text-align:center;color:#64748b">'+it.qty+'</td>';
+                    th+='<td style="padding:6px 8px;text-align:right;font-weight:600;color:#0f172a">€'+(it.unit_price*it.qty).toFixed(2)+'</td>';
+                    th+='<td style="padding:6px 8px"><button class="hm-oo-rem" data-idx="'+idx+'" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:14px;font-weight:700">×</button></td>';
+                    th+='</tr>';
                 });
                 th+='</tbody></table>';
                 $('#hm-oo-items').html(th);
-                $('#hm-oo-total').text('€'+tot.toFixed(2));
-            };
-            renderItems();
+            }
 
-            // Add product
-            $(document).off('change.ooprod').on('change.ooprod','#hm-oo-product',function(){
-                var $sel=$(this),val=$sel.val();if(!val){return;}
-                var opt=$sel.find('option:selected');
-                orderItems.push({id:val,name:opt.data('name'),price:opt.data('price')||0});
-                renderItems();
-                $sel.val('');
-            });
+            function updateTotals(){
+                var sub=0,vat=0;
+                orderItems.forEach(function(it){sub+=it.unit_price*it.qty;vat+=it.vat_amount;});
+                var discPct=parseFloat($('#hm-oo-disc').val())||0;
+                var disc=discPct>0?Math.round(sub*(discPct/100)*100)/100:0;
+                var prsi=($('#hm-oo-prsi-l').is(':checked')?500:0)+($('#hm-oo-prsi-r').is(':checked')?500:0);
+                var total=Math.max(0,sub+vat-disc-prsi);
+                $('#hm-oo-sub').text('€'+sub.toFixed(2));
+                $('#hm-oo-vat').text('€'+vat.toFixed(2));
+                $('#hm-oo-disc-amt').text('−€'+disc.toFixed(2));
+                $('#hm-oo-prsi-amt').text('−€'+prsi.toFixed(2));
+                $('#hm-oo-total').text('€'+total.toFixed(2));
+            }
 
             // Remove item
             $(document).off('click.oorem').on('click.oorem','.hm-oo-rem',function(){
                 orderItems.splice(parseInt($(this).data('idx')),1);
-                renderItems();
+                renderItems();updateTotals();
             });
+
+            // PRSI / Discount change → update totals
+            $(document).off('change.ooprsi input.oodisc').on('change.ooprsi','#hm-oo-prsi-l,#hm-oo-prsi-r',updateTotals);
+            $(document).off('input.oodisc').on('input.oodisc','#hm-oo-disc',updateTotals);
 
             // Close
             $(document).off('click.ooclose').on('click.ooclose','.hm-oo-close',function(e){
-                e.stopPropagation();$('.hm-modal-bg--top').remove();$(document).off('.ooprod .oorem .ooclose .oosave');
+                e.stopPropagation();$('.hm-modal-bg--top').remove();
+                $(document).off('.oocat .oomfr .oostyle .ooprod .ooadditem .oorem .ooclose .oosave .oopay .ooprsi .oodisc');
+            });
+            $(document).off('click.oobg').on('click.oobg','.hm-modal-bg--top',function(e){
+                if($(e.target).hasClass('hm-modal-bg--top')){
+                    $('.hm-modal-bg--top').remove();
+                    $(document).off('.oocat .oomfr .oostyle .ooprod .ooadditem .oorem .ooclose .oosave .oopay .oobg .ooprsi .oodisc');
+                }
             });
 
-            // Save order
+            // ── Submit Order ──
             $(document).off('click.oosave').on('click.oosave','.hm-oo-save',function(){
                 if(!orderItems.length){$('#hm-oo-err').text('Please add at least one item.');return;}
-                var $btn=$(this);$btn.prop('disabled',true).text('Creating...');
+                var $btn=$(this);$btn.prop('disabled',true).text('Submitting...');
+                var discPct=parseFloat($('#hm-oo-disc').val())||0;
                 post('create_outcome_order',{
                     patient_id:$('#hm-oo-pid').val(),
                     appointment_id:$('#hm-oo-aid').val(),
                     items_json:JSON.stringify(orderItems),
-                    notes:$('#hm-oo-notes').val()||''
+                    notes:$('#hm-oo-notes').val()||'',
+                    prsi_left:$('#hm-oo-prsi-l').is(':checked')?1:0,
+                    prsi_right:$('#hm-oo-prsi-r').is(':checked')?1:0,
+                    discount_pct:discPct,
+                    payment_method:''
                 }).then(function(r){
                     if(r.success){
-                        $('.hm-modal-bg--top').remove();$(document).off('.ooprod .oorem .ooclose .oosave');
-                        self.toast('Order created successfully');
+                        $('.hm-modal-bg--top').remove();
+                        $(document).off('.oocat .oomfr .oostyle .ooprod .ooadditem .oorem .ooclose .oosave .oopay .oobg .ooprsi .oodisc');
+                        self.toast('Order '+r.data.order_number+' submitted for approval');
                     } else {
-                        $btn.prop('disabled',false).text('Create Order');
+                        $btn.prop('disabled',false).text('Submit Order');
                         $('#hm-oo-err').text(r.data&&r.data.message?r.data.message:'Failed to create order');
                     }
                 }).fail(function(){
-                    $btn.prop('disabled',false).text('Create Order');
+                    $btn.prop('disabled',false).text('Submit Order');
                     $('#hm-oo-err').text('Network error');
                 });
+            });
+
+            // ── Take Payment → creates order then shows payment modal ──
+            $(document).off('click.oopay').on('click.oopay','#hm-oo-pay',function(){
+                if(!orderItems.length){$('#hm-oo-err').text('Please add at least one item.');return;}
+                var $btn=$(this);$btn.prop('disabled',true).text('Processing...');
+                var discPct=parseFloat($('#hm-oo-disc').val())||0;
+                post('create_outcome_order',{
+                    patient_id:$('#hm-oo-pid').val(),
+                    appointment_id:$('#hm-oo-aid').val(),
+                    items_json:JSON.stringify(orderItems),
+                    notes:$('#hm-oo-notes').val()||'',
+                    prsi_left:$('#hm-oo-prsi-l').is(':checked')?1:0,
+                    prsi_right:$('#hm-oo-prsi-r').is(':checked')?1:0,
+                    discount_pct:discPct,
+                    payment_method:''
+                }).then(function(r){
+                    if(r.success){
+                        // Close order modal
+                        $('.hm-modal-bg--top').remove();
+                        $(document).off('.oocat .oomfr .oostyle .ooprod .ooadditem .oorem .ooclose .oosave .oopay .oobg .ooprsi .oodisc');
+
+                        // Open payment modal
+                        self._openPaymentModal(r.data.order_id,r.data.order_number,r.data.grand_total,a.patient_name||'');
+                    } else {
+                        $btn.prop('disabled',false).text('Take Payment');
+                        $('#hm-oo-err').text(r.data&&r.data.message?r.data.message:'Failed');
+                    }
+                }).fail(function(){
+                    $btn.prop('disabled',false).text('Take Payment');
+                    $('#hm-oo-err').text('Network error');
+                });
+            });
+
+        }).fail(function(){
+            self.toast('Failed to load product data');
+        });
+    },
+
+    // ── Payment Modal ──
+    _openPaymentModal:function(orderId,orderNumber,grandTotal,patientName){
+        var self=this;
+        var h='<div class="hm-modal-bg hm-modal-bg--top open" style="z-index:100001">';
+        h+='<div class="hm-modal" style="max-width:420px;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">';
+
+        h+='<div style="background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center">';
+        h+='<div><div style="font-size:16px;font-weight:700">Take Payment</div>';
+        h+='<div style="font-size:12px;opacity:.85;margin-top:2px">'+esc(patientName)+' — '+esc(orderNumber)+'</div></div>';
+        h+='<button class="hm-close hm-pay-close" style="color:#fff;font-size:20px;background:none;border:none;cursor:pointer">×</button></div>';
+
+        h+='<div style="padding:20px;background:#fff">';
+        h+='<div style="text-align:center;margin-bottom:16px"><div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.3px">Total Due</div>';
+        h+='<div style="font-size:28px;font-weight:700;color:#059669">€'+parseFloat(grandTotal).toFixed(2)+'</div></div>';
+
+        h+='<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Amount (€)</label>';
+        h+='<input type="number" id="hm-pay-amt" class="hm-inp" step="0.01" min="0" value="'+parseFloat(grandTotal).toFixed(2)+'" style="font-size:15px;padding:10px 12px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%;font-weight:600"></div>';
+
+        h+='<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Payment Method</label>';
+        h+='<select id="hm-pay-method" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
+        h+='<option value="">— Select —</option><option value="Card">Card</option><option value="Cash">Cash</option>';
+        h+='<option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option>';
+        h+='</select></div>';
+
+        h+='<div id="hm-pay-err" style="color:#ef4444;font-size:12px;margin-bottom:8px"></div>';
+
+        h+='<button id="hm-pay-confirm" class="hm-btn hm-btn--primary" style="width:100%;padding:10px;font-size:14px;font-weight:600;border-radius:6px">Confirm Payment</button>';
+        h+='</div></div></div>';
+
+        $('body').append(h);
+
+        $(document).off('click.payclose').on('click.payclose','.hm-pay-close',function(e){
+            e.stopPropagation();$('.hm-modal-bg--top').remove();
+            $(document).off('.payclose .payconfirm');
+            self.toast('Order '+orderNumber+' submitted for approval (no payment taken)');
+        });
+
+        $(document).off('click.payconfirm').on('click.payconfirm','#hm-pay-confirm',function(){
+            var amt=parseFloat($('#hm-pay-amt').val())||0;
+            var method=$('#hm-pay-method').val();
+            if(!amt||amt<=0){$('#hm-pay-err').text('Enter a valid amount.');return;}
+            if(!method){$('#hm-pay-err').text('Select a payment method.');return;}
+
+            var $btn=$(this);$btn.prop('disabled',true).text('Processing...');
+            post('record_order_payment',{
+                order_id:orderId,
+                amount:amt,
+                payment_method:method
+            }).then(function(r){
+                if(r.success){
+                    $('.hm-modal-bg--top').remove();
+                    $(document).off('.payclose .payconfirm');
+                    self.toast('Payment of €'+amt.toFixed(2)+' recorded on '+orderNumber);
+                } else {
+                    $btn.prop('disabled',false).text('Confirm Payment');
+                    $('#hm-pay-err').text(r.data&&r.data.message?r.data.message:'Failed');
+                }
+            }).fail(function(){
+                $btn.prop('disabled',false).text('Confirm Payment');
+                $('#hm-pay-err').text('Network error');
             });
         });
     },

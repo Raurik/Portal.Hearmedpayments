@@ -57,6 +57,8 @@ add_action( 'wp_ajax_hm_create_patient',       'hm_ajax_create_patient_from_cale
 add_action( 'wp_ajax_hm_get_outcome_templates', 'hm_ajax_get_outcome_templates' );
 add_action( 'wp_ajax_hm_save_appointment_outcome', 'hm_ajax_save_appointment_outcome' );
 add_action( 'wp_ajax_hm_create_outcome_order',  'hm_ajax_create_outcome_order' );
+add_action( 'wp_ajax_hm_get_order_products',    'hm_ajax_get_order_products' );
+add_action( 'wp_ajax_hm_record_order_payment',  'hm_ajax_record_order_payment' );
 add_action( 'wp_ajax_hm_update_appointment_status', 'hm_ajax_update_appointment_status' );
 add_action( 'wp_ajax_hm_save_exclusion',           'hm_ajax_save_exclusion' );
 add_action( 'wp_ajax_hm_delete_exclusion',         'hm_ajax_delete_exclusion' );
@@ -1413,6 +1415,119 @@ function hm_ajax_save_appointment_outcome() {
 }
 
 // ================================================================
+// GET ALL PRODUCTS FOR ORDER FORM — cascading dropdowns
+// ================================================================
+function hm_ajax_get_order_products() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+
+    try {
+        $db = HearMed_DB::instance();
+
+        // All active products with manufacturer info
+        $products = $db->get_results(
+            "SELECT p.id, p.product_name, p.item_type, p.style, p.tech_level,
+                    p.retail_price, p.cost_price, p.vat_category, p.hearing_aid_class,
+                    p.power_type, p.product_code,
+                    m.id AS manufacturer_id, m.name AS manufacturer_name
+             FROM hearmed_reference.products p
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+             WHERE p.is_active = true
+             ORDER BY m.name, p.product_name"
+        ) ?: [];
+
+        // All active services
+        $services = $db->get_results(
+            "SELECT id, service_name, default_price
+             FROM hearmed_reference.services
+             WHERE is_active = true
+             ORDER BY service_name"
+        ) ?: [];
+
+        // HearMed ranges for PRSI pricing
+        $ranges = $db->get_results(
+            "SELECT id, range_name, price_total::numeric AS price_total, price_ex_prsi::numeric AS price_ex_prsi
+             FROM hearmed_reference.hearmed_range
+             WHERE COALESCE(is_active::text,'true') NOT IN ('false','f','0')
+             ORDER BY range_name"
+        ) ?: [];
+
+        wp_send_json_success([
+            'products' => $products,
+            'services' => $services,
+            'ranges'   => $ranges,
+        ]);
+    } catch ( Throwable $e ) {
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+// ================================================================
+// RECORD PAYMENT ON ORDER — deposit or full payment from calendar
+// ================================================================
+function hm_ajax_record_order_payment() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+
+    try {
+        $order_id       = intval( $_POST['order_id'] ?? 0 );
+        $amount         = floatval( $_POST['amount'] ?? 0 );
+        $payment_method = sanitize_text_field( $_POST['payment_method'] ?? '' );
+
+        if ( ! $order_id ) { wp_send_json_error( [ 'message' => 'No order specified.' ] ); return; }
+        if ( $amount <= 0 ) { wp_send_json_error( [ 'message' => 'Invalid amount.' ] ); return; }
+        if ( ! $payment_method ) { wp_send_json_error( [ 'message' => 'Select a payment method.' ] ); return; }
+
+        $db = HearMed_DB::instance();
+
+        $order = $db->get_row(
+            "SELECT o.id, o.patient_id, o.clinic_id, o.grand_total, o.deposit_amount
+             FROM hearmed_core.orders o WHERE o.id = \$1", [$order_id]
+        );
+        if ( ! $order ) { wp_send_json_error( [ 'message' => 'Order not found.' ] ); return; }
+
+        // Update deposit on order
+        $new_deposit = floatval( $order->deposit_amount ?? 0 ) + $amount;
+        $db->update( 'hearmed_core.orders', [
+            'deposit_amount'  => $new_deposit,
+            'deposit_method'  => $payment_method,
+            'deposit_paid_at' => date( 'Y-m-d H:i:s' ),
+        ], [ 'id' => $order_id ] );
+
+        // Create payment record
+        $db->insert( 'hearmed_core.payments', [
+            'patient_id'     => $order->patient_id,
+            'amount'         => $amount,
+            'payment_date'   => date( 'Y-m-d' ),
+            'payment_method' => $payment_method,
+            'received_by'    => get_current_user_id(),
+            'clinic_id'      => $order->clinic_id,
+            'created_by'     => get_current_user_id(),
+            'notes'          => 'Deposit on order #' . $order_id,
+        ]);
+
+        // Log in patient timeline
+        $db->insert( 'hearmed_core.patient_timeline', [
+            'patient_id'  => $order->patient_id,
+            'event_type'  => 'payment_received',
+            'event_date'  => date( 'Y-m-d' ),
+            'staff_id'    => get_current_user_id(),
+            'description' => 'Payment of €' . number_format( $amount, 2 ) . ' received via ' . $payment_method,
+            'order_id'    => $order_id,
+        ]);
+
+        $balance = max( 0, floatval( $order->grand_total ) - $new_deposit );
+
+        wp_send_json_success([
+            'message' => 'Payment of €' . number_format( $amount, 2 ) . ' recorded.',
+            'balance' => $balance,
+        ]);
+    } catch ( Throwable $e ) {
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+// ================================================================
 // CREATE ORDER FROM OUTCOME — lightweight order creation from calendar
 // ================================================================
 function hm_ajax_create_outcome_order() {
@@ -1423,34 +1538,94 @@ function hm_ajax_create_outcome_order() {
         $appointment_id = intval( $_POST['appointment_id'] ?? 0 );
         $notes          = sanitize_textarea_field( $_POST['notes'] ?? '' );
         $items          = json_decode( stripslashes( $_POST['items_json'] ?? '[]' ), true );
+        $prsi_left      = !empty( $_POST['prsi_left'] );
+        $prsi_right     = !empty( $_POST['prsi_right'] );
+        $discount_pct   = floatval( $_POST['discount_pct'] ?? 0 );
+        $payment_method = sanitize_text_field( $_POST['payment_method'] ?? '' );
 
         if ( ! $patient_id ) { wp_send_json_error( [ 'message' => 'No patient specified.' ] ); return; }
         if ( empty( $items ) ) { wp_send_json_error( [ 'message' => 'No items added.' ] ); return; }
 
         $db = HearMed_DB::instance();
 
+        // Get clinic from appointment or current user
+        $clinic_id = null;
+        if ( $appointment_id ) {
+            $appt = $db->get_row(
+                "SELECT clinic_id FROM hearmed_core.appointments WHERE id = \$1", [$appointment_id]
+            );
+            $clinic_id = $appt ? $appt->clinic_id : null;
+        }
+
         // Calculate totals
         $subtotal = 0;
+        $vat_total = 0;
+        $line_num = 1;
+        $order_items_data = [];
         foreach ( $items as $item ) {
-            $subtotal += floatval( $item['price'] ?? 0 );
+            $qty        = intval( $item['qty'] ?? 1 );
+            $unit_price = floatval( $item['unit_price'] ?? $item['price'] ?? 0 );
+            $vat_rate   = floatval( $item['vat_rate'] ?? 0 );
+            $net        = $unit_price * $qty;
+            $vat        = round( $net * ( $vat_rate / 100 ), 2 );
+            $subtotal  += $net;
+            $vat_total += $vat;
+
+            $order_items_data[] = [
+                'line_number'       => $line_num++,
+                'item_type'         => sanitize_key( $item['type'] ?? 'product' ),
+                'item_id'           => intval( $item['id'] ?? 0 ),
+                'item_description'  => sanitize_text_field( $item['name'] ?? '' ),
+                'ear_side'          => sanitize_text_field( $item['ear'] ?? '' ),
+                'quantity'          => $qty,
+                'unit_retail_price' => $unit_price,
+                'vat_rate'          => $vat_rate,
+                'vat_amount'        => $vat,
+                'line_total'        => $net + $vat,
+            ];
         }
+
+        // Apply discount
+        $discount_total = 0;
+        if ( $discount_pct > 0 && $discount_pct <= 100 ) {
+            $discount_total = round( $subtotal * ( $discount_pct / 100 ), 2 );
+        }
+
+        // PRSI
+        $prsi_applicable = $prsi_left || $prsi_right;
+        $prsi_amount     = ( $prsi_left ? 500 : 0 ) + ( $prsi_right ? 500 : 0 );
+
+        $grand_total = max( 0, $subtotal + $vat_total - $discount_total - $prsi_amount );
 
         $order_num = 'ORD-' . date( 'Ymd' ) . '-' . str_pad( rand( 1, 9999 ), 4, '0', STR_PAD_LEFT );
 
+        $staff_id = null;
+        try {
+            $user = HearMed_Auth::current_user();
+            $staff_id = $user->id ?? null;
+        } catch ( Throwable $ignored ) {
+            $staff_id = get_current_user_id();
+        }
+
         $order_id = $db->insert( 'hearmed_core.orders', [
-            'order_number'   => $order_num,
-            'patient_id'     => $patient_id,
-            'staff_id'       => get_current_user_id(),
-            'clinic_id'      => null,
-            'order_date'     => date( 'Y-m-d' ),
-            'current_status' => 'Awaiting Approval',
-            'subtotal'       => $subtotal,
-            'discount_total' => 0,
-            'vat_total'      => 0,
-            'grand_total'    => $subtotal,
-            'notes'          => $notes,
-            'created_at'     => current_time( 'mysql' ),
-            'created_by'     => get_current_user_id(),
+            'order_number'    => $order_num,
+            'patient_id'      => $patient_id,
+            'staff_id'        => $staff_id,
+            'clinic_id'       => $clinic_id,
+            'order_date'      => date( 'Y-m-d' ),
+            'current_status'  => 'Awaiting Approval',
+            'subtotal'        => $subtotal,
+            'discount_total'  => $discount_total,
+            'vat_total'       => $vat_total,
+            'grand_total'     => $grand_total,
+            'prsi_applicable' => $prsi_applicable,
+            'prsi_amount'     => $prsi_amount,
+            'prsi_left'       => $prsi_left,
+            'prsi_right'      => $prsi_right,
+            'payment_method'  => $payment_method,
+            'notes'           => $notes,
+            'created_at'      => current_time( 'mysql' ),
+            'created_by'      => $staff_id,
         ] );
 
         if ( ! $order_id ) {
@@ -1458,41 +1633,52 @@ function hm_ajax_create_outcome_order() {
             return;
         }
 
-        // Insert order items
-        foreach ( $items as $item ) {
+        // Insert line items
+        foreach ( $order_items_data as $oi ) {
             try {
-                $db->insert( 'hearmed_core.order_items', [
-                    'order_id'    => $order_id,
-                    'item_type'   => strpos( $item['id'] ?? '', 'svc-' ) === 0 ? 'service' : 'product',
-                    'item_name'   => sanitize_text_field( $item['name'] ?? '' ),
-                    'qty'         => 1,
-                    'unit_price'  => floatval( $item['price'] ?? 0 ),
-                    'vat_rate'    => 0,
-                    'vat_amount'  => 0,
-                    'line_total'  => floatval( $item['price'] ?? 0 ),
-                    'created_at'  => current_time( 'mysql' ),
-                ] );
+                $oi['order_id'] = $order_id;
+                $db->insert( 'hearmed_core.order_items', $oi );
             } catch ( Throwable $ignored ) {}
         }
 
         // Link order to appointment
         if ( $appointment_id ) {
             try {
-                HearMed_DB::update(
-                    HearMed_Portal::table( 'appointments' ),
-                    [ 'order_id' => $order_id, 'updated_at' => current_time( 'mysql' ) ],
-                    [ 'id' => $appointment_id ]
+                $db->query(
+                    "UPDATE hearmed_core.appointments SET order_id = \$1, updated_at = NOW() WHERE id = \$2",
+                    [ $order_id, $appointment_id ]
                 );
             } catch ( Throwable $ignored ) {}
         }
 
-        HearMed_Portal::log( 'order_created_from_outcome', 'order', $order_id, [
-            'appointment_id' => $appointment_id,
-            'patient_id'     => $patient_id,
-            'total'          => $subtotal,
-        ] );
+        // Log in patient timeline
+        try {
+            $db->insert( 'hearmed_core.patient_timeline', [
+                'patient_id'  => $patient_id,
+                'event_type'  => 'order_created',
+                'event_date'  => date( 'Y-m-d' ),
+                'staff_id'    => $staff_id,
+                'description' => 'Order ' . $order_num . ' created. Total: €' . number_format( $grand_total, 2 ),
+                'order_id'    => $order_id,
+            ]);
+        } catch ( Throwable $ignored ) {}
 
-        wp_send_json_success( [ 'order_id' => $order_id, 'order_number' => $order_num ] );
+        // Status history
+        try {
+            $db->insert( 'hearmed_core.order_status_history', [
+                'order_id'   => $order_id,
+                'from_status'=> null,
+                'to_status'  => 'Awaiting Approval',
+                'changed_by' => $staff_id,
+                'notes'      => 'Order created from appointment outcome',
+            ]);
+        } catch ( Throwable $ignored ) {}
+
+        wp_send_json_success( [
+            'order_id'     => $order_id,
+            'order_number' => $order_num,
+            'grand_total'  => $grand_total,
+        ] );
     } catch ( Throwable $e ) {
         error_log( '[HearMed] create_outcome_order error: ' . $e->getMessage() );
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
