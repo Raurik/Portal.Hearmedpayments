@@ -984,7 +984,7 @@ class HearMed_KPI {
              WHERE a.staff_id = $1
                AND a.appointment_date BETWEEN $2 AND $3
                AND a.appointment_date < CURRENT_DATE
-               AND a.appointment_status NOT IN ('Cancelled', 'No Show', 'Completed')
+               AND a.appointment_status NOT IN ('Cancelled', 'No Show', 'Completed', 'Rescheduled')
                AND (a.outcome IS NULL OR TRIM(a.outcome) = '')
                AND NOT EXISTS (
                    SELECT 1 FROM hearmed_core.appointment_outcomes ao WHERE ao.appointment_id = a.id
@@ -1193,7 +1193,7 @@ class HearMed_KPI {
              WHERE a.staff_id = $1
                AND a.appointment_date BETWEEN $2 AND $3
                AND a.appointment_date < CURRENT_DATE
-               AND a.appointment_status NOT IN ('Cancelled', 'No Show', 'Completed')
+               AND a.appointment_status NOT IN ('Cancelled', 'No Show', 'Completed', 'Rescheduled')
                AND (a.outcome IS NULL OR TRIM(a.outcome) = '')
                AND NOT EXISTS (
                    SELECT 1 FROM hearmed_core.appointment_outcomes ao
