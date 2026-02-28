@@ -1326,8 +1326,7 @@ function hm_ajax_get_outcome_templates() {
     $sid = intval( $_POST['service_id'] ?? 0 );
     if ( ! $sid ) { wp_send_json_success( [] ); return; }
     $rows = HearMed_DB::get_results(
-        "SELECT id, outcome_name, outcome_color, triggers_order, triggers_invoice, requires_note,
-                triggers_followup, triggers_reminder, followup_service_ids
+        "SELECT *
          FROM hearmed_core.outcome_templates
          WHERE service_id = $1
          ORDER BY outcome_name",
@@ -1340,15 +1339,17 @@ function hm_ajax_get_outcome_templates() {
             $decoded = json_decode( $r->followup_service_ids, true );
             if ( is_array( $decoded ) ) $fu_ids = array_map( 'intval', $decoded );
         }
+        // Backwards-compatible: support both old (is_invoiceable) and new (triggers_order/triggers_invoice) columns
+        $has_new_cols = property_exists($r, 'triggers_order');
         $d[] = [
             'id'                  => (int) $r->id,
             'outcome_name'        => $r->outcome_name,
             'outcome_color'       => $r->outcome_color ?: '#6b7280',
-            'triggers_order'      => (bool) ($r->triggers_order ?? false),
-            'triggers_invoice'    => (bool) ($r->triggers_invoice ?? false),
-            'requires_note'       => (bool) $r->requires_note,
-            'triggers_followup'   => (bool) $r->triggers_followup,
-            'triggers_reminder'   => (bool) $r->triggers_reminder,
+            'triggers_order'      => $has_new_cols ? (bool) $r->triggers_order : (bool) ($r->is_invoiceable ?? false),
+            'triggers_invoice'    => $has_new_cols ? (bool) $r->triggers_invoice : false,
+            'requires_note'       => (bool) ($r->requires_note ?? false),
+            'triggers_followup'   => (bool) ($r->triggers_followup ?? false),
+            'triggers_reminder'   => (bool) ($r->triggers_reminder ?? false),
             'followup_service_ids'=> $fu_ids,
         ];
     }

@@ -248,10 +248,15 @@ class HearMed_Admin_Appointment_Type_Detail {
                             <span style="width:16px;height:16px;border-radius:4px;background:<?php echo esc_attr($oc); ?>;flex-shrink:0;display:inline-block;"></span>
                             <span class="hm-slbl" style="font-weight:600;color:#0f172a;"><?php echo esc_html($o->outcome_name); ?></span>
                             <span style="display:flex;gap:6px;align-items:center;">
-                                <?php if (!empty($o->triggers_order) && $o->triggers_order): ?>
+                                <?php
+                                    // Backwards-compatible: map old is_invoiceable to new flags
+                                    $o_triggers_order  = !empty($o->triggers_order) ? $o->triggers_order : (!empty($o->is_invoiceable) ? $o->is_invoiceable : false);
+                                    $o_triggers_invoice = !empty($o->triggers_invoice) ? $o->triggers_invoice : false;
+                                ?>
+                                <?php if ($o_triggers_order): ?>
                                     <span class="hm-badge hm-badge--sm hm-badge--amber">Order</span>
                                 <?php endif; ?>
-                                <?php if (!empty($o->triggers_invoice) && $o->triggers_invoice): ?>
+                                <?php if ($o_triggers_invoice): ?>
                                     <span class="hm-badge hm-badge--sm hm-badge--cyan">Invoice</span>
                                 <?php endif; ?>
                                 <?php if (!empty($o->requires_note) && $o->requires_note): ?>
@@ -273,8 +278,8 @@ class HearMed_Admin_Appointment_Type_Detail {
                                     'id'                    => (int)$o->id,
                                     'outcome_name'          => $o->outcome_name,
                                     'outcome_color'         => $oc,
-                                    'triggers_order'        => !empty($o->triggers_order) && $o->triggers_order,
-                                    'triggers_invoice'      => !empty($o->triggers_invoice) && $o->triggers_invoice,
+                                    'triggers_order'        => $o_triggers_order,
+                                    'triggers_invoice'      => $o_triggers_invoice,
                                     'requires_note'         => !empty($o->requires_note) && $o->requires_note,
                                     'triggers_followup'     => !empty($o->triggers_followup) && $o->triggers_followup,
                                     'followup_service_ids'  => $fu_ids,
@@ -694,12 +699,16 @@ class HearMed_Admin_Appointment_Type_Detail {
         $fu_ids = json_decode(stripslashes($_POST['followup_service_ids'] ?? '[]'), true);
         if (!is_array($fu_ids)) $fu_ids = [];
 
+        // Check which columns exist (backwards-compatible with pre-migration DB)
+        $has_new_cols = HearMed_DB::get_var(
+            "SELECT COUNT(*) FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'outcome_templates' AND column_name = 'triggers_order'"
+        );
+
         $data = [
             'service_id'           => $service_id,
             'outcome_name'         => $name,
             'outcome_color'        => sanitize_hex_color($_POST['outcome_color'] ?? '#cccccc') ?: '#cccccc',
-            'triggers_order'       => !empty($_POST['triggers_order']),
-            'triggers_invoice'     => !empty($_POST['triggers_invoice']),
             'requires_note'        => !empty($_POST['requires_note']),
             'triggers_followup'    => !empty($_POST['triggers_followup']),
             'followup_service_ids' => wp_json_encode($fu_ids),
@@ -710,6 +719,15 @@ class HearMed_Admin_Appointment_Type_Detail {
             'report_outcome'       => sanitize_text_field($_POST['report_outcome'] ?? ''),
             'updated_at'           => current_time('mysql'),
         ];
+
+        // Write to correct columns depending on migration status
+        if ($has_new_cols > 0) {
+            $data['triggers_order']   = !empty($_POST['triggers_order']);
+            $data['triggers_invoice'] = !empty($_POST['triggers_invoice']);
+        } else {
+            // Pre-migration: map back to is_invoiceable (true if either flag set)
+            $data['is_invoiceable'] = !empty($_POST['triggers_order']) || !empty($_POST['triggers_invoice']);
+        }
 
         if ($id) {
             $result = HearMed_DB::update($this->out_table, $data, ['id' => $id]);
