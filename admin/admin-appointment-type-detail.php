@@ -248,8 +248,11 @@ class HearMed_Admin_Appointment_Type_Detail {
                             <span style="width:16px;height:16px;border-radius:4px;background:<?php echo esc_attr($oc); ?>;flex-shrink:0;display:inline-block;"></span>
                             <span class="hm-slbl" style="font-weight:600;color:#0f172a;"><?php echo esc_html($o->outcome_name); ?></span>
                             <span style="display:flex;gap:6px;align-items:center;">
-                                <?php if (!empty($o->is_invoiceable) && $o->is_invoiceable): ?>
-                                    <span class="hm-badge hm-badge--sm hm-badge--amber">Invoiceable</span>
+                                <?php if (!empty($o->triggers_order) && $o->triggers_order): ?>
+                                    <span class="hm-badge hm-badge--sm hm-badge--amber">Order</span>
+                                <?php endif; ?>
+                                <?php if (!empty($o->triggers_invoice) && $o->triggers_invoice): ?>
+                                    <span class="hm-badge hm-badge--sm hm-badge--cyan">Invoice</span>
                                 <?php endif; ?>
                                 <?php if (!empty($o->requires_note) && $o->requires_note): ?>
                                     <span class="hm-badge hm-badge--sm hm-badge--blue">Note</span>
@@ -270,7 +273,8 @@ class HearMed_Admin_Appointment_Type_Detail {
                                     'id'                    => (int)$o->id,
                                     'outcome_name'          => $o->outcome_name,
                                     'outcome_color'         => $oc,
-                                    'is_invoiceable'        => !empty($o->is_invoiceable) && $o->is_invoiceable,
+                                    'triggers_order'        => !empty($o->triggers_order) && $o->triggers_order,
+                                    'triggers_invoice'      => !empty($o->triggers_invoice) && $o->triggers_invoice,
                                     'requires_note'         => !empty($o->requires_note) && $o->requires_note,
                                     'triggers_followup'     => !empty($o->triggers_followup) && $o->triggers_followup,
                                     'followup_service_ids'  => $fu_ids,
@@ -357,9 +361,16 @@ class HearMed_Admin_Appointment_Type_Detail {
                         <div class="hm-srow hm-color-row"><span class="hm-slbl">Banner Colour</span><span class="hm-sval"><input type="color" id="hmo-colour" value="#22c55e" class="hm-color-box"></span></div>
                         <div class="hm-srow">
                             <label class="hm-day-check">
-                                <input type="checkbox" id="hmo-invoiceable">
+                                <input type="checkbox" id="hmo-triggers-order">
                                 <span class="hm-check"></span>
-                                Invoiceable (triggers order flow)
+                                Triggers order flow
+                            </label>
+                        </div>
+                        <div class="hm-srow">
+                            <label class="hm-day-check">
+                                <input type="checkbox" id="hmo-triggers-invoice">
+                                <span class="hm-check"></span>
+                                Triggers invoice flow
                             </label>
                         </div>
                         <div class="hm-srow">
@@ -505,7 +516,8 @@ class HearMed_Admin_Appointment_Type_Detail {
                     $('#hmo-id').val(isEdit ? data.id : '');
                     $('#hmo-name').val(isEdit ? data.outcome_name : '');
                     $('#hmo-colour').val(isEdit ? (data.outcome_color || '#22c55e') : '#22c55e');
-                    $('#hmo-invoiceable').prop('checked', isEdit ? !!data.is_invoiceable : false);
+                    $('#hmo-triggers-order').prop('checked', isEdit ? !!data.triggers_order : false);
+                    $('#hmo-triggers-invoice').prop('checked', isEdit ? !!data.triggers_invoice : false);
                     $('#hmo-note').prop('checked', isEdit ? !!data.requires_note : false);
                     $('#hmo-followup').prop('checked', isEdit ? !!data.triggers_followup : false);
                     $('#hmo-reminder').prop('checked', isEdit ? !!data.triggers_reminder : false);
@@ -564,7 +576,8 @@ class HearMed_Admin_Appointment_Type_Detail {
                     service_id: SVC_ID,
                     outcome_name: name,
                     outcome_color: $('#hmo-colour').val(),
-                    is_invoiceable: $('#hmo-invoiceable').is(':checked') ? 1 : 0,
+                    triggers_order: $('#hmo-triggers-order').is(':checked') ? 1 : 0,
+                    triggers_invoice: $('#hmo-triggers-invoice').is(':checked') ? 1 : 0,
                     requires_note: $('#hmo-note').is(':checked') ? 1 : 0,
                     triggers_followup: $('#hmo-followup').is(':checked') ? 1 : 0,
                     followup_service_ids: JSON.stringify(fuIds),
@@ -685,7 +698,8 @@ class HearMed_Admin_Appointment_Type_Detail {
             'service_id'           => $service_id,
             'outcome_name'         => $name,
             'outcome_color'        => sanitize_hex_color($_POST['outcome_color'] ?? '#cccccc') ?: '#cccccc',
-            'is_invoiceable'       => !empty($_POST['is_invoiceable']),
+            'triggers_order'       => !empty($_POST['triggers_order']),
+            'triggers_invoice'     => !empty($_POST['triggers_invoice']),
             'requires_note'        => !empty($_POST['requires_note']),
             'triggers_followup'    => !empty($_POST['triggers_followup']),
             'followup_service_ids' => wp_json_encode($fu_ids),

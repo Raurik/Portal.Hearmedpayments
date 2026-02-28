@@ -412,7 +412,8 @@ var Cal={
                     oh+='<button class="hm-outcome-opt" data-oid="'+o.id+'" data-color="'+esc(o.outcome_color)+'" data-name="'+esc(o.outcome_name)+'" data-note="'+(o.requires_note?'1':'0')+'" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:#334155;transition:all .15s">';
                     oh+='<span style="width:12px;height:12px;border-radius:3px;background:'+esc(o.outcome_color)+';flex-shrink:0"></span>';
                     oh+=esc(o.outcome_name);
-                    if(o.is_invoiceable)oh+='<span style="margin-left:auto;font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:3px">£</span>';
+                    if(o.triggers_order)oh+='<span style="margin-left:auto;font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px">Order</span>';
+                    else if(o.triggers_invoice)oh+='<span style="margin-left:auto;font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:3px">Invoice</span>';
                     oh+='</button>';
                 });
                 $('#hm-pop-outcome-list').html(oh);
@@ -1289,14 +1290,15 @@ var Cal={
             var oh='';
             r.data.forEach(function(o){
                 oh+='<button class="hm-om-opt" data-oid="'+o.id+'" data-color="'+esc(o.outcome_color)+'" data-name="'+esc(o.outcome_name)+'"';
-                oh+=' data-note="'+(o.requires_note?'1':'0')+'" data-invoice="'+(o.is_invoiceable?'1':'0')+'"';
+                oh+=' data-note="'+(o.requires_note?'1':'0')+'" data-order="'+(o.triggers_order?'1':'0')+'" data-invoice="'+(o.triggers_invoice?'1':'0')+'"';
                 oh+=' data-followup="'+(o.triggers_followup?'1':'0')+'"';
                 oh+=' data-fu-svc="'+esc(JSON.stringify(o.followup_service_ids||[]))+'"';
                 oh+=' style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:#334155;transition:all .15s;text-align:left;width:100%">';
                 oh+='<span style="width:14px;height:14px;border-radius:4px;background:'+esc(o.outcome_color)+';flex-shrink:0"></span>';
                 oh+='<span style="flex:1">'+esc(o.outcome_name)+'</span>';
                 var badges='';
-                if(o.is_invoiceable)badges+='<span style="font-size:9px;background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:4px;font-weight:700">£ Invoiceable</span>';
+                if(o.triggers_order)badges+='<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-weight:700">Order</span>';
+                if(o.triggers_invoice)badges+='<span style="font-size:9px;background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:4px;font-weight:700">Invoice</span>';
                 if(o.requires_note)badges+='<span style="font-size:9px;background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-weight:700">Note Required</span>';
                 if(o.triggers_followup)badges+='<span style="font-size:9px;background:#dcfce7;color:#166534;padding:2px 6px;border-radius:4px;font-weight:700">Follow-up</span>';
                 if(badges)oh+='<span style="display:flex;gap:4px;flex-shrink:0">'+badges+'</span>';
@@ -1313,7 +1315,8 @@ var Cal={
             var $o=$(this);
             $o.css({borderColor:$o.data('color'),background:$o.data('color')+'12'});
             var needsNote=$o.data('note')==='1'||$o.data('note')===1;
-            var isInvoice=$o.data('invoice')==='1'||$o.data('invoice')===1;
+            var triggersOrder=$o.data('order')==='1'||$o.data('order')===1;
+            var triggersInvoice=$o.data('invoice')==='1'||$o.data('invoice')===1;
             var needsFollowup=$o.data('followup')==='1'||$o.data('followup')===1;
             var fuSvc=[];
             try{fuSvc=JSON.parse($o.attr('data-fu-svc')||'[]');}catch(e){}
@@ -1323,7 +1326,8 @@ var Cal={
                 color:$o.data('color'),
                 name:$o.data('name'),
                 requires_note:needsNote,
-                is_invoiceable:isInvoice,
+                triggers_order:triggersOrder,
+                triggers_invoice:triggersInvoice,
                 triggers_followup:needsFollowup,
                 followup_service_ids:fuSvc
             };
@@ -1337,9 +1341,14 @@ var Cal={
                 $('#hm-om-note').val('');
             }
 
-            // Show/hide invoice notice
-            if(isInvoice){
-                $('#hm-om-invoice-area').show();
+            // Show/hide order/invoice notice
+            if(triggersOrder){
+                $('#hm-om-invoice-area').show().find('div > div:first-child').text('This outcome creates a new order');
+                $('#hm-om-invoice-area').find('div > div:last-child').text('A new order form will open after saving.');
+                self._outcomeInvoicePending=true;
+            } else if(triggersInvoice){
+                $('#hm-om-invoice-area').show().find('div > div:first-child').text('This outcome triggers invoice flow');
+                $('#hm-om-invoice-area').find('div > div:last-child').text('You can select an existing order or create a new one.');
                 self._outcomeInvoicePending=true;
             } else {
                 $('#hm-om-invoice-area').hide();
@@ -1436,17 +1445,15 @@ var Cal={
                 self.refresh();
                 self.toast('Outcome saved: '+o.name);
 
-                // Determine order flow based on service flags
-                var isSalesOpp=!!a.sales_opportunity;
-                var isIncomeBearing=!!a.income_bearing;
+                // Determine order flow based on outcome flags
                 var hasOrderFlow=false;
 
-                if(isSalesOpp && o.is_invoiceable && a.patient_id){
-                    // Sales Opportunity → forces new order creation
+                if(o.triggers_order && a.patient_id){
+                    // Triggers Order → opens new order creation form
                     self._openOutcomeOrderModal(a,o);
                     hasOrderFlow=true;
-                } else if(isIncomeBearing && a.patient_id){
-                    // Income Bearing → order picker (existing orders or create new)
+                } else if(o.triggers_invoice && a.patient_id){
+                    // Triggers Invoice → order picker (existing orders or create new)
                     self._openOrderSelectModal(a,o);
                     hasOrderFlow=true;
                 }

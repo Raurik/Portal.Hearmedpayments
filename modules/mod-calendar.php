@@ -1326,7 +1326,7 @@ function hm_ajax_get_outcome_templates() {
     $sid = intval( $_POST['service_id'] ?? 0 );
     if ( ! $sid ) { wp_send_json_success( [] ); return; }
     $rows = HearMed_DB::get_results(
-        "SELECT id, outcome_name, outcome_color, is_invoiceable, requires_note,
+        "SELECT id, outcome_name, outcome_color, triggers_order, triggers_invoice, requires_note,
                 triggers_followup, triggers_reminder, followup_service_ids
          FROM hearmed_core.outcome_templates
          WHERE service_id = $1
@@ -1344,7 +1344,8 @@ function hm_ajax_get_outcome_templates() {
             'id'                  => (int) $r->id,
             'outcome_name'        => $r->outcome_name,
             'outcome_color'       => $r->outcome_color ?: '#6b7280',
-            'is_invoiceable'      => (bool) $r->is_invoiceable,
+            'triggers_order'      => (bool) ($r->triggers_order ?? false),
+            'triggers_invoice'    => (bool) ($r->triggers_invoice ?? false),
             'requires_note'       => (bool) $r->requires_note,
             'triggers_followup'   => (bool) $r->triggers_followup,
             'triggers_reminder'   => (bool) $r->triggers_reminder,
