@@ -475,6 +475,7 @@ function hm_kpi_render() {
                 var html = isDispenser ? this.renderDispenser(d) : this.renderClinical(d);
                 $('#kpi-content').html(html);
                 this.bindVaultEvents(d);
+                this.bindUnclosedClick();
             },
 
             renderDispenser: function(d) {
@@ -511,8 +512,10 @@ function hm_kpi_render() {
                 // Appointments card
                 html += '<div class="kpi-card kpi-summary"><div class="kpi-label">Appointments</div><div class="kpi-summary__ring">' + self.ringGauge(aPct, 48, 3);
                 html += '<div class="kpi-summary__list">';
-                [{l:'Completed',v:a.completed,c:'var(--kpi-green)'},{l:'No-show',v:a.noshow,c:'var(--kpi-red)'},{l:'Cancelled',v:a.cancelled,c:'var(--kpi-amber)'},{l:'Unclosed',v:a.unclosed||0,c:'#8B5CF6'},{l:'Upcoming',v:upco,c:'var(--kpi-g300)'}].forEach(function(s) {
-                    html += '<div class="kpi-summary__item"><span class="kpi-summary__item-label"><span class="kpi-summary__dot" style="background:' + s.c + '"></span>' + s.l + '</span><span class="kpi-summary__item-val">' + (s.v || 0) + '</span></div>';
+                [{l:'Completed',v:a.completed,c:'var(--kpi-green)',click:false},{l:'No-show',v:a.noshow,c:'var(--kpi-red)',click:false},{l:'Cancelled',v:a.cancelled,c:'var(--kpi-amber)',click:false},{l:'Unclosed',v:a.unclosed||0,c:'#8B5CF6',click:true},{l:'Upcoming',v:upco,c:'var(--kpi-g300)',click:false}].forEach(function(s) {
+                    var cls = 'kpi-summary__item' + (s.click && s.v > 0 ? ' kpi-unclosed-link' : '');
+                    var style = s.click && s.v > 0 ? 'cursor:pointer;border-radius:4px;padding:2px 4px;transition:background .15s;' : '';
+                    html += '<div class="' + cls + '" style="' + style + '"><span class="kpi-summary__item-label"><span class="kpi-summary__dot" style="background:' + s.c + '"></span>' + s.l + '</span><span class="kpi-summary__item-val">' + (s.v || 0) + '</span></div>';
                 });
                 html += '</div></div></div>';
 
@@ -792,6 +795,64 @@ function hm_kpi_render() {
                 $('#kpi-vault-prompt').show();
                 $('#kpi-pin-input').val('');
                 $('#kpi-pin-error').hide();
+            },
+
+            bindUnclosedClick: function() {
+                var self = this;
+                $('#kpi-content').off('click.unclosed').on('click.unclosed', '.kpi-unclosed-link', function() {
+                    // Show loading modal
+                    var m = '<div class="kpi-unclosed-modal-bg" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100000;display:flex;align-items:center;justify-content:center">';
+                    m += '<div style="background:#fff;border-radius:12px;width:90%;max-width:640px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden">';
+                    m += '<div style="background:#8B5CF6;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">';
+                    m += '<div style="font-size:16px;font-weight:700">Unclosed Appointments</div>';
+                    m += '<button class="kpi-unclosed-close" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px">&times;</button></div>';
+                    m += '<div id="kpi-unclosed-body" style="padding:20px;overflow-y:auto;flex:1"><div style="text-align:center;padding:30px;color:#64748b">Loading...</div></div></div></div>';
+                    $('body').append(m);
+
+                    // Close events
+                    $('.kpi-unclosed-modal-bg').on('click', function(e) { if ($(e.target).hasClass('kpi-unclosed-modal-bg')) $(this).remove(); });
+                    $('.kpi-unclosed-close').on('click', function() { $('.kpi-unclosed-modal-bg').remove(); });
+
+                    // Fetch unclosed appointments
+                    $.post(HM.ajax_url, {
+                        action: 'hm_kpi_get_unclosed',
+                        nonce: HM.nonce,
+                        staff_id: self.staffId,
+                        period_start: self.periodStart,
+                        period_end: self.periodEnd
+                    }, function(r) {
+                        if (!r.success) {
+                            $('#kpi-unclosed-body').html('<div style="color:#ef4444;padding:20px;text-align:center">' + (r.data || 'Error') + '</div>');
+                            return;
+                        }
+                        var list = r.data || [];
+                        if (!list.length) {
+                            $('#kpi-unclosed-body').html('<div style="color:#64748b;text-align:center;padding:30px">No unclosed appointments found.</div>');
+                            return;
+                        }
+                        var h = '<table style="width:100%;font-size:13px;border-collapse:collapse">';
+                        h += '<thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">';
+                        h += '<th style="text-align:left;padding:8px 10px;font-weight:600;color:#334155">Date</th>';
+                        h += '<th style="text-align:left;padding:8px 10px;font-weight:600;color:#334155">Time</th>';
+                        h += '<th style="text-align:left;padding:8px 10px;font-weight:600;color:#334155">Patient</th>';
+                        h += '<th style="text-align:left;padding:8px 10px;font-weight:600;color:#334155">Type</th>';
+                        h += '<th style="text-align:left;padding:8px 10px;font-weight:600;color:#334155">Status</th>';
+                        h += '</tr></thead><tbody>';
+                        list.forEach(function(appt) {
+                            h += '<tr style="border-bottom:1px solid #f1f5f9;transition:background .1s" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'#fff\'">';
+                            h += '<td style="padding:8px 10px;color:#0f172a;font-weight:500">' + (appt.date || '—') + '</td>';
+                            h += '<td style="padding:8px 10px;color:#64748b">' + (appt.time || '—') + '</td>';
+                            h += '<td style="padding:8px 10px;color:#0f172a">' + (appt.patient_name || '—') + '</td>';
+                            h += '<td style="padding:8px 10px;color:#64748b">' + (appt.service_name || '—') + '</td>';
+                            h += '<td style="padding:8px 10px"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:#FEF3C7;color:#92400E">' + (appt.status || 'Pending') + '</span></td>';
+                            h += '</tr>';
+                        });
+                        h += '</tbody></table>';
+                        h += '<div style="margin-top:12px;padding:10px 14px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;font-size:12px;color:#92400E">';
+                        h += '<strong>' + list.length + '</strong> appointment' + (list.length !== 1 ? 's' : '') + ' without a recorded outcome. Please review and close these.</div>';
+                        $('#kpi-unclosed-body').html(h);
+                    });
+                });
             }
         };
 
@@ -811,6 +872,7 @@ class HearMed_KPI {
     public static function init() {
         add_shortcode('hearmed_kpi', [__CLASS__, 'render']);
         add_action('wp_ajax_hm_kpi_get_data', [__CLASS__, 'ajax_get_data']);
+        add_action('wp_ajax_hm_kpi_get_unclosed', [__CLASS__, 'ajax_get_unclosed']);
     }
 
     public static function render($atts = []): string {
@@ -876,6 +938,76 @@ class HearMed_KPI {
         $data['commission'] = self::get_commission_data($staff, $period_start, $period_end);
 
         wp_send_json_success($data);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       AJAX: Get unclosed appointments list
+       ═══════════════════════════════════════════════════════ */
+    public static function ajax_get_unclosed() {
+        check_ajax_referer('hm_nonce', 'nonce');
+
+        $uid = get_current_user_id();
+        if (!$uid) { wp_send_json_error('Not logged in'); return; }
+
+        $target_staff_id = intval($_POST['staff_id'] ?? 0);
+        $period_start    = sanitize_text_field($_POST['period_start'] ?? '');
+        $period_end      = sanitize_text_field($_POST['period_end'] ?? '');
+
+        if (!$target_staff_id || !$period_start || !$period_end) {
+            wp_send_json_error('Missing parameters');
+            return;
+        }
+
+        // Security: non-admins can only see their own data
+        $viewer = HearMed_DB::get_row(
+            "SELECT id, role FROM hearmed_reference.staff WHERE wp_user_id = $1 AND is_active = true",
+            [$uid]
+        );
+        if (!$viewer) { wp_send_json_error('Staff not found'); return; }
+
+        $is_admin = in_array($viewer->role, ['c_level', 'administrator']);
+        if (!$is_admin && (int)$viewer->id !== $target_staff_id) {
+            wp_send_json_error('Access denied');
+            return;
+        }
+
+        $rows = HearMed_DB::get_results(
+            "SELECT a.id,
+                    TO_CHAR(a.appointment_date, 'DD Mon YYYY') AS date,
+                    TO_CHAR(a.start_time, 'HH24:MI') AS time,
+                    CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
+                    COALESCE(s.service_name, at.type_name, '—') AS service_name,
+                    a.appointment_status AS status
+             FROM hearmed_core.appointments a
+             LEFT JOIN hearmed_core.patients p ON p.id = a.patient_id
+             LEFT JOIN hearmed_reference.services s ON s.id = a.service_id
+             LEFT JOIN hearmed_reference.appointment_types at ON at.id = a.appointment_type_id
+             WHERE a.staff_id = $1
+               AND a.appointment_date BETWEEN $2 AND $3
+               AND a.appointment_date < CURRENT_DATE
+               AND a.appointment_status NOT IN ('Cancelled', 'No Show')
+               AND NOT EXISTS (
+                   SELECT 1 FROM hearmed_core.appointment_outcomes ao WHERE ao.appointment_id = a.id
+               )
+             ORDER BY a.appointment_date DESC, a.start_time DESC",
+            [$target_staff_id, $period_start, $period_end]
+        );
+
+        $list = [];
+        if ($rows) {
+            foreach ($rows as $r) {
+                $list[] = [
+                    'id'           => $r->id,
+                    'date'         => $r->date,
+                    'time'         => $r->time,
+                    'patient_name' => $r->patient_name,
+                    'service_name' => $r->service_name,
+                    'status'       => $r->status,
+                ];
+            }
+        }
+
+        wp_send_json_success($list);
     }
 
     /* ─── DISPENSER DATA ─── */
