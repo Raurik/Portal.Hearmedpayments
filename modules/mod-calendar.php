@@ -1585,9 +1585,12 @@ function hm_ajax_create_outcome_order() {
             ];
         }
 
-        // Apply discount
+        // Apply discount (% or fixed €)
         $discount_total = 0;
-        if ( $discount_pct > 0 && $discount_pct <= 100 ) {
+        $discount_euro = floatval( $_POST['discount_euro'] ?? 0 );
+        if ( $discount_euro > 0 ) {
+            $discount_total = min( $discount_euro, $subtotal + $vat_total );
+        } elseif ( $discount_pct > 0 && $discount_pct <= 100 ) {
             $discount_total = round( $subtotal * ( $discount_pct / 100 ), 2 );
         }
 
