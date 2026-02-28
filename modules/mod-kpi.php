@@ -1052,15 +1052,15 @@ class HearMed_KPI {
         // Closing Rate: Sale / (Sale + Tested Not Sold) from Hearing Test appointments
         $closing_data = HearMed_DB::get_row(
             "SELECT 
-                COUNT(*) FILTER (WHERE ot.report_outcome = 'Sale') AS sales,
-                COUNT(*) FILTER (WHERE ot.report_outcome IN ('Sale', 'Tested Not Sold')) AS testable
+                COUNT(*) FILTER (WHERE ot.report_outcome = 'Hearing Aids') AS sales,
+                COUNT(*) FILTER (WHERE ot.report_outcome IN ('Hearing Aids', 'Tested Not Sold (TNS)')) AS testable
              FROM hearmed_core.appointments a
              JOIN hearmed_reference.services sv ON sv.id = a.service_id
              JOIN hearmed_core.appointment_outcomes ao ON ao.appointment_id = a.id
              JOIN hearmed_core.outcome_templates ot ON ot.outcome_name = ao.outcome_name AND ot.service_id = sv.id
              WHERE a.staff_id = $1 AND a.appointment_date BETWEEN $2 AND $3
-             AND sv.is_reportable = true AND sv.report_category = 'Hearing Test'
-             AND ot.is_reportable = true AND ot.report_outcome IN ('Sale', 'Tested Not Sold')",
+             AND sv.is_reportable = true AND sv.report_category IN ('Hearing Test', 'OOW Hearing Test')
+             AND ot.is_reportable = true AND ot.report_outcome IN ('Hearing Aids', 'Tested Not Sold (TNS)')",
             [$sid, $start, $end]
         );
         $closing_rate = ($closing_data && $closing_data->testable > 0) 
@@ -1069,14 +1069,14 @@ class HearMed_KPI {
         // Conversion Rate: Sale / ALL Hearing Test outcomes
         $conv_data = HearMed_DB::get_row(
             "SELECT 
-                COUNT(*) FILTER (WHERE ot.report_outcome = 'Sale') AS sales,
+                COUNT(*) FILTER (WHERE ot.report_outcome = 'Hearing Aids') AS sales,
                 COUNT(*) AS total
              FROM hearmed_core.appointments a
              JOIN hearmed_reference.services sv ON sv.id = a.service_id
              JOIN hearmed_core.appointment_outcomes ao ON ao.appointment_id = a.id
              JOIN hearmed_core.outcome_templates ot ON ot.outcome_name = ao.outcome_name AND ot.service_id = sv.id
              WHERE a.staff_id = $1 AND a.appointment_date BETWEEN $2 AND $3
-             AND sv.is_reportable = true AND sv.report_category = 'Hearing Test'
+             AND sv.is_reportable = true AND sv.report_category IN ('Hearing Test', 'OOW Hearing Test')
              AND ot.is_reportable = true",
             [$sid, $start, $end]
         );
@@ -1144,7 +1144,7 @@ class HearMed_KPI {
                   AND test.appointment_status = 'Completed'
                   AND EXISTS (
                       SELECT 1 FROM hearmed_reference.services tsv 
-                      WHERE tsv.id = test.service_id AND tsv.is_reportable = true AND tsv.report_category = 'Hearing Test'
+                      WHERE tsv.id = test.service_id AND tsv.is_reportable = true AND tsv.report_category IN ('Hearing Test', 'OOW Hearing Test')
                   )
              WHERE wax.staff_id = $1 AND wax.appointment_date BETWEEN $2 AND $3
              AND wax.appointment_status = 'Completed'",

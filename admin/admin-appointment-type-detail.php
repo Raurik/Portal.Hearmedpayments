@@ -166,7 +166,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                             <label class="hm-day-check">
                                 <input type="checkbox" id="hm-svc-reportable" <?php checked(!empty($svc->is_reportable)); ?>>
                                 <span class="hm-check"></span>
-                                Include in KPI reports
+                                Include in Reports
                             </label>
                         </div>
                         <div id="hm-svc-report-cat-wrap" style="margin-left:24px;margin-bottom:8px;<?php echo empty($svc->is_reportable) ? 'display:none;' : ''; ?>">
@@ -177,12 +177,12 @@ class HearMed_Admin_Appointment_Type_Detail {
                                         <option value="">— Select —</option>
                                         <?php
                                         $rcats = [
-                                            'hearing_aids' => 'Hearing Aids',
-                                            'accessories'  => 'Accessories',
-                                            'wax_removal'  => 'Wax Removal',
-                                            'diagnostic'   => 'Diagnostic',
-                                            'aftercare'    => 'Aftercare',
-                                            'other'        => 'Other',
+                                            'Hearing Test'         => 'Hearing Test',
+                                            'OOW Hearing Test'     => 'OOW Hearing Test',
+                                            'Wax Removal'          => 'Wax Removal',
+                                            'Service App'          => 'Service App',
+                                            'Fitting Appointment'  => 'Fitting Appointment',
+                                            'Post Test App'        => 'Post Test App',
                                         ];
                                         $cur_rc = $svc->report_category ?? '';
                                         foreach ($rcats as $rk => $rv):
@@ -264,7 +264,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                                     <span class="hm-badge hm-badge--sm hm-badge--orange">Call <?php echo intval($o->followup_call_days ?? 7); ?>d</span>
                                 <?php endif; ?>
                                 <?php if (!empty($o->is_reportable) && $o->is_reportable): ?>
-                                    <span class="hm-badge hm-badge--sm hm-badge--teal">KPI</span>
+                                    <span class="hm-badge hm-badge--sm hm-badge--teal">Report</span>
                                 <?php endif; ?>
                                 <button class="hm-btn hm-btn--sm hm-outcome-edit" data-row='<?php echo json_encode([
                                     'id'                    => (int)$o->id,
@@ -401,7 +401,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                             <label class="hm-day-check">
                                 <input type="checkbox" id="hmo-reportable">
                                 <span class="hm-check"></span>
-                                Include in KPI reports
+                                Include in Reports
                             </label>
                         </div>
                         <div id="hmo-report-outcome-wrap" style="margin-left:24px;margin-bottom:8px;display:none;">
@@ -410,11 +410,12 @@ class HearMed_Admin_Appointment_Type_Detail {
                                 <span class="hm-sval">
                                     <select class="hm-dd" id="hmo-report-outcome">
                                         <option value="">— Select —</option>
-                                        <option value="sale">Sale</option>
-                                        <option value="no_sale">No Sale</option>
-                                        <option value="partial">Partial</option>
-                                        <option value="return">Return</option>
-                                        <option value="other">Other</option>
+                                        <option value="Hearing Aids">Hearing Aids</option>
+                                        <option value="Wax Referral">Wax Referral</option>
+                                        <option value="Medical Referral">Medical Referral</option>
+                                        <option value="Tested Not Sold (TNS)">Tested Not Sold (TNS)</option>
+                                        <option value="Could Not Test (CNT)">Could Not Test (CNT)</option>
+                                        <option value="Normal Hearing">Normal Hearing</option>
                                     </select>
                                 </span>
                             </div>
@@ -452,7 +453,7 @@ class HearMed_Admin_Appointment_Type_Detail {
             var ajaxUrl = HM.ajax_url || HM.ajax;
             var nonce   = HM.nonce;
 
-            /* ── KPI reportable toggle ── */
+            /* ── Reportable toggle ── */
             $('#hm-svc-reportable').on('change', function(){
                 $('#hm-svc-report-cat-wrap').toggle(this.checked);
             });
