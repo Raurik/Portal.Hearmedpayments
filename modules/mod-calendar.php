@@ -1431,16 +1431,18 @@ function hm_ajax_get_order_products() {
     try {
         $db = HearMed_DB::instance();
 
-        // All active products with manufacturer info
+        // All active products with manufacturer info + range pricing fallback
         $products = $db->get_results(
             "SELECT p.id, p.product_name, p.item_type, p.style, p.tech_level,
-                    p.retail_price, p.cost_price, p.vat_category, p.hearing_aid_class,
+                    COALESCE(p.retail_price, hr.price_total::numeric, 0) AS retail_price,
+                    p.cost_price, p.vat_category, p.hearing_aid_class,
                     p.power_type, p.product_code,
                     p.bundled_category, p.speaker_length, p.speaker_power,
                     p.dome_type, p.dome_size,
                     m.id AS manufacturer_id, m.name AS manufacturer_name
              FROM hearmed_reference.products p
              LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+             LEFT JOIN hearmed_reference.hearmed_range hr ON hr.id = p.hearmed_range_id
              WHERE p.is_active = true
              ORDER BY m.name, p.product_name"
         ) ?: [];
@@ -1657,13 +1659,12 @@ function hm_ajax_create_outcome_order() {
 
         $order_num = 'ORD-' . date( 'Ymd' ) . '-' . str_pad( rand( 1, 9999 ), 4, '0', STR_PAD_LEFT );
 
-        $staff_id = null;
-        try {
-            $user = HearMed_Auth::current_user();
-            $staff_id = $user->id ?? null;
-        } catch ( Throwable $ignored ) {
-            $staff_id = get_current_user_id();
-        }
+        // Resolve staff table ID from WP user
+        $wp_uid   = get_current_user_id();
+        $staff_id = $db->get_var(
+            "SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1",
+            [ $wp_uid ]
+        ) ?: $wp_uid;
 
         $order_id = $db->insert( 'hearmed_core.orders', [
             'order_number'    => $order_num,
@@ -1687,7 +1688,7 @@ function hm_ajax_create_outcome_order() {
         ] );
 
         if ( ! $order_id ) {
-            wp_send_json_error( [ 'message' => 'Failed to create order.' ] );
+            wp_send_json_error( [ 'message' => 'Failed to create order. ' . HearMed_DB::last_error() ] );
             return;
         }
 
