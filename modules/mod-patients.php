@@ -1865,10 +1865,11 @@ function hm_ajax_transcribe_audio() {
 }
 
 /**
- * Ensure appointment_transcripts has the columns the code expects.
- * The original migration used staff_id / transcript_hash / duration_secs
- * but the INSERT code uses created_by / checksum_hash / duration_seconds.
- * This adds the code-expected aliases so both old and new rows work.
+ * Ensure appointment_transcripts has ALL columns the code expects.
+ * The original migration used staff_id / transcript_hash / duration_secs / word_count.
+ * Later code introduced aliases: created_by / checksum_hash / duration_seconds.
+ * This adds BOTH sets so SELECTs and INSERTs always work regardless of which
+ * migration has been run.
  */
 function hm_ensure_transcript_columns() {
     static $done = false;
@@ -1880,6 +1881,10 @@ function hm_ensure_transcript_columns() {
 
     @HearMed_DB::query(
         "ALTER TABLE hearmed_admin.appointment_transcripts
+         ADD COLUMN IF NOT EXISTS staff_id         INTEGER,
+         ADD COLUMN IF NOT EXISTS transcript_hash  VARCHAR(64),
+         ADD COLUMN IF NOT EXISTS duration_secs    INTEGER DEFAULT 0,
+         ADD COLUMN IF NOT EXISTS word_count       INTEGER DEFAULT 0,
          ADD COLUMN IF NOT EXISTS created_by       INTEGER,
          ADD COLUMN IF NOT EXISTS checksum_hash    VARCHAR(64),
          ADD COLUMN IF NOT EXISTS duration_seconds INTEGER DEFAULT 0"
@@ -1913,16 +1918,23 @@ function hm_ajax_save_ai_transcript() {
     ]);
 
     /* ── 2. Save to appointment_transcripts (new clinical pipeline) ── */
+    /*  Populate BOTH original (staff_id, transcript_hash, duration_secs,
+        word_count) AND alias (created_by, checksum_hash, duration_seconds)
+        columns so the INSERT works regardless of which migration has run. */
     $transcript_id = null;
     $transcript_id = $db->insert( 'hearmed_admin.appointment_transcripts', [
-        'appointment_id'  => $appointment_id ?: null,
-        'patient_id'      => $pid,
-        'created_by'      => $staff_id ?: null,
-        'transcript_text' => $text,
-        'checksum_hash'   => $hash,
-        'duration_seconds' => $duration_secs ?: null,
-        'source'          => 'whisper',
-        'created_at'      => current_time( 'mysql' ),
+        'appointment_id'   => $appointment_id ?: null,
+        'patient_id'       => $pid,
+        'staff_id'         => $staff_id ?: null,
+        'created_by'       => $staff_id ?: null,
+        'transcript_text'  => $text,
+        'transcript_hash'  => $hash,
+        'checksum_hash'    => $hash,
+        'word_count'       => $word_count,
+        'duration_secs'    => $duration_secs ?: 0,
+        'duration_seconds' => $duration_secs ?: 0,
+        'source'           => 'whisper',
+        'created_at'       => current_time( 'mysql' ),
     ]);
 
     hm_patient_audit( 'SAVE_AI_TRANSCRIPT', 'patient_note', $note_id, [
@@ -1983,6 +1995,9 @@ function hm_ajax_get_patient_transcripts() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
+
+    /* Ensure alias columns exist before SELECT references them */
+    hm_ensure_transcript_columns();
 
     $db   = HearMed_DB::instance();
     $rows = $db->get_results(

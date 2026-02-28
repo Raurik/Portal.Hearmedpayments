@@ -1018,7 +1018,7 @@ function initProfile(){
             $b.off('change','#ai-doc-type').on('change','#ai-doc-type',checkReady);
 
             /* ── Recording logic ── */
-            var mr,chunks=[],isRec=false,recStart=0,timerIv=null;
+            var mr,chunks=[],isRec=false,recStart=0,timerIv=null,lastDurSecs=0;
 
             $b.off('click','#hm-start-recording').on('click','#hm-start-recording',function(){
                 if(isRec)return;
@@ -1068,6 +1068,7 @@ function initProfile(){
 
             /* ── Show transcript for review ── */
             function showTx(txt,durSecs){
+                lastDurSecs=durSecs||0;
                 $('#hm-rec-status').hide();
                 var docName=$('#ai-doc-type option:selected').text()||'';
                 $('#hm-transcript-wrap').html(
@@ -1098,7 +1099,8 @@ function initProfile(){
                     patient_id:pid,
                     appointment_id:window.hmCurrentApptId||latestApptId||0,
                     template_id:tplId,
-                    transcript:t
+                    transcript:t,
+                    duration_secs:lastDurSecs
                 },function(r){
                     if(r.success){
                         toast('Transcript saved — AI extraction triggered');
