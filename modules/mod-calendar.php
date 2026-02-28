@@ -1325,6 +1325,32 @@ function hm_ajax_get_outcome_templates() {
     try {
     $sid = intval( $_POST['service_id'] ?? 0 );
     if ( ! $sid ) { wp_send_json_success( [] ); return; }
+
+    // ── Auto-migrate: ensure triggers_order / triggers_invoice columns exist ──
+    $has_col = HearMed_DB::get_var(
+        "SELECT COUNT(*) FROM information_schema.columns
+         WHERE table_schema = 'hearmed_core' AND table_name = 'outcome_templates' AND column_name = 'triggers_order'"
+    );
+    if ( ! $has_col ) {
+        // Add triggers_order
+        HearMed_DB::query( "ALTER TABLE hearmed_core.outcome_templates ADD COLUMN IF NOT EXISTS triggers_order BOOLEAN NOT NULL DEFAULT false" );
+        // Rename is_invoiceable → triggers_invoice if applicable
+        $has_old = HearMed_DB::get_var(
+            "SELECT COUNT(*) FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'outcome_templates' AND column_name = 'is_invoiceable'"
+        );
+        $has_new = HearMed_DB::get_var(
+            "SELECT COUNT(*) FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'outcome_templates' AND column_name = 'triggers_invoice'"
+        );
+        if ( $has_old && ! $has_new ) {
+            HearMed_DB::query( "ALTER TABLE hearmed_core.outcome_templates RENAME COLUMN is_invoiceable TO triggers_invoice" );
+        } elseif ( ! $has_new ) {
+            HearMed_DB::query( "ALTER TABLE hearmed_core.outcome_templates ADD COLUMN IF NOT EXISTS triggers_invoice BOOLEAN NOT NULL DEFAULT false" );
+        }
+        error_log( '[HearMed] Auto-migrated outcome_templates: added triggers_order / triggers_invoice columns' );
+    }
+
     $rows = HearMed_DB::get_results(
         "SELECT *
          FROM hearmed_core.outcome_templates
@@ -1339,14 +1365,12 @@ function hm_ajax_get_outcome_templates() {
             $decoded = json_decode( $r->followup_service_ids, true );
             if ( is_array( $decoded ) ) $fu_ids = array_map( 'intval', $decoded );
         }
-        // Backwards-compatible: support both old (is_invoiceable) and new (triggers_order/triggers_invoice) columns
-        $has_new_cols = property_exists($r, 'triggers_order');
         $d[] = [
             'id'                  => (int) $r->id,
             'outcome_name'        => $r->outcome_name,
             'outcome_color'       => $r->outcome_color ?: '#6b7280',
-            'triggers_order'      => $has_new_cols ? (bool) $r->triggers_order : (bool) ($r->is_invoiceable ?? false),
-            'triggers_invoice'    => $has_new_cols ? (bool) $r->triggers_invoice : false,
+            'triggers_order'      => (bool) ($r->triggers_order ?? false),
+            'triggers_invoice'    => (bool) ($r->triggers_invoice ?? false),
             'requires_note'       => (bool) ($r->requires_note ?? false),
             'triggers_followup'   => (bool) ($r->triggers_followup ?? false),
             'triggers_reminder'   => (bool) ($r->triggers_reminder ?? false),
