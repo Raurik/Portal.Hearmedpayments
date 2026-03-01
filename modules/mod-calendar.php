@@ -1520,12 +1520,12 @@ function hm_ajax_get_order_products() {
              ORDER BY m.name, p.product_name"
         ) ?: [];
 
-        // All active services
+        // All active services (stored in products table with item_type='service')
         $services = $db->get_results(
-            "SELECT id, service_name, default_price
-             FROM hearmed_reference.services
-             WHERE is_active = true
-             ORDER BY service_name"
+            "SELECT id, product_name AS service_name, retail_price AS default_price
+             FROM hearmed_reference.products
+             WHERE is_active = true AND item_type = 'service'
+             ORDER BY product_name"
         ) ?: [];
 
         // HearMed ranges for PRSI pricing
