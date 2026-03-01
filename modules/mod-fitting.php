@@ -878,12 +878,13 @@ function hm_ajax_fitting_load() {
                 ) AS product_names,
                 (SELECT a.appointment_date
                  FROM hearmed_core.appointments a
-                 JOIN hearmed_reference.services sv ON sv.id = a.service_id
+                 LEFT JOIN hearmed_reference.services sv ON sv.id = a.service_id
                  WHERE a.patient_id = o.patient_id
-                   AND sv.service_name ILIKE '%fitting%'
-                   AND a.appointment_status NOT IN ('Cancelled','No Show')
+                   AND a.appointment_status NOT IN ('Cancelled','No Show','Completed')
                    AND a.appointment_date >= CURRENT_DATE
-                 ORDER BY a.appointment_date ASC
+                 ORDER BY
+                   CASE WHEN sv.service_name ILIKE '%fitting%' THEN 0 ELSE 1 END,
+                   a.appointment_date ASC
                  LIMIT 1
                 ) AS fitting_date
          FROM hearmed_core.orders o
@@ -1046,12 +1047,13 @@ function hm_ajax_fitting_receive() {
     $fitting_appt = $db->get_row(
         "SELECT a.id, a.appointment_date
          FROM hearmed_core.appointments a
-         JOIN hearmed_reference.services sv ON sv.id = a.service_id
+         LEFT JOIN hearmed_reference.services sv ON sv.id = a.service_id
          WHERE a.patient_id = \$1
-           AND sv.service_name ILIKE '%fitting%'
-           AND a.appointment_status NOT IN ('Cancelled','No Show')
+           AND a.appointment_status NOT IN ('Cancelled','No Show','Completed')
            AND a.appointment_date >= CURRENT_DATE
-         ORDER BY a.appointment_date ASC
+         ORDER BY
+           CASE WHEN sv.service_name ILIKE '%fitting%' THEN 0 ELSE 1 END,
+           a.appointment_date ASC
          LIMIT 1",
         [$order->patient_id]
     );
