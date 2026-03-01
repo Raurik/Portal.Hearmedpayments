@@ -716,7 +716,45 @@ function hm_ajax_update_appointment() {
     try {
     $t   = HearMed_Portal::table( 'appointments' );
     $id  = intval( $_POST['appointment_id'] );
+
+    $user = wp_get_current_user();
+    $is_admin_role = ! empty( array_intersect( [ 'administrator', 'hm_clevel', 'hm_admin', 'hm_finance' ], (array) ( $user->roles ?? [] ) ) );
+
+    $existing = HearMed_DB::get_row(
+        "SELECT appointment_status, outcome FROM hearmed_core.appointments WHERE id = $1",
+        [ $id ]
+    );
+    if ( ! $existing ) {
+        wp_send_json_error( 'Appointment not found' );
+        return;
+    }
+
+    $is_closed = ( ( $existing->appointment_status ?? '' ) === 'Completed' ) || ! empty( trim( (string) ( $existing->outcome ?? '' ) ) );
     $data = [ 'updated_at' => current_time( 'mysql' ) ];
+
+    // Closed appointments: only admin/c-level/finance can fully edit/reopen.
+    // All users may still add/update notes after closure.
+    if ( $is_closed && ! $is_admin_role ) {
+        if ( isset( $_POST['notes'] ) ) {
+            $data['notes'] = sanitize_textarea_field( $_POST['notes'] );
+        } else {
+            wp_send_json_error( 'Permission denied — only notes can be updated on closed appointments.' );
+            return;
+        }
+
+        // Block all non-note edits for non-admin roles on closed appointments.
+        foreach ( [ 'status', 'appointment_date', 'location_type', 'patient_id', 'clinic_id', 'dispenser_id', 'start_time', 'service_id', 'duration', 'outcome' ] as $blocked_key ) {
+            if ( isset( $_POST[ $blocked_key ] ) ) {
+                wp_send_json_error( 'Permission denied — only notes can be updated on closed appointments.' );
+                return;
+            }
+        }
+
+        HearMed_DB::update( $t, $data, [ 'id' => $id ] );
+        HearMed_Portal::log( 'updated_note', 'appointment', $id );
+        wp_send_json_success( [ 'id' => $id, 'notes_only' => true ] );
+        return;
+    }
 
     // Status update
     if ( isset( $_POST['status'] ) ) {
