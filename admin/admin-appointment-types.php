@@ -114,6 +114,11 @@ class HearMed_Admin_Appointment_Types {
             </table>
             <?php endif; ?>
 
+            <!-- Sticky bottom-right save bar -->
+            <div style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;padding:12px 32px;display:flex;justify-content:flex-end;z-index:100;box-shadow:0 -2px 8px rgba(0,0,0,0.06);">
+                <button class="hm-btn hm-btn--primary" onclick="hmApptType.saveAll()" id="hma-save-all" style="min-width:140px;">Save All</button>
+            </div>
+
             <!-- Modal -->
             <div class="hm-modal-bg" id="hm-appt-modal">
                 <div class="hm-modal hm-modal--md">
@@ -186,6 +191,7 @@ class HearMed_Admin_Appointment_Types {
 
         <script>
         var hmApptType = {
+            _allTypes: <?php echo json_encode(array_map(function($t){ return (array)$t; }, $types), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP); ?>,
             open: function(data) {
                 var isEdit = !!(data && data.id);
                 document.getElementById('hm-appt-title').textContent = isEdit ? 'Edit Appointment Type' : 'Add Appointment Type';
@@ -222,7 +228,28 @@ class HearMed_Admin_Appointment_Types {
                     sales_opportunity:  document.getElementById('hma-sales').checked ? 1 : 0,
                     income_bearing:     document.getElementById('hma-income').checked ? 1 : 0
                 }, function(r) {
-                    if (r.success) location.reload();
+                    if (r.success) {
+                        // Update the in-memory _allTypes so Save All stays current
+                        var editId = parseInt(document.getElementById('hma-id').value) || 0;
+                        var updated = {
+                            id: r.data.id || editId,
+                            service_name: name,
+                            service_color: document.getElementById('hma-colour').value,
+                            text_color: document.getElementById('hma-text-colour').value,
+                            duration_minutes: parseInt(document.getElementById('hma-duration').value) || 30,
+                            appointment_category: document.getElementById('hma-category').value,
+                            sales_opportunity: document.getElementById('hma-sales').checked,
+                            income_bearing: document.getElementById('hma-income').checked
+                        };
+                        if (editId) {
+                            for (var i = 0; i < hmApptType._allTypes.length; i++) {
+                                if (parseInt(hmApptType._allTypes[i].id) === editId) { hmApptType._allTypes[i] = updated; break; }
+                            }
+                        } else {
+                            hmApptType._allTypes.push(updated);
+                        }
+                        location.reload();
+                    }
                     else { alert(r.data || 'Error saving appointment type'); btn.textContent = 'Save'; btn.disabled = false; }
                 });
             },
@@ -235,6 +262,34 @@ class HearMed_Admin_Appointment_Types {
                 }, function(r) {
                     if (r.success) location.reload();
                     else alert(r.data || 'Error deleting appointment type');
+                });
+            },
+            saveAll: function() {
+                var items = hmApptType._allTypes;
+                if (!items.length) { alert('No appointment types to save.'); return; }
+                var btn = document.getElementById('hma-save-all');
+                btn.textContent = 'Saving...'; btn.disabled = true;
+                var total = items.length, done = 0, errors = [];
+                items.forEach(function(t) {
+                    jQuery.post(HM.ajax_url, {
+                        action:              'hm_admin_save_appointment_type',
+                        nonce:               HM.nonce,
+                        id:                  t.id,
+                        service_name:        t.service_name,
+                        colour:              t.service_color || '#3B82F6',
+                        text_color:          t.text_color || '#FFFFFF',
+                        duration:            t.duration_minutes || 30,
+                        appointment_category: t.appointment_category || '',
+                        sales_opportunity:   t.sales_opportunity ? 1 : 0,
+                        income_bearing:      t.income_bearing ? 1 : 0
+                    }, function(r) {
+                        done++;
+                        if (!r.success) errors.push(r.data || 'Error');
+                        if (done === total) {
+                            if (errors.length) { alert(errors.join('\n')); btn.textContent = 'Save All'; btn.disabled = false; }
+                            else { btn.textContent = 'Saved ✓'; setTimeout(function(){ btn.textContent = 'Save All'; btn.disabled = false; }, 1500); }
+                        }
+                    });
                 });
             }
         };

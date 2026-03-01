@@ -622,6 +622,18 @@ var Cal={
         var colW=Math.max(80,Math.min(140,Math.floor(900/disps.length)));
         var tc=disps.length*dates.length;
 
+        // Build a clinic-color lookup for each dispenser
+        var dispClinicColor={};
+        disps.forEach(function(p){
+            var cid=parseInt(p.clinic_id||p.clinicId||0);
+            if(cid&&Cal.clinics){
+                var cl=Cal.clinics.find(function(c){return c.id===cid;});
+                if(cl&&(cl.clinic_colour||cl.color)){dispClinicColor[p.id]=cl.clinic_colour||cl.color;}
+            }
+        });
+        // hex to rgba helper
+        function hexToRgba(hex,a){hex=hex.replace('#','');if(hex.length===3)hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];var r=parseInt(hex.substring(0,2),16),g=parseInt(hex.substring(2,4),16),b=parseInt(hex.substring(4,6),16);return 'rgba('+r+','+g+','+b+','+a+')';}
+
         var h='<div class="hm-grid" style="grid-template-columns:44px repeat('+tc+',minmax('+colW+'px,1fr));--hm-cal-bg:'+(cfg.calBg||'#ffffff')+';--hm-cal-grid:'+(cfg.gridLineColor||'#e2e8f0')+';--hm-cal-today:'+(cfg.todayHighlight||'#e6f7f9')+'">';
         h+='<div class="hm-time-corner"></div>';
         dates.forEach(function(d){
@@ -633,7 +645,8 @@ var Cal={
                 var lbl=esc(p.initials);
                 var onHol=Cal.isDispOnHoliday(p.id,d);
                 var dotCls=onHol?'hm-dot hm-dot--red':'hm-dot hm-dot--green';
-                h+='<div class="hm-prov-cell"><div class="hm-prov-ini"><span class="'+dotCls+' hm-dot--sm"'+(onHol?' title="On holiday / unavailable"':' title="Available"')+'></span>'+lbl+'</div></div>';
+                var provBg=dispClinicColor[p.id]?';background:'+hexToRgba(dispClinicColor[p.id],0.15):'';
+                h+='<div class="hm-prov-cell" style="border-radius:4px'+provBg+'"><div class="hm-prov-ini"><span class="'+dotCls+' hm-dot--sm"'+(onHol?' title="On holiday / unavailable"':' title="Available"')+'></span>'+lbl+'</div></div>';
             });
             h+='</div></div>';
         });
@@ -646,7 +659,8 @@ var Cal={
             dates.forEach(function(d,di){
                 disps.forEach(function(p,pi){
                     var cls='hm-slot'+(isHr?' hr':'')+(pi===disps.length-1?' dl':'');
-                    h+='<div class="'+cls+'" data-date="'+fmt(d)+'" data-time="'+pad(hr)+':'+pad(mn)+'" data-disp="'+p.id+'" data-day="'+di+'" data-slot="'+s+'" style="height:'+slotH+'px"></div>';
+                    var slotBg=dispClinicColor[p.id]?';background:'+hexToRgba(dispClinicColor[p.id],0.06):'';
+                    h+='<div class="'+cls+'" data-date="'+fmt(d)+'" data-time="'+pad(hr)+':'+pad(mn)+'" data-disp="'+p.id+'" data-day="'+di+'" data-slot="'+s+'" style="height:'+slotH+'px'+slotBg+'"></div>';
                 });
             });
         }

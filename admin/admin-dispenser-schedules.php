@@ -112,12 +112,15 @@ class HearMed_Admin_Dispenser_Schedules {
                                     </select>
                             </div>
                             <div class="hm-form-group">
-                                <label>Day *</label>
-                                <select id="hmse-day">
+                                <label>Day(s) *</label>
+                                <div style="display:flex;flex-wrap:wrap;gap:12px;padding:8px 0;">
                                     <?php foreach ($days as $idx => $label): ?>
-                                        <option value="<?php echo (int)$idx; ?>"><?php echo esc_html($label); ?></option>
+                                        <label class="hm-day-check">
+                                            <input type="checkbox" class="hmse-day-check" value="<?php echo (int)$idx; ?>">
+                                            <?php echo esc_html($label); ?>
+                                        </label>
                                     <?php endforeach; ?>
-                                </select>
+                                </div>
                             </div>
                         </div>
                         <div class="hm-form-row">
@@ -161,7 +164,12 @@ class HearMed_Admin_Dispenser_Schedules {
                 document.getElementById('hm-sched-edit-title').textContent = isEdit ? 'Edit Schedule' : 'Add Schedule';
                 document.getElementById('hmse-id').value       = isEdit ? data.id : '';
                 document.getElementById('hmse-clinic').value   = data.clinic_id || '';
-                document.getElementById('hmse-day').value      = data.day_of_week !== undefined ? data.day_of_week : '1';
+                // Clear all day checkboxes, then check the appropriate one(s)
+                document.querySelectorAll('.hmse-day-check').forEach(function(cb) { cb.checked = false; });
+                if (data.day_of_week !== undefined) {
+                    var dayCheck = document.querySelector('.hmse-day-check[value="'+data.day_of_week+'"]');
+                    if (dayCheck) dayCheck.checked = true;
+                }
                 document.getElementById('hmse-rotation').value = data.rotation_weeks || '1';
                 document.getElementById('hmse-week').value     = data.week_number || '1';
                 document.getElementById('hmse-active').checked = data.is_active !== false;
@@ -172,21 +180,40 @@ class HearMed_Admin_Dispenser_Schedules {
             save: function() {
                 var clinic = document.getElementById('hmse-clinic').value;
                 if (!clinic) { alert('Please select a clinic.'); return; }
+                var days = [];
+                document.querySelectorAll('.hmse-day-check:checked').forEach(function(cb) {
+                    days.push(parseInt(cb.value));
+                });
+                if (!days.length) { alert('Please select at least one day.'); return; }
                 var btn = document.getElementById('hmse-save');
                 btn.textContent = 'Saving...'; btn.disabled = true;
-                jQuery.post(HM.ajax_url, {
-                    action: 'hm_admin_save_dispenser_schedule',
-                    nonce: HM.nonce,
-                    id: document.getElementById('hmse-id').value,
-                    staff_id: document.getElementById('hmse-staff').value,
-                    clinic_id: clinic,
-                    day_of_week: document.getElementById('hmse-day').value,
-                    rotation_weeks: document.getElementById('hmse-rotation').value,
-                    week_number: document.getElementById('hmse-week').value,
-                    is_active: document.getElementById('hmse-active').checked ? 1 : 0
-                }, function(r) {
-                    if (r.success) location.reload();
-                    else { alert(r.data || 'Error'); btn.textContent = 'Save'; btn.disabled = false; }
+                var schedId  = document.getElementById('hmse-id').value;
+                var staffId  = document.getElementById('hmse-staff').value;
+                var rotation = document.getElementById('hmse-rotation').value;
+                var week     = document.getElementById('hmse-week').value;
+                var isActive = document.getElementById('hmse-active').checked ? 1 : 0;
+                var total = days.length, done = 0, errors = [];
+                days.forEach(function(day, idx) {
+                    jQuery.post(HM.ajax_url, {
+                        action: 'hm_admin_save_dispenser_schedule',
+                        nonce: HM.nonce,
+                        id: days.length === 1 ? schedId : '',
+                        staff_id: staffId,
+                        clinic_id: clinic,
+                        day_of_week: day,
+                        rotation_weeks: rotation,
+                        week_number: week,
+                        is_active: isActive,
+                        is_multi_day: days.length > 1 ? 1 : 0,
+                        day_index: idx + 1
+                    }, function(r) {
+                        done++;
+                        if (!r.success) errors.push(r.data || 'Error');
+                        if (done === total) {
+                            if (errors.length) { alert(errors.join('\n')); btn.textContent = 'Save'; btn.disabled = false; }
+                            else location.reload();
+                        }
+                    });
                 });
             }
         };
