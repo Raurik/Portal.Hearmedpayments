@@ -215,86 +215,90 @@ class HearMed_Print_Templates {
 <?php echo $font_link; ?>
 <style>
 :root { --hm-accent: <?php echo esc_attr($accent); ?>; --hm-navy: #151B33; }
-@page { size: A4; margin: 15mm; }
-@media print { body { -webkit-print-color-adjust: exact; } .no-print { display: none !important; } }
+@page { size: A4; margin: 12mm; }
+@media print {
+    html, body { height: 100% !important; }
+    body { -webkit-print-color-adjust: exact; }
+    .no-print { display: none !important; }
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { height: 100%; }
 body {
     font-family: '<?php echo esc_attr($s['tableFont'] ?? 'Source Sans 3'); ?>', -apple-system, sans-serif;
     font-size: <?php echo intval($s['tableSize'] ?? 11); ?>px;
-    color: #1e293b; line-height: 1.5; padding: 30px; width: 210mm; max-width: 210mm; margin: 0 auto;
-    min-height: 297mm;
+    color: #1e293b; line-height: 1.6; padding: 40px; width: 210mm; max-width: 210mm; margin: 0 auto;
+    min-height: 297mm; height: 100%;
     display: flex; flex-direction: column;
 }
 /* Header */
-.hm-print-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 12px; border-bottom: 3px solid var(--hm-accent); margin-bottom: 16px; }
-.hm-print-logo { width: 48px; height: 48px; border-radius: 8px; background: var(--hm-accent); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 18px; margin-bottom: 6px; }
+.hm-print-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 18px; border-bottom: 3px solid var(--hm-accent); margin-bottom: 24px; }
+.hm-print-logo { width: 56px; height: 56px; border-radius: 8px; background: var(--hm-accent); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 20px; margin-bottom: 8px; }
 .hm-print-company { font-family: '<?php echo esc_attr($s['headerFont'] ?? 'Cormorant Garamond'); ?>', serif; font-size: <?php echo intval($s['headerSize'] ?? 18); ?>px; font-weight: 700; color: <?php echo esc_attr($s['headerColor'] ?? '#0BB4C4'); ?>; }
-.hm-print-tagline { font-size: 10px; color: #94a3b8; }
-.hm-print-form-type { display: inline-block; margin-top: 6px; padding: 2px 10px; border-radius: 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; background: var(--hm-accent); color: #fff; }
-.hm-print-meta { text-align: right; font-size: 10px; color: #64748b; }
+.hm-print-tagline { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+.hm-print-form-type { display: inline-block; margin-top: 8px; padding: 3px 12px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; background: var(--hm-accent); color: #fff; }
+.hm-print-meta { text-align: right; font-size: 11px; color: #64748b; }
 .hm-print-meta strong { color: #1e293b; display: block; }
 /* Info boxes */
-.hm-print-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-.hm-print-box { background: #f8fafc; border-radius: 6px; padding: 8px 12px; }
-.hm-print-box-label { font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .3px; margin-bottom: 4px; }
-.hm-print-box strong { font-size: 12px; }
-.hm-print-box .sub { font-size: 10px; color: #64748b; margin-top: 1px; }
+.hm-print-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.hm-print-box { background: #f8fafc; border-radius: 6px; padding: 12px 16px; }
+.hm-print-box-label { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .3px; margin-bottom: 6px; }
+.hm-print-box strong { font-size: 13px; }
+.hm-print-box .sub { font-size: 11px; color: #64748b; margin-top: 2px; }
 /* Tables */
-.hm-print-section-title { font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .3px; margin-bottom: 4px; }
-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-th { background: #f8fafc; text-align: left; padding: 5px 8px; font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .3px; border-bottom: 2px solid #e2e8f0; }
-td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; }
+.hm-print-section-title { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .3px; margin-bottom: 8px; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+th { background: #f8fafc; text-align: left; padding: 8px 10px; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .3px; border-bottom: 2px solid #e2e8f0; }
+td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
 .money { text-align: right; }
 tfoot td { font-weight: 600; border-bottom: none; }
-.total-row td { font-weight: 700; border-top: 2px solid #e2e8f0; padding-top: 6px; color: var(--hm-accent); }
+.total-row td { font-weight: 700; border-top: 2px solid #e2e8f0; padding-top: 8px; color: var(--hm-accent); }
 /* Badges */
-.badge { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 4px; }
+.badge { display: inline-block; padding: 3px 12px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-top: 6px; }
 .badge-paid { background: #d1fae5; color: #065f46; }
 .badge-approved { background: #dbeafe; color: #1e40af; }
 .badge-credit { background: #fef3cd; color: #92400e; }
 .badge-warranty-in { background: #dbeafe; color: #1e40af; }
 .badge-warranty-out { background: #fee2e2; color: #991b1b; }
 /* Payments */
-.hm-print-payments { background: #f0fdfa; border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; }
-.hm-print-payments h4 { font-size: 9px; font-weight: 600; color: #065f46; text-transform: uppercase; margin-bottom: 6px; }
-.pay-row { display: flex; justify-content: space-between; font-size: 10px; padding: 2px 0; border-bottom: 1px solid #d1fae5; }
+.hm-print-payments { background: #f0fdfa; border-radius: 6px; padding: 14px 16px; margin-bottom: 20px; }
+.hm-print-payments h4 { font-size: 10px; font-weight: 600; color: #065f46; text-transform: uppercase; margin-bottom: 8px; }
+.pay-row { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-bottom: 1px solid #d1fae5; }
 .pay-row:last-child { border-bottom: none; font-weight: 700; }
 /* Fault / Reason boxes */
-.hm-print-fault { border: 1px solid #fde68a; background: #fffbeb; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
-.hm-print-fault-label { font-size: 9px; font-weight: 600; color: #92400e; text-transform: uppercase; margin-bottom: 4px; }
-.hm-print-fault p { font-size: 10px; color: #78350f; }
-.hm-print-credit-reason { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
-.hm-print-credit-reason-label { font-size: 9px; font-weight: 600; color: #991b1b; text-transform: uppercase; margin-bottom: 2px; }
-.hm-print-credit-reason p { font-size: 10px; color: #7f1d1d; }
+.hm-print-fault { border: 1px solid #fde68a; background: #fffbeb; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; }
+.hm-print-fault-label { font-size: 10px; font-weight: 600; color: #92400e; text-transform: uppercase; margin-bottom: 6px; }
+.hm-print-fault p { font-size: 11px; color: #78350f; }
+.hm-print-credit-reason { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; }
+.hm-print-credit-reason-label { font-size: 10px; font-weight: 600; color: #991b1b; text-transform: uppercase; margin-bottom: 4px; }
+.hm-print-credit-reason p { font-size: 11px; color: #7f1d1d; }
 /* Return address */
-.hm-print-return { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
-.hm-print-return-label { font-size: 9px; font-weight: 600; color: #0369a1; text-transform: uppercase; margin-bottom: 4px; }
+.hm-print-return { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; }
+.hm-print-return-label { font-size: 10px; font-weight: 600; color: #0369a1; text-transform: uppercase; margin-bottom: 6px; }
 /* Date tracking */
-.hm-print-dates { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-.hm-print-date-box { background: #f8fafc; border-radius: 6px; padding: 8px 12px; text-align: center; }
-.hm-print-date-label { font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; }
-.hm-print-date-val { font-size: 12px; font-weight: 700; }
+.hm-print-dates { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.hm-print-date-box { background: #f8fafc; border-radius: 6px; padding: 12px 16px; text-align: center; }
+.hm-print-date-label { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; }
+.hm-print-date-val { font-size: 13px; font-weight: 700; }
 /* Serials */
-.hm-print-serials { font-size: 10px; color: #475569; margin-bottom: 12px; }
-.hm-print-serials code { font-family: monospace; background: #f1f5f9; padding: 0 4px; border-radius: 2px; }
+.hm-print-serials { font-size: 11px; color: #475569; margin-bottom: 20px; }
+.hm-print-serials code { font-family: monospace; background: #f1f5f9; padding: 1px 5px; border-radius: 2px; }
 /* Notes */
-.hm-print-notes { border: 1px dashed #e2e8f0; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
-.hm-print-notes-label { font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
-.hm-print-notes p { font-size: 10px; color: #64748b; }
+.hm-print-notes { border: 1px dashed #e2e8f0; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; }
+.hm-print-notes-label { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 6px; }
+.hm-print-notes p { font-size: 11px; color: #64748b; }
 /* Approval */
-.hm-print-approval { background: #f0fdfa; border: 1px solid rgba(11,180,196,0.2); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
-.hm-print-approval-label { font-size: 9px; font-weight: 600; color: var(--hm-accent); text-transform: uppercase; margin-bottom: 2px; }
+.hm-print-approval { background: #f0fdfa; border: 1px solid rgba(11,180,196,0.2); border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; }
+.hm-print-approval-label { font-size: 10px; font-weight: 600; color: var(--hm-accent); text-transform: uppercase; margin-bottom: 4px; }
 /* Exchange */
-.hm-print-exchange { background: #f0fdfa; border: 1px solid rgba(11,180,196,0.2); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
+.hm-print-exchange { background: #f0fdfa; border: 1px solid rgba(11,180,196,0.2); border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; }
 /* Ear moulds */
-.hm-print-moulds { background: #f8fafc; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
-.hm-print-moulds-label { font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+.hm-print-moulds { background: #f8fafc; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; }
+.hm-print-moulds-label { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 6px; }
 /* Signature */
-.hm-print-signature { margin-top: 24px; border-top: 1px solid #1e293b; padding-top: 4px; width: 60%; }
-.hm-print-signature span { font-size: 9px; color: #64748b; }
+.hm-print-signature { margin-top: 32px; border-top: 1px solid #1e293b; padding-top: 6px; width: 60%; }
+.hm-print-signature span { font-size: 10px; color: #64748b; }
 /* Footer */
-.hm-print-footer { padding-top: 8px; border-top: 1px solid #e2e8f0; text-align: center; font-family: '<?php echo esc_attr($s['footerFont'] ?? 'Source Sans 3'); ?>', sans-serif; font-size: <?php echo intval($s['footerSize'] ?? 9); ?>px; color: <?php echo esc_attr($s['footerColor'] ?? '#94a3b8'); ?>; }
+.hm-print-footer { margin-top: auto; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center; font-family: '<?php echo esc_attr($s['footerFont'] ?? 'Source Sans 3'); ?>', sans-serif; font-size: <?php echo intval($s['footerSize'] ?? 9); ?>px; color: <?php echo esc_attr($s['footerColor'] ?? '#94a3b8'); ?>; }
 /* Content wrapper */
 .hm-print-content { flex: 1 1 auto; }
 /* Print button */
@@ -519,7 +523,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
             <h4>Payment Details</h4>
             <?php $total = 0; foreach ($d->payments as $pm): $total += (float)$pm->amount; ?>
             <div class="pay-row">
-                <span><?php echo date('d M Y', strtotime($pm->payment_date)); ?> — <?php echo esc_html($pm->payment_method); ?></span>
+                <span><?php echo esc_html($pm->payment_method); ?> — <em>Paid <?php echo date('d M Y', strtotime($pm->payment_date)); ?></em></span>
                 <span>€<?php echo number_format((float)$pm->amount, 2); ?></span>
             </div>
             <?php endforeach; ?>
