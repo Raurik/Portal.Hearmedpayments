@@ -112,6 +112,16 @@ class HearMed_Admin_Finance_Form_Builder {
                                 <input type="color" class="hm-ffb-input" data-key="accentColor" value="<?php echo esc_attr($s['accentColor'] ?? '#0BB4C4'); ?>">
                             </div>
                         </div>
+                        <div class="hm-ffb-row">
+                            <div class="hm-ffb-field" style="max-width:120px;">
+                                <label>Logo Size</label>
+                                <select class="hm-input hm-ffb-input" data-key="logoSize">
+                                    <?php foreach ([40,48,56,64,72,80,96,120,140,160] as $lsz): ?>
+                                    <option value="<?php echo $lsz; ?>" <?php selected($s['logoSize'] ?? 80, $lsz); ?>><?php echo $lsz; ?>px</option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
 
                         <div class="hm-ffb-section-title" style="margin-top:16px;">Toggles</div>
                         <?php
@@ -400,13 +410,14 @@ class HearMed_Admin_Finance_Form_Builder {
 
                 /* ── HEADER ── */
                 var showLogo = s.logo !== false && s.logo !== 'false' && s.logo !== undefined ? true : (s.logo === undefined);
+                var logoSz = parseInt(s.logoSize) || 80;
                 html += '<div class="p-header">';
                 html += '<div>';
                 if (showLogo) {
                     if (globalLogoUrl) {
-                        html += '<img src="'+esc(globalLogoUrl)+'" class="p-logo-img" alt="Logo">';
+                        html += '<img src="'+esc(globalLogoUrl)+'" class="p-logo-img" style="max-width:'+logoSz+'px;max-height:'+logoSz+'px;" alt="Logo">';
                     } else {
-                        html += '<div class="p-logo" style="background:'+accent+';">HM</div>';
+                        html += '<div class="p-logo" style="background:'+accent+';width:'+logoSz+'px;height:'+logoSz+'px;font-size:'+Math.round(logoSz*0.36)+'px;">HM</div>';
                     }
                 }
                 html += '<div class="p-company" style="font-family:\''+hFont+'\',serif;font-size:'+hSize+'px;color:'+hColor+';">'+esc(company)+'</div>';

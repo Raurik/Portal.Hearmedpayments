@@ -28,6 +28,7 @@ class HearMed_Print_Templates {
             'companyName'    => 'HearMed Acoustic Health Care Ltd',
             'tagline'        => 'Payment Receipt',
             'logo'           => true,
+            'logoSize'       => 80,
             'headerFont'     => 'Cormorant Garamond',
             'headerSize'     => 18,
             'headerColor'    => '#0BB4C4',
@@ -53,6 +54,7 @@ class HearMed_Print_Templates {
             'companyName'    => 'HearMed Acoustic Health Care Ltd',
             'tagline'        => 'Hearing Aid Order',
             'logo'           => true,
+            'logoSize'       => 80,
             'headerFont'     => 'Cormorant Garamond',
             'headerSize'     => 18,
             'headerColor'    => '#0BB4C4',
@@ -77,6 +79,7 @@ class HearMed_Print_Templates {
             'companyName'    => 'HearMed Acoustic Health Care Ltd',
             'tagline'        => 'Repair Docket',
             'logo'           => true,
+            'logoSize'       => 80,
             'headerFont'     => 'Cormorant Garamond',
             'headerSize'     => 18,
             'headerColor'    => '#0BB4C4',
@@ -102,6 +105,7 @@ class HearMed_Print_Templates {
             'companyName'    => 'HearMed Acoustic Health Care Ltd',
             'tagline'        => 'Credit Note',
             'logo'           => true,
+            'logoSize'       => 80,
             'headerFont'     => 'Cormorant Garamond',
             'headerSize'     => 18,
             'headerColor'    => '#0BB4C4',
@@ -364,10 +368,11 @@ tfoot td { font-weight: 600; border-bottom: none; }
         <div class="hm-print-header">
             <div>
                 <?php if ($s['logo'] ?? true): ?>
+                    <?php $lsz = intval($s['logoSize'] ?? 80); ?>
                     <?php if ($logo_url): ?>
-                    <img src="<?php echo esc_url($logo_url); ?>" alt="Logo" style="max-width:48px;max-height:48px;border-radius:8px;object-fit:contain;margin-bottom:6px;">
+                    <img src="<?php echo esc_url($logo_url); ?>" alt="Logo" style="max-width:<?php echo $lsz; ?>px;max-height:<?php echo $lsz; ?>px;border-radius:8px;object-fit:contain;margin-bottom:6px;">
                     <?php else: ?>
-                    <div class="hm-print-logo">H</div>
+                    <div class="hm-print-logo" style="width:<?php echo $lsz; ?>px;height:<?php echo $lsz; ?>px;font-size:<?php echo round($lsz * 0.36); ?>px;">H</div>
                     <?php endif; ?>
                 <?php endif; ?>
                 <div class="hm-print-company"><?php echo $company; ?></div>
