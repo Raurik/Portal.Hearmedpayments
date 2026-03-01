@@ -534,7 +534,9 @@ class HearMed_Invoice {
     <title>Invoice <?php echo esc_html( $invoice->invoice_number ); ?></title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial, sans-serif; font-size: 13px; color: #151B33; background: #fff; padding: 2rem; max-width: 860px; margin: 0 auto; }
+        @page { size: A4; margin: 15mm; }
+        body { font-family: Arial, sans-serif; font-size: 13px; color: #151B33; background: #fff; padding: 2rem; max-width: 860px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+        .hm-inv__content { flex: 1; }
         .hm-inv__header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; border-bottom: 3px solid #151B33; padding-bottom: 1.25rem; }
         .hm-inv__logo { font-size: 1.5rem; font-weight: 700; color: #151B33; }
         .hm-inv__logo span { color: #0BB4C4; }
@@ -562,9 +564,9 @@ class HearMed_Invoice {
         .hm-inv__vat-table thead th { background: #e2e8f0; color: #151B33; font-size: 0.7rem; }
         .hm-inv__payment { margin-top: 1.5rem; padding: 1rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
         .hm-inv__paid-stamp { font-size: 1.4rem; font-weight: 900; color: #059669; border: 3px solid #059669; padding: 4px 14px; border-radius: 4px; transform: rotate(-5deg); display: inline-block; }
-        .hm-inv__footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; font-size: 0.75rem; color: #94a3b8; display: flex; justify-content: space-between; }
+        .hm-inv__footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid #e2e8f0; font-size: 0.75rem; color: #94a3b8; display: flex; justify-content: space-between; }
         .no-print { display: block; margin-bottom: 1rem; }
-        @media print { .no-print { display: none !important; } body { padding: 0.5cm; } }
+        @media print { .no-print { display: none !important; } body { padding: 0.5cm; min-height: 100%; } }
     </style>
 </head>
 <body>
@@ -578,6 +580,7 @@ class HearMed_Invoice {
     </button>
 </div>
 
+<div class="hm-inv__content">
 <!-- Header -->
 <div class="hm-inv__header">
     <div class="hm-inv__logo">Hear<span>Med</span></div>
@@ -623,23 +626,21 @@ class HearMed_Invoice {
             <th>Ear</th>
             <th style="text-align:center;">Qty</th>
             <th class="text-right">Unit Price</th>
+            <th class="text-right">VAT Rate</th>
             <th class="text-right">VAT</th>
             <th class="text-right">Total (inc VAT)</th>
         </tr>
     </thead>
     <tbody>
     <?php foreach ( $invoice->items as $item ) :
-        $rate    = floatval( $item->vat_rate );
-        $badge   = '';
-        if     ( $rate === 0.0  ) $badge = '<span class="hm-inv__vat-badge">0%</span>';
-        elseif ( $rate === 13.5 ) $badge = '<span class="hm-inv__vat-badge hm-inv__vat-badge--r">13.5%</span>';
-        else                      $badge = '<span class="hm-inv__vat-badge hm-inv__vat-badge--s">23%</span>';
+        $rate = floatval( $item->vat_rate );
     ?>
     <tr>
-        <td><?php echo esc_html( $item->item_description ); ?><?php echo $badge; ?></td>
+        <td><?php echo esc_html( $item->item_description ); ?></td>
         <td><?php echo esc_html( $item->ear_side ?: '—' ); ?></td>
         <td style="text-align:center;"><?php echo intval( $item->quantity ); ?></td>
         <td class="text-right">€<?php echo number_format( $item->unit_price, 2 ); ?></td>
+        <td class="text-right"><?php echo number_format( $rate, 1 ); ?>%</td>
         <td class="text-right">€<?php echo number_format( $item->vat_amount, 2 ); ?></td>
         <td class="text-right">€<?php echo number_format( $item->line_total, 2 ); ?></td>
     </tr>
@@ -704,6 +705,8 @@ class HearMed_Invoice {
     <div class="hm-inv__paid-stamp">PAID</div>
 </div>
 <?php endif; ?>
+
+</div><!-- /.hm-inv__content -->
 
 <!-- Footer -->
 <div class="hm-inv__footer">
@@ -812,14 +815,14 @@ class HearMed_Invoice {
             [ $inv->id ]
         );
 
-        // Patient devices (serials)
+        // Patient devices (serials) — only those linked to THIS invoice's order
         $tpl->devices = $db->get_results(
             "SELECT pd.serial_number_left, pd.serial_number_right, pr.product_name
              FROM hearmed_core.patient_devices pd
              LEFT JOIN hearmed_reference.products pr ON pr.id = pd.product_id
-             WHERE pd.patient_id = \$1 AND pd.fitting_date IS NOT NULL
-             ORDER BY pd.created_at DESC LIMIT 4",
-            [ $inv->patient_id ]
+             WHERE pd.order_id = \$1
+             ORDER BY pd.created_at DESC",
+            [ $inv->order_id ]
         );
 
         return $tpl;

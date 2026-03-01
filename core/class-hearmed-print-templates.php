@@ -38,7 +38,7 @@ class HearMed_Print_Templates {
             'patientAddress' => true,
             'tableFont'      => 'Source Sans 3',
             'tableSize'      => 11,
-            'vatLabel'       => 'VAT (23%)',
+            'vatLabel'       => 'VAT',
             'prsi'           => true,
             'serials'        => true,
             'payments'       => true,
@@ -110,7 +110,7 @@ class HearMed_Print_Templates {
             'originalInvoice'=> true,
             'patientAddress' => true,
             'creditReason'   => true,
-            'vatLabel'       => 'VAT (23%)',
+            'vatLabel'       => 'VAT',
             'refundMethod'   => true,
             'exchangeDetails'=> false,
             'footerLine1'    => 'Credit processed by HearMed Acoustic Health Care Ltd.',
@@ -222,6 +222,8 @@ body {
     font-family: '<?php echo esc_attr($s['tableFont'] ?? 'Source Sans 3'); ?>', -apple-system, sans-serif;
     font-size: <?php echo intval($s['tableSize'] ?? 11); ?>px;
     color: #1e293b; line-height: 1.5; padding: 30px; max-width: 700px; margin: 0 auto;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
 }
 /* Header */
 .hm-print-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 12px; border-bottom: 3px solid var(--hm-accent); margin-bottom: 16px; }
@@ -291,7 +293,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
 .hm-print-signature { margin-top: 24px; border-top: 1px solid #1e293b; padding-top: 4px; width: 60%; }
 .hm-print-signature span { font-size: 9px; color: #64748b; }
 /* Footer */
-.hm-print-footer { margin-top: 16px; padding-top: 8px; border-top: 1px solid #e2e8f0; text-align: center; font-family: '<?php echo esc_attr($s['footerFont'] ?? 'Source Sans 3'); ?>', sans-serif; font-size: <?php echo intval($s['footerSize'] ?? 9); ?>px; color: <?php echo esc_attr($s['footerColor'] ?? '#94a3b8'); ?>; }
+.hm-print-footer { margin-top: auto; padding-top: 8px; border-top: 1px solid #e2e8f0; text-align: center; font-family: '<?php echo esc_attr($s['footerFont'] ?? 'Source Sans 3'); ?>', sans-serif; font-size: <?php echo intval($s['footerSize'] ?? 9); ?>px; color: <?php echo esc_attr($s['footerColor'] ?? '#94a3b8'); ?>; }
 /* Print button */
 .print-btn { position: fixed; top: 10px; right: 10px; padding: 10px 20px; background: var(--hm-accent); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; z-index: 100; }
 .print-btn:hover { opacity: 0.9; }
@@ -447,29 +449,33 @@ tfoot td { font-weight: 600; border-bottom: none; }
         <div class="hm-print-section-title">Items</div>
         <table>
             <thead><tr>
-                <th>Description</th><th>Ear</th><th>Qty</th><th class="money">Unit Price</th><th class="money">Total</th>
+                <th>Description</th><th>Ear</th><th>Qty</th><th class="money">Unit Price</th><th class="money">VAT Rate</th><th class="money">VAT</th><th class="money">Total</th>
             </tr></thead>
             <tbody>
-            <?php foreach ($items as $it): ?>
+            <?php foreach ($items as $it):
+                $vr = floatval($it->vat_rate ?? 0);
+            ?>
             <tr>
                 <td><?php echo esc_html($it->product_name ?: ($it->item_description ?? '')); ?></td>
                 <td><?php echo esc_html($it->ear_side ?: '—'); ?></td>
                 <td><?php echo esc_html($it->quantity ?? 1); ?></td>
                 <td class="money">€<?php echo number_format((float)($it->unit_price ?? $it->unit_retail_price ?? 0), 2); ?></td>
+                <td class="money"><?php echo number_format($vr, 1); ?>%</td>
+                <td class="money">€<?php echo number_format((float)($it->vat_amount ?? 0), 2); ?></td>
                 <td class="money">€<?php echo number_format((float)($it->line_total ?? 0), 2); ?></td>
             </tr>
             <?php endforeach; ?>
             </tbody>
             <tfoot>
-                <tr><td colspan="4" class="money">Subtotal</td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->subtotal : ($order->subtotal ?? 0)), 2); ?></td></tr>
+                <tr><td colspan="6" class="money">Subtotal</td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->subtotal : ($order->subtotal ?? 0)), 2); ?></td></tr>
                 <?php if ((float)($invoice ? $invoice->discount_total : ($order->discount_total ?? 0)) > 0): ?>
-                <tr><td colspan="4" class="money">Discount</td><td class="money">-€<?php echo number_format((float)($invoice ? $invoice->discount_total : $order->discount_total), 2); ?></td></tr>
+                <tr><td colspan="6" class="money">Discount</td><td class="money">-€<?php echo number_format((float)($invoice ? $invoice->discount_total : $order->discount_total), 2); ?></td></tr>
                 <?php endif; ?>
-                <tr><td colspan="4" class="money"><?php echo esc_html($s['vatLabel'] ?? 'VAT (23%)'); ?></td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->vat_total : ($order->vat_total ?? 0)), 2); ?></td></tr>
+                <tr><td colspan="6" class="money"><?php echo esc_html($s['vatLabel'] ?? 'VAT'); ?></td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->vat_total : ($order->vat_total ?? 0)), 2); ?></td></tr>
                 <?php if (($s['prsi'] ?? true) && !empty($order->prsi_applicable)): ?>
-                <tr><td colspan="4" class="money" style="color:var(--hm-accent);">PRSI Grant</td><td class="money" style="color:var(--hm-accent);">-€<?php echo number_format((float)($order->prsi_amount ?? 0), 2); ?></td></tr>
+                <tr><td colspan="6" class="money" style="color:var(--hm-accent);">PRSI Grant</td><td class="money" style="color:var(--hm-accent);">-€<?php echo number_format((float)($order->prsi_amount ?? 0), 2); ?></td></tr>
                 <?php endif; ?>
-                <tr class="total-row"><td colspan="4" class="money">Total Paid</td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->grand_total : ($order->grand_total ?? 0)), 2); ?></td></tr>
+                <tr class="total-row"><td colspan="6" class="money">Total Paid</td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->grand_total : ($order->grand_total ?? 0)), 2); ?></td></tr>
             </tfoot>
         </table>
         <?php return ob_get_clean();
