@@ -227,10 +227,15 @@ class HearMed_Orders {
         $db = HearMed_DB::instance();
 
         $products = $db->get_results(
-            "SELECT p.id, m.name AS manufacturer_name, p.product_name, p.style,
-                    p.tech_level, p.retail_price
+            "SELECT p.id,
+                m.name AS manufacturer_name,
+                p.product_name,
+                p.style,
+                p.tech_level,
+                COALESCE(p.retail_price, hr.price_total::numeric, 0) AS retail_price
              FROM hearmed_reference.products p
              LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+             LEFT JOIN hearmed_reference.hearmed_range hr ON hr.id = p.hearmed_range_id
              WHERE p.is_active = true
              ORDER BY m.name, p.product_name", []
         );
