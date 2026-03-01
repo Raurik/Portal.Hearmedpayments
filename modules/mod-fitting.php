@@ -448,7 +448,7 @@ function hm_render_fitting_page() {
                 if (o.current_status === 'Ordered') {
                     actions = '<button class="hm-btn hm-btn-receive" onclick="hmFitting.openSerial(' + o.id + ')">Receive in Branch</button>';
                 } else if (o.current_status === 'Awaiting Fitting') {
-                    actions = '<button class="hm-btn hm-btn-fitted" onclick="hmFitting.openPayment(' + o.id + ')">Fitted</button>';
+                    actions = '<span style="color:#334155;font-size:11px;font-weight:600;">Complete in Appointment close-off</span>';
                 } else {
                     actions = '<span style="color:var(--hm-text-muted);font-size:11px;">Awaiting finance</span>';
                 }
@@ -1103,6 +1103,9 @@ function hm_ajax_fitting_load_invoice() {
     check_ajax_referer('hm_nonce', 'nonce');
     if (!is_user_logged_in()) { wp_send_json_error(['msg' => 'Access denied']); return; }
 
+    wp_send_json_error(['msg' => 'Use Appointment close-off to complete payment and close this order.']);
+    return;
+
     $db       = HearMed_DB::instance();
     $order_id = intval($_POST['order_id'] ?? 0);
 
@@ -1218,6 +1221,9 @@ add_action('wp_ajax_hm_fitting_record_payment', 'hm_ajax_fitting_record_payment'
 function hm_ajax_fitting_record_payment() {
     check_ajax_referer('hm_nonce', 'nonce');
     if (!is_user_logged_in()) { wp_send_json_error(['msg' => 'Access denied']); return; }
+
+    wp_send_json_error(['msg' => 'Use Appointment close-off to complete payment and close this order.']);
+    return;
 
     $db         = HearMed_DB::instance();
     $order_id   = intval($_POST['order_id'] ?? 0);
