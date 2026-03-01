@@ -31,20 +31,24 @@ function hm_render_fitting_page() {
 
     $db = HearMed_DB::instance();
 
-    // Counts by status
+    // Counts + totals by status
     $counts = $db->get_results(
-        "SELECT o.current_status, COUNT(*) AS cnt
+        "SELECT o.current_status, COUNT(*) AS cnt, COALESCE(SUM(o.grand_total), 0) AS total_value
          FROM hearmed_core.orders o
          WHERE o.current_status IN ('Approved','Ordered','Awaiting Fitting')
            AND EXISTS (SELECT 1 FROM hearmed_core.order_items oi WHERE oi.order_id = o.id AND oi.item_type = 'product')
          GROUP BY o.current_status"
     );
     $count_map = [];
+    $value_map = [];
     $total = 0;
+    $total_value = 0;
     if ($counts) {
         foreach ($counts as $c) {
             $count_map[$c->current_status] = (int)$c->cnt;
+            $value_map[$c->current_status] = (float)$c->total_value;
             $total += (int)$c->cnt;
+            $total_value += (float)$c->total_value;
         }
     }
 
@@ -111,9 +115,6 @@ function hm_render_fitting_page() {
     .hmf-summary-cell + .hmf-summary-cell{border-left:1px solid #e2e8f0;}
     .hmf-summary-cell-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--hm-text-light);font-weight:600;margin-bottom:2px;}
     .hmf-summary-cell-val{font-size:20px;font-weight:700;color:#0f172a;}
-    .hmf-summary-cell-val.green{color:#059669;}
-    .hmf-summary-cell-val.blue{color:#2563eb;}
-    .hmf-summary-cell-val.purple{color:#7c3aed;}
     .hmf-summary-cell-sub{font-size:10px;color:var(--hm-text-muted);margin-top:2px;}
     </style>
 
@@ -126,20 +127,20 @@ function hm_render_fitting_page() {
             <!-- Stats -->
             <div class="hm-stats">
                 <div class="hm-stat">
-                    <div class="hm-stat-label">Awaiting Order</div>
-                    <div class="hm-stat-val amber"><?php echo $count_map['Approved'] ?? 0; ?></div>
+                    <div class="hm-stat-label">Awaiting Order (<?php echo $count_map['Approved'] ?? 0; ?>)</div>
+                    <div class="hm-stat-val amber">€<?php echo number_format($value_map['Approved'] ?? 0, 2); ?></div>
                 </div>
                 <div class="hm-stat">
-                    <div class="hm-stat-label">Awaiting Delivery</div>
-                    <div class="hm-stat-val teal"><?php echo $count_map['Ordered'] ?? 0; ?></div>
+                    <div class="hm-stat-label">Awaiting Delivery (<?php echo $count_map['Ordered'] ?? 0; ?>)</div>
+                    <div class="hm-stat-val teal">€<?php echo number_format($value_map['Ordered'] ?? 0, 2); ?></div>
                 </div>
                 <div class="hm-stat">
-                    <div class="hm-stat-label">Awaiting Fitting</div>
-                    <div class="hm-stat-val green"><?php echo $count_map['Awaiting Fitting'] ?? 0; ?></div>
+                    <div class="hm-stat-label">Awaiting Fitting (<?php echo $count_map['Awaiting Fitting'] ?? 0; ?>)</div>
+                    <div class="hm-stat-val green">€<?php echo number_format($value_map['Awaiting Fitting'] ?? 0, 2); ?></div>
                 </div>
                 <div class="hm-stat">
-                    <div class="hm-stat-label">Total Pipeline</div>
-                    <div class="hm-stat-val"><?php echo $total; ?></div>
+                    <div class="hm-stat-label">Total Pipeline (<?php echo $total; ?>)</div>
+                    <div class="hm-stat-val">€<?php echo number_format($total_value, 2); ?></div>
                 </div>
             </div>
 
@@ -416,6 +417,7 @@ function hm_render_fitting_page() {
             html += '<th>Hearing Aid</th>';
             html += '<th>Clinic</th>';
             html += '<th>Dispenser</th>';
+            html += '<th style="text-align:right;">Order Total</th>';
             html += '<th>PRSI</th>';
             html += '<th>Order Status</th>';
             html += '<th>Fitting Appt</th>';
@@ -460,6 +462,7 @@ function hm_render_fitting_page() {
                 html += '<td><span class="hmf-product">' + hmFE(o.product_names) + '</span></td>';
                 html += '<td>' + hmFE(o.clinic_name) + '</td>';
                 html += '<td>' + hmFE(o.dispenser_name) + '</td>';
+                html += '<td style="text-align:right;font-weight:600;white-space:nowrap;">€' + parseFloat(o.grand_total || 0).toFixed(2) + '</td>';
                 html += '<td>' + prsiDot + '</td>';
                 html += '<td><span class="hm-status ' + statusClass + '">' + statusLabel + '</span></td>';
                 html += '<td>' + fittingDate + '</td>';
@@ -474,56 +477,46 @@ function hm_render_fitting_page() {
         renderTotals: function(orders) {
             var container = document.getElementById('hmf-totals');
 
-            // 1. Total Awaiting Fitting (status = 'Awaiting Fitting')
+            // Financial totals
             var awaitingFitting = orders.filter(function(o) { return o.current_status === 'Awaiting Fitting'; });
-            var totalAwaiting = awaitingFitting.length;
+            var awaitingOrder   = orders.filter(function(o) { return o.current_status === 'Approved'; });
+            var awaitingDelivery = orders.filter(function(o) { return o.current_status === 'Ordered'; });
 
-            // 2. Fitting before end of month
-            var now = new Date();
-            var endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-            var fittingBeforeEOM = awaitingFitting.filter(function(o) {
-                if (!o.fitting_date_raw) return false;
-                var fd = new Date(o.fitting_date_raw);
-                return fd <= endOfMonth;
-            }).length;
-
-            // 3. PRSI to claim — orders fitted (PRSI applicable) within the current PRSI cycle
-            // PRSI cycle: 2nd Tuesday of this month → 1st Monday of next month
-            var cycle = this.getPRSICycleDates();
-            var prsiCount = 0;
-            if (cycle.start && cycle.end) {
-                // Count Awaiting Fitting orders that are PRSI applicable
-                // and have a fitting date within the PRSI cycle window
-                prsiCount = awaitingFitting.filter(function(o) {
-                    if (!o.prsi_applicable) return false;
-                    if (!o.fitting_date_raw) return true; // PRSI applicable but no date = still in window
-                    var fd = new Date(o.fitting_date_raw);
-                    return fd >= cycle.start && fd <= cycle.end;
-                }).length;
+            function sumTotal(arr) {
+                return arr.reduce(function(s, o) { return s + parseFloat(o.grand_total || 0); }, 0);
             }
+            function euro(v) { return '€' + v.toFixed(2); }
 
-            var cycleLabel = '';
-            if (cycle.start && cycle.end) {
-                cycleLabel = hmFD(cycle.start) + ' – ' + hmFD(cycle.end);
-            }
+            var valAwaiting  = sumTotal(awaitingFitting);
+            var valOrder     = sumTotal(awaitingOrder);
+            var valDelivery  = sumTotal(awaitingDelivery);
+            var valPipeline  = sumTotal(orders);
 
-            var monthName = now.toLocaleString('default', { month: 'long' });
+            // PRSI count
+            var prsiCount = awaitingFitting.filter(function(o) { return o.prsi_applicable; }).length;
+            var prsiVal   = sumTotal(awaitingFitting.filter(function(o) { return o.prsi_applicable; }));
 
             container.innerHTML =
                 '<div class="hmf-summary-row">' +
                     '<div class="hmf-summary-cell">' +
-                        '<div class="hmf-summary-cell-label">Total Awaiting Fitting</div>' +
-                        '<div class="hmf-summary-cell-val green">' + totalAwaiting + '</div>' +
+                        '<div class="hmf-summary-cell-label">Awaiting Fitting (' + awaitingFitting.length + ')</div>' +
+                        '<div class="hmf-summary-cell-val">' + euro(valAwaiting) + '</div>' +
                     '</div>' +
                     '<div class="hmf-summary-cell">' +
-                        '<div class="hmf-summary-cell-label">Fitting Before End of ' + hmFE(monthName) + '</div>' +
-                        '<div class="hmf-summary-cell-val blue">' + fittingBeforeEOM + '</div>' +
-                        '<div class="hmf-summary-cell-sub">Scheduled before ' + hmFD(endOfMonth) + '</div>' +
+                        '<div class="hmf-summary-cell-label">Awaiting Order (' + awaitingOrder.length + ')</div>' +
+                        '<div class="hmf-summary-cell-val">' + euro(valOrder) + '</div>' +
                     '</div>' +
                     '<div class="hmf-summary-cell">' +
-                        '<div class="hmf-summary-cell-label">PRSI to Claim</div>' +
-                        '<div class="hmf-summary-cell-val purple">' + prsiCount + '</div>' +
-                        '<div class="hmf-summary-cell-sub">' + hmFE(cycleLabel) + '</div>' +
+                        '<div class="hmf-summary-cell-label">Awaiting Delivery (' + awaitingDelivery.length + ')</div>' +
+                        '<div class="hmf-summary-cell-val">' + euro(valDelivery) + '</div>' +
+                    '</div>' +
+                    '<div class="hmf-summary-cell">' +
+                        '<div class="hmf-summary-cell-label">PRSI to Claim (' + prsiCount + ')</div>' +
+                        '<div class="hmf-summary-cell-val">' + euro(prsiVal) + '</div>' +
+                    '</div>' +
+                    '<div class="hmf-summary-cell" style="border-left:2px solid #e2e8f0;">' +
+                        '<div class="hmf-summary-cell-label">Total Pipeline (' + orders.length + ')</div>' +
+                        '<div class="hmf-summary-cell-val" style="font-size:22px;">' + euro(valPipeline) + '</div>' +
                     '</div>' +
                 '</div>';
 
