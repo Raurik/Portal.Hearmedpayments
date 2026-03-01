@@ -2574,7 +2574,8 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
         foreach ( $sections as $sec ) {
             if ( empty( $sec['enabled'] ) ) continue;
             $sec_type = $sec['type'] ?? '';
-            if ( ! in_array( $sec_type, [ 'ai_extract', 'ai_detect' ] ) ) continue;
+            // Skip auto-fill, chart, signature — extract from all other section types that have fields
+            if ( in_array( $sec_type, [ 'auto', 'chart', 'signature' ] ) ) continue;
 
             $sec_key = $sec['key'] ?? '';
             $fields_schema = [];
@@ -2582,26 +2583,49 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
             if ( ! empty( $sec['fields'] ) && is_array( $sec['fields'] ) ) {
                 foreach ( $sec['fields'] as $f ) {
                     if ( ! is_array( $f ) ) continue;
-                    $fkey  = $f['key'] ?? '';
+                    $fkey   = $f['key'] ?? '';
                     $flabel = $f['label'] ?? ucwords( str_replace( '_', ' ', $fkey ) );
-                    $fs = [ 'type' => $f['format'] ?? 'text' ];
+                    $format = $f['format'] ?? 'text';
+                    $fs = [ 'type' => $format ];
                     if ( ! empty( $f['required'] ) ) {
                         $fs['required'] = true;
                     }
-                    // Always add field instruction (use ai_instruction or fallback to label)
-                    $instr = ! empty( $f['ai_instruction'] ) ? $f['ai_instruction'] : 'Extract information about ' . strtolower( $flabel ) . ' from the transcript.';
+
+                    // Build format-aware instruction
+                    $base_instr = ! empty( $f['ai_instruction'] ) ? $f['ai_instruction'] : 'Extract information about ' . strtolower( $flabel ) . ' from the transcript.';
+                    $format_hint = '';
+                    switch ( $format ) {
+                        case 'number':
+                            $format_hint = ' Return a numeric value only (e.g. "3", "45", "0.5").';
+                            break;
+                        case 'boolean':
+                            $format_hint = ' Return "Yes" or "No" only.';
+                            break;
+                        case 'date':
+                            $format_hint = ' Return a date in YYYY-MM-DD format if found.';
+                            break;
+                        case 'textarea':
+                            $format_hint = ' Provide a detailed, thorough response. Include all relevant information mentioned in the transcript.';
+                            break;
+                        case 'select':
+                            $format_hint = ' Pick the single best matching option from the ai_instruction.';
+                            break;
+                    }
+                    $instr = $base_instr . $format_hint;
                     $fs['instruction'] = $instr;
                     $field_instructions[] = "{$sec_key}.{$fkey} ({$flabel}): {$instr}";
                     $fields_schema[ $fkey ] = $fs;
-                    // Flat output example with empty string placeholder
                     $output_fields[ $fkey ] = '';
                 }
             }
-            $schema[ $sec_key ] = [
-                'label'  => $sec['label'] ?? '',
-                'fields' => $fields_schema,
-            ];
-            $output_example[ $sec_key ] = $output_fields;
+            // Only include sections that actually have fields to extract
+            if ( ! empty( $output_fields ) ) {
+                $schema[ $sec_key ] = [
+                    'label'  => $sec['label'] ?? '',
+                    'fields' => $fields_schema,
+                ];
+                $output_example[ $sec_key ] = $output_fields;
+            }
         }
     }
 
@@ -2613,9 +2637,13 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
     $system_prompt .= "\n\nCRITICAL OUTPUT RULES:\n";
     $system_prompt .= "1. Return a flat JSON object: { \"section_key\": { \"field_key\": \"extracted value\" } }\n";
     $system_prompt .= "2. Each field value must be a plain text string with the extracted information, or null if not found.\n";
-    $system_prompt .= "3. Do NOT prefix values with type labels like 'Text:', 'Boolean:', 'Date:' etc.\n";
+    $system_prompt .= "3. Do NOT prefix values with type labels like 'Text:', 'Boolean:', 'Date:', 'Number:' etc.\n";
     $system_prompt .= "4. Do NOT nest values under 'fields', 'label', 'type' or any wrapper key.\n";
     $system_prompt .= "5. Write naturally — e.g. \"Patient reports bilateral tinnitus for 3 years\" not \"Text: Patient reports...\"\n";
+    $system_prompt .= "6. For number fields, return just the number as a string (e.g. \"3\", \"45\").\n";
+    $system_prompt .= "7. For boolean fields, return \"Yes\" or \"No\".\n";
+    $system_prompt .= "8. For textarea/long text fields, provide detailed thorough responses with all relevant information from the transcript.\n";
+    $system_prompt .= "9. Search the ENTIRE transcript thoroughly for ALL relevant information for each field.\n";
 
     $user_prompt  = "Extract clinical data from the following audiology consultation transcript.\n\n";
     $user_prompt .= "REQUIRED OUTPUT FORMAT (respond with JSON exactly like this, replacing null with extracted values):\n";
