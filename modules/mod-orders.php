@@ -1114,7 +1114,7 @@ class HearMed_Orders {
         $order = $db->get_row(
             "SELECT o.*,
                     p.first_name AS p_first, p.last_name AS p_last, p.patient_number,
-                    p.date_of_birth, p.phone, p.mobile, p.pps_number,
+                    p.date_of_birth, p.phone, p.mobile, p.prsi_number AS pps_number,
                     c.clinic_name,
                     CONCAT_WS(', ', c.address_line1, c.address_line2, c.city, c.county, COALESCE(c.postcode, '')) AS clinic_address,
                     c.phone AS clinic_phone,

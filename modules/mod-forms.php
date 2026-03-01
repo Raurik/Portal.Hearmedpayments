@@ -327,7 +327,7 @@ class HearMed_Forms {
 
         $patient = $patient_id ? $db->get_row(
             "SELECT p.*, c.clinic_name, c.phone AS clinic_phone, c.email AS clinic_email,
-                    c.address_line1 AS clinic_addr, c.vat_number AS clinic_vat
+                    c.address_line1 AS clinic_addr
              FROM hearmed_core.patients p
              LEFT JOIN hearmed_reference.clinics c ON c.id = p.assigned_clinic_id
              WHERE p.id = $1",

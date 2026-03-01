@@ -1416,7 +1416,7 @@ function hm_ajax_fitting_receipt() {
         "SELECT o.*,
                 p.first_name AS p_first, p.last_name AS p_last, p.patient_number,
                 p.address_line1, p.address_line2, p.city, p.county, p.eircode,
-                c.clinic_name, c.address AS clinic_address, c.phone AS clinic_phone,
+                c.clinic_name, CONCAT_WS(', ', c.address_line1, c.city, c.county, COALESCE(c.postcode, '')) AS clinic_address, c.phone AS clinic_phone,
                 CONCAT(s.first_name, ' ', s.last_name) AS dispenser_name
          FROM hearmed_core.orders o
          JOIN hearmed_core.patients p ON p.id = o.patient_id

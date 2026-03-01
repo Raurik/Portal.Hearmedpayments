@@ -493,7 +493,7 @@ function hm_ajax_os_order_pdf() {
     $order = $db->get_row(
         "SELECT o.*,
                 p.first_name AS p_first, p.last_name AS p_last, p.patient_number,
-                c.clinic_name, c.address AS clinic_address, c.phone AS clinic_phone,
+                c.clinic_name, CONCAT_WS(', ', c.address_line1, c.city, c.county, COALESCE(c.postcode, '')) AS clinic_address, c.phone AS clinic_phone,
                 CONCAT(s.first_name, ' ', s.last_name) AS dispenser_name
          FROM hearmed_core.orders o
          JOIN hearmed_core.patients p ON p.id = o.patient_id

@@ -79,12 +79,11 @@ class HearMed_Invoice {
         $order = $db->get_row(
             "SELECT o.*,
                     p.first_name, p.last_name, p.email, p.phone,
-                    p.date_of_birth, p.pps_number,
+                    p.date_of_birth, p.prsi_number AS pps_number,
                     p.address_line1, p.address_line2, p.city, p.county, p.eircode,
                     c.clinic_name, c.address_line1 AS clinic_addr1,
                     c.address_line2 AS clinic_addr2, c.city AS clinic_city,
                     c.phone AS clinic_phone, c.email AS clinic_email,
-                    c.vat_number AS clinic_vat,
                     CONCAT(s.first_name,' ',s.last_name) AS dispenser_name
              FROM hearmed_core.orders o
              JOIN hearmed_core.patients p        ON p.id = o.patient_id
@@ -481,7 +480,7 @@ class HearMed_Invoice {
                     p.first_name, p.last_name, p.email, p.phone, p.patient_number,
                     p.address_line1, p.address_line2, p.city AS p_city, p.county, p.eircode,
                     c.clinic_name, c.address_line1 AS c_addr1, c.address_line2 AS c_addr2,
-                    c.city AS c_city, c.phone AS c_phone, c.email AS c_email, c.vat_number,
+                    c.city AS c_city, c.phone AS c_phone, c.email AS c_email,
                     CONCAT(s.first_name,' ',s.last_name) AS dispenser_name,
                     pay.payment_method, pay.payment_date AS paid_date
              FROM hearmed_core.invoices inv
@@ -525,7 +524,7 @@ class HearMed_Invoice {
         $prsi     = floatval( $invoice->prsi_amount );
         $vat_bd   = $invoice->vat_breakdown ?? [];
         $company  = HearMed_Settings::get( 'hm_report_company_name', 'HearMed Acoustic Health Care Ltd' );
-        $vat_num  = $invoice->vat_number ?? HearMed_Settings::get( 'hm_vat_number', '' );
+        $vat_num  = $invoice->vat_number ?? HearMed_Settings::get( 'hm_global_vat_number', '' );
 
         ob_start(); ?>
 <!DOCTYPE html>
