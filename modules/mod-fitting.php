@@ -1177,52 +1177,17 @@ function hm_ajax_fitting_load_invoice() {
 
     // If no invoice exists, create one automatically
     if (!$invoice) {
-        $inv_number = 'INV-' . date('Ymd') . '-' . str_pad(rand(1,9999), 4, '0', STR_PAD_LEFT);
         $uid = get_current_user_id();
         $staff_id = $db->get_var("SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1", [$uid]);
 
-        $inv_id = $db->insert('hearmed_core.invoices', [
-            'invoice_number'    => $inv_number,
-            'patient_id'        => $order->patient_id,
-            'order_id'          => $order_id,
-            'staff_id'          => $order->staff_id,
-            'clinic_id'         => $order->clinic_id,
-            'invoice_date'      => date('Y-m-d'),
-            'subtotal'          => $order->subtotal,
-            'discount_total'    => $order->discount_total,
-            'vat_total'         => $order->vat_total,
-            'grand_total'       => $order->grand_total,
-            'balance_remaining' => $order->grand_total,
-            'payment_status'    => 'Unpaid',
-            'prsi_applicable'   => $order->prsi_applicable,
-            'prsi_amount'       => $order->prsi_amount ?? 0,
-            'created_by'        => $staff_id ?: $uid,
-        ]);
-
-        // Copy order items to invoice items
-        $items = $db->get_results(
-            "SELECT * FROM hearmed_core.order_items WHERE order_id = \$1 ORDER BY line_number",
-            [$order_id]
-        );
-        foreach ($items ?: [] as $it) {
-            $db->insert('hearmed_core.invoice_items', [
-                'invoice_id'       => $inv_id,
-                'line_number'      => $it->line_number,
-                'item_type'        => $it->item_type,
-                'item_id'          => $it->item_id,
-                'item_description' => $it->item_description,
-                'ear_side'         => $it->ear_side,
-                'quantity'         => $it->quantity,
-                'unit_price'       => $it->unit_retail_price,
-                'discount_percent' => $it->discount_percent,
-                'discount_amount'  => $it->discount_amount,
-                'vat_rate'         => 23,
-                'line_total'       => $it->line_total,
-            ]);
+        $inv_id = false;
+        if (class_exists('HearMed_Invoice') && method_exists('HearMed_Invoice', 'ensure_invoice_for_order')) {
+            $inv_id = HearMed_Invoice::ensure_invoice_for_order($order_id, $staff_id ?: $uid);
         }
-
-        // Link invoice to order
-        $db->query("UPDATE hearmed_core.orders SET invoice_id = \$1 WHERE id = \$2", [$inv_id, $order_id]);
+        if (!$inv_id) {
+            wp_send_json_error(['msg' => 'Failed to create invoice from order.']);
+            return;
+        }
 
         $invoice = $db->get_row("SELECT * FROM hearmed_core.invoices WHERE id = \$1", [$inv_id]);
     }
@@ -1310,52 +1275,14 @@ function hm_ajax_fitting_record_payment() {
     }
 
     if (!$invoice_id) {
-        $inv_number = 'INV-' . date('Ymd') . '-' . str_pad(rand(1,9999), 4, '0', STR_PAD_LEFT);
-        $invoice_id = $db->insert('hearmed_core.invoices', [
-            'invoice_number'    => $inv_number,
-            'patient_id'        => $order->patient_id,
-            'order_id'          => $order_id,
-            'staff_id'          => $order->staff_id,
-            'clinic_id'         => $order->clinic_id,
-            'invoice_date'      => date('Y-m-d'),
-            'subtotal'          => $order->subtotal,
-            'discount_total'    => $order->discount_total,
-            'vat_total'         => $order->vat_total,
-            'grand_total'       => $order->grand_total,
-            'balance_remaining' => $order->grand_total,
-            'payment_status'    => 'Unpaid',
-            'prsi_applicable'   => $order->prsi_applicable,
-            'prsi_amount'       => $order->prsi_amount ?? 0,
-            'created_by'        => $staff_id ?: $uid,
-        ]);
+        if (class_exists('HearMed_Invoice') && method_exists('HearMed_Invoice', 'ensure_invoice_for_order')) {
+            $invoice_id = HearMed_Invoice::ensure_invoice_for_order($order_id, $staff_id ?: $uid);
+        }
 
         if (!$invoice_id) {
             wp_send_json_error(['msg' => 'Unable to create invoice before payment.']);
             return;
         }
-
-        $items = $db->get_results(
-            "SELECT * FROM hearmed_core.order_items WHERE order_id = \$1 ORDER BY line_number",
-            [$order_id]
-        );
-        foreach ($items ?: [] as $it) {
-            $db->insert('hearmed_core.invoice_items', [
-                'invoice_id'       => $invoice_id,
-                'line_number'      => $it->line_number,
-                'item_type'        => $it->item_type,
-                'item_id'          => $it->item_id,
-                'item_description' => $it->item_description,
-                'ear_side'         => $it->ear_side,
-                'quantity'         => $it->quantity,
-                'unit_price'       => $it->unit_retail_price,
-                'discount_percent' => $it->discount_percent,
-                'discount_amount'  => $it->discount_amount,
-                'vat_rate'         => 23,
-                'line_total'       => $it->line_total,
-            ]);
-        }
-
-        $db->query("UPDATE hearmed_core.orders SET invoice_id = \$1 WHERE id = \$2", [$invoice_id, $order_id]);
     }
 
     $invoice = $db->get_row("SELECT * FROM hearmed_core.invoices WHERE id = \$1", [$invoice_id]);

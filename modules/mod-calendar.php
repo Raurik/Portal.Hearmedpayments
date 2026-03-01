@@ -1654,58 +1654,15 @@ function hm_ajax_record_order_payment() {
         }
 
         if ( ! $invoice ) {
-            $inv_number = 'INV-' . date( 'Ymd' ) . '-' . str_pad( rand( 1, 9999 ), 4, '0', STR_PAD_LEFT );
-            $inv_id = $db->insert( 'hearmed_core.invoices', [
-                'invoice_number'    => $inv_number,
-                'patient_id'        => $order->patient_id,
-                'order_id'          => $order_id,
-                'staff_id'          => $order->staff_id ?: $staff_id,
-                'clinic_id'         => $order->clinic_id,
-                'invoice_date'      => date( 'Y-m-d' ),
-                'subtotal'          => (float) ( $order->subtotal ?? 0 ),
-                'discount_total'    => (float) ( $order->discount_total ?? 0 ),
-                'vat_total'         => (float) ( $order->vat_total ?? 0 ),
-                'grand_total'       => (float) ( $order->grand_total ?? 0 ),
-                'balance_remaining' => (float) ( $order->grand_total ?? 0 ),
-                'payment_status'    => 'Unpaid',
-                'prsi_applicable'   => ! empty( $order->prsi_applicable ) && $order->prsi_applicable !== 'f',
-                'prsi_amount'       => (float) ( $order->prsi_amount ?? 0 ),
-                'created_by'        => $staff_id ?: null,
-            ] );
+            $inv_id = false;
+            if ( class_exists( 'HearMed_Invoice' ) && method_exists( 'HearMed_Invoice', 'ensure_invoice_for_order' ) ) {
+                $inv_id = HearMed_Invoice::ensure_invoice_for_order( $order_id, $staff_id ?: null );
+            }
 
             if ( ! $inv_id ) {
                 wp_send_json_error( [ 'message' => 'Failed to create invoice. ' . HearMed_DB::last_error() ] );
                 return;
             }
-
-            // Copy order items to invoice_items (best effort)
-            $items = $db->get_results(
-                "SELECT line_number, item_type, item_id, item_description, ear_side,
-                        quantity, unit_retail_price, discount_percent, discount_amount, vat_rate, line_total
-                   FROM hearmed_core.order_items WHERE order_id = \$1 ORDER BY line_number",
-                [ $order_id ]
-            );
-            foreach ( $items ?: [] as $it ) {
-                $db->insert( 'hearmed_core.invoice_items', [
-                    'invoice_id'       => $inv_id,
-                    'line_number'      => (int) ( $it->line_number ?? 1 ),
-                    'item_type'        => $it->item_type,
-                    'item_id'          => intval( $it->item_id ?? 0 ),
-                    'item_description' => $it->item_description,
-                    'ear_side'         => $it->ear_side,
-                    'quantity'         => intval( $it->quantity ?? 1 ),
-                    'unit_price'       => (float) ( $it->unit_retail_price ?? 0 ),
-                    'discount_percent' => (float) ( $it->discount_percent ?? 0 ),
-                    'discount_amount'  => (float) ( $it->discount_amount ?? 0 ),
-                    'vat_rate'         => (float) ( $it->vat_rate ?? 0 ),
-                    'line_total'       => (float) ( $it->line_total ?? 0 ),
-                ] );
-            }
-
-            $db->query(
-                "UPDATE hearmed_core.orders SET invoice_id = \$1, updated_at = NOW() WHERE id = \$2",
-                [ $inv_id, $order_id ]
-            );
 
             $invoice = $db->get_row(
                 "SELECT id, invoice_number, grand_total, balance_remaining

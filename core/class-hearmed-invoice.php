@@ -228,6 +228,115 @@ class HearMed_Invoice {
         return $invoice_id;
     }
 
+    /**
+     * Ensure an unpaid invoice exists and is linked to the given order.
+     * Uses canonical invoice numbering settings/sequence.
+     *
+     * @param int      $order_id
+     * @param int|null $created_by
+     * @return int|false
+     */
+    public static function ensure_invoice_for_order( $order_id, $created_by = null ) {
+        $db = HearMed_DB::instance();
+
+        $order = $db->get_row(
+            "SELECT o.*
+               FROM hearmed_core.orders o
+              WHERE o.id = $1",
+            [ $order_id ]
+        );
+        if ( ! $order ) {
+            return false;
+        }
+
+        if ( ! empty( $order->invoice_id ) ) {
+            $existing = $db->get_var(
+                "SELECT id FROM hearmed_core.invoices WHERE id = $1 LIMIT 1",
+                [ intval( $order->invoice_id ) ]
+            );
+            if ( $existing ) {
+                $db->query(
+                    "UPDATE hearmed_core.invoices SET order_id = $1 WHERE id = $2 AND (order_id IS NULL OR order_id <> $1)",
+                    [ $order_id, intval( $existing ) ]
+                );
+                return intval( $existing );
+            }
+        }
+
+        $existing_by_order = $db->get_var(
+            "SELECT id FROM hearmed_core.invoices WHERE order_id = $1 ORDER BY id DESC LIMIT 1",
+            [ $order_id ]
+        );
+        if ( $existing_by_order ) {
+            $db->update( 'orders', [ 'invoice_id' => intval( $existing_by_order ) ], [ 'id' => $order_id ] );
+            return intval( $existing_by_order );
+        }
+
+        $invoice_number = self::next_invoice_number();
+
+        HearMed_DB::begin_transaction();
+
+        $invoice_id = $db->insert( 'invoices', [
+            'invoice_number'    => $invoice_number,
+            'patient_id'        => $order->patient_id,
+            'order_id'          => $order_id,
+            'staff_id'          => $order->staff_id,
+            'clinic_id'         => $order->clinic_id,
+            'invoice_date'      => date( 'Y-m-d' ),
+            'subtotal'          => (float) ( $order->subtotal ?? 0 ),
+            'discount_total'    => (float) ( $order->discount_total ?? 0 ),
+            'vat_total'         => (float) ( $order->vat_total ?? 0 ),
+            'grand_total'       => (float) ( $order->grand_total ?? 0 ),
+            'balance_remaining' => (float) ( $order->grand_total ?? 0 ),
+            'payment_status'    => 'Unpaid',
+            'prsi_applicable'   => ! empty( $order->prsi_applicable ) && $order->prsi_applicable !== 'f',
+            'prsi_amount'       => (float) ( $order->prsi_amount ?? 0 ),
+            'created_by'        => $created_by,
+        ] );
+
+        if ( ! $invoice_id ) {
+            HearMed_DB::rollback();
+            return false;
+        }
+
+        $items = $db->get_results(
+            "SELECT oi.*,
+                    CASE
+                        WHEN oi.item_type = 'product' THEN COALESCE(pr.vat_category, 'Hearing Aids')
+                        ELSE COALESCE(sv.vat_category, 'Services')
+                    END AS vat_category
+               FROM hearmed_core.order_items oi
+               LEFT JOIN hearmed_reference.products pr ON pr.id = oi.item_id AND oi.item_type = 'product'
+               LEFT JOIN hearmed_reference.services sv ON sv.id = oi.item_id AND oi.item_type = 'service'
+              WHERE oi.order_id = $1
+              ORDER BY oi.line_number",
+            [ $order_id ]
+        );
+
+        foreach ( $items ?: [] as $it ) {
+            $vat_rate = self::vat_rate_for_category( $it->vat_category ?? 'Hearing Aids' );
+            $db->insert( 'invoice_items', [
+                'invoice_id'       => $invoice_id,
+                'line_number'      => intval( $it->line_number ?? 1 ),
+                'item_type'        => $it->item_type,
+                'item_id'          => intval( $it->item_id ?? 0 ),
+                'item_description' => $it->item_description,
+                'ear_side'         => $it->ear_side,
+                'quantity'         => intval( $it->quantity ?? 1 ),
+                'unit_price'       => (float) ( $it->unit_retail_price ?? 0 ),
+                'discount_percent' => (float) ( $it->discount_percent ?? 0 ),
+                'discount_amount'  => (float) ( $it->discount_amount ?? 0 ),
+                'vat_rate'         => (float) $vat_rate,
+                'line_total'       => (float) ( $it->line_total ?? 0 ),
+            ] );
+        }
+
+        $db->update( 'orders', [ 'invoice_id' => $invoice_id ], [ 'id' => $order_id ] );
+
+        HearMed_DB::commit();
+        return intval( $invoice_id );
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // VAT CALCULATION
     // ═══════════════════════════════════════════════════════════════════════
