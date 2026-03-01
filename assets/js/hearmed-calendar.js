@@ -224,14 +224,17 @@ var Cal={
             if(id===0){
                 // "All" clicked — clear selection
                 if(group==='clinic'){self.selClinics=[];}else{self.selDisps=[];}
+            } else if(group==='clinic'){
+                // Single-select for clinics: toggle same or replace
+                self.selClinics=self.selClinics.length===1&&self.selClinics[0]===id?[]:[id];
             } else {
-                var arr=group==='clinic'?self.selClinics:self.selDisps;
+                var arr=self.selDisps;
                 var idx=arr.indexOf(id);
                 if(idx>-1)arr.splice(idx,1); else arr.push(id);
-                if(group==='clinic')self.selClinics=arr; else self.selDisps=arr;
+                self.selDisps=arr;
             }
             self.renderMultiSelect();
-            if(group==='clinic')self.loadDispensers().then(function(){self.refresh();});
+            if(group==='clinic'){$('#hm-clinicMsDrop').removeClass('open');self.loadDispensers().then(function(){self.refresh();});}
             else self.refresh();
         });
 
@@ -524,7 +527,8 @@ var Cal={
         }).fail(function(){ console.warn('[HearMed] get_clinics failed'); });
     },
     loadDispensers:function(){
-        return post('get_dispensers',{clinic:0,date:fmt(this.date)}).then(function(r){
+        var cid=this.selClinics.length===1?this.selClinics[0]:0;
+        return post('get_dispensers',{clinic:cid,date:fmt(this.date)}).then(function(r){
             if(!r.success)return;
             Cal.dispensers=r.data;
             Cal.renderMultiSelect();
@@ -566,7 +570,13 @@ var Cal={
         // Dispensers — filtered by selected clinics
         var filtDisp=this.dispensers;
         if(this.selClinics.length){
-            filtDisp=this.dispensers.filter(function(d){return Cal.selClinics.indexOf(parseInt(d.clinic_id||d.clinicId))>-1;});
+            filtDisp=this.dispensers.filter(function(d){
+                if(d.clinic_ids&&d.clinic_ids.length){
+                    for(var i=0;i<d.clinic_ids.length;i++){if(Cal.selClinics.indexOf(parseInt(d.clinic_ids[i]))>-1)return true;}
+                    return false;
+                }
+                return Cal.selClinics.indexOf(parseInt(d.clinic_id||d.clinicId))>-1;
+            });
         }
         var dh='<div class="hm-ms-item'+(this.selDisps.length===0?' on':'')+'" data-id="0" data-group="disp">All Assignees</div>';
         filtDisp.forEach(function(d){
@@ -597,7 +607,14 @@ var Cal={
     },
     visDisps:function(){
         var d=this.dispensers;
-        if(this.selClinics.length)d=d.filter(function(x){return Cal.selClinics.indexOf(parseInt(x.clinic_id||x.clinicId))>-1;});
+        if(this.selClinics.length)d=d.filter(function(x){
+            // Check clinic_ids array first (all assigned clinics), fall back to clinic_id
+            if(x.clinic_ids&&x.clinic_ids.length){
+                for(var i=0;i<x.clinic_ids.length;i++){if(Cal.selClinics.indexOf(parseInt(x.clinic_ids[i]))>-1)return true;}
+                return false;
+            }
+            return Cal.selClinics.indexOf(parseInt(x.clinic_id||x.clinicId))>-1;
+        });
         if(this.selDisps.length)d=d.filter(function(x){return Cal.selDisps.indexOf(parseInt(x.id))>-1;});
         return d;
     },
@@ -626,6 +643,8 @@ var Cal={
         var dispClinicColor={};
         disps.forEach(function(p){
             var cid=parseInt(p.clinic_id||p.clinicId||0);
+            // If a single clinic is selected, use that; otherwise use the dispenser's primary clinic
+            if(Cal.selClinics.length===1){cid=Cal.selClinics[0];}
             if(cid&&Cal.clinics){
                 var cl=Cal.clinics.find(function(c){return c.id===cid;});
                 if(cl&&(cl.clinic_colour||cl.color)){dispClinicColor[p.id]=cl.clinic_colour||cl.color;}

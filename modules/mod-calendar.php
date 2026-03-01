@@ -332,6 +332,7 @@ function hm_ajax_get_dispensers() {
             'name'           => $fname,
             'initials'       => $initials,
             'clinic_id'      => $clinic_id ?: ( ! empty( $cids ) ? $cids[0] : null ),
+            'clinic_ids'     => $cids,
             'calendar_order' => 99,
             'role_type'      => $p->role,
             'color'          => $p->staff_color ?: '#0BB4C4',
