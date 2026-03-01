@@ -70,15 +70,21 @@ class HearMed_Ajax {
         add_action( 'wp_ajax_hm_patient_search', [ 'HearMed_Orders', 'ajax_patient_search' ] ); // Autocomplete
         add_action( 'wp_ajax_hm_print_order_sheet', [ 'HearMed_Orders', 'ajax_print_order_sheet' ] ); // Print order
 
-        // Accounting — ADD THESE 5 NEW ONES
-add_action('wp_ajax_hm_save_supplier_invoice', ['HearMed_Accounting', 'ajax_save_supplier_invoice']);
-add_action('wp_ajax_hm_retry_qbo_sync',        ['HearMed_Accounting', 'ajax_retry_qbo_sync']);
-add_action('wp_ajax_hm_assign_bank_txn',        ['HearMed_Accounting', 'ajax_assign_bank_txn']);
-add_action('wp_ajax_hm_qbo_sync_accounts',      ['HearMed_Accounting', 'ajax_qbo_sync_accounts']);
-add_action('wp_ajax_hm_qbo_disconnect',         ['HearMed_Accounting', 'ajax_qbo_disconnect']);
+        // ── Orders — AJAX list/detail/status (hearmed-orders.js) ─────────────
+        add_action( 'wp_ajax_hm_get_orders',           [ 'HearMed_Orders', 'ajax_get_orders' ] );
+        add_action( 'wp_ajax_hm_get_order_detail',     [ 'HearMed_Orders', 'ajax_get_order_detail' ] );
+        add_action( 'wp_ajax_hm_update_order_status',  [ 'HearMed_Orders', 'ajax_update_order_status' ] );
+        add_action( 'wp_ajax_hm_get_pending_orders',   [ 'HearMed_Orders', 'ajax_get_pending_orders' ] );
+        add_action( 'wp_ajax_hm_get_awaiting_fitting', [ 'HearMed_Orders', 'ajax_get_awaiting_fitting' ] );
+        add_action( 'wp_ajax_hm_prefit_cancel',        [ 'HearMed_Orders', 'ajax_prefit_cancel' ] );
 
         // ── Accounting / QuickBooks ───────────────────────────────────────────
-        add_action( 'wp_ajax_hm_retry_qbo_sync', [ 'HearMed_Accounting', 'ajax_retry_sync' ] );
+        add_action( 'wp_ajax_hm_save_supplier_invoice', [ 'HearMed_Accounting', 'ajax_save_supplier_invoice' ] );
+        add_action( 'wp_ajax_hm_retry_qbo_sync',        [ 'HearMed_Accounting', 'ajax_retry_qbo_sync' ] );
+        add_action( 'wp_ajax_hm_assign_bank_txn',        [ 'HearMed_Accounting', 'ajax_assign_bank_txn' ] );
+        add_action( 'wp_ajax_hm_qbo_sync_accounts',      [ 'HearMed_Accounting', 'ajax_qbo_sync_accounts' ] );
+        add_action( 'wp_ajax_hm_qbo_disconnect',         [ 'HearMed_Accounting', 'ajax_qbo_disconnect' ] );
+        add_action( 'wp_ajax_hm_run_qbo_batch',          [ 'HearMed_Accounting', 'ajax_run_qbo_batch' ] );
 
         // ── Calendar ─────────────────────────────────────────────────────────
         // Calendar registers its own handlers inside mod-calendar.php

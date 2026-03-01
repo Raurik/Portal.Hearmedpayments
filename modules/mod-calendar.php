@@ -185,9 +185,9 @@ function hm_ajax_save_settings() {
             if ( isset( $_POST[ $f ] ) ) {
                 $val = $_POST[ $f ];
                 $data[ $f ] = ( $val === '1' || $val === 1 || $val === 'yes' || $val === true || $val === 'true' || $val === 't' );
-            } else {
-                $data[ $f ] = false;
             }
+            // If not sent, leave unchanged — avoids overwriting checkboxes
+            // that don't exist in the current form.
         }
         
         // Check if record exists

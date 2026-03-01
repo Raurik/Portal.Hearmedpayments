@@ -2016,4 +2016,472 @@ class HearMed_Orders {
         })();
         </script>';
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AJAX: Load orders list (for hearmed-orders.js Order Status page)
+    // ═══════════════════════════════════════════════════════════════════════
+    public static function ajax_get_orders() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+
+        $db     = HearMed_DB::instance();
+        $clinic = HearMed_Auth::current_clinic();
+        $status = sanitize_text_field( $_POST['status'] ?? '' );
+        $search = sanitize_text_field( $_POST['search'] ?? '' );
+        $paged  = max( 1, intval( $_POST['paged'] ?? 1 ) );
+        $per    = 25;
+        $offset = ( $paged - 1 ) * $per;
+
+        $where = [];
+        $params = [];
+        $i = 1;
+
+        if ( $clinic ) {
+            $where[] = "o.clinic_id = \${$i}"; $params[] = $clinic; $i++;
+        }
+        if ( $status && $status !== 'all' ) {
+            $where[] = "o.current_status = \${$i}"; $params[] = $status; $i++;
+        }
+        if ( $search ) {
+            $where[] = "(p.first_name ILIKE \${$i} OR p.last_name ILIKE \${$i} OR o.order_number ILIKE \${$i} OR p.patient_number ILIKE \${$i})";
+            $params[] = '%' . $search . '%'; $i++;
+        }
+
+        $wc = $where ? 'WHERE ' . implode( ' AND ', $where ) : '';
+
+        // Count
+        $count_row = $db->get_row(
+            "SELECT COUNT(*) AS cnt FROM hearmed_core.orders o
+             JOIN hearmed_core.patients p ON p.id = o.patient_id
+             {$wc}", $params
+        );
+        $total = (int) ( $count_row->cnt ?? 0 );
+
+        // Fetch page
+        $params_page = $params;
+        $params_page[] = $per;    $li = $i++;
+        $params_page[] = $offset; $oi = $i++;
+
+        $rows = $db->get_results(
+            "SELECT o.id, o.order_number, o.current_status AS status,
+                    o.grand_total, o.prsi_applicable, o.prsi_amount,
+                    o.created_at, o.is_flagged AS duplicate_flag,
+                    p.first_name, p.last_name, p.patient_number,
+                    CONCAT(s.first_name,' ',s.last_name) AS dispenser_name
+             FROM hearmed_core.orders o
+             JOIN hearmed_core.patients p ON p.id = o.patient_id
+             LEFT JOIN hearmed_reference.staff s ON s.id = o.staff_id
+             {$wc}
+             ORDER BY o.created_at DESC
+             LIMIT \${$li} OFFSET \${$oi}",
+            $params_page
+        ) ?: [];
+
+        $order_ids = array_map( function( $r ) { return (int) $r->id; }, $rows );
+
+        // Product summaries in one query
+        $summaries = [];
+        if ( $order_ids ) {
+            $ph = [];
+            $sp = [];
+            foreach ( $order_ids as $idx => $oid ) {
+                $sp[] = $oid;
+                $ph[] = '$' . ( $idx + 1 );
+            }
+            $items = $db->get_results(
+                "SELECT order_id, item_description FROM hearmed_core.order_items
+                 WHERE order_id IN (" . implode( ',', $ph ) . ")
+                 ORDER BY order_id, line_number",
+                $sp
+            ) ?: [];
+            foreach ( $items as $it ) {
+                $summaries[ (int) $it->order_id ][] = $it->item_description;
+            }
+        }
+
+        $orders = [];
+        foreach ( $rows as $r ) {
+            $descs = $summaries[ (int) $r->id ] ?? [];
+            $orders[] = [
+                'id'              => (int) $r->id,
+                'order_number'    => $r->order_number,
+                'patient_name'    => trim( $r->first_name . ' ' . $r->last_name ),
+                'patient_number'  => $r->patient_number ?? '',
+                'product_summary' => implode( ', ', $descs ),
+                'grand_total'     => (float) $r->grand_total,
+                'prsi_applicable' => (bool) $r->prsi_applicable,
+                'prsi_amount'     => (float) ( $r->prsi_amount ?? 0 ),
+                'status'          => $r->status,
+                'created_at'      => $r->created_at,
+                'duplicate_flag'  => (bool) $r->duplicate_flag,
+            ];
+        }
+
+        wp_send_json_success( [ 'orders' => $orders, 'total' => $total, 'per_page' => $per ] );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AJAX: Get single order detail (for order detail modal)
+    // ═══════════════════════════════════════════════════════════════════════
+    public static function ajax_get_order_detail() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+
+        $order_id = intval( $_POST['order_id'] ?? 0 );
+        if ( ! $order_id ) wp_send_json_error( [ 'msg' => 'Missing order ID.' ] );
+
+        $db = HearMed_DB::instance();
+
+        $o = $db->get_row(
+            "SELECT o.*,
+                    p.first_name AS p_first, p.last_name AS p_last, p.patient_number,
+                    c.clinic_name,
+                    CONCAT(s.first_name,' ',s.last_name) AS dispenser_name
+             FROM hearmed_core.orders o
+             JOIN hearmed_core.patients p ON p.id = o.patient_id
+             JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
+             LEFT JOIN hearmed_reference.staff s ON s.id = o.staff_id
+             WHERE o.id = \$1",
+            [ $order_id ]
+        );
+        if ( ! $o ) wp_send_json_error( [ 'msg' => 'Order not found.' ] );
+
+        $items = $db->get_results(
+            "SELECT oi.item_description, oi.ear_side, oi.quantity,
+                    oi.unit_retail_price, oi.vat_amount, oi.line_total,
+                    COALESCE(oi.unit_cost_price, 0) AS cost_price,
+                    oi.unit_retail_price - oi.line_total AS discount_amount
+             FROM hearmed_core.order_items oi
+             WHERE oi.order_id = \$1
+             ORDER BY oi.line_number",
+            [ $order_id ]
+        ) ?: [];
+
+        $line_items  = [];
+        $cost_total  = 0;
+        $retail_total = 0;
+        foreach ( $items as $it ) {
+            $qty          = (int) ( $it->quantity ?? 1 );
+            $unit_price   = (float) $it->unit_retail_price;
+            $line_total   = (float) $it->line_total;
+            $discount     = max( 0, ( $unit_price * $qty ) - $line_total + (float) $it->vat_amount );
+            $cost_total  += (float) $it->cost_price * $qty;
+            $retail_total += $unit_price * $qty;
+
+            $line_items[] = [
+                'product_name' => $it->item_description,
+                'ear'          => $it->ear_side ?? '',
+                'qty'          => $qty,
+                'unit_price'   => $unit_price,
+                'discount'     => round( $discount, 2 ),
+                'line_total'   => $line_total,
+            ];
+        }
+
+        $margin = $retail_total > 0
+            ? round( ( ( $retail_total - $cost_total ) / $retail_total ) * 100, 1 )
+            : null;
+
+        wp_send_json_success( [
+            'id'                    => (int) $o->id,
+            'order_number'          => $o->order_number,
+            'status'                => $o->current_status,
+            'patient_name'          => trim( $o->p_first . ' ' . $o->p_last ),
+            'patient_number'        => $o->patient_number ?? '',
+            'clinic_name'           => $o->clinic_name ?? '',
+            'dispenser_name'        => $o->dispenser_name ?? '',
+            'created_at'            => $o->created_at,
+            'line_items'            => $line_items,
+            'subtotal'              => (float) ( $o->subtotal ?? 0 ),
+            'discount'              => (float) ( $o->discount_total ?? 0 ),
+            'vat_total'             => (float) ( $o->vat_total ?? 0 ),
+            'prsi_applicable'       => (bool) $o->prsi_applicable,
+            'prsi_amount'           => (float) ( $o->prsi_amount ?? 0 ),
+            'grand_total'           => (float) ( $o->grand_total ?? 0 ),
+            'gross_margin_percent'  => $margin,
+            'notes'                 => $o->notes ?? '',
+            'duplicate_flag'        => (bool) ( $o->is_flagged ?? false ),
+            'duplicate_flag_reason' => $o->flag_reason ?? '',
+        ] );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AJAX: Update order status (dispatcher for Mark Ordered / Received)
+    // ═══════════════════════════════════════════════════════════════════════
+    public static function ajax_update_order_status() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+        if ( ! HearMed_Auth::can( 'manage_orders' ) ) {
+            wp_send_json_error( [ 'msg' => 'Access denied.' ] );
+        }
+
+        $order_id   = intval( $_POST['order_id'] ?? 0 );
+        $new_status = sanitize_text_field( $_POST['new_status'] ?? '' );
+        $user       = HearMed_Auth::current_user();
+        $db         = HearMed_DB::instance();
+
+        if ( ! $order_id || ! in_array( $new_status, [ 'Ordered', 'Received' ], true ) ) {
+            wp_send_json_error( [ 'msg' => 'Invalid request.' ] );
+        }
+
+        $order = $db->get_row(
+            "SELECT o.current_status, o.staff_id, o.order_number
+             FROM hearmed_core.orders o WHERE o.id = \$1",
+            [ $order_id ]
+        );
+        if ( ! $order ) wp_send_json_error( [ 'msg' => 'Order not found.' ] );
+
+        if ( $new_status === 'Ordered' ) {
+            $db->update( 'hearmed_core.orders', [
+                'current_status' => 'Ordered',
+                'ordered_at'     => date( 'Y-m-d H:i:s' ),
+            ], [ 'id' => $order_id ] );
+            self::log_status_change( $order_id, $order->current_status, 'Ordered', $user->id ?? null, 'Order placed with supplier' );
+            wp_send_json_success( 'Marked as ordered.' );
+
+        } elseif ( $new_status === 'Received' ) {
+            $db->update( 'hearmed_core.orders', [
+                'current_status' => 'Received',
+                'arrived_at'     => date( 'Y-m-d H:i:s' ),
+            ], [ 'id' => $order_id ] );
+            self::log_status_change( $order_id, $order->current_status, 'Received', $user->id ?? null, 'Aids arrived in clinic' );
+            self::notify_user( $order->staff_id ?? null, 'order_arrived', $order_id, [
+                'order_number' => $order->order_number,
+            ] );
+            wp_send_json_success( 'Marked as received.' );
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AJAX: Get pending orders for approval queue
+    // ═══════════════════════════════════════════════════════════════════════
+    public static function ajax_get_pending_orders() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+
+        $db = HearMed_DB::instance();
+
+        $orders = $db->get_results(
+            "SELECT o.*,
+                    p.first_name AS p_first, p.last_name AS p_last,
+                    p.patient_number,
+                    c.clinic_name,
+                    CONCAT(s.first_name,' ',s.last_name) AS dispenser_name
+             FROM hearmed_core.orders o
+             JOIN hearmed_core.patients p ON p.id = o.patient_id
+             JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
+             LEFT JOIN hearmed_reference.staff s ON s.id = o.staff_id
+             WHERE o.current_status = 'Awaiting Approval'
+             ORDER BY o.created_at ASC"
+        ) ?: [];
+
+        $result = [];
+        foreach ( $orders as $o ) {
+            $items = $db->get_results(
+                "SELECT oi.*,
+                        pr.product_name, pr.style, pr.tech_level,
+                        COALESCE(pr.cost_price, 0) AS product_cost,
+                        m.name AS manufacturer_name
+                 FROM hearmed_core.order_items oi
+                 LEFT JOIN hearmed_reference.products pr ON pr.id = oi.item_id AND oi.item_type = 'product'
+                 LEFT JOIN hearmed_reference.manufacturers m ON m.id = pr.manufacturer_id
+                 WHERE oi.order_id = \$1
+                 ORDER BY oi.line_number",
+                [ $o->id ]
+            ) ?: [];
+
+            $line_items   = [];
+            $cost_total   = 0;
+            $retail_total = 0;
+            foreach ( $items as $it ) {
+                $qty          = (int) ( $it->quantity ?? 1 );
+                $unit_price   = (float) ( $it->unit_retail_price ?? 0 );
+                $unit_cost    = (float) ( $it->unit_cost_price ?? $it->product_cost ?? 0 );
+                $line_total   = (float) ( $it->line_total ?? 0 );
+                $discount     = max( 0, ( $unit_price * $qty ) - $line_total + (float) ( $it->vat_amount ?? 0 ) );
+                $cost_total  += $unit_cost * $qty;
+                $retail_total += $unit_price * $qty;
+
+                $line_items[] = [
+                    'product_name' => $it->item_description ?: ( $it->product_name ?? '' ),
+                    'manufacturer' => $it->manufacturer_name ?? '',
+                    'style'        => $it->style ?? '',
+                    'range'        => $it->tech_level ?? '',
+                    'ear'          => $it->ear_side ?? '',
+                    'qty'          => $qty,
+                    'unit_price'   => $unit_price,
+                    'cost_price'   => $unit_cost,
+                    'discount'     => round( $discount, 2 ),
+                    'vat_rate'     => (float) ( $it->vat_rate ?? 0 ),
+                    'line_total'   => $line_total,
+                ];
+            }
+
+            $margin = $retail_total > 0
+                ? ( ( $retail_total - $cost_total ) / $retail_total ) * 100
+                : 0;
+
+            // Flags
+            $flags = [];
+            if ( $margin < 15 ) {
+                $flags[] = [ 'level' => 'red', 'msg' => 'Low margin: ' . number_format( $margin, 1 ) . '%' ];
+            } elseif ( $margin < 25 ) {
+                $flags[] = [ 'level' => 'amber', 'msg' => 'Margin: ' . number_format( $margin, 1 ) . '%' ];
+            }
+
+            // Duplicate check
+            $product_ids = [];
+            foreach ( $items as $it ) {
+                if ( $it->item_type === 'product' && ! empty( $it->item_id ) ) {
+                    $product_ids[] = (int) $it->item_id;
+                }
+            }
+            $product_ids = array_values( array_unique( $product_ids ) );
+            if ( ! empty( $product_ids ) ) {
+                $dp = [ (int) $o->patient_id, (int) $o->id ];
+                $ph = [];
+                foreach ( $product_ids as $idx => $pid ) { $dp[] = $pid; $ph[] = '$' . ( $idx + 3 ); }
+                $dup = $db->get_row(
+                    "SELECT o2.order_number FROM hearmed_core.orders o2
+                     JOIN hearmed_core.order_items oi2 ON oi2.order_id = o2.id
+                     WHERE o2.patient_id = \$1 AND o2.id <> \$2
+                       AND o2.current_status <> 'Cancelled'
+                       AND o2.created_at > NOW() - INTERVAL '90 days'
+                       AND oi2.item_type = 'product'
+                       AND oi2.item_id IN (" . implode( ',', $ph ) . ")
+                     LIMIT 1", $dp
+                );
+                if ( $dup ) {
+                    $flags[] = [ 'level' => 'red', 'msg' => 'Possible duplicate — see ' . $dup->order_number ];
+                }
+            }
+
+            $result[] = [
+                'id'                   => (int) $o->id,
+                'order_number'         => $o->order_number,
+                'patient_name'         => trim( $o->p_first . ' ' . $o->p_last ),
+                'patient_number'       => $o->patient_number ?? '',
+                'dispenser_name'       => $o->dispenser_name ?? '',
+                'clinic_name'          => $o->clinic_name ?? '',
+                'created_at'           => $o->created_at,
+                'prsi_applicable'      => (bool) $o->prsi_applicable,
+                'prsi_amount'          => (float) ( $o->prsi_amount ?? 0 ),
+                'subtotal'             => (float) ( $o->subtotal ?? 0 ),
+                'discount'             => (float) ( $o->discount_total ?? 0 ),
+                'vat_total'            => (float) ( $o->vat_total ?? 0 ),
+                'grand_total'          => (float) ( $o->grand_total ?? 0 ),
+                'gross_margin_percent' => round( $margin, 1 ),
+                'notes'                => $o->notes ?? '',
+                'line_items'           => $line_items,
+                'flags'                => $flags,
+            ];
+        }
+
+        wp_send_json_success( $result );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AJAX: Get awaiting fitting queue
+    // ═══════════════════════════════════════════════════════════════════════
+    public static function ajax_get_awaiting_fitting() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+
+        $db        = HearMed_DB::instance();
+        $clinic_id = intval( $_POST['clinic_id'] ?? 0 );
+        $date_from = sanitize_text_field( $_POST['date_from'] ?? '' );
+        $date_to   = sanitize_text_field( $_POST['date_to'] ?? '' );
+
+        $where  = [ "o.current_status = 'Awaiting Fitting'" ];
+        $params = [];
+        $i      = 1;
+
+        if ( $clinic_id ) {
+            $where[] = "o.clinic_id = \${$i}"; $params[] = $clinic_id; $i++;
+        }
+        if ( $date_from ) {
+            $where[] = "o.created_at >= \${$i}"; $params[] = $date_from; $i++;
+        }
+        if ( $date_to ) {
+            $where[] = "o.created_at <= \${$i}::date + interval '1 day'"; $params[] = $date_to; $i++;
+        }
+
+        $wc = 'WHERE ' . implode( ' AND ', $where );
+
+        $rows = $db->get_results(
+            "SELECT o.id AS order_id, o.order_number, o.grand_total AS total_price,
+                    o.prsi_applicable, o.prsi_amount, o.created_at,
+                    p.first_name || ' ' || p.last_name AS patient_name,
+                    p.patient_number,
+                    c.clinic_name,
+                    CONCAT(s.first_name,' ',s.last_name) AS dispenser_name,
+                    fq.fitting_date,
+                    (SELECT string_agg(oi.item_description, ', ' ORDER BY oi.line_number)
+                     FROM hearmed_core.order_items oi WHERE oi.order_id = o.id) AS product_description
+             FROM hearmed_core.orders o
+             JOIN hearmed_core.patients p ON p.id = o.patient_id
+             JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
+             LEFT JOIN hearmed_reference.staff s ON s.id = o.staff_id
+             LEFT JOIN hearmed_core.fitting_queue fq ON fq.order_id = o.id
+             {$wc}
+             ORDER BY fq.fitting_date ASC NULLS LAST, o.created_at DESC",
+            $params
+        ) ?: [];
+
+        $data = [];
+        foreach ( $rows as $r ) {
+            $data[] = [
+                'order_id'            => (int) $r->order_id,
+                'order_number'        => $r->order_number ?? '',
+                'patient_name'        => $r->patient_name ?? '',
+                'patient_number'      => $r->patient_number ?? '',
+                'clinic_name'         => $r->clinic_name ?? '',
+                'dispenser_name'      => $r->dispenser_name ?? '',
+                'product_description' => $r->product_description ?? '',
+                'total_price'         => (float) ( $r->total_price ?? 0 ),
+                'prsi_applicable'     => (bool) $r->prsi_applicable,
+                'prsi_amount'         => (float) ( $r->prsi_amount ?? 0 ),
+                'fitting_date'        => $r->fitting_date,
+            ];
+        }
+
+        wp_send_json_success( $data );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AJAX: Pre-fit cancel (cancel order from Awaiting Fitting)
+    // ═══════════════════════════════════════════════════════════════════════
+    public static function ajax_prefit_cancel() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+        if ( ! HearMed_Auth::can( 'manage_orders' ) && ! HearMed_Auth::can( 'create_orders' ) ) {
+            wp_send_json_error( [ 'msg' => 'Access denied.' ] );
+        }
+
+        $order_id = intval( $_POST['order_id'] ?? 0 );
+        $reason   = sanitize_textarea_field( $_POST['reason'] ?? '' );
+        $user     = HearMed_Auth::current_user();
+        $db       = HearMed_DB::instance();
+
+        if ( ! $order_id ) wp_send_json_error( [ 'msg' => 'Missing order ID.' ] );
+        if ( ! $reason )   wp_send_json_error( [ 'msg' => 'A cancellation reason is required.' ] );
+
+        $order = $db->get_row(
+            "SELECT current_status FROM hearmed_core.orders WHERE id = \$1",
+            [ $order_id ]
+        );
+        if ( ! $order ) wp_send_json_error( [ 'msg' => 'Order not found.' ] );
+
+        // Update order to Cancelled
+        $db->update( 'hearmed_core.orders', [
+            'current_status'      => 'Cancelled',
+            'cancellation_type'   => 'pre_fit_cancel',
+            'cancellation_reason' => $reason,
+            'cancellation_date'   => date( 'Y-m-d H:i:s' ),
+        ], [ 'id' => $order_id ] );
+
+        // Remove from fitting queue
+        $db->query(
+            "UPDATE hearmed_core.fitting_queue SET queue_status = 'Cancelled' WHERE order_id = \$1",
+            [ $order_id ]
+        );
+
+        self::log_status_change( $order_id, $order->current_status, 'Cancelled', $user->id ?? null, 'Pre-fit cancel: ' . $reason );
+
+        wp_send_json_success( 'Order cancelled.' );
+    }
 }
