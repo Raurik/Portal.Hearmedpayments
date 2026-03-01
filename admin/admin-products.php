@@ -169,7 +169,11 @@ class HearMed_Admin_Products {
         if ($type === 'service') {
             return HearMed_DB::get_results(
                 "SELECT id, service_name AS product_name, service_code AS product_code,
-                        retail_price, vat_rate AS vat_category, is_active,
+                        retail_price,
+                        CASE WHEN vat_rate IS NOT NULL
+                             THEN 'Services (' || TRIM(TRAILING '.' FROM TRIM(TRAILING '0' FROM TO_CHAR(vat_rate, 'FM999990.99'))) || '%)'
+                             ELSE NULL END AS vat_category,
+                        is_active,
                         'service' AS item_type, 'Services' AS category,
                         NULL AS manufacturer_name, NULL AS hearmed_range_name
                  FROM hearmed_reference.services
@@ -1121,11 +1125,17 @@ class HearMed_Admin_Products {
 
         // Services go to their own table with mapped column names
         if ($type === 'service') {
+            // Extract numeric rate from vat_category string like "Services (13.5%)"
+            $vat_cat = $data['vat_category'] ?? '';
+            $vat_numeric = null;
+            if (preg_match('/\(([\d.]+)%?\)/', $vat_cat, $m)) {
+                $vat_numeric = floatval($m[1]);
+            }
             $svc_data = [
                 'service_name' => $name,
                 'service_code' => $data['product_code'],
                 'retail_price' => $data['retail_price'] ?? null,
-                'vat_rate'     => $data['vat_category'] ?? null,
+                'vat_rate'     => $vat_numeric,
                 'is_active'    => true,
                 'updated_at'   => current_time('mysql'),
             ];
