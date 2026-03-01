@@ -1737,7 +1737,6 @@ function hm_ajax_record_order_payment() {
             'received_by'    => $staff_id ?: null,
             'clinic_id'      => $order->clinic_id,
             'created_by'     => $staff_id ?: null,
-            'notes'          => 'Deposit on order #' . $order_id,
         ] );
 
         if ( ! $pay_id ) {
