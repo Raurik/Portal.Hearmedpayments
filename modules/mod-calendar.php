@@ -1728,6 +1728,24 @@ function hm_ajax_get_patient_pipeline_orders() {
 
         $db = HearMed_DB::instance();
 
+        $debug = [
+            'input_patient_id'      => $patient_id,
+            'input_appointment_id'  => $appointment_id,
+            'appointment_order_id'  => 0,
+            'candidate_patient_ids' => [],
+            'matched_order_ids'     => [],
+            'matched_count'         => 0,
+        ];
+
+        if ( $appointment_id > 0 ) {
+            $debug['appointment_order_id'] = intval(
+                $db->get_var(
+                    "SELECT COALESCE(order_id, 0) FROM hearmed_core.appointments WHERE id = \$1",
+                    [ $appointment_id ]
+                ) ?: 0
+            );
+        }
+
         $base_select =
             "SELECT o.id, o.order_number, o.order_date, o.current_status, o.grand_total,
                     o.deposit_amount, o.prsi_amount, o.discount_total,
@@ -1777,6 +1795,8 @@ function hm_ajax_get_patient_pipeline_orders() {
             $candidate_patient_ids = [ $patient_id ];
         }
 
+        $debug['candidate_patient_ids'] = $candidate_patient_ids;
+
         $patient_ids_sql = implode( ',', $candidate_patient_ids );
 
         if ( $appointment_id > 0 ) {
@@ -1811,7 +1831,15 @@ function hm_ajax_get_patient_pipeline_orders() {
             ];
         }
 
-        wp_send_json_success( $list );
+        $debug['matched_order_ids'] = array_values( array_map( static function( $row ) {
+            return intval( $row->id ?? 0 );
+        }, ( $rows ?: [] ) ) );
+        $debug['matched_count'] = count( $list );
+
+        wp_send_json_success( [
+            'orders' => $list,
+            'debug'  => $debug,
+        ] );
     } catch ( Throwable $e ) {
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
     }

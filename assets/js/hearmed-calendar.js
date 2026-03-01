@@ -2073,7 +2073,9 @@ var Cal={
         // Fetch patient's existing orders in pipeline
         post('get_patient_pipeline_orders',{patient_id:a.patient_id,appointment_id:(a._ID||a.id||0)}).then(function(r){
             if(!r.success){self.toast('Failed to load orders');return;}
-            var orders=r.data||[];
+            var payload=r.data||[];
+            var orders=Array.isArray(payload)?payload:(payload.orders||[]);
+            var debug=(!Array.isArray(payload)&&payload&&payload.debug)?payload.debug:null;
 
             var h='<div class="hm-modal-bg hm-modal-bg--top open" style="z-index:100000">';
             h+='<div class="hm-modal" style="max-width:560px;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">';
@@ -2110,6 +2112,16 @@ var Cal={
                 h+='<div style="border-top:1px solid #e2e8f0;margin:16px 0 12px"></div>';
             } else {
                 h+='<div style="text-align:center;padding:20px 0;color:#94a3b8;font-size:13px">No active existing orders found for this patient.</div>';
+                if(debug){
+                    h+='<div style="margin-top:10px;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;color:#475569;font-size:11px;line-height:1.5">';
+                    h+='<div style="font-weight:700;color:#334155;margin-bottom:4px">Debug</div>';
+                    h+='<div>patient_id: '+esc(String(debug.input_patient_id||''))+'</div>';
+                    h+='<div>appointment_id: '+esc(String(debug.input_appointment_id||''))+'</div>';
+                    h+='<div>appointment.order_id: '+esc(String(debug.appointment_order_id||''))+'</div>';
+                    h+='<div>candidate_patient_ids: '+esc((debug.candidate_patient_ids||[]).join(', ')||'—')+'</div>';
+                    h+='<div>matched_order_ids: '+esc((debug.matched_order_ids||[]).join(', ')||'—')+'</div>';
+                    h+='</div>';
+                }
             }
 
             // Create New button
