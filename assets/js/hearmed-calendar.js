@@ -2039,6 +2039,37 @@ var Cal={
 
         $('body').append(h);
 
+        var orderMax=parseFloat(grandTotal)||0;
+
+        // Compute how much is already allocated to primary + existing extras
+        var getAllocated=function(){
+            var sum=parseFloat($('#hm-pay-amt-1').val())||0;
+            $('#hm-pay-extra-methods .hm-pay-extra-row').each(function(){
+                sum+=parseFloat($(this).find('.hm-pay-extra-amount').val())||0;
+            });
+            return Math.round(sum*100)/100;
+        };
+
+        // Cap the main Amount field at order total
+        $(document).off('change.paycap input.paycap').on('change.paycap input.paycap','#hm-pay-amt',function(){
+            var v=parseFloat($(this).val())||0;
+            if(v>orderMax){$(this).val(orderMax.toFixed(2));}
+            if(v<0){$(this).val('0.00');}
+        });
+
+        // When primary amount changes, auto-adjust last extra row remainder
+        $(document).off('change.payrecalc input.payrecalc').on('change.payrecalc input.payrecalc','#hm-pay-amt-1',function(){
+            var total=parseFloat($('#hm-pay-amt').val())||0;
+            var primary=parseFloat($(this).val())||0;
+            if(primary>total){$(this).val(total.toFixed(2));primary=total;}
+            if(primary<0){$(this).val('0.00');primary=0;}
+            var extras=$('#hm-pay-extra-methods .hm-pay-extra-row');
+            if(extras.length===1){
+                var remainder=Math.round((total-primary)*100)/100;
+                extras.last().find('.hm-pay-extra-amount').val(remainder>0?remainder.toFixed(2):'');
+            }
+        });
+
         var addExtraMethodRow=function(){
             var idx=$('#hm-pay-extra-methods .hm-pay-extra-row').length;
             var row='';
@@ -2052,6 +2083,14 @@ var Cal={
             $('#hm-pay-extra-methods').append(row);
             $('#hm-pay-primary-amt-wrap').show();
             if(!$('#hm-pay-amt-1').val()) $('#hm-pay-amt-1').val($('#hm-pay-amt').val());
+
+            // Auto-fill: remainder = total - already allocated
+            var total=parseFloat($('#hm-pay-amt').val())||0;
+            var allocated=getAllocated();
+            var remainder=Math.round((total-allocated)*100)/100;
+            if(remainder>0){
+                $('#hm-pay-extra-methods .hm-pay-extra-row').last().find('.hm-pay-extra-amount').val(remainder.toFixed(2));
+            }
         };
 
         var promptSerialsAndSave=function(data){
@@ -2131,6 +2170,7 @@ var Cal={
             var hasExtra=$('#hm-pay-extra-methods .hm-pay-extra-row').length>0;
             var splitPayload=[];
             if(!amt||amt<=0){$('#hm-pay-err').text('Enter a valid amount.');return;}
+            if(amt>orderMax){$('#hm-pay-err').text('Amount cannot exceed order total of €'+orderMax.toFixed(2)+'.');return;}
             if(!method){$('#hm-pay-err').text('Select a payment method.');return;}
 
             if(hasExtra){
