@@ -980,7 +980,7 @@ class HearMed_KPI {
                     a.appointment_status AS status
              FROM hearmed_core.appointments a
              LEFT JOIN hearmed_core.patients p ON p.id = a.patient_id
-             LEFT JOIN hearmed_reference.services s ON s.id = a.service_id
+             LEFT JOIN hearmed_reference.appointment_types s ON s.id = a.service_id
              WHERE a.staff_id = $1
                AND a.appointment_date BETWEEN $2 AND $3
                AND a.appointment_date < CURRENT_DATE
@@ -1055,7 +1055,7 @@ class HearMed_KPI {
                 COUNT(*) FILTER (WHERE ot.report_outcome = 'Hearing Aids') AS sales,
                 COUNT(*) FILTER (WHERE ot.report_outcome IN ('Hearing Aids', 'Tested Not Sold (TNS)')) AS testable
              FROM hearmed_core.appointments a
-             JOIN hearmed_reference.services sv ON sv.id = a.service_id
+             JOIN hearmed_reference.appointment_types sv ON sv.id = a.service_id
              JOIN hearmed_core.appointment_outcomes ao ON ao.appointment_id = a.id
              JOIN hearmed_core.outcome_templates ot ON ot.outcome_name = ao.outcome_name AND ot.service_id = sv.id
              WHERE a.staff_id = $1 AND a.appointment_date BETWEEN $2 AND $3
@@ -1072,7 +1072,7 @@ class HearMed_KPI {
                 COUNT(*) FILTER (WHERE ot.report_outcome = 'Hearing Aids') AS sales,
                 COUNT(*) AS total
              FROM hearmed_core.appointments a
-             JOIN hearmed_reference.services sv ON sv.id = a.service_id
+             JOIN hearmed_reference.appointment_types sv ON sv.id = a.service_id
              JOIN hearmed_core.appointment_outcomes ao ON ao.appointment_id = a.id
              JOIN hearmed_core.outcome_templates ot ON ot.outcome_name = ao.outcome_name AND ot.service_id = sv.id
              WHERE a.staff_id = $1 AND a.appointment_date BETWEEN $2 AND $3
@@ -1135,7 +1135,7 @@ class HearMed_KPI {
                 COUNT(DISTINCT wax.patient_id) AS wax_patients,
                 COUNT(DISTINCT test.patient_id) AS converted
              FROM hearmed_core.appointments wax
-             JOIN hearmed_reference.services wsv ON wsv.id = wax.service_id 
+             JOIN hearmed_reference.appointment_types wsv ON wsv.id = wax.service_id 
                   AND wsv.is_reportable = true AND wsv.report_category = 'Wax Removal'
              LEFT JOIN hearmed_core.appointments test 
                   ON test.patient_id = wax.patient_id
@@ -1143,7 +1143,7 @@ class HearMed_KPI {
                   AND test.appointment_date BETWEEN wax.appointment_date AND (wax.appointment_date + INTERVAL '90 days')
                   AND test.appointment_status = 'Completed'
                   AND EXISTS (
-                      SELECT 1 FROM hearmed_reference.services tsv 
+                      SELECT 1 FROM hearmed_reference.appointment_types tsv 
                       WHERE tsv.id = test.service_id AND tsv.is_reportable = true AND tsv.report_category IN ('Hearing Test', 'OOW Hearing Test')
                   )
              WHERE wax.staff_id = $1 AND wax.appointment_date BETWEEN $2 AND $3
@@ -1287,7 +1287,7 @@ class HearMed_KPI {
                     a.appointment_status
              FROM hearmed_core.appointments a
              JOIN hearmed_core.patients p ON p.id = a.patient_id
-             JOIN hearmed_reference.services sv ON sv.id = a.service_id
+             JOIN hearmed_reference.appointment_types sv ON sv.id = a.service_id
              LEFT JOIN hearmed_reference.staff s ON s.id = a.staff_id
              WHERE a.clinic_id = $1 AND a.appointment_date = CURRENT_DATE
              AND a.appointment_status NOT IN ('Cancelled')

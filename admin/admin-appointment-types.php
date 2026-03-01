@@ -2,7 +2,7 @@
 /**
  * HearMed Admin — Appointment Types
  * Shortcode: [hearmed_appointment_types]
- * Manages appointment type / service definitions stored in hearmed_reference.services.
+ * Manages appointment type / service definitions stored in hearmed_reference.appointment_types.
  *
  * @package HearMed_Portal
  * @since   5.1.0
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) exit;
 
 class HearMed_Admin_Appointment_Types {
 
-    private $table = 'hearmed_reference.services';
+    private $table = 'hearmed_reference.appointment_types';
 
     public function __construct() {
         add_shortcode('hearmed_appointment_types', [$this, 'render']);

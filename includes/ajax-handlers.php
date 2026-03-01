@@ -66,7 +66,7 @@ function hm_quick_add_handler() {
                 'is_active'       => true,
                 'created_at'      => $now,
             ];
-            $id = HearMed_DB::insert('hearmed_reference.services', $appt_data);
+            $id = HearMed_DB::insert('hearmed_reference.appointment_types', $appt_data);
             if ($id) wp_send_json_success(['id' => $id, 'name' => $name]);
             break;
 

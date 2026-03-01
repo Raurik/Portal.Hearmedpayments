@@ -349,7 +349,7 @@ function hm_ajax_get_services() {
     try {
     // Check if tint_opacity column exists (added by MIGRATION_SERVICE_CARD_COLOURS)
     $has_tint = (bool) HearMed_DB::get_var(
-        "SELECT 1 FROM information_schema.columns WHERE table_schema='hearmed_reference' AND table_name='services' AND column_name='tint_opacity'"
+        "SELECT 1 FROM information_schema.columns WHERE table_schema='hearmed_reference' AND table_name='appointment_types' AND column_name='tint_opacity'"
     );
     $tint_col = $has_tint ? "COALESCE(tint_opacity, 12) AS tint_opacity," : "12 AS tint_opacity,";
     $ps = HearMed_DB::get_results(
@@ -359,7 +359,7 @@ function hm_ajax_get_services() {
                 COALESCE(duration_minutes, 30) AS duration_minutes,
                 {$tint_col}
                 is_active
-         FROM hearmed_reference.services WHERE is_active = true ORDER BY service_name"
+         FROM hearmed_reference.appointment_types WHERE is_active = true ORDER BY service_name"
     );
     $d = [];
     foreach ( $ps as $p ) {
@@ -460,7 +460,7 @@ function hm_ajax_get_appointments() {
             LEFT JOIN hearmed_core.patients p ON a.patient_id = p.id
             LEFT JOIN hearmed_reference.staff st ON a.staff_id = st.id
             LEFT JOIN hearmed_reference.clinics c ON a.clinic_id = c.id
-            LEFT JOIN hearmed_reference.services sv ON sv.id = a.service_id
+            LEFT JOIN hearmed_reference.appointment_types sv ON sv.id = a.service_id
             LEFT JOIN LATERAL (
                 SELECT outcome_color, outcome_name FROM hearmed_core.appointment_outcomes
                 WHERE appointment_id = a.id ORDER BY created_at DESC LIMIT 1
@@ -557,7 +557,7 @@ function hm_ajax_create_appointment() {
     $dur = intval( $_POST['duration'] ?? 0 );
     if ( ! $dur && $sid ) {
         $svc_dur = HearMed_DB::get_var(
-            "SELECT COALESCE(duration_minutes, 30) FROM hearmed_reference.services WHERE id = $1", [ $sid ]
+            "SELECT COALESCE(duration_minutes, 30) FROM hearmed_reference.appointment_types WHERE id = $1", [ $sid ]
         );
         $dur = intval( $svc_dur ) ?: 30;
     }
@@ -785,7 +785,7 @@ function hm_ajax_update_appointment() {
         $dur = intval( $_POST['duration'] ?? 0 );
         if ( ! $dur && $sid ) {
             $svc_dur = HearMed_DB::get_var(
-                "SELECT COALESCE(duration_minutes, 30) FROM hearmed_reference.services WHERE id = $1", [ $sid ]
+                "SELECT COALESCE(duration_minutes, 30) FROM hearmed_reference.appointment_types WHERE id = $1", [ $sid ]
             );
             $dur = intval( $svc_dur ) ?: 30;
         }
@@ -843,7 +843,7 @@ function hm_ajax_update_appointment_status() {
              FROM hearmed_core.appointments a
              LEFT JOIN hearmed_core.patients p ON a.patient_id = p.id
              LEFT JOIN hearmed_reference.staff st ON a.staff_id = st.id
-             LEFT JOIN hearmed_reference.services sv ON sv.id = a.service_id
+             LEFT JOIN hearmed_reference.appointment_types sv ON sv.id = a.service_id
              WHERE a.id = \$1",
             [ $id ]
         );
@@ -1140,7 +1140,7 @@ function hm_ajax_get_blockouts() {
         "SELECT b.*, sv.service_name,
                 CASE WHEN b.dispenser_id > 0 THEN (s.first_name || ' ' || s.last_name) ELSE 'All' END AS dispenser_name
          FROM hearmed_core.calendar_blockouts b
-         LEFT JOIN hearmed_reference.services sv ON b.service_id = sv.id
+         LEFT JOIN hearmed_reference.appointment_types sv ON b.service_id = sv.id
          LEFT JOIN hearmed_reference.staff s ON b.dispenser_id = s.id
          ORDER BY b.start_date DESC"
     );
@@ -1215,11 +1215,11 @@ function hm_ajax_save_service() {
         'updated_at'           => current_time( 'mysql' ),
     ];
     if ( $id ) {
-        HearMed_DB::update( 'services', $d, [ 'id' => $id ] );
+        HearMed_DB::update( 'appointment_types', $d, [ 'id' => $id ] );
     } else {
         $d['created_at'] = current_time( 'mysql' );
         $d['is_active'] = true;
-        $id = HearMed_DB::insert( 'services', $d );
+        $id = HearMed_DB::insert( 'appointment_types', $d );
     }
     wp_send_json_success( [ 'id' => $id ] );
     } catch ( Throwable $e ) {
@@ -1232,7 +1232,7 @@ function hm_ajax_delete_service() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
     try {
-    HearMed_DB::update( 'services', [ 'is_active' => false ], [ 'id' => intval( $_POST['id'] ) ] );
+    HearMed_DB::update( 'appointment_types', [ 'is_active' => false ], [ 'id' => intval( $_POST['id'] ) ] );
     wp_send_json_success();
     } catch ( Throwable $e ) {
         error_log( '[HearMed] delete_service error: ' . $e->getMessage() );

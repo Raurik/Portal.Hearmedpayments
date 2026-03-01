@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) exit;
 
 class HearMed_Admin_Appointment_Type_Detail {
 
-    private $svc_table  = 'hearmed_reference.services';
+    private $svc_table  = 'hearmed_reference.appointment_types';
     private $out_table  = 'hearmed_core.outcome_templates';
     private $sas_table  = 'hearmed_reference.service_assignable_staff';
 
