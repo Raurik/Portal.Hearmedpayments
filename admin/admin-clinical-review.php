@@ -60,6 +60,12 @@ class HearMed_Admin_Clinical_Review {
         $sections       = json_decode( $doc->sections_json ?: '[]', true );
         $extracted_data = json_decode( $doc->extracted_json ?: '{}', true );
         $reviewed_data  = json_decode( $doc->reviewed_json ?: '{}', true );
+
+        // Normalize extracted data: if AI nested under 'fields', flatten it
+        if ( function_exists( 'hm_normalize_ai_extracted' ) ) {
+            $extracted_data = hm_normalize_ai_extracted( $extracted_data );
+        }
+
         $form_data      = ! empty( $reviewed_data ) ? $reviewed_data : $extracted_data;
 
         $p_name = $patient ? trim( ( $patient->first_name ?? '' ) . ' ' . ( $patient->last_name ?? '' ) ) : 'Unknown';
@@ -169,6 +175,8 @@ class HearMed_Admin_Clinical_Review {
                                             $val    = '';
                                             if ( is_array( $sec_data ) && isset( $sec_data[ $fkey ] ) ) {
                                                 $val = $sec_data[ $fkey ];
+                                                // If AI returned an array/object for this field, convert to string
+                                                if ( is_array( $val ) ) $val = implode( ', ', array_filter( $val, 'is_string' ) ) ?: json_encode( $val );
                                             }
 
                                             echo '<div class="hm-form-group">';

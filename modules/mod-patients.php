@@ -2447,6 +2447,33 @@ function hm_ajax_create_exchange() {
  * @param string $transcript_text
  * @param int    $template_id  Optional — explicit template chosen by user
  */
+/**
+ * Normalize AI-extracted JSON so section data is flat: { section_key: { field_key: value } }
+ * Handles cases where the AI nests values under 'fields' or 'label' wrappers.
+ */
+function hm_normalize_ai_extracted( $data ) {
+    if ( ! is_array( $data ) ) return $data;
+
+    $normalised = [];
+    foreach ( $data as $sec_key => $sec_val ) {
+        if ( ! is_array( $sec_val ) ) {
+            // Scalar section value — keep as-is (e.g. a string summary)
+            $normalised[ $sec_key ] = $sec_val;
+            continue;
+        }
+        // If the AI nested under 'fields', unwrap it
+        if ( isset( $sec_val['fields'] ) && is_array( $sec_val['fields'] ) ) {
+            $normalised[ $sec_key ] = $sec_val['fields'];
+        } else {
+            // Remove any 'label' key the AI echoed back — it's metadata, not data
+            $clean = $sec_val;
+            unset( $clean['label'] );
+            $normalised[ $sec_key ] = $clean;
+        }
+    }
+    return $normalised;
+}
+
 function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id, $transcript_text, $template_id = 0 ) {
     $db = HearMed_DB::instance();
 
@@ -2540,43 +2567,57 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
 
     /* ── 3. Build extraction schema from template sections ── */
     $sections = json_decode( $template->sections_json ?: '[]', true );
-    $schema   = [];
+    $schema   = [];        // Internal schema with metadata
+    $output_example = [];  // Flat output format for the AI
+    $field_instructions = []; // Per-field instructions
     if ( is_array( $sections ) ) {
         foreach ( $sections as $sec ) {
             if ( empty( $sec['enabled'] ) ) continue;
             $sec_type = $sec['type'] ?? '';
             if ( ! in_array( $sec_type, [ 'ai_extract', 'ai_detect' ] ) ) continue;
 
+            $sec_key = $sec['key'] ?? '';
             $fields_schema = [];
+            $output_fields = [];
             if ( ! empty( $sec['fields'] ) && is_array( $sec['fields'] ) ) {
                 foreach ( $sec['fields'] as $f ) {
                     if ( ! is_array( $f ) ) continue;
+                    $fkey = $f['key'] ?? '';
                     $fs = [ 'type' => $f['format'] ?? 'text' ];
                     if ( ! empty( $f['ai_instruction'] ) ) {
                         $fs['instruction'] = $f['ai_instruction'];
+                        $field_instructions[] = "{$sec_key}.{$fkey}: " . $f['ai_instruction'];
                     }
                     if ( ! empty( $f['required'] ) ) {
                         $fs['required'] = true;
                     }
-                    $fields_schema[ $f['key'] ?? '' ] = $fs;
+                    $fields_schema[ $fkey ] = $fs;
+                    // Build flat output example: field_key → null
+                    $output_fields[ $fkey ] = null;
                 }
             }
-            $schema[ $sec['key'] ?? '' ] = [
+            $schema[ $sec_key ] = [
                 'label'  => $sec['label'] ?? '',
                 'fields' => $fields_schema,
             ];
+            // Flat output: section_key → { field_key: null, ... }
+            $output_example[ $sec_key ] = $output_fields;
         }
     }
 
     /* ── 4. Build AI prompt ── */
     $system_prompt = $template->ai_system_prompt ?? '';
     if ( empty( $system_prompt ) ) {
-        $system_prompt = 'You are a clinical audiologist assistant. Extract structured data from the consultation transcript. Output valid JSON matching the provided schema exactly. Be concise and clinical. If information is not mentioned in the transcript, use null for that field.';
+        $system_prompt = 'You are a clinical audiologist assistant. Extract structured data from the consultation transcript. Be concise and clinical. If information is not mentioned in the transcript, use null for that field.';
     }
+    $system_prompt .= "\n\nIMPORTANT: Your response must be a flat JSON object. Each top-level key is a section, and each section value is an object mapping field keys directly to extracted string values (or null). Do NOT nest values under 'fields', 'label', or any other wrapper.";
 
-    $user_prompt = "Extract clinical data from the following audiology consultation transcript.\n\n";
-    $user_prompt .= "OUTPUT SCHEMA (respond with JSON matching this structure):\n";
-    $user_prompt .= json_encode( $schema, JSON_PRETTY_PRINT ) . "\n\n";
+    $user_prompt  = "Extract clinical data from the following audiology consultation transcript.\n\n";
+    $user_prompt .= "REQUIRED OUTPUT FORMAT (respond with JSON exactly like this, replacing null with extracted values):\n";
+    $user_prompt .= json_encode( $output_example, JSON_PRETTY_PRINT ) . "\n\n";
+    if ( ! empty( $field_instructions ) ) {
+        $user_prompt .= "FIELD INSTRUCTIONS:\n" . implode( "\n", $field_instructions ) . "\n\n";
+    }
     $user_prompt .= "TRANSCRIPT:\n" . $anon_text;
 
     /* ── 5. Call AI API or use MOCK mode ── */
@@ -2674,10 +2715,12 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
             $parsed  = json_decode( trim( $content ), true );
 
             if ( is_array( $parsed ) ) {
-                $extracted = $parsed;
+                $extracted = hm_normalize_ai_extracted( $parsed );
                 $success   = true;
 
-                HearMed_Logger::log( 'ai_extraction', "OpenRouter success: model={$model}, tokens={$ai_tokens}, duration={$duration_ms}ms, attempt={$attempt}" );
+                HearMed_Logger::log( 'ai_extraction', "OpenRouter success: model={$model}, tokens={$ai_tokens}, duration={$duration_ms}ms, attempt={$attempt}", [
+                    'extracted_preview' => substr( json_encode( $extracted ), 0, 500 ),
+                ] );
             } else {
                 $last_error = 'AI returned non-JSON response (len=' . strlen( $content ) . ')';
                 HearMed_Logger::log( 'ai_extraction', "OpenRouter JSON parse failed (attempt {$attempt})", [
