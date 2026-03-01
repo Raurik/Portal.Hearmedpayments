@@ -1732,7 +1732,7 @@ function hm_ajax_get_patient_pipeline_orders() {
             "SELECT o.id, o.order_number, o.order_date, o.current_status, o.grand_total,
                     o.deposit_amount, o.prsi_amount, o.discount_total,
                     COALESCE(o.grand_total, 0) - COALESCE(o.deposit_amount, 0) AS balance_due,
-                    (SELECT string_agg(oi.product_name, ', ' ORDER BY oi.id)
+                (SELECT string_agg(COALESCE(oi.item_description, oi.item_type || ' #' || oi.item_id::text), ', ' ORDER BY oi.id)
                      FROM hearmed_core.order_items oi WHERE oi.order_id = o.id) AS items_summary
              FROM hearmed_core.orders o";
 
