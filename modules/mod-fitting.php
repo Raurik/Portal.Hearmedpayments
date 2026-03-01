@@ -1022,6 +1022,21 @@ function hm_ajax_fitting_receive() {
 
     // Insert patient_devices records
     foreach ($by_product as $product_id => $sr) {
+        // ── Serial uniqueness check ──
+        foreach (['left' => $sr['left'], 'right' => $sr['right']] as $side => $sn) {
+            if ($sn) {
+                $dup = $db->get_var(
+                    "SELECT id FROM hearmed_core.patient_devices
+                     WHERE (serial_number_left = \$1 OR serial_number_right = \$1)",
+                    [$sn]
+                );
+                if ($dup) {
+                    wp_send_json_error(['msg' => 'Serial \"' . $sn . '\" (' . ucfirst($side) . ') is already assigned to another device (device #' . $dup . ').']);
+                    return;
+                }
+            }
+        }
+
         $device_id = $db->insert('hearmed_core.patient_devices', [
             'patient_id'          => $order->patient_id,
             'product_id'          => $product_id,

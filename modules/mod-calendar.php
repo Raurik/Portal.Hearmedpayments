@@ -1296,6 +1296,28 @@ function hm_ajax_create_patient_from_calendar() {
         $ln = sanitize_text_field( $_POST['last_name']  ?? '' );
         if ( ! $fn || ! $ln ) { wp_send_json_error( [ 'message' => 'First and last name are required.' ] ); return; }
 
+        // ── Duplicate patient check: same name + DOB + address ──
+        $dob_check  = sanitize_text_field( $_POST['dob'] ?? '' );
+        $addr_check = sanitize_textarea_field( $_POST['patient_address'] ?? '' );
+        $dup_params = [ $fn, $ln ];
+        $dup_sql = "SELECT id FROM hearmed_core.patients
+                     WHERE LOWER(TRIM(first_name)) = LOWER(TRIM(\$1))
+                       AND LOWER(TRIM(last_name))  = LOWER(TRIM(\$2))";
+        if ( $dob_check ) {
+            $dup_sql .= " AND date_of_birth = \$" . ( count( $dup_params ) + 1 );
+            $dup_params[] = $dob_check;
+        }
+        if ( $addr_check ) {
+            $dup_sql .= " AND LOWER(TRIM(COALESCE(address_line1,''))) = LOWER(TRIM(\$" . ( count( $dup_params ) + 1 ) . "))";
+            $dup_params[] = $addr_check;
+        }
+        $dup_sql .= " LIMIT 1";
+        $existing = HearMed_DB::get_row( $dup_sql, $dup_params );
+        if ( $existing ) {
+            wp_send_json_error( [ 'message' => 'A patient with the same name' . ( $dob_check ? ', date of birth' : '' ) . ( $addr_check ? ' and address' : '' ) . ' already exists (ID: ' . $existing->id . '). Please check for duplicates.' ] );
+            return;
+        }
+
         // Generate patient number
         $data = [
             'patient_number' => 'P' . str_pad( mt_rand( 1, 999999 ), 6, '0', STR_PAD_LEFT ),
@@ -1936,6 +1958,23 @@ function hm_ajax_save_order_serials_from_payment() {
         }
 
         foreach ( $by_product as $product_id => $vals ) {
+            // ── Serial uniqueness check ──
+            foreach ( [ 'left', 'right' ] as $side ) {
+                $sn = trim( (string) ( $vals[ $side ] ?? '' ) );
+                if ( $sn ) {
+                    $dup = $db->get_var(
+                        "SELECT id FROM hearmed_core.patient_devices
+                         WHERE (serial_number_left = \$1 OR serial_number_right = \$1)
+                           AND NOT (patient_id = \$2 AND product_id = \$3)",
+                        [ $sn, intval( $order->patient_id ), intval( $product_id ) ]
+                    );
+                    if ( $dup ) {
+                        wp_send_json_error( [ 'message' => 'Serial number \"' . $sn . '\" (' . ucfirst( $side ) . ') is already assigned to another device (device #' . $dup . ').' ] );
+                        return;
+                    }
+                }
+            }
+
             $existing = $db->get_row(
                 "SELECT id, serial_number_left, serial_number_right
                    FROM hearmed_core.patient_devices

@@ -295,6 +295,20 @@ class HearMed_Stock {
 
         HearMed_DB::begin_transaction();
         try {
+            // ── Serial uniqueness check ──
+            $sn = trim( (string) ( $stock->serial_number ?? '' ) );
+            if ( $sn ) {
+                $dup = HearMed_DB::get_var(
+                    "SELECT id FROM hearmed_core.patient_devices
+                     WHERE serial_number_left = $1 OR serial_number_right = $1",
+                    [ $sn ]
+                );
+                if ( $dup ) {
+                    wp_send_json_error( 'Serial "' . $sn . '" is already assigned to another device (device #' . $dup . ').' );
+                    return;
+                }
+            }
+
             // Create patient device
             HearMed_DB::insert(
                 HearMed_DB::table('patient_devices'),

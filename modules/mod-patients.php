@@ -366,6 +366,28 @@ function hm_ajax_create_patient() {
     $clinic_id    = intval( $_POST['assigned_clinic_id'] ?? 0 );
     $dispenser_id = intval( $_POST['assigned_dispenser_id'] ?? 0 );
 
+    // ── Duplicate patient check: same name + DOB + address ──
+    $addr_check = sanitize_textarea_field( $_POST['patient_address'] ?? '' );
+    $dup_params = [ $fn, $ln ];
+    $dup_sql = "SELECT id, first_name, last_name, date_of_birth, address_line1
+                  FROM hearmed_core.patients
+                 WHERE LOWER(TRIM(first_name)) = LOWER(TRIM(\$1))
+                   AND LOWER(TRIM(last_name))  = LOWER(TRIM(\$2))";
+    if ( $dob ) {
+        $dup_sql .= " AND date_of_birth = \$" . ( count( $dup_params ) + 1 );
+        $dup_params[] = $dob;
+    }
+    if ( $addr_check ) {
+        $dup_sql .= " AND LOWER(TRIM(COALESCE(address_line1,''))) = LOWER(TRIM(\$" . ( count( $dup_params ) + 1 ) . "))";
+        $dup_params[] = $addr_check;
+    }
+    $dup_sql .= " LIMIT 1";
+    $existing = $db->get_row( $dup_sql, $dup_params );
+    if ( $existing ) {
+        wp_send_json_error( 'A patient with the same name' . ( $dob ? ', date of birth' : '' ) . ( $addr_check ? ' and address' : '' ) . ' already exists (ID: ' . $existing->id . '). Please check for duplicates before adding a new patient.' );
+        return;
+    }
+
     $data = [
         'patient_number'  => hm_generate_patient_number(),
         'first_name'      => $fn,
