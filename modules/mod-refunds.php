@@ -575,7 +575,7 @@ class HearMed_Refunds {
         // For exchanges: create a draft order and return its ID
         $exchange_order_id = null;
         if ( $type === 'exchange' ) {
-            $order_num = 'ORD-' . date('Ymd') . '-' . str_pad( rand(1,9999), 4, '0', STR_PAD_LEFT );
+            $order_num = HearMed_Utils::generate_order_number();
 
             // Get patient's clinic
             $patient = $db->get_row( "SELECT assigned_clinic_id FROM hearmed_core.patients WHERE id = \$1", [$patient_id] );

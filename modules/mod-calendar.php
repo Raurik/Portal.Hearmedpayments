@@ -1847,7 +1847,7 @@ function hm_ajax_create_outcome_order() {
 
         $grand_total = max( 0, $subtotal + $vat_total - $discount_total - $prsi_amount );
 
-        $order_num = 'ORD-' . date( 'Ymd' ) . '-' . str_pad( rand( 1, 9999 ), 4, '0', STR_PAD_LEFT );
+        $order_num = HearMed_Utils::generate_order_number();
 
         // Resolve staff table ID from WP user
         $wp_uid   = get_current_user_id();

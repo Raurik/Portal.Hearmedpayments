@@ -1013,9 +1013,13 @@ class HearMed_Orders {
     public static function render_order_sheet( $order_id ) {
         $db = HearMed_DB::instance();
         $order = $db->get_row(
-            "SELECT o.*, p.first_name, p.last_name, p.date_of_birth,
+            "SELECT o.*,
+                    p.first_name AS p_first, p.last_name AS p_last, p.patient_number,
+                    p.date_of_birth, p.phone, p.mobile, p.pps_number,
                     c.clinic_name,
-                    CONCAT(s.first_name,' ',s.last_name) AS created_by_name
+                    CONCAT_WS(', ', c.address_line1, c.address_line2, c.city, c.county, COALESCE(c.postcode, '')) AS clinic_address,
+                    c.phone AS clinic_phone,
+                    CONCAT(s.first_name,' ',s.last_name) AS dispenser_name
              FROM hearmed_core.orders o
              JOIN hearmed_core.patients p        ON p.id = o.patient_id
              JOIN hearmed_reference.clinics c    ON c.id = o.clinic_id
@@ -1025,98 +1029,39 @@ class HearMed_Orders {
         if (!$order) return '<p>Order not found.</p>';
 
         $items = $db->get_results(
-            "SELECT oi.ear_side, oi.speaker_size, oi.needs_charger, oi.quantity,
-                    m.name AS manufacturer, p.product_name, p.style, p.tech_level
+            "SELECT oi.*, 
+                    p.product_name, p.style, p.tech_level, p.product_code,
+                    m.name AS manufacturer_name
              FROM hearmed_core.order_items oi
-             JOIN hearmed_reference.products p      ON p.id = oi.item_id
-             JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
-             WHERE oi.order_id = \$1 AND oi.item_type = 'product'
+             LEFT JOIN hearmed_reference.products p      ON p.id = oi.item_id AND oi.item_type = 'product'
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+             WHERE oi.order_id = \$1
              ORDER BY oi.line_number", [$order_id]
         );
 
-        ob_start(); ?>
-        <!DOCTYPE html><html><head>
-        <meta charset="UTF-8">
-        <title>Order Sheet — <?php echo esc_html($order->order_number); ?></title>
-        <style>
-            *{box-sizing:border-box}
-            body{font-family:Arial,sans-serif;max-width:820px;margin:2rem auto;color:#151B33;font-size:13px}
-            h1{color:#151B33;margin-bottom:0.25rem} .teal{color:var(--hm-teal)}
-            .sub{color:#64748b;font-size:12px;margin-bottom:2rem}
-            .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem 1.5rem;margin-bottom:1.5rem}
-            .grid div strong{display:block;font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
-            table{width:100%;border-collapse:collapse;margin-top:1rem}
-            th{background:#151B33;color:#fff;padding:7px 10px;text-align:left;font-size:11px;text-transform:uppercase}
-            td{padding:8px 10px;border-bottom:1px solid #e2e8f0}
-            .badge{background:var(--hm-teal);color:#fff;padding:1px 7px;border-radius:3px;font-size:11px;font-weight:bold}
-            .notes{margin-top:1.5rem;padding:0.75rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px}
-            .sign{margin-top:2.5rem;border-top:2px solid #151B33;padding-top:1.25rem}
-            .sign-row{display:flex;gap:3rem;margin-top:0.75rem}
-            .sign-field{flex:1}
-            .sign-field span{display:block;font-size:10px;color:#94a3b8;text-transform:uppercase;margin-bottom:0.5rem}
-            .sign-line{border-bottom:1px solid #94a3b8;min-height:28px}
-            .footer{margin-top:2rem;font-size:10px;color:#94a3b8}
-            @media print{body{margin:1cm}}
-        </style>
-        </head><body>
+        $tpl_data = clone $order;
+        $tpl_data->items = $items ?: [];
+        $tpl_data->order_status = $order->current_status ?? '';
 
-        <h1>HearMed <span class="teal">Order Sheet</span></h1>
-        <p class="sub">Print and use to place order with supplier. File a copy.</p>
+        if (!empty($order->approved_by)) {
+            $approver = $db->get_row(
+                "SELECT CONCAT(first_name, ' ', last_name) AS name FROM hearmed_reference.staff WHERE id = \$1",
+                [$order->approved_by]
+            );
+            $tpl_data->approved_by_name = $approver ? $approver->name : '';
+            $tpl_data->approved_at      = $order->approved_at ?? $order->approved_date ?? '';
+        }
 
-        <div class="grid">
-            <div><strong>Order Ref</strong><?php echo esc_html($order->order_number); ?></div>
-            <div><strong>Date</strong><?php echo date('d M Y',strtotime($order->created_at)); ?></div>
-            <div><strong>Clinic</strong><?php echo esc_html($order->clinic_name); ?></div>
-            <div><strong>Dispenser</strong><?php echo esc_html($order->created_by_name ?: '—'); ?></div>
-            <div><strong>Patient</strong><?php echo esc_html($order->first_name.' '.$order->last_name); ?></div>
-            <div><strong>DOB</strong><?php echo $order->date_of_birth ? date('d/m/Y',strtotime($order->date_of_birth)) : '—'; ?></div>
-        </div>
+        $tpl_data->ear_mould_type       = $order->ear_mould_type ?? '';
+        $tpl_data->ear_mould_vent       = $order->ear_mould_vent ?? '';
+        $tpl_data->ear_mould_material   = $order->ear_mould_material ?? '';
+        $tpl_data->special_instructions = $order->notes ?? '';
 
-        <?php if ($order->notes) : ?>
-        <div class="notes"><strong>Clinical Notes:</strong> <?php echo esc_html($order->notes); ?></div>
-        <?php endif; ?>
+        if ( class_exists( 'HearMed_Print_Templates' ) ) {
+            return HearMed_Print_Templates::render( 'order', $tpl_data );
+        }
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Manufacturer</th><th>Model</th><th>Style</th>
-                    <th>Tech Level</th><th>Ear</th>
-                    <th>Speaker Size</th><th>Charger?</th><th>Qty</th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($items as $item) : ?>
-            <tr>
-                <td><?php echo esc_html($item->manufacturer); ?></td>
-                <td><?php echo esc_html($item->product_name); ?></td>
-                <td><?php echo esc_html($item->style ?: '—'); ?></td>
-                <td><?php echo esc_html($item->tech_level ?: '—'); ?></td>
-                <td><?php echo esc_html($item->ear_side ?: '—'); ?></td>
-                <td><?php echo esc_html($item->speaker_size ?: '—'); ?></td>
-                <td><?php echo !empty($item->needs_charger) ? '<span class="badge">YES</span>' : 'No'; ?></td>
-                <td><?php echo esc_html($item->quantity); ?></td>
-            </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-
-        <div class="sign">
-            <div class="sign-row">
-                <div class="sign-field"><span>Ordered by</span><div class="sign-line"></div></div>
-                <div class="sign-field"><span>Date placed with supplier</span><div class="sign-line"></div></div>
-                <div class="sign-field"><span>Supplier order reference</span><div class="sign-line"></div></div>
-            </div>
-            <div class="sign-row" style="margin-top:1.25rem;">
-                <div class="sign-field"><span>Expected delivery date</span><div class="sign-line"></div></div>
-                <div class="sign-field"><span>Received in clinic — date</span><div class="sign-line"></div></div>
-                <div class="sign-field"><span>Received by</span><div class="sign-line"></div></div>
-            </div>
-        </div>
-
-        <p class="footer">HearMed Acoustic Health Care Ltd — Confidential — <?php echo esc_html($order->clinic_name); ?></p>
-        <script>window.print();</script>
-        </body></html>
-        <?php return ob_get_clean();
+        return '<p>Order template engine not available.</p>';
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1155,8 +1100,7 @@ class HearMed_Orders {
         $prsi_amount     = ($prsi_left ? 500 : 0) + ($prsi_right ? 500 : 0);
         $grand_total     = max(0, $subtotal + $vat_total - $prsi_amount);
 
-        // Generate order number: ORD-YYYYMMDD-XXXX
-        $order_num = 'ORD-'.date('Ymd').'-'.str_pad(rand(1,9999),4,'0',STR_PAD_LEFT);
+        $order_num = HearMed_Utils::generate_order_number();
 
         $order_id = $db->insert('hearmed_core.orders', [
             'order_number'    => $order_num,

@@ -231,7 +231,20 @@ class HearMed_Utils {
      * @return string Order number
      */
     public static function generate_order_number( $prefix = 'ORD' ) {
-        return $prefix . '-' . date( 'Ymd' ) . '-' . strtoupper( substr( uniqid(), -6 ) );
+        if ( $prefix === 'ORD' || $prefix === '' || $prefix === null ) {
+            $prefix = (string) HearMed_Settings::get( 'hm_order_prefix', 'ORD-' );
+        }
+
+        $prefix = preg_replace( '/\s+/', '', (string) $prefix );
+        if ( $prefix === '' ) {
+            $prefix = 'ORD-';
+        }
+
+        $last = intval( HearMed_Settings::get( 'hm_order_last_number', '0' ) );
+        $next = $last + 1;
+        HearMed_Settings::set( 'hm_order_last_number', (string) $next );
+
+        return $prefix . str_pad( (string) $next, 5, '0', STR_PAD_LEFT );
     }
     
     /**
