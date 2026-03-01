@@ -948,6 +948,19 @@ function hm_ajax_fitting_load() {
             'invoice_id'      => $o->invoice_id ? (int)$o->invoice_id : null,
             'items'           => $items,
         ];
+
+        // Debug: log appointment lookup for Awaiting Fitting orders
+        if ($o->current_status === 'Awaiting Fitting' && empty($o->fitting_date)) {
+            $appt_count = $db->get_var(
+                "SELECT COUNT(*) FROM hearmed_core.appointments WHERE patient_id = \$1",
+                [(int)$o->patient_id]
+            );
+            $future_count = $db->get_var(
+                "SELECT COUNT(*) FROM hearmed_core.appointments WHERE patient_id = \$1 AND appointment_date >= CURRENT_DATE AND appointment_status NOT IN ('Cancelled','No Show','Completed')",
+                [(int)$o->patient_id]
+            );
+            error_log("[HearMed Fitting Debug] patient_id={$o->patient_id} patient={$o->p_first} {$o->p_last} — total appointments: {$appt_count}, future non-cancelled: {$future_count}, fitting_date from query: " . ($o->fitting_date ?? 'NULL'));
+        }
     }
 
     wp_send_json_success(['orders' => $result]);
