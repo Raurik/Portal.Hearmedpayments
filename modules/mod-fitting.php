@@ -33,22 +33,28 @@ function hm_render_fitting_page() {
 
     // Counts + totals by status
     $counts = $db->get_results(
-        "SELECT o.current_status, COUNT(*) AS cnt, COALESCE(SUM(o.grand_total), 0) AS total_value
+        "SELECT o.current_status, COUNT(*) AS cnt,
+                COALESCE(SUM(o.subtotal), 0) AS total_subtotal,
+                COALESCE(SUM(o.prsi_amount), 0) AS total_prsi
          FROM hearmed_core.orders o
          WHERE o.current_status IN ('Approved','Ordered','Awaiting Fitting')
            AND EXISTS (SELECT 1 FROM hearmed_core.order_items oi WHERE oi.order_id = o.id AND oi.item_type = 'product')
          GROUP BY o.current_status"
     );
     $count_map = [];
-    $value_map = [];
+    $subtotal_map = [];
+    $prsi_map = [];
     $total = 0;
-    $total_value = 0;
+    $total_subtotal = 0;
+    $total_prsi = 0;
     if ($counts) {
         foreach ($counts as $c) {
             $count_map[$c->current_status] = (int)$c->cnt;
-            $value_map[$c->current_status] = (float)$c->total_value;
+            $subtotal_map[$c->current_status] = (float)$c->total_subtotal;
+            $prsi_map[$c->current_status] = (float)$c->total_prsi;
             $total += (int)$c->cnt;
-            $total_value += (float)$c->total_value;
+            $total_subtotal += (float)$c->total_subtotal;
+            $total_prsi += (float)$c->total_prsi;
         }
     }
 
@@ -128,19 +134,22 @@ function hm_render_fitting_page() {
             <div class="hm-stats">
                 <div class="hm-stat">
                     <div class="hm-stat-label">Awaiting Order (<?php echo $count_map['Approved'] ?? 0; ?>)</div>
-                    <div class="hm-stat-val amber">€<?php echo number_format($value_map['Approved'] ?? 0, 2); ?></div>
+                    <div class="hm-stat-val amber">€<?php echo number_format($subtotal_map['Approved'] ?? 0, 2); ?></div>
                 </div>
                 <div class="hm-stat">
                     <div class="hm-stat-label">Awaiting Delivery (<?php echo $count_map['Ordered'] ?? 0; ?>)</div>
-                    <div class="hm-stat-val teal">€<?php echo number_format($value_map['Ordered'] ?? 0, 2); ?></div>
+                    <div class="hm-stat-val teal">€<?php echo number_format($subtotal_map['Ordered'] ?? 0, 2); ?></div>
                 </div>
                 <div class="hm-stat">
                     <div class="hm-stat-label">Awaiting Fitting (<?php echo $count_map['Awaiting Fitting'] ?? 0; ?>)</div>
-                    <div class="hm-stat-val green">€<?php echo number_format($value_map['Awaiting Fitting'] ?? 0, 2); ?></div>
+                    <div class="hm-stat-val green">€<?php echo number_format($subtotal_map['Awaiting Fitting'] ?? 0, 2); ?></div>
                 </div>
                 <div class="hm-stat">
                     <div class="hm-stat-label">Total Pipeline (<?php echo $total; ?>)</div>
-                    <div class="hm-stat-val">€<?php echo number_format($total_value, 2); ?></div>
+                    <div class="hm-stat-val">€<?php echo number_format($total_subtotal, 2); ?></div>
+                    <?php if ($total_prsi > 0) : ?>
+                    <div class="hm-stat-sub" style="font-size:10px;color:#059669;margin-top:2px;">PRSI: −€<?php echo number_format($total_prsi, 2); ?></div>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -462,7 +471,7 @@ function hm_render_fitting_page() {
                 html += '<td><span class="hmf-product">' + hmFE(o.product_names) + '</span></td>';
                 html += '<td>' + hmFE(o.clinic_name) + '</td>';
                 html += '<td>' + hmFE(o.dispenser_name) + '</td>';
-                html += '<td style="text-align:right;font-weight:600;white-space:nowrap;">€' + parseFloat(o.grand_total || 0).toFixed(2) + '</td>';
+                html += '<td style="text-align:right;font-weight:600;white-space:nowrap;">€' + parseFloat(o.subtotal || 0).toFixed(2) + '</td>';
                 html += '<td>' + prsiDot + '</td>';
                 html += '<td><span class="hm-status ' + statusClass + '">' + statusLabel + '</span></td>';
                 html += '<td>' + fittingDate + '</td>';
@@ -482,41 +491,34 @@ function hm_render_fitting_page() {
             var awaitingOrder   = orders.filter(function(o) { return o.current_status === 'Approved'; });
             var awaitingDelivery = orders.filter(function(o) { return o.current_status === 'Ordered'; });
 
-            function sumTotal(arr) {
-                return arr.reduce(function(s, o) { return s + parseFloat(o.grand_total || 0); }, 0);
+            function sumField(arr, field) {
+                return arr.reduce(function(s, o) { return s + parseFloat(o[field] || 0); }, 0);
             }
             function euro(v) { return '€' + v.toFixed(2); }
 
-            var valAwaiting  = sumTotal(awaitingFitting);
-            var valOrder     = sumTotal(awaitingOrder);
-            var valDelivery  = sumTotal(awaitingDelivery);
-            var valPipeline  = sumTotal(orders);
+            var valAwaiting  = sumField(awaitingFitting, 'subtotal');
+            var valOrder     = sumField(awaitingOrder, 'subtotal');
+            var valDelivery  = sumField(awaitingDelivery, 'subtotal');
+            var valPipeline  = sumField(orders, 'subtotal');
 
-            // PRSI count
-            var prsiCount = awaitingFitting.filter(function(o) { return o.prsi_applicable; }).length;
-            var prsiVal   = sumTotal(awaitingFitting.filter(function(o) { return o.prsi_applicable; }));
+            // PRSI totals
+            var prsiCount = orders.filter(function(o) { return o.prsi_applicable; }).length;
+            var prsiVal   = sumField(orders, 'prsi_amount');
+            var patientPays = valPipeline - prsiVal;
 
             container.innerHTML =
                 '<div class="hmf-summary-row">' +
                     '<div class="hmf-summary-cell">' +
-                        '<div class="hmf-summary-cell-label">Awaiting Fitting (' + awaitingFitting.length + ')</div>' +
-                        '<div class="hmf-summary-cell-val">' + euro(valAwaiting) + '</div>' +
-                    '</div>' +
-                    '<div class="hmf-summary-cell">' +
-                        '<div class="hmf-summary-cell-label">Awaiting Order (' + awaitingOrder.length + ')</div>' +
-                        '<div class="hmf-summary-cell-val">' + euro(valOrder) + '</div>' +
-                    '</div>' +
-                    '<div class="hmf-summary-cell">' +
-                        '<div class="hmf-summary-cell-label">Awaiting Delivery (' + awaitingDelivery.length + ')</div>' +
-                        '<div class="hmf-summary-cell-val">' + euro(valDelivery) + '</div>' +
-                    '</div>' +
-                    '<div class="hmf-summary-cell">' +
-                        '<div class="hmf-summary-cell-label">PRSI to Claim (' + prsiCount + ')</div>' +
-                        '<div class="hmf-summary-cell-val">' + euro(prsiVal) + '</div>' +
-                    '</div>' +
-                    '<div class="hmf-summary-cell" style="border-left:2px solid #e2e8f0;">' +
                         '<div class="hmf-summary-cell-label">Total Pipeline (' + orders.length + ')</div>' +
                         '<div class="hmf-summary-cell-val" style="font-size:22px;">' + euro(valPipeline) + '</div>' +
+                    '</div>' +
+                    '<div class="hmf-summary-cell">' +
+                        '<div class="hmf-summary-cell-label">PRSI Deduction (' + prsiCount + ')</div>' +
+                        '<div class="hmf-summary-cell-val" style="color:#059669;">−' + euro(prsiVal) + '</div>' +
+                    '</div>' +
+                    '<div class="hmf-summary-cell" style="border-left:2px solid #e2e8f0;">' +
+                        '<div class="hmf-summary-cell-label">Patient Pays</div>' +
+                        '<div class="hmf-summary-cell-val" style="font-size:22px;font-weight:800;">' + euro(patientPays) + '</div>' +
                     '</div>' +
                 '</div>';
 
@@ -859,7 +861,7 @@ function hm_ajax_fitting_load() {
 
     $orders = $db->get_results(
         "SELECT o.id, o.order_number, o.patient_id, o.current_status,
-                o.prsi_applicable, o.grand_total, o.order_date, o.invoice_id,
+                o.prsi_applicable, o.subtotal, o.prsi_amount, o.grand_total, o.order_date, o.invoice_id,
                 o.clinic_id, o.staff_id,
                 p.patient_number, p.first_name AS p_first, p.last_name AS p_last,
                 c.clinic_name,
@@ -937,6 +939,8 @@ function hm_ajax_fitting_load() {
             'product_names'   => $o->product_names ?? '',
             'fitting_date'    => $o->fitting_date ? date('d M Y', strtotime($o->fitting_date)) : '',
             'fitting_date_raw'=> $o->fitting_date ?? '',
+            'subtotal'        => (float)($o->subtotal ?? 0),
+            'prsi_amount'     => (float)($o->prsi_amount ?? 0),
             'grand_total'     => (float)($o->grand_total ?? 0),
             'invoice_id'      => $o->invoice_id ? (int)$o->invoice_id : null,
             'items'           => $items,
