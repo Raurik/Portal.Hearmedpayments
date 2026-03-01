@@ -386,6 +386,7 @@ function initProfile(){
         function mt(name,label,checked){return'<label class="hm-pref-item"><input type="checkbox" class="hm-pref-check" data-pref="'+name+'"'+(checked?' checked':'')+'><span>'+label+'</span></label>';}
 
         function renderView(){
+            p=patient; // refresh from global so post-save re-render shows new data
             function dce(title,body,section){
                 return '<div class="hm-detail-card" data-section="'+section+'">'+
                     '<div class="hm-detail-card-title" style="display:flex;justify-content:space-between;align-items:center;">'+
@@ -408,14 +409,15 @@ function initProfile(){
                 '</div>'+
                 (p.is_admin?'<div class="hm-card" style="margin-top:16px;border:1px solid #fecdd3;"><div class="hm-card-hd" style="color:#e53e3e;">'+HM_ICONS.warning+' GDPR — Right to Erasure</div><div class="hm-card-body"><p style="font-size:13px;color:#64748b;">Anonymises personal data. Clinical + financial records retained. Irreversible.</p><button class="hm-btn hm-btn-danger hm-btn--sm" id="hm-anonymise-btn">Anonymise Patient</button></div></div>':'')+
             '</div>');
-            $c.on('click','.hm-section-edit',function(){editSection($(this).data('section'));});
-            $c.on('click','#hm-save-mkt',function(){
+            $c.off('click','.hm-section-edit').on('click','.hm-section-edit',function(){editSection($(this).data('section'));});
+            $c.off('click','#hm-save-mkt').on('click','#hm-save-mkt',function(){
                 $.post(_hm.ajax,{action:'hm_update_marketing_prefs',nonce:_hm.nonce,patient_id:pid,marketing_email:$('[data-pref="marketing_email"]').is(':checked')?'1':'0',marketing_sms:$('[data-pref="marketing_sms"]').is(':checked')?'1':'0',marketing_phone:$('[data-pref="marketing_phone"]').is(':checked')?'1':'0'},function(r){if(r.success)toast('Preferences updated');else toast('Error','error');});
             });
-            $c.on('click','#hm-anonymise-btn',showAnonymiseModal);
+            $c.off('click','#hm-anonymise-btn').on('click','#hm-anonymise-btn',showAnonymiseModal);
         }
 
         function editSection(section){
+            p=patient; // ensure edit form uses latest data
             var $card=$('.hm-detail-card[data-section="'+section+'"]');
             var formHtml='',afterRender=null;
             if(section==='name'){
