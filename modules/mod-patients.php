@@ -671,6 +671,7 @@ function hm_ajax_update_patient() {
         'is_active'           => ( $_POST['is_active'] ?? '1' ) === '1',
         'annual_review_date'  => sanitize_text_field( $_POST['annual_review_date'] ?? '' ) ?: null,
         'assigned_clinic_id'  => intval( $_POST['assigned_clinic_id'] ?? 0 ) ?: null,
+        'assigned_dispenser_id' => intval( $_POST['assigned_dispenser_id'] ?? 0 ) ?: null,
         'gp_name'             => sanitize_text_field( $_POST['gp_name'] ?? '' ),
         'gp_address'          => sanitize_textarea_field( $_POST['gp_address'] ?? '' ),
         'nok_name'            => sanitize_text_field( $_POST['nok_name'] ?? '' ),
