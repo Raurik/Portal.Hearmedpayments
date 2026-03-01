@@ -2058,7 +2058,13 @@ var Cal={
                     self.toast('Payment of €'+amt.toFixed(2)+' recorded on '+orderNumber);
                 } else {
                     $btn.prop('disabled',false).text('Confirm Payment');
-                    $('#hm-pay-err').text(r.data&&r.data.message?r.data.message:'Failed');
+                    var msg=(r.data&&r.data.message)?r.data.message:'Failed';
+                    if(r.data&&r.data.debug){
+                        var d=r.data.debug;
+                        var recent=Array.isArray(d.recent_orders)?d.recent_orders.map(function(o){return (o.order_number||'')+' (#'+(o.id||'')+')';}).join(', '):'';
+                        msg += ' [debug id='+String(d.received_order_id||0)+', number='+String(d.received_order_number||'')+', lookup='+String(d.used_lookup||'')+(recent?(', recent='+recent):'')+']';
+                    }
+                    $('#hm-pay-err').text(msg);
                 }
             }).fail(function(){
                 $btn.prop('disabled',false).text('Confirm Payment');

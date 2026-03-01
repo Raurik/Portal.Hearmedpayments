@@ -1558,6 +1558,12 @@ function hm_ajax_record_order_payment() {
         $amount         = floatval( $_POST['amount'] ?? 0 );
         $payment_method = sanitize_text_field( $_POST['payment_method'] ?? '' );
 
+        $debug = [
+            'received_order_id'      => $order_id,
+            'received_order_number'  => $order_number,
+            'used_lookup'            => '',
+        ];
+
         if ( ! $order_id && ! $order_number ) { wp_send_json_error( [ 'message' => 'No order specified.' ] ); return; }
         if ( $amount <= 0 ) { wp_send_json_error( [ 'message' => 'Invalid amount.' ] ); return; }
         if ( ! $payment_method ) { wp_send_json_error( [ 'message' => 'Select a payment method.' ] ); return; }
@@ -1572,6 +1578,7 @@ function hm_ajax_record_order_payment() {
 
         $order = null;
         if ( $order_id > 0 ) {
+            $debug['used_lookup'] = 'id';
             $order = $db->get_row(
                 "SELECT o.id, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
                         o.subtotal, o.discount_total, o.vat_total,
@@ -1583,6 +1590,7 @@ function hm_ajax_record_order_payment() {
         }
 
         if ( ! $order && $order_number ) {
+            $debug['used_lookup'] = $debug['used_lookup'] ? ( $debug['used_lookup'] . '+number_exact' ) : 'number_exact';
             $order = $db->get_row(
                 "SELECT o.id, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
                         o.subtotal, o.discount_total, o.vat_total,
@@ -1599,7 +1607,35 @@ function hm_ajax_record_order_payment() {
             }
         }
 
-        if ( ! $order ) { wp_send_json_error( [ 'message' => 'Order not found.' ] ); return; }
+        if ( ! $order && $order_number ) {
+            $debug['used_lookup'] = $debug['used_lookup'] ? ( $debug['used_lookup'] . '+number_normalized' ) : 'number_normalized';
+            $order = $db->get_row(
+                "SELECT o.id, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
+                        o.subtotal, o.discount_total, o.vat_total,
+                        o.grand_total, o.balance_due, o.prsi_applicable, o.prsi_amount,
+                        o.deposit_amount
+                 FROM hearmed_core.orders o
+                 WHERE UPPER(regexp_replace(COALESCE(o.order_number, ''), '[^A-Za-z0-9]', '', 'g'))
+                     = UPPER(regexp_replace(\$1, '[^A-Za-z0-9]', '', 'g'))
+                 ORDER BY o.id DESC
+                 LIMIT 1",
+                [ $order_number ]
+            );
+            if ( $order ) {
+                $order_id = intval( $order->id );
+            }
+        }
+
+        if ( ! $order ) {
+            $debug['recent_orders'] = $db->get_results(
+                "SELECT id, order_number
+                   FROM hearmed_core.orders
+                  ORDER BY id DESC
+                  LIMIT 5"
+            ) ?: [];
+            wp_send_json_error( [ 'message' => 'Order not found.', 'debug' => $debug ] );
+            return;
+        }
 
         // Ensure invoice exists and is linked to order
         $invoice = null;
