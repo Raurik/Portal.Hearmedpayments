@@ -875,13 +875,13 @@ add_action('wp_ajax_hm_fitting_load', 'hm_ajax_fitting_load');
 function hm_fitting_compute_prsi( $o ) {
     $stored = (float) ( $o->prsi_amount ?? 0 );
     if ( $stored > 0 ) return $stored;
-    if ( ! $o->prsi_applicable ) return 0.0;
+    if ( ! hm_pg_bool( $o->prsi_applicable ?? false ) ) return 0.0;
 
     $per_ear = (float) HearMed_Settings::get( 'hm_prsi_amount_per_ear', '500' );
 
     // Try prsi_left / prsi_right boolean flags
-    $left  = ! empty( $o->prsi_left );
-    $right = ! empty( $o->prsi_right );
+    $left  = hm_pg_bool( $o->prsi_left ?? false );
+    $right = hm_pg_bool( $o->prsi_right ?? false );
     if ( $left || $right ) {
         return ( $left ? $per_ear : 0 ) + ( $right ? $per_ear : 0 );
     }
@@ -979,7 +979,7 @@ function hm_ajax_fitting_load() {
             'clinic_id'       => isset($o->clinic_id) ? (int)$o->clinic_id : null,
             'staff_id'        => isset($o->staff_id) ? (int)$o->staff_id : null,
             'current_status'  => $o->current_status,
-            'prsi_applicable' => (bool)$o->prsi_applicable,
+            'prsi_applicable' => hm_pg_bool($o->prsi_applicable ?? false),
             'product_names'   => $o->product_names ?? '',
             'fitting_date'    => $o->fitting_date ? date('d M Y', strtotime($o->fitting_date)) : '',
             'fitting_date_raw'=> $o->fitting_date ?? '',
