@@ -1582,7 +1582,9 @@ function hm_ajax_record_order_payment() {
             $order = $db->get_row(
                 "SELECT o.id, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
                         o.subtotal, o.discount_total, o.vat_total,
-                        o.grand_total, o.balance_due, o.prsi_applicable, o.prsi_amount,
+                        o.grand_total,
+                        (COALESCE(o.grand_total, 0) - COALESCE(o.deposit_amount, 0)) AS balance_due,
+                        o.prsi_applicable, o.prsi_amount,
                         o.deposit_amount
                  FROM hearmed_core.orders o WHERE o.id = \$1",
                 [ $order_id ]
@@ -1594,7 +1596,9 @@ function hm_ajax_record_order_payment() {
             $order = $db->get_row(
                 "SELECT o.id, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
                         o.subtotal, o.discount_total, o.vat_total,
-                        o.grand_total, o.balance_due, o.prsi_applicable, o.prsi_amount,
+                        o.grand_total,
+                        (COALESCE(o.grand_total, 0) - COALESCE(o.deposit_amount, 0)) AS balance_due,
+                        o.prsi_applicable, o.prsi_amount,
                         o.deposit_amount
                  FROM hearmed_core.orders o
                  WHERE UPPER(TRIM(COALESCE(o.order_number, ''))) = UPPER(TRIM(\$1))
@@ -1612,7 +1616,9 @@ function hm_ajax_record_order_payment() {
             $order = $db->get_row(
                 "SELECT o.id, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
                         o.subtotal, o.discount_total, o.vat_total,
-                        o.grand_total, o.balance_due, o.prsi_applicable, o.prsi_amount,
+                        o.grand_total,
+                        (COALESCE(o.grand_total, 0) - COALESCE(o.deposit_amount, 0)) AS balance_due,
+                        o.prsi_applicable, o.prsi_amount,
                         o.deposit_amount
                  FROM hearmed_core.orders o
                  WHERE UPPER(regexp_replace(COALESCE(o.order_number, ''), '[^A-Za-z0-9]', '', 'g'))
