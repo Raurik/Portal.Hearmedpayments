@@ -2026,6 +2026,12 @@ var Cal={
         h+='<option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option>';
         h+='</select></div>';
 
+        h+='<div id="hm-pay-primary-amt-wrap" style="display:none;margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Primary Method Amount (€)</label>';
+        h+='<input type="number" id="hm-pay-amt-1" class="hm-inp" step="0.01" min="0" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%"></div>';
+
+        h+='<div id="hm-pay-extra-methods" style="margin-bottom:8px"></div>';
+        h+='<button type="button" id="hm-pay-add-method" class="hm-btn" style="width:100%;margin:0 0 12px;font-size:12px;padding:8px;border:1px dashed #94a3b8;background:#f8fafc">+ Add Payment Method</button>';
+
         h+='<div id="hm-pay-err" style="color:#ef4444;font-size:12px;margin-bottom:8px"></div>';
 
         h+='<button id="hm-pay-confirm" class="hm-btn hm-btn--primary" style="width:100%;padding:10px;font-size:14px;font-weight:600;border-radius:6px">Confirm Payment</button>';
@@ -2033,37 +2039,138 @@ var Cal={
 
         $('body').append(h);
 
+        var addExtraMethodRow=function(){
+            var idx=$('#hm-pay-extra-methods .hm-pay-extra-row').length;
+            var row='';
+            row+='<div class="hm-pay-extra-row" data-idx="'+idx+'" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+            row+='<select class="hm-inp hm-pay-extra-method" style="flex:1;font-size:12px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0">';
+            row+='<option value="">Method</option><option value="Card">Card</option><option value="Cash">Cash</option><option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option>';
+            row+='</select>';
+            row+='<input type="number" class="hm-inp hm-pay-extra-amount" step="0.01" min="0" placeholder="Amount" style="width:120px;font-size:12px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0">';
+            row+='<button type="button" class="hm-pay-extra-remove" style="border:0;background:#fee2e2;color:#b91c1c;border-radius:6px;padding:7px 9px;cursor:pointer">✕</button>';
+            row+='</div>';
+            $('#hm-pay-extra-methods').append(row);
+            $('#hm-pay-primary-amt-wrap').show();
+            if(!$('#hm-pay-amt-1').val()) $('#hm-pay-amt-1').val($('#hm-pay-amt').val());
+        };
+
+        var promptSerialsAndSave=function(data){
+            var items=(data&&Array.isArray(data.serial_items))?data.serial_items:[];
+            if(!items.length){
+                $('#hm-pay-err').text((data&&data.message)?data.message:'Serial numbers are required before payment.');
+                return;
+            }
+            var recDefault=(data&&data.received_date)?String(data.received_date):new Date().toISOString().slice(0,10);
+            var receivedDate=window.prompt('Enter received date (YYYY-MM-DD)', recDefault);
+            if(!receivedDate) return;
+
+            var entries=[];
+            for(var i=0;i<items.length;i++){
+                var it=items[i]||{};
+                var label=String(it.item_description||('Product #'+String(it.product_id||'')));
+                var ear=String(it.ear_side||'Unknown').toLowerCase();
+                if(ear==='left'||ear==='binaural'||ear==='unknown'){
+                    var sl=window.prompt('Serial number (Left) for '+label, '');
+                    if(sl===null) return;
+                    sl=String(sl||'').trim();
+                    if(sl){ entries.push({product_id:parseInt(it.product_id,10)||0,ear:'left',serial:sl}); }
+                }
+                if(ear==='right'||ear==='binaural'){
+                    var sr=window.prompt('Serial number (Right) for '+label, '');
+                    if(sr===null) return;
+                    sr=String(sr||'').trim();
+                    if(sr){ entries.push({product_id:parseInt(it.product_id,10)||0,ear:'right',serial:sr}); }
+                }
+                if(ear==='unknown' && entries.length===0){
+                    var su=window.prompt('Serial number for '+label+' (will save as Left)', '');
+                    if(su===null) return;
+                    su=String(su||'').trim();
+                    if(su){ entries.push({product_id:parseInt(it.product_id,10)||0,ear:'left',serial:su}); }
+                }
+            }
+            if(!entries.length){
+                $('#hm-pay-err').text('No serial numbers entered.');
+                return;
+            }
+            post('save_order_serials_from_payment',{
+                order_id:orderId,
+                received_date:receivedDate,
+                serials_json:JSON.stringify(entries)
+            }).then(function(sv){
+                if(sv.success){
+                    $('#hm-pay-err').css('color','#059669').text('Serials saved. Click Confirm Payment again.');
+                } else {
+                    $('#hm-pay-err').css('color','#ef4444').text(sv.data&&sv.data.message?sv.data.message:'Failed to save serials');
+                }
+            }).fail(function(){
+                $('#hm-pay-err').css('color','#ef4444').text('Network error while saving serials.');
+            });
+        };
+
+        $(document).off('click.payaddmethod').on('click.payaddmethod','#hm-pay-add-method',function(){
+            addExtraMethodRow();
+        });
+
+        $(document).off('click.payremovemethod').on('click.payremovemethod','.hm-pay-extra-remove',function(){
+            $(this).closest('.hm-pay-extra-row').remove();
+            if(!$('#hm-pay-extra-methods .hm-pay-extra-row').length){
+                $('#hm-pay-primary-amt-wrap').hide();
+                $('#hm-pay-amt-1').val('');
+            }
+        });
+
         $(document).off('click.payclose').on('click.payclose','.hm-pay-close',function(e){
             e.stopPropagation();$('.hm-modal-bg--top').remove();
-            $(document).off('.payclose .payconfirm');
+            $(document).off('.payclose .payconfirm .payaddmethod .payremovemethod');
             self.toast('Order '+orderNumber+' submitted for approval (no payment taken)');
         });
 
         $(document).off('click.payconfirm').on('click.payconfirm','#hm-pay-confirm',function(){
             var amt=parseFloat($('#hm-pay-amt').val())||0;
             var method=$('#hm-pay-method').val();
+            var hasExtra=$('#hm-pay-extra-methods .hm-pay-extra-row').length>0;
+            var splitPayload=[];
             if(!amt||amt<=0){$('#hm-pay-err').text('Enter a valid amount.');return;}
             if(!method){$('#hm-pay-err').text('Select a payment method.');return;}
+
+            if(hasExtra){
+                var primaryAmt=parseFloat($('#hm-pay-amt-1').val())||0;
+                if(!primaryAmt||primaryAmt<=0){$('#hm-pay-err').text('Enter primary method amount.');return;}
+                splitPayload.push({method:method,amount:primaryAmt});
+                $('#hm-pay-extra-methods .hm-pay-extra-row').each(function(){
+                    var m=$(this).find('.hm-pay-extra-method').val();
+                    var a=parseFloat($(this).find('.hm-pay-extra-amount').val())||0;
+                    if(m&&a>0){splitPayload.push({method:m,amount:a});}
+                });
+                var sm=0; splitPayload.forEach(function(x){ sm+=parseFloat(x.amount)||0; });
+                if(Math.abs(sm-amt)>0.01){$('#hm-pay-err').text('Split amounts must equal total amount.');return;}
+            }
 
             var $btn=$(this);$btn.prop('disabled',true).text('Processing...');
             post('record_order_payment',{
                 order_id:orderId,
                 order_number:orderNumber,
                 amount:amt,
-                payment_method:method
+                payment_method:method,
+                split_payments_json: JSON.stringify(splitPayload)
             }).then(function(r){
                 if(r.success){
                     $('.hm-modal-bg--top').remove();
-                    $(document).off('.payclose .payconfirm');
+                    $(document).off('.payclose .payconfirm .payaddmethod .payremovemethod');
                     self.toast('Payment of €'+amt.toFixed(2)+' recorded on '+orderNumber);
                 } else {
                     $btn.prop('disabled',false).text('Confirm Payment');
+                    if(r.data&&r.data.code==='serials_required'){
+                        promptSerialsAndSave(r.data);
+                        return;
+                    }
                     var msg=(r.data&&r.data.message)?r.data.message:'Failed';
                     if(r.data&&r.data.debug){
                         var d=r.data.debug;
                         var recent=Array.isArray(d.recent_orders)?d.recent_orders.map(function(o){return (o.order_number||'')+' (#'+(o.id||'')+')';}).join(', '):'';
                         msg += ' [debug id='+String(d.received_order_id||0)+', number='+String(d.received_order_number||'')+', lookup='+String(d.used_lookup||'')+(recent?(', recent='+recent):'')+']';
                     }
+                    $('#hm-pay-err').css('color','#ef4444');
                     $('#hm-pay-err').text(msg);
                 }
             }).fail(function(){

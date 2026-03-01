@@ -59,6 +59,7 @@ add_action( 'wp_ajax_hm_save_appointment_outcome', 'hm_ajax_save_appointment_out
 add_action( 'wp_ajax_hm_create_outcome_order',  'hm_ajax_create_outcome_order' );
 add_action( 'wp_ajax_hm_get_order_products',    'hm_ajax_get_order_products' );
 add_action( 'wp_ajax_hm_record_order_payment',  'hm_ajax_record_order_payment' );
+add_action( 'wp_ajax_hm_save_order_serials_from_payment',  'hm_ajax_save_order_serials_from_payment' );
 add_action( 'wp_ajax_hm_get_patient_pipeline_orders',    'hm_ajax_get_patient_pipeline_orders' );
 add_action( 'wp_ajax_hm_update_appointment_status', 'hm_ajax_update_appointment_status' );
 add_action( 'wp_ajax_hm_save_exclusion',           'hm_ajax_save_exclusion' );
@@ -1557,6 +1558,8 @@ function hm_ajax_record_order_payment() {
         $order_number   = sanitize_text_field( $_POST['order_number'] ?? '' );
         $amount         = floatval( $_POST['amount'] ?? 0 );
         $payment_method = sanitize_text_field( $_POST['payment_method'] ?? '' );
+        $split_raw      = wp_unslash( $_POST['split_payments_json'] ?? '[]' );
+        $split_payments = json_decode( $split_raw, true );
 
         $debug = [
             'received_order_id'      => $order_id,
@@ -1566,7 +1569,7 @@ function hm_ajax_record_order_payment() {
 
         if ( ! $order_id && ! $order_number ) { wp_send_json_error( [ 'message' => 'No order specified.' ] ); return; }
         if ( $amount <= 0 ) { wp_send_json_error( [ 'message' => 'Invalid amount.' ] ); return; }
-        if ( ! $payment_method ) { wp_send_json_error( [ 'message' => 'Select a payment method.' ] ); return; }
+        if ( ! $payment_method && empty( $split_payments ) ) { wp_send_json_error( [ 'message' => 'Select a payment method.' ] ); return; }
 
         $db = HearMed_DB::instance();
 
@@ -1580,7 +1583,8 @@ function hm_ajax_record_order_payment() {
         if ( $order_id > 0 ) {
             $debug['used_lookup'] = 'id';
             $order = $db->get_row(
-                "SELECT o.id, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
+                "SELECT o.id, o.order_number, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
+                    o.current_status, o.received_date,
                         o.subtotal, o.discount_total, o.vat_total,
                         o.grand_total,
                         (COALESCE(o.grand_total, 0) - COALESCE(o.deposit_amount, 0)) AS balance_due,
@@ -1594,7 +1598,8 @@ function hm_ajax_record_order_payment() {
         if ( ! $order && $order_number ) {
             $debug['used_lookup'] = $debug['used_lookup'] ? ( $debug['used_lookup'] . '+number_exact' ) : 'number_exact';
             $order = $db->get_row(
-                "SELECT o.id, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
+                "SELECT o.id, o.order_number, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
+                    o.current_status, o.received_date,
                         o.subtotal, o.discount_total, o.vat_total,
                         o.grand_total,
                         (COALESCE(o.grand_total, 0) - COALESCE(o.deposit_amount, 0)) AS balance_due,
@@ -1614,7 +1619,8 @@ function hm_ajax_record_order_payment() {
         if ( ! $order && $order_number ) {
             $debug['used_lookup'] = $debug['used_lookup'] ? ( $debug['used_lookup'] . '+number_normalized' ) : 'number_normalized';
             $order = $db->get_row(
-                "SELECT o.id, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
+                "SELECT o.id, o.order_number, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
+                    o.current_status, o.received_date,
                         o.subtotal, o.discount_total, o.vat_total,
                         o.grand_total,
                         (COALESCE(o.grand_total, 0) - COALESCE(o.deposit_amount, 0)) AS balance_due,
@@ -1641,6 +1647,68 @@ function hm_ajax_record_order_payment() {
             ) ?: [];
             wp_send_json_error( [ 'message' => 'Order not found.', 'debug' => $debug ] );
             return;
+        }
+
+        $current_status_norm = strtolower( trim( (string) ( $order->current_status ?? '' ) ) );
+        if ( $current_status_norm === 'awaiting fitting' ) {
+            $serial_items = $db->get_results(
+                "SELECT oi.id AS order_item_id,
+                        oi.item_id AS product_id,
+                        COALESCE(oi.item_description, p.product_name, 'Product') AS item_description,
+                        COALESCE(NULLIF(TRIM(oi.ear_side), ''), 'Unknown') AS ear_side
+                   FROM hearmed_core.order_items oi
+                   LEFT JOIN hearmed_reference.products p ON p.id = oi.item_id
+                  WHERE oi.order_id = \$1
+                    AND oi.item_type = 'product'
+                  ORDER BY oi.line_number, oi.id",
+                [ $order_id ]
+            ) ?: [];
+
+            $missing = [];
+            foreach ( $serial_items as $it ) {
+                $ear = strtolower( trim( (string) ( $it->ear_side ?? '' ) ) );
+                $check = $db->get_row(
+                    "SELECT COALESCE(TRIM(serial_number_left), '') AS serial_left,
+                            COALESCE(TRIM(serial_number_right), '') AS serial_right
+                       FROM hearmed_core.patient_devices
+                      WHERE patient_id = \$1
+                        AND product_id = \$2
+                      ORDER BY id DESC
+                      LIMIT 1",
+                    [ intval( $order->patient_id ), intval( $it->product_id ?? 0 ) ]
+                );
+                $left_ok = ! empty( $check->serial_left );
+                $right_ok = ! empty( $check->serial_right );
+
+                $is_missing = false;
+                if ( $ear === 'left' ) {
+                    $is_missing = ! $left_ok;
+                } elseif ( $ear === 'right' ) {
+                    $is_missing = ! $right_ok;
+                } elseif ( $ear === 'binaural' ) {
+                    $is_missing = ! ( $left_ok && $right_ok );
+                } else {
+                    $is_missing = ! ( $left_ok || $right_ok );
+                }
+
+                if ( $is_missing ) {
+                    $missing[] = [
+                        'product_id'      => intval( $it->product_id ?? 0 ),
+                        'item_description'=> (string) ( $it->item_description ?? 'Product' ),
+                        'ear_side'        => (string) ( $it->ear_side ?? 'Unknown' ),
+                    ];
+                }
+            }
+
+            if ( empty( $order->received_date ) || ! empty( $missing ) ) {
+                wp_send_json_error( [
+                    'code'          => 'serials_required',
+                    'message'       => 'This order is Awaiting Fitting. Add received date and serial numbers before closing payment.',
+                    'received_date' => date( 'Y-m-d' ),
+                    'serial_items'  => $missing,
+                ] );
+                return;
+            }
         }
 
         $has_balance_remaining = (bool) $db->get_var(
@@ -1692,21 +1760,53 @@ function hm_ajax_record_order_payment() {
             'deposit_paid_at' => date( 'Y-m-d H:i:s' ),
         ], [ 'id' => $order_id ] );
 
-        // Create payment record
-        $pay_id = $db->insert( 'hearmed_core.payments', [
-            'invoice_id'     => intval( $invoice->id ),
-            'patient_id'     => $order->patient_id,
-            'amount'         => $amount,
-            'payment_date'   => date( 'Y-m-d' ),
-            'payment_method' => $payment_method,
-            'received_by'    => $staff_id ?: null,
-            'clinic_id'      => $order->clinic_id,
-            'created_by'     => $staff_id ?: null,
-        ] );
+        $payment_rows = [];
+        if ( is_array( $split_payments ) && ! empty( $split_payments ) ) {
+            foreach ( $split_payments as $sp ) {
+                $sp_method = sanitize_text_field( $sp['method'] ?? '' );
+                $sp_amount = floatval( $sp['amount'] ?? 0 );
+                if ( $sp_method && $sp_amount > 0 ) {
+                    $payment_rows[] = [
+                        'invoice_id'     => intval( $invoice->id ),
+                        'patient_id'     => $order->patient_id,
+                        'amount'         => $sp_amount,
+                        'payment_date'   => date( 'Y-m-d' ),
+                        'payment_method' => $sp_method,
+                        'received_by'    => $staff_id ?: null,
+                        'clinic_id'      => $order->clinic_id,
+                        'created_by'     => $staff_id ?: null,
+                    ];
+                }
+            }
+        }
+        if ( empty( $payment_rows ) ) {
+            $payment_rows[] = [
+                'invoice_id'     => intval( $invoice->id ),
+                'patient_id'     => $order->patient_id,
+                'amount'         => $amount,
+                'payment_date'   => date( 'Y-m-d' ),
+                'payment_method' => $payment_method,
+                'received_by'    => $staff_id ?: null,
+                'clinic_id'      => $order->clinic_id,
+                'created_by'     => $staff_id ?: null,
+            ];
+        }
 
-        if ( ! $pay_id ) {
-            wp_send_json_error( [ 'message' => 'Payment failed to save. ' . HearMed_DB::last_error() ] );
+        $sum = 0.0;
+        foreach ( $payment_rows as $row ) {
+            $sum += floatval( $row['amount'] );
+        }
+        if ( abs( $sum - $amount ) > 0.01 ) {
+            wp_send_json_error( [ 'message' => 'Split payment amounts must equal the entered amount.' ] );
             return;
+        }
+
+        foreach ( $payment_rows as $row ) {
+            $pay_id = $db->insert( 'hearmed_core.payments', $row );
+            if ( ! $pay_id ) {
+                wp_send_json_error( [ 'message' => 'Payment failed to save. ' . HearMed_DB::last_error() ] );
+                return;
+            }
         }
 
         $new_balance = max( 0, floatval( $invoice->balance_remaining ?? $invoice->grand_total ?? $order->grand_total ) - $amount );
@@ -1730,6 +1830,37 @@ function hm_ajax_record_order_payment() {
             );
         }
 
+        if ( $new_balance <= 0 ) {
+            $db->query(
+                "UPDATE hearmed_core.orders
+                    SET current_status = 'Complete',
+                        fitted_date = NOW(),
+                        updated_at = NOW()
+                  WHERE id = \$1",
+                [ $order_id ]
+            );
+
+            $db->query(
+                "UPDATE hearmed_core.fitting_queue
+                    SET queue_status = 'Fitted',
+                        fitted_date = NOW(),
+                        fitted_by = \$1,
+                        updated_at = NOW()
+                  WHERE order_id = \$2",
+                [ $staff_id ?: null, $order_id ]
+            );
+
+            $db->query(
+                "INSERT INTO hearmed_core.order_status_history (order_id, from_status, to_status, changed_by, changed_at, notes)
+                 SELECT \$1, \$2, 'Complete', \$3, NOW(), \$4
+                 WHERE EXISTS (
+                     SELECT 1 FROM information_schema.tables
+                     WHERE table_schema = 'hearmed_core' AND table_name = 'order_status_history'
+                 )",
+                [ $order_id, (string) ( $order->current_status ?? '' ), $staff_id ?: null, 'Closed from calendar payment flow — paid in full' ]
+            );
+        }
+
         // Log in patient timeline
         $db->insert( 'hearmed_core.patient_timeline', [
             'patient_id'  => $order->patient_id,
@@ -1748,6 +1879,103 @@ function hm_ajax_record_order_payment() {
             'invoice_id' => intval( $invoice->id ),
             'invoice_number' => $invoice->invoice_number,
         ]);
+    } catch ( Throwable $e ) {
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+// ================================================================
+// SAVE ORDER SERIALS FROM CALENDAR PAYMENT FLOW
+// ================================================================
+function hm_ajax_save_order_serials_from_payment() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( [ 'message' => 'Denied' ] ); return; }
+
+    try {
+        $db = HearMed_DB::instance();
+        $order_id = intval( $_POST['order_id'] ?? 0 );
+        $received_date = sanitize_text_field( $_POST['received_date'] ?? '' );
+        $serials_raw = wp_unslash( $_POST['serials_json'] ?? '[]' );
+        $serials = json_decode( $serials_raw, true );
+
+        if ( ! $order_id ) { wp_send_json_error( [ 'message' => 'Missing order.' ] ); return; }
+        if ( ! is_array( $serials ) || empty( $serials ) ) { wp_send_json_error( [ 'message' => 'No serials provided.' ] ); return; }
+
+        $order = $db->get_row(
+            "SELECT id, patient_id, clinic_id, staff_id, current_status, received_date
+               FROM hearmed_core.orders WHERE id = \$1",
+            [ $order_id ]
+        );
+        if ( ! $order ) { wp_send_json_error( [ 'message' => 'Order not found.' ] ); return; }
+
+        $wp_uid = get_current_user_id();
+        $staff_id = $db->get_var( "SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1", [ $wp_uid ] );
+
+        $by_product = [];
+        foreach ( $serials as $entry ) {
+            $product_id = intval( $entry['product_id'] ?? 0 );
+            $ear = strtolower( trim( (string) ( $entry['ear'] ?? '' ) ) );
+            $serial = sanitize_text_field( $entry['serial'] ?? '' );
+            if ( ! $product_id || ! $serial || ! in_array( $ear, [ 'left', 'right' ], true ) ) {
+                continue;
+            }
+            if ( ! isset( $by_product[ $product_id ] ) ) {
+                $by_product[ $product_id ] = [ 'left' => '', 'right' => '' ];
+            }
+            $by_product[ $product_id ][ $ear ] = $serial;
+        }
+
+        if ( empty( $by_product ) ) {
+            wp_send_json_error( [ 'message' => 'No valid serial entries.' ] );
+            return;
+        }
+
+        foreach ( $by_product as $product_id => $vals ) {
+            $existing = $db->get_row(
+                "SELECT id, serial_number_left, serial_number_right
+                   FROM hearmed_core.patient_devices
+                  WHERE patient_id = \$1 AND product_id = \$2
+                  ORDER BY id DESC
+                  LIMIT 1",
+                [ intval( $order->patient_id ), intval( $product_id ) ]
+            );
+
+            $left = $vals['left'] ?: (string) ( $existing->serial_number_left ?? '' );
+            $right = $vals['right'] ?: (string) ( $existing->serial_number_right ?? '' );
+
+            if ( $existing ) {
+                $db->update( 'hearmed_core.patient_devices', [
+                    'serial_number_left'  => $left,
+                    'serial_number_right' => $right,
+                ], [ 'id' => intval( $existing->id ) ] );
+            } else {
+                $db->insert( 'hearmed_core.patient_devices', [
+                    'patient_id'          => intval( $order->patient_id ),
+                    'product_id'          => intval( $product_id ),
+                    'serial_number_left'  => $left,
+                    'serial_number_right' => $right,
+                    'device_status'       => 'Active',
+                    'created_by'          => $staff_id ?: null,
+                ] );
+            }
+        }
+
+        if ( $received_date ) {
+            $db->query(
+                "UPDATE hearmed_core.orders
+                    SET received_date = COALESCE(received_date, \$1),
+                        received_by = COALESCE(received_by, \$2),
+                        current_status = CASE
+                            WHEN current_status = 'Ordered' THEN 'Awaiting Fitting'
+                            ELSE current_status
+                        END,
+                        updated_at = NOW()
+                  WHERE id = \$3",
+                [ $received_date . ' ' . date( 'H:i:s' ), $staff_id ?: null, $order_id ]
+            );
+        }
+
+        wp_send_json_success( [ 'message' => 'Serials saved.' ] );
     } catch ( Throwable $e ) {
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
     }
