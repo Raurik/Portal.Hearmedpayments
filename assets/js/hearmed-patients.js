@@ -1238,8 +1238,8 @@ function initProfile(){
                         '<td style="font-weight:500;">'+euro(o.grand_total)+'</td>'+
                         '<td><span class="hm-badge hm-badge--sm '+bc+'">'+esc(o.status)+'</span></td>'+
                         '<td style="white-space:nowrap;">'+
-                            '<a href="/orders/?hm_action=view&order_id='+o._ID+'" class="hm-btn hm-btn--secondary hm-btn--sm">View</a> '+
-                            '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-order-pdf-btn" data-id="'+o._ID+'" title="Download Order PDF">PDF</button>'+
+                            '<button class="hm-btn hm-btn--primary hm-btn--sm hm-order-pdf-btn" data-id="'+o._ID+'" title="Download Order PDF">⬇ PDF</button> '+
+                            '<a href="/orders/?hm_action=view&order_id='+o._ID+'" class="hm-btn hm-btn--secondary hm-btn--sm">View</a>'+
                         '</td>'+
                     '</tr>';
                 });

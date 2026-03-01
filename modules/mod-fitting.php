@@ -878,9 +878,9 @@ function hm_ajax_fitting_load() {
                 ) AS product_names,
                 (SELECT a.appointment_date
                  FROM hearmed_core.appointments a
-                 JOIN hearmed_reference.appointment_types at2 ON at2.id = a.appointment_type_id
+                 JOIN hearmed_reference.services sv ON sv.id = a.service_id
                  WHERE a.patient_id = o.patient_id
-                   AND at2.type_name ILIKE '%fitting%'
+                   AND sv.service_name ILIKE '%fitting%'
                    AND a.appointment_status NOT IN ('Cancelled','No Show')
                    AND a.appointment_date >= CURRENT_DATE
                  ORDER BY a.appointment_date ASC
@@ -888,7 +888,7 @@ function hm_ajax_fitting_load() {
                 ) AS fitting_date
          FROM hearmed_core.orders o
          JOIN hearmed_core.patients p ON p.id = o.patient_id
-         JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
+         LEFT JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
          LEFT JOIN hearmed_reference.staff s ON s.id = o.staff_id
          WHERE o.current_status IN ('Approved','Ordered','Awaiting Fitting')
            AND EXISTS (
@@ -1000,6 +1000,7 @@ function hm_ajax_fitting_receive() {
         $device_id = $db->insert('hearmed_core.patient_devices', [
             'patient_id'          => $order->patient_id,
             'product_id'          => $product_id,
+            'order_id'            => $order_id,
             'serial_number_left'  => $sr['left'],
             'serial_number_right' => $sr['right'],
             'device_status'       => 'Active',
@@ -1045,9 +1046,9 @@ function hm_ajax_fitting_receive() {
     $fitting_appt = $db->get_row(
         "SELECT a.id, a.appointment_date
          FROM hearmed_core.appointments a
-         JOIN hearmed_reference.appointment_types at2 ON at2.id = a.appointment_type_id
+         JOIN hearmed_reference.services sv ON sv.id = a.service_id
          WHERE a.patient_id = \$1
-           AND at2.type_name ILIKE '%fitting%'
+           AND sv.service_name ILIKE '%fitting%'
            AND a.appointment_status NOT IN ('Cancelled','No Show')
            AND a.appointment_date >= CURRENT_DATE
          ORDER BY a.appointment_date ASC
