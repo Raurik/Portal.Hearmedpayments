@@ -2582,25 +2582,25 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
             if ( ! empty( $sec['fields'] ) && is_array( $sec['fields'] ) ) {
                 foreach ( $sec['fields'] as $f ) {
                     if ( ! is_array( $f ) ) continue;
-                    $fkey = $f['key'] ?? '';
+                    $fkey  = $f['key'] ?? '';
+                    $flabel = $f['label'] ?? ucwords( str_replace( '_', ' ', $fkey ) );
                     $fs = [ 'type' => $f['format'] ?? 'text' ];
-                    if ( ! empty( $f['ai_instruction'] ) ) {
-                        $fs['instruction'] = $f['ai_instruction'];
-                        $field_instructions[] = "{$sec_key}.{$fkey}: " . $f['ai_instruction'];
-                    }
                     if ( ! empty( $f['required'] ) ) {
                         $fs['required'] = true;
                     }
+                    // Always add field instruction (use ai_instruction or fallback to label)
+                    $instr = ! empty( $f['ai_instruction'] ) ? $f['ai_instruction'] : 'Extract information about ' . strtolower( $flabel ) . ' from the transcript.';
+                    $fs['instruction'] = $instr;
+                    $field_instructions[] = "{$sec_key}.{$fkey} ({$flabel}): {$instr}";
                     $fields_schema[ $fkey ] = $fs;
-                    // Build flat output example: field_key → null
-                    $output_fields[ $fkey ] = null;
+                    // Flat output example with empty string placeholder
+                    $output_fields[ $fkey ] = '';
                 }
             }
             $schema[ $sec_key ] = [
                 'label'  => $sec['label'] ?? '',
                 'fields' => $fields_schema,
             ];
-            // Flat output: section_key → { field_key: null, ... }
             $output_example[ $sec_key ] = $output_fields;
         }
     }
@@ -2610,7 +2610,12 @@ function hm_trigger_ai_extraction( $patient_id, $appointment_id, $transcript_id,
     if ( empty( $system_prompt ) ) {
         $system_prompt = 'You are a clinical audiologist assistant. Extract structured data from the consultation transcript. Be concise and clinical. If information is not mentioned in the transcript, use null for that field.';
     }
-    $system_prompt .= "\n\nIMPORTANT: Your response must be a flat JSON object. Each top-level key is a section, and each section value is an object mapping field keys directly to extracted string values (or null). Do NOT nest values under 'fields', 'label', or any other wrapper.";
+    $system_prompt .= "\n\nCRITICAL OUTPUT RULES:\n";
+    $system_prompt .= "1. Return a flat JSON object: { \"section_key\": { \"field_key\": \"extracted value\" } }\n";
+    $system_prompt .= "2. Each field value must be a plain text string with the extracted information, or null if not found.\n";
+    $system_prompt .= "3. Do NOT prefix values with type labels like 'Text:', 'Boolean:', 'Date:' etc.\n";
+    $system_prompt .= "4. Do NOT nest values under 'fields', 'label', 'type' or any wrapper key.\n";
+    $system_prompt .= "5. Write naturally — e.g. \"Patient reports bilateral tinnitus for 3 years\" not \"Text: Patient reports...\"\n";
 
     $user_prompt  = "Extract clinical data from the following audiology consultation transcript.\n\n";
     $user_prompt .= "REQUIRED OUTPUT FORMAT (respond with JSON exactly like this, replacing null with extracted values):\n";

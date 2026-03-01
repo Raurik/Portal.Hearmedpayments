@@ -262,15 +262,15 @@ function hm_ajax_reextract_clinical_doc() {
             if ( ! empty( $sec['fields'] ) && is_array( $sec['fields'] ) ) {
                 foreach ( $sec['fields'] as $f ) {
                     if ( ! is_array( $f ) ) continue;
-                    $fkey = $f['key'] ?? '';
+                    $fkey  = $f['key'] ?? '';
+                    $flabel = $f['label'] ?? ucwords( str_replace( '_', ' ', $fkey ) );
                     $fs = [ 'type' => $f['format'] ?? 'text' ];
-                    if ( ! empty( $f['ai_instruction'] ) ) {
-                        $fs['instruction'] = $f['ai_instruction'];
-                        $field_instructions[] = "{$sec_key}.{$fkey}: " . $f['ai_instruction'];
-                    }
                     if ( ! empty( $f['required'] ) ) $fs['required'] = true;
+                    $instr = ! empty( $f['ai_instruction'] ) ? $f['ai_instruction'] : 'Extract information about ' . strtolower( $flabel ) . ' from the transcript.';
+                    $fs['instruction'] = $instr;
+                    $field_instructions[] = "{$sec_key}.{$fkey} ({$flabel}): {$instr}";
                     $fields_schema[ $fkey ] = $fs;
-                    $output_fields[ $fkey ] = null;
+                    $output_fields[ $fkey ] = '';
                 }
             }
             $schema[ $sec_key ] = [
@@ -286,7 +286,12 @@ function hm_ajax_reextract_clinical_doc() {
     if ( empty( $system_prompt ) ) {
         $system_prompt = 'You are a clinical audiologist assistant. Extract structured data from the consultation transcript. Be concise and clinical. If information is not mentioned in the transcript, use null for that field.';
     }
-    $system_prompt .= "\n\nIMPORTANT: Your response must be a flat JSON object. Each top-level key is a section, and each section value is an object mapping field keys directly to extracted string values (or null). Do NOT nest values under 'fields', 'label', or any other wrapper.";
+    $system_prompt .= "\n\nCRITICAL OUTPUT RULES:\n";
+    $system_prompt .= "1. Return a flat JSON object: { \"section_key\": { \"field_key\": \"extracted value\" } }\n";
+    $system_prompt .= "2. Each field value must be a plain text string with the extracted information, or null if not found.\n";
+    $system_prompt .= "3. Do NOT prefix values with type labels like 'Text:', 'Boolean:', 'Date:' etc.\n";
+    $system_prompt .= "4. Do NOT nest values under 'fields', 'label', 'type' or any wrapper key.\n";
+    $system_prompt .= "5. Write naturally — e.g. \"Patient reports bilateral tinnitus for 3 years\" not \"Text: Patient reports...\"\n";
 
     $user_prompt  = "Extract clinical data from the following audiology consultation transcript.\n\n";
     $user_prompt .= "REQUIRED OUTPUT FORMAT (respond with JSON exactly like this, replacing null with extracted values):\n";
@@ -571,6 +576,23 @@ function hm_ajax_generate_clinical_pdf() {
         'updated_at' => current_time( 'mysql' ),
     ], [ 'id' => $id ] );
 
+    // Save a copy to the patient's documents tab
+    $file_url = $upload['baseurl'] . $rel_path;
+    $doc_type = $doc->template_name ?? 'Clinical Document';
+    $staff_id = get_current_user_id();
+    $staff_row = HearMed_DB::get_row(
+        "SELECT id FROM hearmed_reference.staff WHERE wp_user_id = $1",
+        [ $staff_id ]
+    );
+
+    HearMed_DB::insert( 'hearmed_core.patient_documents', [
+        'patient_id'    => $doc->patient_id,
+        'document_type' => $doc_type,
+        'file_url'      => $file_url,
+        'file_name'     => $filename,
+        'created_by'    => $staff_row ? $staff_row->id : null,
+    ] );
+
     wp_send_json_success( [
         'pdf_url'  => $upload['baseurl'] . $rel_path,
         'filename' => $filename,
@@ -585,6 +607,10 @@ function hm_build_clinical_pdf_html( $doc, $patient ) {
     $sections       = json_decode( $doc->sections_json ?: '[]', true );
     $reviewed_data  = json_decode( $doc->reviewed_json ?: '{}', true );
     $extracted_data = json_decode( $doc->extracted_json ?: '{}', true );
+    // Normalize in case AI nested under 'fields'
+    if ( function_exists( 'hm_normalize_ai_extracted' ) ) {
+        $extracted_data = hm_normalize_ai_extracted( $extracted_data );
+    }
     $data           = ! empty( $reviewed_data ) ? $reviewed_data : $extracted_data;
     $is_draft       = ! in_array( $doc->status, [ 'approved', 'generated' ] );
 
