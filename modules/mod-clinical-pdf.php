@@ -536,10 +536,12 @@ function hm_ajax_generate_clinical_pdf() {
     $dir      = $upload['basedir'] . '/hearmed-clinical-docs/' . date( 'Y/m' );
     if ( ! file_exists( $dir ) ) wp_mkdir_p( $dir );
 
-    $filename = sanitize_file_name(
-        'clinical-' . $doc->patient_id . '-' . $id . '-' . date( 'Ymd-His' ) . '.pdf'
-    );
-    $filepath = $dir . '/' . $filename;
+    // Build filename: "Template Name H0001 25.02.2026.pdf"
+    $h_number  = $patient->h_number ?? ( 'P' . $doc->patient_id );
+    $doc_type  = $doc->template_name ?? 'Clinical Document';
+    $date_str  = date( 'd.m.Y' );
+    $filename  = sanitize_file_name( $doc_type . ' ' . $h_number . ' ' . $date_str . '.pdf' );
+    $filepath  = $dir . '/' . $filename;
 
     $password = '';
     if ( $doc->password_protect && $patient ) {
