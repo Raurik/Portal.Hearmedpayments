@@ -1308,13 +1308,58 @@ class HearMed_Orders {
         // Status history log
         self::log_status_change($order_id, null, 'Awaiting Approval', $user->id ?? null, 'Order created');
 
+        // ── Duplicate detection: same patient + same product within 90 days ──
+        $duplicate_flag = false;
+        $dup_reason     = '';
+        $product_ids_for_dup = [];
+        foreach ($items as $item) {
+            if (($item['type'] ?? '') === 'product' && intval($item['id'] ?? 0) > 0) {
+                $product_ids_for_dup[] = intval($item['id']);
+            }
+        }
+        $product_ids_for_dup = array_values(array_unique($product_ids_for_dup));
+
+        if (!empty($product_ids_for_dup)) {
+            $dup_params = [$patient_id, $order_id];
+            $ph = [];
+            foreach ($product_ids_for_dup as $idx => $pid) {
+                $dup_params[] = $pid;
+                $ph[] = '$' . ($idx + 3);
+            }
+            $dup_order = $db->get_row(
+                "SELECT DISTINCT o2.id, o2.order_number
+                 FROM hearmed_core.orders o2
+                 JOIN hearmed_core.order_items oi2 ON oi2.order_id = o2.id
+                 WHERE o2.patient_id = \$1
+                   AND o2.id <> \$2
+                   AND o2.current_status <> 'Cancelled'
+                   AND o2.created_at > NOW() - INTERVAL '90 days'
+                   AND oi2.item_type = 'product'
+                   AND oi2.item_id IN (" . implode(',', $ph) . ")
+                 ORDER BY o2.created_at DESC
+                 LIMIT 1",
+                $dup_params
+            );
+            if ($dup_order) {
+                $duplicate_flag = true;
+                $dup_reason = 'Same product(s) ordered for this patient within 90 days (see ' . $dup_order->order_number . ')';
+                $db->update('hearmed_core.orders', [
+                    'is_flagged'  => true,
+                    'flag_reason' => $dup_reason,
+                ], ['id' => $order_id]);
+            }
+        }
+
         // Notify C-Level
         self::notify('c_level', 'order_awaiting_approval', $order_id, ['order_number' => $order_num]);
 
         wp_send_json_success([
-            'message'  => 'Order '.$order_num.' submitted for C-Level approval.',
-            'order_id' => $order_id,
-            'redirect' => HearMed_Utils::page_url('orders').'?hm_action=view&order_id='.$order_id,
+            'message'        => 'Order '.$order_num.' submitted for C-Level approval.',
+            'order_id'       => $order_id,
+            'order_number'   => $order_num,
+            'duplicate_flag' => $duplicate_flag,
+            'duplicate_flag_reason' => $dup_reason,
+            'redirect'       => HearMed_Utils::page_url('orders').'?hm_action=view&order_id='.$order_id,
         ]);
     }
 

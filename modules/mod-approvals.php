@@ -357,32 +357,66 @@ function hm_ajax_approvals_load() {
         } elseif ($margin_pct < 25) {
             $flags[] = ['level' => 'amber', 'msg' => 'Margin: ' . number_format($margin_pct, 1) . '%'];
         }
-        if (!empty($o->is_flagged)) {
-            $flag_reason = trim((string)($o->flag_reason ?? ''));
-            $duplicate = $db->get_row(
-                "SELECT id, order_number, order_date, grand_total
-                 FROM hearmed_core.orders
-                 WHERE patient_id = $1
-                   AND id <> $2
-                   AND current_status = 'Awaiting Approval'
-                 ORDER BY created_at DESC
-                 LIMIT 1",
-                [(int)$o->patient_id, (int)$o->id]
-            );
-
-            $flag_msg = 'Flagged: ' . ($flag_reason ?: 'possible duplicate');
-            $flag_details = [
-                'reason' => $flag_reason ?: 'Possible duplicate order detected.',
-            ];
-            if ($duplicate) {
-                $flag_details['duplicate_order'] = [
-                    'id' => (int)$duplicate->id,
-                    'order_number' => (string)($duplicate->order_number ?? ''),
-                    'order_date' => !empty($duplicate->order_date) ? date('d M Y', strtotime($duplicate->order_date)) : '',
-                    'grand_total' => (float)($duplicate->grand_total ?? 0),
-                ];
+        // ── Real-time duplicate detection ──────────────────────────
+        // Same patient + same product(s) on another order within 90 days
+        // (any status except Cancelled). This replaces the old is_flagged check.
+        $product_ids = array_filter(array_map(function($li) {
+            return !empty($li['ear_side']) ? intval($li['unit_cost'] ?? 0) : 0; // skip — need actual IDs
+        }, []));
+        // Get product IDs for THIS order's items
+        $this_product_ids = [];
+        foreach ($items as $it) {
+            if (!empty($it->item_type) && $it->item_type === 'product' && !empty($it->item_id)) {
+                $this_product_ids[] = (int)$it->item_id;
             }
-            $flags[] = ['level' => 'red', 'msg' => $flag_msg, 'details' => $flag_details];
+        }
+        $this_product_ids = array_values(array_unique($this_product_ids));
+
+        $duplicate = null;
+        if (!empty($this_product_ids)) {
+            // Build placeholders: $1 = patient_id, $2 = this order id, $3.. = product ids
+            $dup_params = [(int)$o->patient_id, (int)$o->id];
+            $ph = [];
+            foreach ($this_product_ids as $idx => $pid) {
+                $dup_params[] = $pid;
+                $ph[] = '$' . ($idx + 3);
+            }
+            $duplicate = $db->get_row(
+                "SELECT DISTINCT o2.id, o2.order_number, o2.order_date, o2.grand_total
+                 FROM hearmed_core.orders o2
+                 JOIN hearmed_core.order_items oi2 ON oi2.order_id = o2.id
+                 WHERE o2.patient_id = \$1
+                   AND o2.id <> \$2
+                   AND o2.current_status <> 'Cancelled'
+                   AND o2.created_at > NOW() - INTERVAL '90 days'
+                   AND oi2.item_type = 'product'
+                   AND oi2.item_id IN (" . implode(',', $ph) . ")
+                 ORDER BY o2.created_at DESC
+                 LIMIT 1",
+                $dup_params
+            );
+        }
+
+        if ($duplicate) {
+            $flags[] = [
+                'level' => 'red',
+                'msg' => 'Possible duplicate',
+                'details' => [
+                    'reason' => 'Same patient ordered the same product(s) within 90 days.',
+                    'duplicate_order' => [
+                        'id' => (int)$duplicate->id,
+                        'order_number' => (string)($duplicate->order_number ?? ''),
+                        'order_date' => !empty($duplicate->order_date) ? date('d M Y', strtotime($duplicate->order_date)) : '',
+                        'grand_total' => (float)($duplicate->grand_total ?? 0),
+                    ],
+                ],
+            ];
+        } elseif (!empty($o->is_flagged)) {
+            // Legacy flag from DB — show custom reason only if set
+            $flag_reason = trim((string)($o->flag_reason ?? ''));
+            if ($flag_reason) {
+                $flags[] = ['level' => 'amber', 'msg' => 'Flagged: ' . $flag_reason];
+            }
         }
 
         $result[] = [
