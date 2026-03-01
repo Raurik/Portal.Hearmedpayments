@@ -294,7 +294,9 @@ tfoot td { font-weight: 600; border-bottom: none; }
 .hm-print-signature { margin-top: 24px; border-top: 1px solid #1e293b; padding-top: 4px; width: 60%; }
 .hm-print-signature span { font-size: 9px; color: #64748b; }
 /* Footer */
-.hm-print-footer { margin-top: auto; padding-top: 8px; border-top: 1px solid #e2e8f0; text-align: center; font-family: '<?php echo esc_attr($s['footerFont'] ?? 'Source Sans 3'); ?>', sans-serif; font-size: <?php echo intval($s['footerSize'] ?? 9); ?>px; color: <?php echo esc_attr($s['footerColor'] ?? '#94a3b8'); ?>; }
+.hm-print-footer { padding-top: 8px; border-top: 1px solid #e2e8f0; text-align: center; font-family: '<?php echo esc_attr($s['footerFont'] ?? 'Source Sans 3'); ?>', sans-serif; font-size: <?php echo intval($s['footerSize'] ?? 9); ?>px; color: <?php echo esc_attr($s['footerColor'] ?? '#94a3b8'); ?>; }
+/* Content wrapper */
+.hm-print-content { flex: 1 1 auto; }
 /* Print button */
 .print-btn { position: fixed; top: 10px; right: 10px; padding: 10px 20px; background: var(--hm-accent); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; z-index: 100; }
 .print-btn:hover { opacity: 0.9; }
@@ -302,10 +304,19 @@ tfoot td { font-weight: 600; border-bottom: none; }
 </head>
 <body>
 <button class="print-btn no-print" onclick="window.print()">Print / Save PDF</button>
+<div class="hm-print-content">
 <?php
-        // Render sections in saved order
+        // Render sections in saved order (footer rendered separately outside content wrapper)
         foreach ($sections as $sec_id) {
+            if ($sec_id === 'footer') continue;
             echo self::render_section($type, $sec_id, $s, $data);
+        }
+?>
+</div>
+<?php
+        // Footer always at bottom of page
+        if (in_array('footer', $sections)) {
+            echo self::render_section($type, 'footer', $s, $data);
         }
 ?>
 </body>
