@@ -122,7 +122,7 @@ function hm_kpi_render() {
     #hm-kpi .kpi-period-label { font-size: 12px; font-weight: 600; color: var(--kpi-g700); padding: 0 6px; min-width: 100px; text-align: center; margin: 0; }
 
     /* ── Cards ── */
-    #hm-kpi .kpi-card { background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); overflow: visible; border: 1px solid var(--kpi-g200); }
+    #hm-kpi .kpi-card { background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); overflow: visible; border: 1px solid var(--kpi-g200); border-top: 3px solid var(--kpi-teal); }
     #hm-kpi .kpi-label { font-size: 10px; font-weight: 600; color: var(--kpi-g400); text-transform: uppercase; letter-spacing: 0.06em; margin: 0; }
     #hm-kpi .kpi-num { font-family: var(--kpi-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1.1; color: var(--kpi-g900); }
 

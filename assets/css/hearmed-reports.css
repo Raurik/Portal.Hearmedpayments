@@ -61,6 +61,7 @@
     background: #fff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
+    border-top: 3px solid var(--hm-teal, #0BB4C4);
     padding: 20px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
