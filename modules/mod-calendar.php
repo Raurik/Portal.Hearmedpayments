@@ -1649,8 +1649,11 @@ function hm_ajax_record_order_payment() {
             return;
         }
 
+        // ── Serial number / received-in-branch gate ─────────────────────
+        // Block payment on ANY non-complete/non-cancelled order that has
+        // hearing-aid products without serial numbers entered.
         $current_status_norm = strtolower( trim( (string) ( $order->current_status ?? '' ) ) );
-        if ( $current_status_norm === 'awaiting fitting' ) {
+        if ( ! in_array( $current_status_norm, [ 'complete', 'cancelled' ], true ) ) {
             $serial_items = $db->get_results(
                 "SELECT oi.id AS order_item_id,
                         oi.item_id AS product_id,
@@ -1700,10 +1703,12 @@ function hm_ajax_record_order_payment() {
                 }
             }
 
-            if ( empty( $order->received_date ) || ! empty( $missing ) ) {
+            // Block if hearing aids not received or serials missing
+            if ( ! empty( $missing ) || ( ! empty( $serial_items ) && empty( $order->received_date ) ) ) {
+                $status_label = ucwords( $current_status_norm );
                 wp_send_json_error( [
                     'code'          => 'serials_required',
-                    'message'       => 'This order is Awaiting Fitting. Add received date and serial numbers before closing payment.',
+                    'message'       => 'Hearing aids have not been received in branch and/or serial numbers are missing. Enter delivery date and serial numbers before payment. (Order status: ' . $status_label . ')',
                     'received_date' => date( 'Y-m-d' ),
                     'serial_items'  => $missing,
                 ] );
@@ -1961,18 +1966,32 @@ function hm_ajax_save_order_serials_from_payment() {
         }
 
         if ( $received_date ) {
+            // Advance order status to Awaiting Fitting regardless of current pre-complete status
             $db->query(
                 "UPDATE hearmed_core.orders
                     SET received_date = COALESCE(received_date, \$1),
                         received_by = COALESCE(received_by, \$2),
+                        arrived_at = COALESCE(arrived_at, \$1),
+                        serials_at = COALESCE(serials_at, \$1),
                         current_status = CASE
-                            WHEN current_status = 'Ordered' THEN 'Awaiting Fitting'
+                            WHEN current_status IN ('Approved','Ordered','Received') THEN 'Awaiting Fitting'
                             ELSE current_status
                         END,
                         updated_at = NOW()
                   WHERE id = \$3",
                 [ $received_date . ' ' . date( 'H:i:s' ), $staff_id ?: null, $order_id ]
             );
+
+            // Ensure fitting_queue entry exists
+            $fq = $db->get_row( "SELECT id FROM hearmed_core.fitting_queue WHERE order_id = \$1", [ $order_id ] );
+            if ( ! $fq ) {
+                $db->insert( 'hearmed_core.fitting_queue', [
+                    'patient_id'   => intval( $order->patient_id ),
+                    'order_id'     => $order_id,
+                    'queue_status' => 'Awaiting',
+                    'created_by'   => $staff_id ?: null,
+                ] );
+            }
         }
 
         wp_send_json_success( [ 'message' => 'Serials saved.' ] );
