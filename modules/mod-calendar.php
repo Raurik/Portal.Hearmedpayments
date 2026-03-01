@@ -1581,22 +1581,74 @@ function hm_ajax_get_patient_pipeline_orders() {
 
     try {
         $patient_id = intval( $_POST['patient_id'] ?? 0 );
+                $appointment_id = intval( $_POST['appointment_id'] ?? 0 );
         if ( ! $patient_id ) { wp_send_json_error( [ 'message' => 'No patient specified.' ] ); return; }
 
         $db = HearMed_DB::instance();
 
-        $rows = $db->get_results(
+                $base_select =
             "SELECT o.id, o.order_number, o.order_date, o.current_status, o.grand_total,
                     o.deposit_amount, o.prsi_amount, o.discount_total,
                     COALESCE(o.grand_total, 0) - COALESCE(o.deposit_amount, 0) AS balance_due,
                     (SELECT string_agg(oi.product_name, ', ' ORDER BY oi.id)
                      FROM hearmed_core.order_items oi WHERE oi.order_id = o.id) AS items_summary
-             FROM hearmed_core.orders o
-             WHERE o.patient_id = \$1
-                             AND COALESCE(o.current_status, '') NOT IN ('Complete', 'Cancelled')
-             ORDER BY o.order_date DESC",
-            [ $patient_id ]
-        );
+                         FROM hearmed_core.orders o";
+
+                if ( $appointment_id > 0 ) {
+                        $rows = $db->get_results(
+                                $base_select .
+                                " WHERE (o.patient_id = \$1
+                                                OR o.id = (SELECT order_id FROM hearmed_core.appointments WHERE id = \$2))
+                                        AND COALESCE(o.current_status, '') NOT IN ('Complete', 'Cancelled')
+                                    ORDER BY o.order_date DESC",
+                                [ $patient_id, $appointment_id ]
+                        );
+                } else {
+                        $rows = $db->get_results(
+                                $base_select .
+                                " WHERE o.patient_id = \$1
+                                        AND COALESCE(o.current_status, '') NOT IN ('Complete', 'Cancelled')
+                                    ORDER BY o.order_date DESC",
+                                [ $patient_id ]
+                        );
+                }
+
+                // Fallback: if patient IDs are duplicated/misaligned, try same patient identity from appointment context.
+                if ( empty( $rows ) && $appointment_id > 0 ) {
+                        $appt_patient = $db->get_row(
+                                "SELECT p.first_name, p.last_name, p.patient_number
+                                     FROM hearmed_core.appointments a
+                                     LEFT JOIN hearmed_core.patients p ON p.id = a.patient_id
+                                    WHERE a.id = \$1
+                                    LIMIT 1",
+                                [ $appointment_id ]
+                        );
+
+                        if ( $appt_patient && ! empty( $appt_patient->first_name ) && ! empty( $appt_patient->last_name ) ) {
+                                if ( ! empty( $appt_patient->patient_number ) ) {
+                                        $rows = $db->get_results(
+                                                $base_select .
+                                                " JOIN hearmed_core.patients p ON p.id = o.patient_id
+                                                    WHERE p.patient_number = \$1
+                                                        AND COALESCE(o.current_status, '') NOT IN ('Complete', 'Cancelled')
+                                                    ORDER BY o.order_date DESC",
+                                                [ $appt_patient->patient_number ]
+                                        );
+                                }
+
+                                if ( empty( $rows ) ) {
+                                        $rows = $db->get_results(
+                                                $base_select .
+                                                " JOIN hearmed_core.patients p ON p.id = o.patient_id
+                                                    WHERE LOWER(TRIM(COALESCE(p.first_name, ''))) = LOWER(TRIM(\$1))
+                                                        AND LOWER(TRIM(COALESCE(p.last_name,  ''))) = LOWER(TRIM(\$2))
+                                                        AND COALESCE(o.current_status, '') NOT IN ('Complete', 'Cancelled')
+                                                    ORDER BY o.order_date DESC",
+                                                [ $appt_patient->first_name, $appt_patient->last_name ]
+                                        );
+                                }
+                        }
+                }
 
         $list = [];
         foreach ( ( $rows ?: [] ) as $r ) {
