@@ -1733,6 +1733,7 @@ function hm_ajax_get_patient_pipeline_orders() {
             'input_appointment_id'  => $appointment_id,
             'appointment_order_id'  => 0,
             'candidate_patient_ids' => [],
+            'linked_order_ids'      => [],
             'matched_order_ids'     => [],
             'matched_count'         => 0,
         ];
@@ -1799,23 +1800,57 @@ function hm_ajax_get_patient_pipeline_orders() {
 
         $patient_ids_sql = implode( ',', $candidate_patient_ids );
 
-        if ( $appointment_id > 0 ) {
-            $rows = $db->get_results(
-                $base_select .
-                " WHERE (o.patient_id IN ({$patient_ids_sql})
-                        OR o.id = (SELECT order_id FROM hearmed_core.appointments WHERE id = \$1))
-                    AND COALESCE(o.current_status, '') <> 'Cancelled'
-                  ORDER BY o.order_date DESC",
-                [ $appointment_id ]
-            );
-        } else {
-            $rows = $db->get_results(
-                $base_select .
-                " WHERE o.patient_id IN ({$patient_ids_sql})
-                    AND COALESCE(o.current_status, '') <> 'Cancelled'
-                  ORDER BY o.order_date DESC"
-            );
+        $linked_order_ids = [];
+
+        $appt_linked_rows = $db->get_results(
+            "SELECT DISTINCT order_id
+               FROM hearmed_core.appointments
+              WHERE patient_id IN ({$patient_ids_sql})
+                AND order_id IS NOT NULL"
+        );
+        foreach ( $appt_linked_rows ?: [] as $row ) {
+            $linked_order_ids[] = intval( $row->order_id ?? 0 );
         }
+
+        $invoice_linked_rows = $db->get_results(
+            "SELECT DISTINCT order_id
+               FROM hearmed_core.invoices
+              WHERE patient_id IN ({$patient_ids_sql})
+                AND order_id IS NOT NULL"
+        );
+        foreach ( $invoice_linked_rows ?: [] as $row ) {
+            $linked_order_ids[] = intval( $row->order_id ?? 0 );
+        }
+
+        $timeline_linked_rows = $db->get_results(
+            "SELECT DISTINCT order_id
+               FROM hearmed_core.patient_timeline
+              WHERE patient_id IN ({$patient_ids_sql})
+                AND order_id IS NOT NULL"
+        );
+        foreach ( $timeline_linked_rows ?: [] as $row ) {
+            $linked_order_ids[] = intval( $row->order_id ?? 0 );
+        }
+
+        if ( $debug['appointment_order_id'] > 0 ) {
+            $linked_order_ids[] = intval( $debug['appointment_order_id'] );
+        }
+
+        $linked_order_ids = array_values( array_unique( array_filter( array_map( 'intval', $linked_order_ids ) ) ) );
+        $debug['linked_order_ids'] = $linked_order_ids;
+
+        $where_parts = [ "o.patient_id IN ({$patient_ids_sql})" ];
+        if ( ! empty( $linked_order_ids ) ) {
+            $where_parts[] = 'o.id IN (' . implode( ',', $linked_order_ids ) . ')';
+        }
+        $where_sql = implode( ' OR ', $where_parts );
+
+        $rows = $db->get_results(
+            $base_select .
+            " WHERE ({$where_sql})
+                AND LOWER(TRIM(COALESCE(o.current_status, ''))) <> 'cancelled'
+              ORDER BY o.order_date DESC"
+        );
 
         $list = [];
         foreach ( ( $rows ?: [] ) as $r ) {

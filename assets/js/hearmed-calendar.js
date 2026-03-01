@@ -2119,6 +2119,7 @@ var Cal={
                     h+='<div>appointment_id: '+esc(String(debug.input_appointment_id||''))+'</div>';
                     h+='<div>appointment.order_id: '+esc(String(debug.appointment_order_id||''))+'</div>';
                     h+='<div>candidate_patient_ids: '+esc((debug.candidate_patient_ids||[]).join(', ')||'—')+'</div>';
+                    h+='<div>linked_order_ids: '+esc((debug.linked_order_ids||[]).join(', ')||'—')+'</div>';
                     h+='<div>matched_order_ids: '+esc((debug.matched_order_ids||[]).join(', ')||'—')+'</div>';
                     h+='</div>';
                 }
