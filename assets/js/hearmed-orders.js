@@ -387,7 +387,10 @@
                     }, 2000);
                 } else {
                     HM.closeOrderModal();
-                    HM.toast('Order ' + r.data.order_number + ' submitted for approval.', 'success');
+                    var msg = r.data.is_quickpay
+                        ? 'Service invoice ' + r.data.order_number + ' created.'
+                        : 'Order ' + r.data.order_number + ' submitted for approval.';
+                    HM.toast(msg, 'success');
                     $(document).trigger('hm:orderCreated', [r.data]);
                 }
             } else {

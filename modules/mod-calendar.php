@@ -2239,6 +2239,16 @@ function hm_ajax_create_outcome_order() {
 
         $grand_total = max( 0, $subtotal + $vat_total - $discount_total - $prsi_amount );
 
+        // ── Quickpay detection: service-only orders bypass approval ──
+        $is_quickpay = ! empty( $items );
+        foreach ( $items as $item ) {
+            if ( ( $item['type'] ?? '' ) !== 'service' ) {
+                $is_quickpay = false;
+                break;
+            }
+        }
+        $initial_status = $is_quickpay ? 'Complete' : 'Awaiting Approval';
+
         $order_num = HearMed_Utils::generate_order_number();
 
         // Resolve staff table ID from WP user
@@ -2254,7 +2264,7 @@ function hm_ajax_create_outcome_order() {
             'staff_id'        => $staff_id,
             'clinic_id'       => $clinic_id,
             'order_date'      => date( 'Y-m-d' ),
-            'current_status'  => 'Awaiting Approval',
+            'current_status'  => $initial_status,
             'subtotal'        => $subtotal,
             'discount_total'  => $discount_total,
             'vat_total'       => $vat_total,
@@ -2267,6 +2277,7 @@ function hm_ajax_create_outcome_order() {
             'notes'           => $notes,
             'created_at'      => current_time( 'mysql' ),
             'created_by'      => $staff_id ?: null,
+            'fitted_date'     => $is_quickpay ? date( 'Y-m-d H:i:s' ) : null,
         ] );
 
         if ( ! $order_id ) {
@@ -2309,16 +2320,30 @@ function hm_ajax_create_outcome_order() {
             $db->insert( 'hearmed_core.order_status_history', [
                 'order_id'   => $order_id,
                 'from_status'=> null,
-                'to_status'  => 'Awaiting Approval',
+                'to_status'  => $initial_status,
                 'changed_by' => $staff_id,
-                'notes'      => 'Order created from appointment outcome',
+                'notes'      => $is_quickpay
+                    ? 'Service quickpay — approval not required'
+                    : 'Order created from appointment outcome',
             ]);
         } catch ( Throwable $ignored ) {}
+
+        // ── Quickpay: auto-create invoice for service-only orders ──
+        $invoice_id = null;
+        if ( $is_quickpay && class_exists( 'HearMed_Invoice' ) ) {
+            try {
+                $invoice_id = HearMed_Invoice::ensure_invoice_for_order( $order_id, $staff_id ?: null );
+            } catch ( Throwable $e ) {
+                error_log( '[HearMed] Quickpay auto-invoice failed: ' . $e->getMessage() );
+            }
+        }
 
         wp_send_json_success( [
             'order_id'     => $order_id,
             'order_number' => $order_num,
             'grand_total'  => $grand_total,
+            'is_quickpay'  => $is_quickpay,
+            'invoice_id'   => $invoice_id,
         ] );
     } catch ( Throwable $e ) {
         error_log( '[HearMed] create_outcome_order error: ' . $e->getMessage() );

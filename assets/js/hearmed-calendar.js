@@ -1667,6 +1667,20 @@ var Cal={
             var selectedProduct=null;
             var discountMode='pct';
 
+            // ── Quickpay state: hide Submit Order for service-only orders ──
+            function updateQuickpayState(){
+                var allServices=orderItems.length>0&&orderItems.every(function(it){return it.type==='service';});
+                if(allServices){
+                    $('.hm-oo-save').hide();
+                    $('#hm-oo-pay').text('Create Invoice & Pay').css({'flex':'1','font-size':'14px'});
+                    $('#hm-oo-prsi-wrap').hide();
+                } else {
+                    $('.hm-oo-save').show();
+                    $('#hm-oo-pay').text('Take Payment').css({'flex':'','font-size':'13px'});
+                    $('#hm-oo-prsi-wrap').show();
+                }
+            }
+
             // ── Cascading Logic ──
 
             // Category change
@@ -1841,6 +1855,7 @@ var Cal={
 
                 renderItems();
                 updateTotals();
+                updateQuickpayState();
 
                 // Reset selectors for next item
                 selectedProduct=null;
@@ -1901,7 +1916,7 @@ var Cal={
             // Remove item
             $(document).off('click.oorem').on('click.oorem','.hm-oo-rem',function(){
                 orderItems.splice(parseInt($(this).data('idx')),1);
-                renderItems();updateTotals();
+                renderItems();updateTotals();updateQuickpayState();
             });
 
             // PRSI / Discount change → update totals
@@ -1954,6 +1969,7 @@ var Cal={
                         $('.hm-modal-bg--top').remove();
                         $(document).off('.oocat .oomfr .oostyle .ooprod .ooadditem .oorem .ooclose .oosave .oopay .oobg .ooprsi .oodisc .ooslider .oodiscmode');
                         self.toast('Order '+r.data.order_number+' submitted for approval');
+                        self.refresh();
                     } else {
                         $btn.prop('disabled',false).text('Submit Order');
                         $('#hm-oo-err').text(r.data&&r.data.message?r.data.message:'Failed to create order');
@@ -1967,7 +1983,9 @@ var Cal={
             // ── Take Payment → creates order then shows payment modal ──
             $(document).off('click.oopay').on('click.oopay','#hm-oo-pay',function(){
                 if(!orderItems.length){$('#hm-oo-err').text('Please add at least one item.');return;}
-                var $btn=$(this);$btn.prop('disabled',true).text('Processing...');
+                var $btn=$(this);
+                var isQuickpay=orderItems.every(function(it){return it.type==='service';});
+                $btn.prop('disabled',true).text(isQuickpay?'Creating Invoice...':'Processing...');
                 var discVal=parseFloat($('#hm-oo-disc').val())||0;
                 post('create_outcome_order',{
                     patient_id:$('#hm-oo-pid').val(),

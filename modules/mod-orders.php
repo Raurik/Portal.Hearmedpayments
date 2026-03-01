@@ -1222,6 +1222,16 @@ class HearMed_Orders {
         $prsi_amount     = ($prsi_left ? 500 : 0) + ($prsi_right ? 500 : 0);
         $grand_total     = max(0, $subtotal + $vat_total - $prsi_amount);
 
+        // ── Quickpay detection: service-only orders bypass approval ──
+        $is_quickpay = ! empty($items);
+        foreach ($items as $item) {
+            if (($item['type'] ?? '') !== 'service') {
+                $is_quickpay = false;
+                break;
+            }
+        }
+        $initial_status = $is_quickpay ? 'Complete' : 'Awaiting Approval';
+
         $order_num = HearMed_Utils::generate_order_number();
 
         $order_id = $db->insert('hearmed_core.orders', [
@@ -1230,7 +1240,7 @@ class HearMed_Orders {
             'staff_id'        => $user->id ?? null,
             'clinic_id'       => $clinic,
             'order_date'      => date('Y-m-d'),
-            'current_status'  => 'Awaiting Approval',
+            'current_status'  => $initial_status,
             'subtotal'        => $subtotal,
             'discount_total'  => $discount_total,
             'vat_total'       => $vat_total,
@@ -1245,6 +1255,7 @@ class HearMed_Orders {
             'deposit_paid_at' => $deposit_amount > 0 && $deposit_paid_at ? $deposit_paid_at : null,
             'notes'           => $notes,
             'created_by'      => $user->id ?? null,
+            'fitted_date'     => $is_quickpay ? date('Y-m-d H:i:s') : null,
         ]);;
 
         if (!$order_id) wp_send_json_error('Failed to save order. Please try again.');
@@ -1328,7 +1339,18 @@ class HearMed_Orders {
         }
 
         // Status history log
-        self::log_status_change($order_id, null, 'Awaiting Approval', $user->id ?? null, 'Order created');
+        self::log_status_change($order_id, null, $initial_status, $user->id ?? null,
+            $is_quickpay ? 'Service quickpay — approval not required' : 'Order created');
+
+        // ── Quickpay: auto-create invoice for service-only orders ──
+        $invoice_id = null;
+        if ( $is_quickpay && class_exists( 'HearMed_Invoice' ) ) {
+            try {
+                $invoice_id = HearMed_Invoice::ensure_invoice_for_order( $order_id, $user->id ?? null );
+            } catch ( Throwable $e ) {
+                error_log( '[HearMed] Quickpay auto-invoice failed: ' . $e->getMessage() );
+            }
+        }
 
         // ── Duplicate detection: same patient + same product within 90 days ──
         $duplicate_flag = false;
@@ -1372,13 +1394,19 @@ class HearMed_Orders {
             }
         }
 
-        // Notify C-Level
-        self::notify('c_level', 'order_awaiting_approval', $order_id, ['order_number' => $order_num]);
+        // Notify C-Level (only for orders needing approval)
+        if ( ! $is_quickpay ) {
+            self::notify('c_level', 'order_awaiting_approval', $order_id, ['order_number' => $order_num]);
+        }
 
         wp_send_json_success([
-            'message'        => 'Order '.$order_num.' submitted for C-Level approval.',
+            'message'        => $is_quickpay
+                ? 'Service invoice '.$order_num.' created.'
+                : 'Order '.$order_num.' submitted for C-Level approval.',
             'order_id'       => $order_id,
             'order_number'   => $order_num,
+            'is_quickpay'    => $is_quickpay,
+            'invoice_id'     => $invoice_id,
             'duplicate_flag' => $duplicate_flag,
             'duplicate_flag_reason' => $dup_reason,
             'redirect'       => HearMed_Utils::page_url('orders').'?hm_action=view&order_id='.$order_id,
