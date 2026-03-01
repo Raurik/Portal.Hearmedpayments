@@ -266,36 +266,32 @@ function hm_ajax_get_dispensers() {
     try {
     $clinic_id = intval( $_POST['clinic'] ?? 0 );
     $date = sanitize_text_field( $_POST['date'] ?? '' );
-    $scheduled_ids = [];
-    if ( $clinic_id && $date ) {
+
+    // Build a map of staff_id => [scheduled day-of-week numbers] for selected clinic
+    $staff_sched_days = [];
+    if ( $clinic_id ) {
         $schedule_table = 'hearmed_reference.dispenser_schedules';
         $has_schedule_table = HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $schedule_table ) ) !== null;
-        if ( ! $has_schedule_table ) {
-            $date = '';
-        }
-    }
-    if ( $clinic_id && $date ) {
-        $ts = strtotime( $date );
-        if ( $ts ) {
-            $day = (int) date( 'w', $ts );
-            $week = (int) date( 'W', $ts );
-            $week_index = ( $week % 2 ) ? 1 : 2;
-            $scheduled = HearMed_DB::get_results(
-                "SELECT staff_id
+        if ( $has_schedule_table ) {
+            $sched_rows = HearMed_DB::get_results(
+                "SELECT staff_id, day_of_week
                  FROM hearmed_reference.dispenser_schedules
                  WHERE clinic_id = $1
-                   AND day_of_week = $2
-                   AND is_active = true
-                   AND (rotation_weeks = 1 OR (rotation_weeks = 2 AND week_number = $3))",
-                [ $clinic_id, $day, $week_index ]
+                   AND is_active = true",
+                [ $clinic_id ]
             );
-            if ( $scheduled ) {
-                foreach ( $scheduled as $row ) {
-                    $scheduled_ids[] = (int) $row->staff_id;
+            if ( $sched_rows ) {
+                foreach ( $sched_rows as $sr ) {
+                    $sid = (int) $sr->staff_id;
+                    if ( ! isset( $staff_sched_days[ $sid ] ) ) {
+                        $staff_sched_days[ $sid ] = [];
+                    }
+                    $staff_sched_days[ $sid ][] = (int) $sr->day_of_week;
                 }
             }
         }
     }
+
     $sql = "SELECT s.id, s.first_name, s.last_name,
                    (s.first_name || ' ' || s.last_name) AS full_name,
                    s.role, s.is_active, s.staff_color,
@@ -306,9 +302,6 @@ function hm_ajax_get_dispensers() {
               AND LOWER(s.role) IN ('dispenser','audiologist','c_level','hm_clevel')";
     if ( $clinic_id ) {
         $sql .= " AND (sc.clinic_id = $clinic_id OR sc.clinic_id IS NULL)";
-    }
-    if ( ! empty( $scheduled_ids ) ) {
-        $sql .= " AND s.id IN (" . implode( ',', array_map( 'intval', $scheduled_ids ) ) . ")";
     }
     $sql .= " GROUP BY s.id, s.first_name, s.last_name, s.role, s.is_active, s.staff_color ORDER BY s.first_name, s.last_name";
     $ps = HearMed_DB::get_results( $sql );
@@ -327,12 +320,14 @@ function hm_ajax_get_dispensers() {
                 }
             }
         }
+        $sid = (int) $p->id;
         $d[] = [
-            'id'             => (int) $p->id,
+            'id'             => $sid,
             'name'           => $fname,
             'initials'       => $initials,
             'clinic_id'      => $clinic_id ?: ( ! empty( $cids ) ? $cids[0] : null ),
             'clinic_ids'     => $cids,
+            'scheduled_days' => isset( $staff_sched_days[ $sid ] ) ? array_values( array_unique( $staff_sched_days[ $sid ] ) ) : [],
             'calendar_order' => 99,
             'role_type'      => $p->role,
             'color'          => $p->staff_color ?: '#0BB4C4',

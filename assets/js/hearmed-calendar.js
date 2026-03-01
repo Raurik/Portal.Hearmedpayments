@@ -653,6 +653,18 @@ var Cal={
         // hex to rgba helper
         function hexToRgba(hex,a){hex=hex.replace('#','');if(hex.length===3)hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];var r=parseInt(hex.substring(0,2),16),g=parseInt(hex.substring(2,4),16),b=parseInt(hex.substring(4,6),16);return 'rgba('+r+','+g+','+b+','+a+')';}
 
+        // Build a set of which dispenser+day combos are NOT scheduled
+        // p.scheduled_days = [0,1,2,...6] (JS day-of-week). Empty = scheduled everywhere (no filter).
+        var dispOffDay={}; // key: dispId+'-'+jsDay  => true means OFF
+        if(Cal.selClinics.length===1){
+            disps.forEach(function(p){
+                var sd=p.scheduled_days;
+                if(sd&&sd.length){
+                    for(var wd=0;wd<7;wd++){if(sd.indexOf(wd)===-1)dispOffDay[p.id+'-'+wd]=true;}
+                }
+            });
+        }
+
         var h='<div class="hm-grid" style="grid-template-columns:44px repeat('+tc+',minmax('+colW+'px,1fr));--hm-cal-bg:'+(cfg.calBg||'#ffffff')+';--hm-cal-grid:'+(cfg.gridLineColor||'#e2e8f0')+';--hm-cal-today:'+(cfg.todayHighlight||'#e6f7f9')+'">';
         h+='<div class="hm-time-corner"></div>';
         dates.forEach(function(d){
@@ -663,9 +675,11 @@ var Cal={
             disps.forEach(function(p){
                 var lbl=esc(p.initials);
                 var onHol=Cal.isDispOnHoliday(p.id,d);
-                var dotCls=onHol?'hm-dot hm-dot--red':'hm-dot hm-dot--green';
-                var provBg=dispClinicColor[p.id]?';background:'+hexToRgba(dispClinicColor[p.id],0.15):'';
-                h+='<div class="hm-prov-cell" style="border-radius:4px'+provBg+'"><div class="hm-prov-ini"><span class="'+dotCls+' hm-dot--sm"'+(onHol?' title="On holiday / unavailable"':' title="Available"')+'></span>'+lbl+'</div></div>';
+                var isOff=!!dispOffDay[p.id+'-'+d.getDay()];
+                var dotCls=onHol?'hm-dot hm-dot--red':isOff?'hm-dot hm-dot--grey':'hm-dot hm-dot--green';
+                var provBg=isOff?';background:#f1f1f1;opacity:0.5':(dispClinicColor[p.id]?';background:'+hexToRgba(dispClinicColor[p.id],0.15):'');
+                var ttl=onHol?'On holiday / unavailable':isOff?'Not scheduled this day':'Available';
+                h+='<div class="hm-prov-cell" style="border-radius:4px'+provBg+'"><div class="hm-prov-ini"><span class="'+dotCls+' hm-dot--sm" title="'+ttl+'"></span>'+lbl+'</div></div>';
             });
             h+='</div></div>';
         });
@@ -678,7 +692,8 @@ var Cal={
             dates.forEach(function(d,di){
                 disps.forEach(function(p,pi){
                     var cls='hm-slot'+(isHr?' hr':'')+(pi===disps.length-1?' dl':'');
-                    var slotBg=dispClinicColor[p.id]?';background:'+hexToRgba(dispClinicColor[p.id],0.06):'';
+                    var isOff=!!dispOffDay[p.id+'-'+d.getDay()];
+                    var slotBg=isOff?';background:#f5f5f5;pointer-events:none':(dispClinicColor[p.id]?';background:'+hexToRgba(dispClinicColor[p.id],0.06):'');
                     h+='<div class="'+cls+'" data-date="'+fmt(d)+'" data-time="'+pad(hr)+':'+pad(mn)+'" data-disp="'+p.id+'" data-day="'+di+'" data-slot="'+s+'" style="height:'+slotH+'px'+slotBg+'"></div>';
                 });
             });
