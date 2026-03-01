@@ -654,6 +654,17 @@ function hm_ajax_update_patient() {
     $db       = HearMed_DB::instance();
     $staff_id = hm_patient_staff_id();
 
+    // Ensure GP/NOK columns exist (added after initial schema)
+    static $gp_cols_checked = false;
+    if ( ! $gp_cols_checked ) {
+        $db->get_results( "ALTER TABLE hearmed_core.patients
+            ADD COLUMN IF NOT EXISTS gp_name VARCHAR(200),
+            ADD COLUMN IF NOT EXISTS gp_address TEXT,
+            ADD COLUMN IF NOT EXISTS nok_name VARCHAR(200),
+            ADD COLUMN IF NOT EXISTS nok_phone VARCHAR(30)" );
+        $gp_cols_checked = true;
+    }
+
     $data = [
         'patient_title'       => sanitize_text_field( $_POST['patient_title'] ?? '' ),
         'first_name'          => sanitize_text_field( $_POST['first_name'] ?? '' ),
