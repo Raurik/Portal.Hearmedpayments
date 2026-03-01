@@ -17,6 +17,7 @@ class HearMed_Admin_Products {
         'service'    => 'Services',
         'bundled'    => 'Bundled Items',
         'accessory'  => 'Accessories',
+        'charger'    => 'Chargers',
         'consumable' => 'Consumables',
     ];
 
@@ -41,6 +42,7 @@ class HearMed_Admin_Products {
             'Services'           => HearMed_Settings::get('hm_vat_services', '13.5'),
             'Bundled Items'      => HearMed_Settings::get('hm_vat_bundled', '0'),
             'Accessories'        => HearMed_Settings::get('hm_vat_accessories', '0'),
+            'Chargers'           => HearMed_Settings::get('hm_vat_accessories', '0'),
             'Consumables'        => HearMed_Settings::get('hm_vat_consumables', '23'),
             'Other Audiological' => HearMed_Settings::get('hm_vat_other_aud', '13.5'),
         ];
@@ -59,6 +61,7 @@ class HearMed_Admin_Products {
             'service'    => ['Services',      'hm_vat_services',    '13.5'],
             'bundled'    => ['Bundled Items',  'hm_vat_bundled',     '0'],
             'accessory'  => ['Accessories',    'hm_vat_accessories', '0'],
+            'charger'    => ['Chargers',       'hm_vat_accessories', '0'],
             'consumable' => ['Consumables',    'hm_vat_consumables', '23'],
         ];
         $info = $map[$item_type] ?? $map['product'];
@@ -82,6 +85,7 @@ class HearMed_Admin_Products {
         'service'    => 'Service',
         'bundled'    => 'Bundled Item',
         'accessory'  => 'Accessory',
+        'charger'    => 'Charger',
         'consumable' => 'Consumable',
     ];
 
@@ -267,7 +271,7 @@ class HearMed_Admin_Products {
                         <?php elseif ($active_tab === 'bundled'): ?>
                             <th>Name</th><th>Manufacturer</th><th>Code</th><th>Category</th>
                             <th>VAT</th><th class="hm-num">Cost</th><th class="hm-num">Retail</th>
-                        <?php elseif ($active_tab === 'accessory' || $active_tab === 'consumable'): ?>
+                        <?php elseif ($active_tab === 'accessory' || $active_tab === 'charger' || $active_tab === 'consumable'): ?>
                             <th>Name</th><th>Manufacturer</th><th>Code</th>
                             <th>VAT</th><th class="hm-num">Cost</th><th class="hm-num">Retail</th>
                         <?php endif; ?>
@@ -366,7 +370,7 @@ class HearMed_Admin_Products {
                             <td><?php echo esc_html($p->vat_category ?: '—'); ?></td>
                             <td class="hm-num"><?php echo $p->cost_price !== null ? '€' . number_format((float) $p->cost_price, 2) : '—'; ?></td>
                             <td class="hm-num"><?php echo $p->retail_price !== null ? '€' . number_format((float) $p->retail_price, 2) : '—'; ?></td>
-                        <?php elseif ($active_tab === 'accessory' || $active_tab === 'consumable'): ?>
+                        <?php elseif ($active_tab === 'accessory' || $active_tab === 'charger' || $active_tab === 'consumable'): ?>
                             <td><strong><?php echo esc_html($p->product_name); ?></strong></td>
                             <td><?php echo esc_html($p->manufacturer_name ?: '—'); ?></td>
                             <td><code style="font-size:11px;"><?php echo esc_html($p->product_code ?: '—'); ?></code></td>
@@ -854,7 +858,7 @@ class HearMed_Admin_Products {
             open: function(data) {
                 var isEdit = !!(data && data.id);
                 var type = this.activeTab;
-                var titles = {product:'Hearing Aid', service:'Service', bundled:'Bundled Item', accessory:'Accessory', consumable:'Consumable'};
+                var titles = {product:'Hearing Aid', service:'Service', bundled:'Bundled Item', accessory:'Accessory', charger:'Charger', consumable:'Consumable'};
                 document.getElementById('hm-prod-modal-title').textContent = (isEdit ? 'Edit ' : 'Add ') + (titles[type] || 'Item');
                 document.getElementById('hmp-id').value = isEdit ? data.id : '';
                 document.getElementById('hmp-item-type').value = type;
@@ -864,7 +868,7 @@ class HearMed_Admin_Products {
                 if (type === 'product') document.getElementById('hmp-product-fields').style.display = 'block';
                 else if (type === 'service') document.getElementById('hmp-service-fields').style.display = 'block';
                 else if (type === 'bundled') document.getElementById('hmp-bundled-fields').style.display = 'block';
-                else if (type === 'accessory' || type === 'consumable') document.getElementById('hmp-acc-fields').style.display = 'block';
+                else if (type === 'accessory' || type === 'charger' || type === 'consumable') document.getElementById('hmp-acc-fields').style.display = 'block';
 
                 if (type === 'product') {
                     document.getElementById('hmp-manufacturer').value = isEdit && data.manufacturer_id ? data.manufacturer_id : '';
@@ -897,13 +901,13 @@ class HearMed_Admin_Products {
                     document.getElementById('hmp-retail-bnd').value   = isEdit && data.retail_price != null ? data.retail_price : '';
                     document.getElementById('hmp-vat-bnd').value      = isEdit && data.vat_category ? data.vat_category : '<?php echo esc_js(self::get_vat_default('bundled')); ?>';
                     hmProd.toggleSubFields();
-                } else if (type === 'accessory' || type === 'consumable') {
+                } else if (type === 'accessory' || type === 'charger' || type === 'consumable') {
                     document.getElementById('hmp-acc-name').value     = isEdit ? (data.product_name || '') : '';
                     document.getElementById('hmp-code-acc').value     = isEdit ? (data.product_code || '') : '';
                     document.getElementById('hmp-acc-mfr').value      = isEdit && data.manufacturer_id ? data.manufacturer_id : '';
                     document.getElementById('hmp-acc-cost').value     = isEdit && data.cost_price != null ? data.cost_price : '';
                     document.getElementById('hmp-acc-retail').value   = isEdit && data.retail_price != null ? data.retail_price : '';
-                    var vatDefault = (type === 'consumable') ? '<?php echo esc_js(self::get_vat_default('consumable')); ?>' : '<?php echo esc_js(self::get_vat_default('accessory')); ?>';
+                    var vatDefault = (type === 'consumable') ? '<?php echo esc_js(self::get_vat_default('consumable')); ?>' : ((type === 'charger') ? '<?php echo esc_js(self::get_vat_default('charger')); ?>' : '<?php echo esc_js(self::get_vat_default('accessory')); ?>');
                     document.getElementById('hmp-vat-acc').value      = isEdit && data.vat_category ? data.vat_category : vatDefault;
                 }
 
@@ -961,7 +965,7 @@ class HearMed_Admin_Products {
                     payload.retail_price     = document.getElementById('hmp-retail-bnd').value;
                     payload.vat_category     = document.getElementById('hmp-vat-bnd').value;
                     payload.display_name     = document.getElementById('hmp-name-bnd').value;
-                } else if (type === 'accessory' || type === 'consumable') {
+                } else if (type === 'accessory' || type === 'charger' || type === 'consumable') {
                     var accName = document.getElementById('hmp-acc-name').value.trim();
                     if (!accName) { alert('Item name is required.'); return; }
                     payload.product_name    = accName;
@@ -1022,6 +1026,9 @@ class HearMed_Admin_Products {
                 } else if (type === 'accessory') {
                     headers = 'item_name,manufacturer,cost_price,retail_price';
                     filename = 'accessories_template.csv';
+                } else if (type === 'charger') {
+                    headers = 'item_name,manufacturer,cost_price,retail_price';
+                    filename = 'chargers_template.csv';
                 } else {
                     headers = 'item_name,manufacturer,cost_price,retail_price';
                     filename = 'consumables_template.csv';
@@ -1093,7 +1100,7 @@ class HearMed_Admin_Products {
             $data['cost_price']       = $_POST['cost_price'] !== '' ? floatval($_POST['cost_price']) : null;
             $data['retail_price']     = $_POST['retail_price'] !== '' ? floatval($_POST['retail_price']) : null;
             $data['display_name']     = sanitize_text_field($_POST['display_name'] ?? '');
-        } elseif ($type === 'accessory' || $type === 'consumable') {
+        } elseif ($type === 'accessory' || $type === 'charger' || $type === 'consumable') {
             $data['manufacturer_id'] = !empty($_POST['manufacturer_id']) ? intval($_POST['manufacturer_id']) : null;
             $data['cost_price']      = $_POST['cost_price'] !== '' ? floatval($_POST['cost_price']) : null;
             $data['retail_price']    = $_POST['retail_price'] !== '' ? floatval($_POST['retail_price']) : null;
@@ -1202,7 +1209,7 @@ class HearMed_Admin_Products {
                 $data['cost_price']       = ($r['cost_price'] ?? '') !== '' ? floatval($r['cost_price']) : null;
                 $data['retail_price']     = ($r['retail_price'] ?? '') !== '' ? floatval($r['retail_price']) : null;
                 $data['product_code']     = self::generate_code('bundled', ['name' => $data['product_name']]);
-            } elseif ($type === 'accessory' || $type === 'consumable') {
+            } elseif ($type === 'accessory' || $type === 'charger' || $type === 'consumable') {
                 $mfr_name = trim($r['manufacturer'] ?? '');
                 $mfr_id   = $mfr_map[strtolower($mfr_name)] ?? null;
                 $data['manufacturer_id'] = $mfr_id;

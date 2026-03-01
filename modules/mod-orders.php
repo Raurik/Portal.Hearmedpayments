@@ -228,10 +228,12 @@ class HearMed_Orders {
 
         $products = $db->get_results(
             "SELECT p.id,
+                p.manufacturer_id,
                 m.name AS manufacturer_name,
                 p.product_name,
                 p.style,
                 p.tech_level,
+                COALESCE(p.cost_price, 0) AS cost_price,
                 COALESCE(p.retail_price, hr.price_total::numeric, 0) AS retail_price
              FROM hearmed_reference.products p
              LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
@@ -297,10 +299,12 @@ class HearMed_Orders {
                                 <?php foreach ($products as $p) : ?>
                                 <option value="<?php echo esc_attr($p->id); ?>"
                                         data-name="<?php echo esc_attr($p->manufacturer_name.' '.$p->product_name.' '.$p->style); ?>"
+                                        data-manufacturer-id="<?php echo esc_attr($p->manufacturer_id ?? ''); ?>"
                                         data-manufacturer="<?php echo esc_attr($p->manufacturer_name); ?>"
                                         data-product-name="<?php echo esc_attr($p->product_name); ?>"
                                         data-style="<?php echo esc_attr($p->style); ?>"
                                         data-tech="<?php echo esc_attr($p->tech_level); ?>"
+                                        data-cost="<?php echo esc_attr($p->cost_price ?? 0); ?>"
                                         data-price="<?php echo esc_attr($p->retail_price ?? 0); ?>"
                                         data-vat="23">
                                     <?php echo esc_html($p->manufacturer_name.' — '.$p->product_name.' '.$p->style.' ('.$p->tech_level.')'); ?>
@@ -1077,6 +1081,7 @@ class HearMed_Orders {
         check_ajax_referer('hearmed_nonce','nonce');
         if (!HearMed_Auth::can('create_orders')) wp_send_json_error('Access denied.');
 
+        $patient_id      = intval($_POST['patient_id'] ?? 0);
         $payment_method  = sanitize_text_field($_POST['payment_method'] ?? '');
         $notes           = sanitize_textarea_field($_POST['notes'] ?? '');
         $prsi_left       = !empty($_POST['prsi_left']);
@@ -1132,19 +1137,77 @@ class HearMed_Orders {
 
         if (!$order_id) wp_send_json_error('Failed to save order. Please try again.');
 
+        // Product costing map, including manufacturer-specific charger costs.
+        $product_cost_map = [];
+        $product_ids = [];
+        foreach ($items as $item) {
+            if (($item['type'] ?? '') === 'product') {
+                $pid = intval($item['id'] ?? 0);
+                if ($pid > 0) $product_ids[] = $pid;
+            }
+        }
+        $product_ids = array_values(array_unique($product_ids));
+        if (!empty($product_ids)) {
+            $params = [];
+            $ph = [];
+            foreach ($product_ids as $idx => $pid) {
+                $params[] = $pid;
+                $ph[] = '$' . ($idx + 1);
+            }
+            $rows = $db->get_results(
+                "SELECT p.id,
+                        COALESCE(p.cost_price, 0) AS base_cost,
+                        COALESCE((
+                            SELECT c.cost_price
+                            FROM hearmed_reference.products c
+                            WHERE c.is_active = true
+                              AND c.item_type = 'charger'
+                              AND c.manufacturer_id = p.manufacturer_id
+                            ORDER BY c.updated_at DESC NULLS LAST, c.id DESC
+                            LIMIT 1
+                        ), 0) AS charger_cost
+                 FROM hearmed_reference.products p
+                 WHERE p.id IN (" . implode(',', $ph) . ")",
+                $params
+            ) ?: [];
+
+            foreach ($rows as $r) {
+                $product_cost_map[(int)$r->id] = [
+                    'base_cost'    => (float)($r->base_cost ?? 0),
+                    'charger_cost' => (float)($r->charger_cost ?? 0),
+                ];
+            }
+        }
+
         // Insert line items
         $line = 1;
         foreach ($items as $item) {
+            $item_type = sanitize_key($item['type'] ?? '');
+            $item_id = intval($item['id'] ?? 0);
+            $needs_charger = !empty($item['charger']);
+
+            $unit_cost_price = 0.0;
+            if ($item_type === 'product' && $item_id > 0) {
+                $cost_row = $product_cost_map[$item_id] ?? null;
+                if ($cost_row) {
+                    $unit_cost_price = (float)$cost_row['base_cost'];
+                    if ($needs_charger) {
+                        $unit_cost_price += (float)$cost_row['charger_cost'];
+                    }
+                }
+            }
+
             $db->insert('hearmed_core.order_items', [
                 'order_id'          => $order_id,
                 'line_number'       => $line++,
-                'item_type'         => sanitize_key($item['type']),
-                'item_id'           => intval($item['id']),
+                'item_type'         => $item_type,
+                'item_id'           => $item_id,
                 'item_description'  => sanitize_text_field($item['name']),
                 'ear_side'          => sanitize_text_field($item['ear'] ?? ''),
                 'speaker_size'      => sanitize_text_field($item['speaker'] ?? ''),
-                'needs_charger'     => !empty($item['charger']),
+                'needs_charger'     => $needs_charger,
                 'quantity'          => intval($item['qty']),
+                'unit_cost_price'   => $unit_cost_price,
                 'unit_retail_price' => floatval($item['unit_price']),
                 'vat_rate'          => floatval($item['vat_rate']),
                 'vat_amount'        => floatval($item['vat_amount']),
@@ -1555,9 +1618,12 @@ class HearMed_Orders {
                 addItem({
                     id: sel.value, type:'product',
                     name: opt.dataset.name,
+                    manufacturer_id: parseInt(opt.dataset.manufacturerId || '0', 10) || 0,
                     ear: ear.value,
                     speaker: '',
                     charger: false,
+                    product_cost: parseFloat(opt.dataset.cost) || 0,
+                    charger_cost: 0,
                     unit_price: parseFloat(opt.dataset.price) || 0,
                     vat_rate: parseFloat(opt.dataset.vat) || 23,
                     qty: 1

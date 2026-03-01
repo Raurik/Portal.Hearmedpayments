@@ -57,6 +57,7 @@ function hm_render_approvals_page() {
     .hma-flag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;}
     .hma-flag-red{background:#fee2e2;color:#991b1b;}
     .hma-flag-amber{background:#fef3cd;color:#92400e;}
+    .hma-flag-click{border:none;cursor:pointer;}
     </style>
 
     <div class="hm-calendar" data-module="admin" data-view="approvals">
@@ -103,6 +104,7 @@ function hm_render_approvals_page() {
 
     <script>
     var hmApprovals = {
+        _orders: {},
 
         load: function() {
             var el = document.getElementById('hma-content');
@@ -130,6 +132,7 @@ function hm_render_approvals_page() {
 
             var html = '';
             data.orders.forEach(function(o) {
+                hmApprovals._orders[o.id] = o;
                 var marginClass = o.margin_percent >= 25 ? 'hma-margin-good' : (o.margin_percent >= 15 ? 'hma-margin-warn' : 'hma-margin-bad');
 
                 html += '<div class="hm-card" data-order-id="' + o.id + '">';
@@ -140,8 +143,12 @@ function hm_render_approvals_page() {
                 if (o.prsi_applicable) html += '<span class="hma-prsi">PRSI &#10004;</span>';
 
                 if (o.flags && o.flags.length) {
-                    o.flags.forEach(function(f) {
-                        html += '<span class="hma-flag hma-flag-' + f.level + '">' + hmE(f.msg) + '</span>';
+                    o.flags.forEach(function(f, flagIdx) {
+                        if (f.details) {
+                            html += '<button type="button" class="hma-flag hma-flag-' + f.level + ' hma-flag-click" onclick="event.stopPropagation();hmApprovals.showFlag(' + o.id + ',' + flagIdx + ')">' + hmE(f.msg) + '</button>';
+                        } else {
+                            html += '<span class="hma-flag hma-flag-' + f.level + '">' + hmE(f.msg) + '</span>';
+                        }
                     });
                 }
                 html += '</div>';
@@ -254,6 +261,20 @@ function hm_render_approvals_page() {
             }, function(r) {
                 if (r.success) { self.closeDeny(); self.load(); } else { alert(r.data && r.data.msg ? r.data.msg : 'Error'); }
             });
+        },
+
+        showFlag: function(orderId, flagIdx) {
+            var order = this._orders[orderId];
+            if (!order || !order.flags || !order.flags[flagIdx] || !order.flags[flagIdx].details) return;
+            var details = order.flags[flagIdx].details;
+            var lines = [];
+            if (details.reason) lines.push('Reason: ' + details.reason);
+            if (details.duplicate_order) {
+                lines.push('Possible duplicate: ' + details.duplicate_order.order_number);
+                if (details.duplicate_order.order_date) lines.push('Date: ' + details.duplicate_order.order_date);
+                lines.push('Total: €' + hmN(details.duplicate_order.grand_total));
+            }
+            alert(lines.join('\n'));
         }
     };
 
@@ -308,11 +329,13 @@ function hm_ajax_approvals_load() {
 
         $line_items = [];
         $cost_total = 0;
+        $retail_total = 0;
         foreach ($items as $it) {
             $unit_cost   = (float)($it->unit_cost_price ?? $it->product_cost ?? 0);
             $unit_retail = (float)($it->unit_retail_price ?? 0);
             $qty         = (int)($it->quantity ?? 1);
             $cost_total += $unit_cost * $qty;
+            $retail_total += $unit_retail * $qty;
 
             $line_items[] = [
                 'description'       => $it->item_description ?: ($it->product_name ?? ''),
@@ -327,7 +350,7 @@ function hm_ajax_approvals_load() {
             ];
         }
 
-        $margin_pct = (float)($o->gross_margin_percent ?? 0);
+        $margin_pct = $retail_total > 0 ? (($retail_total - $cost_total) / $retail_total) * 100 : 0;
         $flags = [];
         if ($margin_pct < 15) {
             $flags[] = ['level' => 'red', 'msg' => 'Low margin: ' . number_format($margin_pct, 1) . '%'];
@@ -335,7 +358,31 @@ function hm_ajax_approvals_load() {
             $flags[] = ['level' => 'amber', 'msg' => 'Margin: ' . number_format($margin_pct, 1) . '%'];
         }
         if (!empty($o->is_flagged)) {
-            $flags[] = ['level' => 'red', 'msg' => 'Flagged: ' . ($o->flag_reason ?: 'possible duplicate')];
+            $flag_reason = trim((string)($o->flag_reason ?? ''));
+            $duplicate = $db->get_row(
+                "SELECT id, order_number, order_date, grand_total
+                 FROM hearmed_core.orders
+                 WHERE patient_id = $1
+                   AND id <> $2
+                   AND current_status = 'Awaiting Approval'
+                 ORDER BY created_at DESC
+                 LIMIT 1",
+                [(int)$o->patient_id, (int)$o->id]
+            );
+
+            $flag_msg = 'Flagged: ' . ($flag_reason ?: 'possible duplicate');
+            $flag_details = [
+                'reason' => $flag_reason ?: 'Possible duplicate order detected.',
+            ];
+            if ($duplicate) {
+                $flag_details['duplicate_order'] = [
+                    'id' => (int)$duplicate->id,
+                    'order_number' => (string)($duplicate->order_number ?? ''),
+                    'order_date' => !empty($duplicate->order_date) ? date('d M Y', strtotime($duplicate->order_date)) : '',
+                    'grand_total' => (float)($duplicate->grand_total ?? 0),
+                ];
+            }
+            $flags[] = ['level' => 'red', 'msg' => $flag_msg, 'details' => $flag_details];
         }
 
         $result[] = [
