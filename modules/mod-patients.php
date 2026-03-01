@@ -654,15 +654,23 @@ function hm_ajax_update_patient() {
     $db       = HearMed_DB::instance();
     $staff_id = hm_patient_staff_id();
 
-    // Ensure GP/NOK columns exist (added after initial schema)
-    static $gp_cols_checked = false;
-    if ( ! $gp_cols_checked ) {
-        $db->get_results( "ALTER TABLE hearmed_core.patients
+    // Check if GP/NOK columns exist (added after initial schema)
+    $has_gp = $db->get_var(
+        "SELECT column_name FROM information_schema.columns
+         WHERE table_schema='hearmed_core' AND table_name='patients' AND column_name='gp_name'"
+    );
+    if ( ! $has_gp ) {
+        // Try to add them
+        @$db->get_results( "ALTER TABLE hearmed_core.patients
             ADD COLUMN IF NOT EXISTS gp_name VARCHAR(200),
             ADD COLUMN IF NOT EXISTS gp_address TEXT,
             ADD COLUMN IF NOT EXISTS nok_name VARCHAR(200),
             ADD COLUMN IF NOT EXISTS nok_phone VARCHAR(30)" );
-        $gp_cols_checked = true;
+        // Re-check
+        $has_gp = $db->get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema='hearmed_core' AND table_name='patients' AND column_name='gp_name'"
+        );
     }
 
     $data = [
@@ -684,13 +692,17 @@ function hm_ajax_update_patient() {
         'annual_review_date'  => sanitize_text_field( $_POST['annual_review_date'] ?? '' ) ?: null,
         'assigned_clinic_id'  => intval( $_POST['assigned_clinic_id'] ?? 0 ) ?: null,
         'assigned_dispenser_id' => intval( $_POST['assigned_dispenser_id'] ?? 0 ) ?: null,
-        'gp_name'             => sanitize_text_field( $_POST['gp_name'] ?? '' ),
-        'gp_address'          => sanitize_textarea_field( $_POST['gp_address'] ?? '' ),
-        'nok_name'            => sanitize_text_field( $_POST['nok_name'] ?? '' ),
-        'nok_phone'           => sanitize_text_field( $_POST['nok_phone'] ?? '' ),
         'updated_by'          => $staff_id ?: null,
         'updated_at'          => date( 'c' ),
     ];
+
+    // Only include GP/NOK fields if columns exist in the database
+    if ( $has_gp ) {
+        $data['gp_name']    = sanitize_text_field( $_POST['gp_name'] ?? '' );
+        $data['gp_address'] = sanitize_textarea_field( $_POST['gp_address'] ?? '' );
+        $data['nok_name']   = sanitize_text_field( $_POST['nok_name'] ?? '' );
+        $data['nok_phone']  = sanitize_text_field( $_POST['nok_phone'] ?? '' );
+    }
 
     // Handle referral source
     $ref_src = sanitize_text_field( $_POST['referral_source'] ?? '' );
