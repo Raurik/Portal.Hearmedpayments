@@ -142,7 +142,9 @@ class HearMed_Invoice {
         // Generate invoice number (atomic — lock row first)
         $invoice_number = self::next_invoice_number();
 
-        HearMed_DB::begin_transaction();
+        if ( ! HearMed_DB::begin_transaction() ) {
+            return false;
+        }
 
         // Create invoice record
         $invoice_id = $db->insert( 'invoices', [
@@ -303,19 +305,23 @@ class HearMed_Invoice {
             "SELECT oi.*,
                     CASE
                         WHEN oi.item_type = 'product' THEN COALESCE(pr.vat_category, 'Hearing Aids')
-                        ELSE COALESCE(sv.vat_category, 'Services')
+                        ELSE 'Services'
                     END AS vat_category
                FROM hearmed_core.order_items oi
                LEFT JOIN hearmed_reference.products pr ON pr.id = oi.item_id AND oi.item_type = 'product'
-               LEFT JOIN hearmed_reference.services sv ON sv.id = oi.item_id AND oi.item_type = 'service'
               WHERE oi.order_id = $1
               ORDER BY oi.line_number",
             [ $order_id ]
         );
 
+        if ( HearMed_DB::last_error() ) {
+            HearMed_DB::rollback();
+            return false;
+        }
+
         foreach ( $items ?: [] as $it ) {
             $vat_rate = self::vat_rate_for_category( $it->vat_category ?? 'Hearing Aids' );
-            $db->insert( 'invoice_items', [
+            $ins = $db->insert( 'invoice_items', [
                 'invoice_id'       => $invoice_id,
                 'line_number'      => intval( $it->line_number ?? 1 ),
                 'item_type'        => $it->item_type,
@@ -329,11 +335,22 @@ class HearMed_Invoice {
                 'vat_rate'         => (float) $vat_rate,
                 'line_total'       => (float) ( $it->line_total ?? 0 ),
             ] );
+            if ( ! $ins ) {
+                HearMed_DB::rollback();
+                return false;
+            }
         }
 
-        $db->update( 'orders', [ 'invoice_id' => $invoice_id ], [ 'id' => $order_id ] );
+        $updated = $db->update( 'orders', [ 'invoice_id' => $invoice_id ], [ 'id' => $order_id ] );
+        if ( $updated === false ) {
+            HearMed_DB::rollback();
+            return false;
+        }
 
-        HearMed_DB::commit();
+        if ( ! HearMed_DB::commit() ) {
+            HearMed_DB::rollback();
+            return false;
+        }
         return intval( $invoice_id );
     }
 

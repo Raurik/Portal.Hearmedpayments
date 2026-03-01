@@ -1185,6 +1185,7 @@ function hm_ajax_fitting_load_invoice() {
             $inv_id = HearMed_Invoice::ensure_invoice_for_order($order_id, $staff_id ?: $uid);
         }
         if (!$inv_id) {
+            HearMed_DB::rollback();
             wp_send_json_error(['msg' => 'Failed to create invoice from order.']);
             return;
         }
@@ -1280,6 +1281,7 @@ function hm_ajax_fitting_record_payment() {
         }
 
         if (!$invoice_id) {
+            HearMed_DB::rollback();
             wp_send_json_error(['msg' => 'Unable to create invoice before payment.']);
             return;
         }

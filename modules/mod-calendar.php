@@ -1671,6 +1671,7 @@ function hm_ajax_record_order_payment() {
             }
 
             if ( ! $inv_id ) {
+                HearMed_DB::rollback();
                 wp_send_json_error( [ 'message' => 'Failed to create invoice. ' . HearMed_DB::last_error() ] );
                 return;
             }
