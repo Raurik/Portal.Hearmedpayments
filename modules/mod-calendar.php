@@ -1525,11 +1525,96 @@ function hm_ajax_record_order_payment() {
 
         $db = HearMed_DB::instance();
 
+        $wp_uid   = get_current_user_id();
+        $staff_id = $db->get_var(
+            "SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1",
+            [ $wp_uid ]
+        );
+
         $order = $db->get_row(
-            "SELECT o.id, o.patient_id, o.clinic_id, o.grand_total, o.deposit_amount
+            "SELECT o.id, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
+                    o.subtotal, o.discount_total, o.vat_total,
+                    o.grand_total, o.balance_due, o.prsi_applicable, o.prsi_amount,
+                    o.deposit_amount
              FROM hearmed_core.orders o WHERE o.id = \$1", [$order_id]
         );
         if ( ! $order ) { wp_send_json_error( [ 'message' => 'Order not found.' ] ); return; }
+
+        // Ensure invoice exists and is linked to order
+        $invoice = null;
+        if ( ! empty( $order->invoice_id ) ) {
+            $invoice = $db->get_row(
+                "SELECT id, invoice_number, grand_total, balance_remaining
+                   FROM hearmed_core.invoices WHERE id = \$1",
+                [ intval( $order->invoice_id ) ]
+            );
+        }
+
+        if ( ! $invoice ) {
+            $inv_number = 'INV-' . date( 'Ymd' ) . '-' . str_pad( rand( 1, 9999 ), 4, '0', STR_PAD_LEFT );
+            $inv_id = $db->insert( 'hearmed_core.invoices', [
+                'invoice_number'    => $inv_number,
+                'patient_id'        => $order->patient_id,
+                'order_id'          => $order_id,
+                'staff_id'          => $order->staff_id ?: $staff_id,
+                'clinic_id'         => $order->clinic_id,
+                'invoice_date'      => date( 'Y-m-d' ),
+                'subtotal'          => (float) ( $order->subtotal ?? 0 ),
+                'discount_total'    => (float) ( $order->discount_total ?? 0 ),
+                'vat_total'         => (float) ( $order->vat_total ?? 0 ),
+                'grand_total'       => (float) ( $order->grand_total ?? 0 ),
+                'balance_remaining' => (float) ( $order->grand_total ?? 0 ),
+                'payment_status'    => 'Unpaid',
+                'prsi_applicable'   => ! empty( $order->prsi_applicable ) && $order->prsi_applicable !== 'f',
+                'prsi_amount'       => (float) ( $order->prsi_amount ?? 0 ),
+                'created_by'        => $staff_id ?: null,
+            ] );
+
+            if ( ! $inv_id ) {
+                wp_send_json_error( [ 'message' => 'Failed to create invoice. ' . HearMed_DB::last_error() ] );
+                return;
+            }
+
+            // Copy order items to invoice_items (best effort)
+            $items = $db->get_results(
+                "SELECT line_number, item_type, item_id, item_description, ear_side,
+                        quantity, unit_retail_price, discount_percent, discount_amount, vat_rate, line_total
+                   FROM hearmed_core.order_items WHERE order_id = \$1 ORDER BY line_number",
+                [ $order_id ]
+            );
+            foreach ( $items ?: [] as $it ) {
+                $db->insert( 'hearmed_core.invoice_items', [
+                    'invoice_id'       => $inv_id,
+                    'line_number'      => (int) ( $it->line_number ?? 1 ),
+                    'item_type'        => $it->item_type,
+                    'item_id'          => intval( $it->item_id ?? 0 ),
+                    'item_description' => $it->item_description,
+                    'ear_side'         => $it->ear_side,
+                    'quantity'         => intval( $it->quantity ?? 1 ),
+                    'unit_price'       => (float) ( $it->unit_retail_price ?? 0 ),
+                    'discount_percent' => (float) ( $it->discount_percent ?? 0 ),
+                    'discount_amount'  => (float) ( $it->discount_amount ?? 0 ),
+                    'vat_rate'         => (float) ( $it->vat_rate ?? 0 ),
+                    'line_total'       => (float) ( $it->line_total ?? 0 ),
+                ] );
+            }
+
+            $db->query(
+                "UPDATE hearmed_core.orders SET invoice_id = \$1, updated_at = NOW() WHERE id = \$2",
+                [ $inv_id, $order_id ]
+            );
+
+            $invoice = $db->get_row(
+                "SELECT id, invoice_number, grand_total, balance_remaining
+                   FROM hearmed_core.invoices WHERE id = \$1",
+                [ $inv_id ]
+            );
+        }
+
+        if ( ! $invoice ) {
+            wp_send_json_error( [ 'message' => 'Invoice could not be loaded after creation.' ] );
+            return;
+        }
 
         // Update deposit on order
         $new_deposit = floatval( $order->deposit_amount ?? 0 ) + $amount;
@@ -1540,23 +1625,40 @@ function hm_ajax_record_order_payment() {
         ], [ 'id' => $order_id ] );
 
         // Create payment record
-        $db->insert( 'hearmed_core.payments', [
+        $pay_id = $db->insert( 'hearmed_core.payments', [
+            'invoice_id'     => intval( $invoice->id ),
             'patient_id'     => $order->patient_id,
             'amount'         => $amount,
             'payment_date'   => date( 'Y-m-d' ),
             'payment_method' => $payment_method,
-            'received_by'    => get_current_user_id(),
+            'received_by'    => $staff_id ?: null,
             'clinic_id'      => $order->clinic_id,
-            'created_by'     => get_current_user_id(),
+            'created_by'     => $staff_id ?: null,
             'notes'          => 'Deposit on order #' . $order_id,
-        ]);
+        ] );
+
+        if ( ! $pay_id ) {
+            wp_send_json_error( [ 'message' => 'Payment failed to save. ' . HearMed_DB::last_error() ] );
+            return;
+        }
+
+        $new_balance = max( 0, floatval( $invoice->balance_remaining ?? $invoice->grand_total ?? $order->grand_total ) - $amount );
+        $payment_status = $new_balance <= 0 ? 'Paid' : 'Partial';
+        $db->query(
+            "UPDATE hearmed_core.invoices
+                SET balance_remaining = \$1,
+                    payment_status = \$2,
+                    updated_at = NOW()
+              WHERE id = \$3",
+            [ $new_balance, $payment_status, intval( $invoice->id ) ]
+        );
 
         // Log in patient timeline
         $db->insert( 'hearmed_core.patient_timeline', [
             'patient_id'  => $order->patient_id,
             'event_type'  => 'payment_received',
             'event_date'  => date( 'Y-m-d' ),
-            'staff_id'    => get_current_user_id(),
+            'staff_id'    => $staff_id ?: null,
             'description' => 'Payment of €' . number_format( $amount, 2 ) . ' received via ' . $payment_method,
             'order_id'    => $order_id,
         ]);
@@ -1566,6 +1668,8 @@ function hm_ajax_record_order_payment() {
         wp_send_json_success([
             'message' => 'Payment of €' . number_format( $amount, 2 ) . ' recorded.',
             'balance' => $balance,
+            'invoice_id' => intval( $invoice->id ),
+            'invoice_number' => $invoice->invoice_number,
         ]);
     } catch ( Throwable $e ) {
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
@@ -1599,7 +1703,7 @@ function hm_ajax_get_patient_pipeline_orders() {
                                 $base_select .
                                 " WHERE (o.patient_id = \$1
                                                 OR o.id = (SELECT order_id FROM hearmed_core.appointments WHERE id = \$2))
-                                        AND COALESCE(o.current_status, '') NOT IN ('Complete', 'Cancelled')
+                            AND COALESCE(o.current_status, '') <> 'Cancelled'
                                     ORDER BY o.order_date DESC",
                                 [ $patient_id, $appointment_id ]
                         );
@@ -1607,7 +1711,7 @@ function hm_ajax_get_patient_pipeline_orders() {
                         $rows = $db->get_results(
                                 $base_select .
                                 " WHERE o.patient_id = \$1
-                                        AND COALESCE(o.current_status, '') NOT IN ('Complete', 'Cancelled')
+                            AND COALESCE(o.current_status, '') <> 'Cancelled'
                                     ORDER BY o.order_date DESC",
                                 [ $patient_id ]
                         );
@@ -1630,7 +1734,7 @@ function hm_ajax_get_patient_pipeline_orders() {
                                                 $base_select .
                                                 " JOIN hearmed_core.patients p ON p.id = o.patient_id
                                                     WHERE p.patient_number = \$1
-                                                        AND COALESCE(o.current_status, '') NOT IN ('Complete', 'Cancelled')
+                                                        AND COALESCE(o.current_status, '') <> 'Cancelled'
                                                     ORDER BY o.order_date DESC",
                                                 [ $appt_patient->patient_number ]
                                         );
@@ -1642,7 +1746,7 @@ function hm_ajax_get_patient_pipeline_orders() {
                                                 " JOIN hearmed_core.patients p ON p.id = o.patient_id
                                                     WHERE LOWER(TRIM(COALESCE(p.first_name, ''))) = LOWER(TRIM(\$1))
                                                         AND LOWER(TRIM(COALESCE(p.last_name,  ''))) = LOWER(TRIM(\$2))
-                                                        AND COALESCE(o.current_status, '') NOT IN ('Complete', 'Cancelled')
+                                                        AND COALESCE(o.current_status, '') <> 'Cancelled'
                                                     ORDER BY o.order_date DESC",
                                                 [ $appt_patient->first_name, $appt_patient->last_name ]
                                         );
@@ -1750,7 +1854,7 @@ function hm_ajax_create_outcome_order() {
         $staff_id = $db->get_var(
             "SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1",
             [ $wp_uid ]
-        ) ?: $wp_uid;
+        );
 
         $order_id = $db->insert( 'hearmed_core.orders', [
             'order_number'    => $order_num,
@@ -1770,7 +1874,7 @@ function hm_ajax_create_outcome_order() {
             'payment_method'  => $payment_method,
             'notes'           => $notes,
             'created_at'      => current_time( 'mysql' ),
-            'created_by'      => $staff_id,
+            'created_by'      => $staff_id ?: null,
         ] );
 
         if ( ! $order_id ) {
