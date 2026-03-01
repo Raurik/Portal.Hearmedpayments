@@ -2205,8 +2205,10 @@ function hm_ajax_create_outcome_order() {
             $qty        = intval( $item['qty'] ?? 1 );
             $unit_price = floatval( $item['unit_price'] ?? $item['price'] ?? 0 );
             $vat_rate   = floatval( $item['vat_rate'] ?? 0 );
-            $net        = $unit_price * $qty;
-            $vat        = round( $net * ( $vat_rate / 100 ), 2 );
+            $gross      = $unit_price * $qty;
+            // Prices are VAT-inclusive — extract VAT from gross
+            $vat        = $vat_rate > 0 ? round( $gross - ( $gross / ( 1 + $vat_rate / 100 ) ), 2 ) : 0;
+            $net        = $gross - $vat;
             $subtotal  += $net;
             $vat_total += $vat;
 
@@ -2217,7 +2219,7 @@ function hm_ajax_create_outcome_order() {
                 'item_description'  => sanitize_text_field( $item['name'] ?? '' ),
                 'ear_side'          => sanitize_text_field( $item['ear'] ?? '' ),
                 'quantity'          => $qty,
-                'unit_retail_price' => $unit_price,
+                'unit_retail_price' => round( $net / max( $qty, 1 ), 2 ),
                 'vat_rate'          => $vat_rate,
                 'vat_amount'        => $vat,
                 'line_total'        => $net + $vat,

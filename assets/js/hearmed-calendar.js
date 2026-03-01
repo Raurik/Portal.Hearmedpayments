@@ -1829,8 +1829,10 @@ var Cal={
                     item.dome_type=$('#hm-oo-dome-type').val()||'';
                 }
 
-                item.vat_amount=parseFloat(((item.unit_price*item.qty)*(item.vat_rate/100)).toFixed(2));
-                item.line_total=parseFloat(((item.unit_price*item.qty)+item.vat_amount).toFixed(2));
+                // Prices are VAT-inclusive — extract VAT from gross
+                var gross=item.unit_price*item.qty;
+                item.vat_amount=item.vat_rate>0?parseFloat((gross-(gross/(1+item.vat_rate/100))).toFixed(2)):0;
+                item.line_total=parseFloat(gross.toFixed(2));
                 item._uid=Date.now()+Math.random();
                 orderItems.push(item);
 
@@ -1848,8 +1850,9 @@ var Cal={
                         qty:1,
                         _uid:Date.now()+Math.random()
                     };
-                    chargerItem.vat_amount=parseFloat(((chargerItem.unit_price*chargerItem.qty)*(chargerItem.vat_rate/100)).toFixed(2));
-                    chargerItem.line_total=parseFloat(((chargerItem.unit_price*chargerItem.qty)+chargerItem.vat_amount).toFixed(2));
+                    var cGross=chargerItem.unit_price*chargerItem.qty;
+                    chargerItem.vat_amount=chargerItem.vat_rate>0?parseFloat((cGross-(cGross/(1+chargerItem.vat_rate/100))).toFixed(2)):0;
+                    chargerItem.line_total=parseFloat(cGross.toFixed(2));
                     orderItems.push(chargerItem);
                 }
 
@@ -1893,18 +1896,18 @@ var Cal={
             }
 
             function updateTotals(){
-                var sub=0,vat=0;
-                orderItems.forEach(function(it){sub+=it.unit_price*it.qty;vat+=it.vat_amount;});
+                var net=0,vat=0,grossSum=0;
+                orderItems.forEach(function(it){var g=it.unit_price*it.qty;grossSum+=g;vat+=it.vat_amount;net+=g-it.vat_amount;});
                 var discVal=parseFloat($('#hm-oo-disc').val())||0;
                 var disc=0;
                 if(discountMode==='pct'){
-                    disc=discVal>0?Math.round(sub*(Math.min(discVal,100)/100)*100)/100:0;
+                    disc=discVal>0?Math.round(grossSum*(Math.min(discVal,100)/100)*100)/100:0;
                 } else {
-                    disc=Math.min(discVal,sub+vat);
+                    disc=Math.min(discVal,grossSum);
                 }
                 var prsi=($('#hm-oo-prsi-l').is(':checked')?500:0)+($('#hm-oo-prsi-r').is(':checked')?500:0);
-                var total=Math.max(0,sub+vat-disc-prsi);
-                $('#hm-oo-sub').text('€'+sub.toFixed(2));
+                var total=Math.max(0,grossSum-disc-prsi);
+                $('#hm-oo-sub').text('€'+net.toFixed(2));
                 $('#hm-oo-vat').text('€'+vat.toFixed(2));
                 $('#hm-oo-disc-amt').text('−€'+disc.toFixed(2));
                 if(disc>0){$('#hm-oo-disc-row').css('display','flex');}else{$('#hm-oo-disc-row').hide();}

@@ -177,7 +177,8 @@ class HearMed_Invoice {
         foreach ( $items as $item ) {
             $vat_rate   = self::vat_rate_for_category( $item->vat_category );
             $net        = floatval( $item->unit_retail_price ) * intval( $item->quantity );
-            $vat_amount = round( $net * ( $vat_rate / 100 ), 2 );
+            // unit_retail_price is already stored as ex-VAT net; recalculate VAT from net
+            $vat_amount = $vat_rate > 0 ? round( $net * ( $vat_rate / 100 ), 2 ) : 0;
             $line_total = $net + $vat_amount;
 
             $db->insert( 'invoice_items', [
@@ -370,7 +371,8 @@ class HearMed_Invoice {
             $vat_category = $item->vat_category ?? 'Hearing Aids';
             $vat_rate     = self::vat_rate_for_category( $vat_category );
             $net          = floatval( $item->unit_retail_price ?? $item->unit_price ?? 0 ) * intval( $item->quantity ?? 1 );
-            $vat          = round( $net * ( $vat_rate / 100 ), 2 );
+            // unit_retail_price stored as ex-VAT net
+            $vat          = $vat_rate > 0 ? round( $net * ( $vat_rate / 100 ), 2 ) : 0;
 
             $rate_key = number_format( $vat_rate, 1 );
             if ( ! isset( $by_rate[ $rate_key ] ) ) {

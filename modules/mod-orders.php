@@ -1214,12 +1214,14 @@ class HearMed_Orders {
 
         $subtotal = $vat_total = $discount_total = 0;
         foreach ($items as $item) {
-            $subtotal  += floatval($item['unit_price']) * intval($item['qty']);
+            $gross      = floatval($item['unit_price']) * intval($item['qty']);
             $vat_total += floatval($item['vat_amount']);
+            $subtotal  += $gross - floatval($item['vat_amount']); // net (ex-VAT)
         }
 
         $prsi_applicable = $prsi_left || $prsi_right;
         $prsi_amount     = ($prsi_left ? 500 : 0) + ($prsi_right ? 500 : 0);
+        // Prices are VAT-inclusive, so grand = net + vat - PRSI = gross - PRSI
         $grand_total     = max(0, $subtotal + $vat_total - $prsi_amount);
 
         // ── Quickpay detection: service-only orders bypass approval ──
@@ -1331,7 +1333,8 @@ class HearMed_Orders {
                 'needs_charger'     => $needs_charger,
                 'quantity'          => intval($item['qty']),
                 'unit_cost_price'   => $unit_cost_price,
-                'unit_retail_price' => floatval($item['unit_price']),
+                // Store net (ex-VAT) price: gross - (extracted VAT / qty)
+                'unit_retail_price' => round( floatval($item['unit_price']) - ( floatval($item['vat_amount']) / max( intval($item['qty']), 1 ) ), 2 ),
                 'vat_rate'          => floatval($item['vat_rate']),
                 'vat_amount'        => floatval($item['vat_amount']),
                 'line_total'        => floatval($item['line_total']),
@@ -1895,8 +1898,10 @@ class HearMed_Orders {
             });
 
             function addItem(item) {
-                item.vat_amount = parseFloat(((item.unit_price * item.qty) * (item.vat_rate/100)).toFixed(2));
-                item.line_total = parseFloat(((item.unit_price * item.qty) + item.vat_amount).toFixed(2));
+                // Prices are VAT-inclusive — extract VAT from gross
+                var gross = item.unit_price * item.qty;
+                item.vat_amount = item.vat_rate > 0 ? parseFloat((gross - (gross / (1 + item.vat_rate/100))).toFixed(2)) : 0;
+                item.line_total = parseFloat(gross.toFixed(2));
                 item._uid = Date.now() + Math.random();
                 items.push(item); renderItems(); updateTotals(); validateForm();
             }
@@ -1942,8 +1947,9 @@ class HearMed_Orders {
                     inp.addEventListener('change',function(){
                         const i = parseInt(this.dataset.idx);
                         items[i].qty = parseInt(this.value)||1;
-                        items[i].vat_amount = parseFloat(((items[i].unit_price*items[i].qty)*(items[i].vat_rate/100)).toFixed(2));
-                        items[i].line_total = parseFloat(((items[i].unit_price*items[i].qty)+items[i].vat_amount).toFixed(2));
+                        var qGross = items[i].unit_price*items[i].qty;
+                        items[i].vat_amount = items[i].vat_rate > 0 ? parseFloat((qGross - (qGross / (1 + items[i].vat_rate/100))).toFixed(2)) : 0;
+                        items[i].line_total = parseFloat(qGross.toFixed(2));
                         renderItems(); updateTotals();
                     });
                 });
@@ -1960,12 +1966,12 @@ class HearMed_Orders {
             });
 
             function updateTotals() {
-                let sub=0, vat=0;
-                items.forEach(item=>{ sub+=item.unit_price*item.qty; vat+=item.vat_amount; });
+                let net=0, vat=0, grossSum=0;
+                items.forEach(item=>{ var g=item.unit_price*item.qty; grossSum+=g; vat+=item.vat_amount; net+=g-item.vat_amount; });
                 const prsi = (document.getElementById('prsi_left').checked?500:0)
                            + (document.getElementById('prsi_right').checked?500:0);
-                const total = Math.max(0, sub+vat-prsi);
-                document.getElementById('hm-subtotal').textContent       = '€'+sub.toFixed(2);
+                const total = Math.max(0, grossSum-prsi);
+                document.getElementById('hm-subtotal').textContent       = '€'+net.toFixed(2);
                 document.getElementById('hm-vat-total').textContent      = '€'+vat.toFixed(2);
                 document.getElementById('hm-prsi-display').textContent   = '€'+prsi.toFixed(2);
                 document.getElementById('hm-prsi-deduction').textContent = '−€'+prsi.toFixed(2);

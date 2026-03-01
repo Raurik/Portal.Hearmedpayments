@@ -239,8 +239,9 @@
             : discountVal;
 
         var net       = Math.max(0, gross - discountEur);
-        var vatAmount = net * (vatRate / 100);
-        var lineTotal = net + vatAmount;
+        // Prices are VAT-inclusive — extract VAT from net (after discount)
+        var vatAmount = vatRate > 0 ? net - (net / (1 + vatRate / 100)) : 0;
+        var lineTotal = net;
 
         $line.find('.hm-line-total').text('€' + lineTotal.toFixed(2));
 
@@ -274,7 +275,8 @@
             var gross   = unitPrice * qty;
             var discEur = (discType === 'pct') ? (discVal / 100) * gross : discVal;
             var net     = Math.max(0, gross - discEur);
-            var vat     = net * (vatRate / 100);
+            // VAT-inclusive: extract VAT from net
+            var vat     = vatRate > 0 ? net - (net / (1 + vatRate / 100)) : 0;
 
             subtotal      += gross;
             totalDiscount += discEur;
@@ -296,10 +298,11 @@
             prsiAmount = Math.min(500 * earCount, 1000);
         }
 
-        var grandPrePrsi = subtotal - totalDiscount + totalVat;
-        var grand        = Math.max(0, grandPrePrsi - prsiAmount);
+        // subtotal is gross (VAT-inclusive), so grand = gross - discount - PRSI
+        var netTotal = subtotal - totalDiscount - totalVat;
+        var grand    = Math.max(0, subtotal - totalDiscount - prsiAmount);
 
-        $('#hm-total-subtotal').text('€' + subtotal.toFixed(2));
+        $('#hm-total-subtotal').text('€' + netTotal.toFixed(2));
         $('#hm-total-discount').text('−€' + totalDiscount.toFixed(2));
         $('#hm-total-vat').text('€' + totalVat.toFixed(2));
         $('#hm-total-prsi').text(prsiChecked ? '−€' + prsiAmount.toFixed(2) : '—');
