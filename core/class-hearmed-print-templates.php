@@ -218,11 +218,12 @@ class HearMed_Print_Templates {
 @page { size: A4; margin: 15mm; }
 @media print { body { -webkit-print-color-adjust: exact; } .no-print { display: none !important; } }
 * { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
 body {
     font-family: '<?php echo esc_attr($s['tableFont'] ?? 'Source Sans 3'); ?>', -apple-system, sans-serif;
     font-size: <?php echo intval($s['tableSize'] ?? 11); ?>px;
-    color: #1e293b; line-height: 1.5; padding: 30px; max-width: 100%; margin: 0 auto;
-    min-height: 100vh;
+    color: #1e293b; line-height: 1.5; padding: 30px; width: 210mm; max-width: 210mm; margin: 0 auto;
+    min-height: 297mm;
     display: flex; flex-direction: column;
 }
 /* Header */
