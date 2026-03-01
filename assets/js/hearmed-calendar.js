@@ -2069,7 +2069,7 @@ var Cal={
             h+='<div style="padding:20px;max-height:70vh;overflow-y:auto;background:#fff">';
 
             if(orders.length){
-                h+='<div style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Existing Orders (Awaiting Fitting)</div>';
+                h+='<div style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Existing Active Orders</div>';
                 orders.forEach(function(ord){
                     var bal=parseFloat(ord.balance_due)||0;
                     h+='<div class="hm-osel-order" data-oid="'+ord.id+'" data-onum="'+esc(ord.order_number)+'" data-total="'+ord.grand_total+'" data-bal="'+bal+'" ';
@@ -2090,7 +2090,7 @@ var Cal={
                 });
                 h+='<div style="border-top:1px solid #e2e8f0;margin:16px 0 12px"></div>';
             } else {
-                h+='<div style="text-align:center;padding:20px 0;color:#94a3b8;font-size:13px">No existing orders awaiting fitting for this patient.</div>';
+                h+='<div style="text-align:center;padding:20px 0;color:#94a3b8;font-size:13px">No active existing orders found for this patient.</div>';
             }
 
             // Create New button

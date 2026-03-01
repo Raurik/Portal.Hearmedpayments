@@ -1593,7 +1593,7 @@ function hm_ajax_get_patient_pipeline_orders() {
                      FROM hearmed_core.order_items oi WHERE oi.order_id = o.id) AS items_summary
              FROM hearmed_core.orders o
              WHERE o.patient_id = \$1
-               AND o.current_status IN ('Awaiting Fitting', 'Approved', 'Ordered', 'Received')
+                             AND COALESCE(o.current_status, '') NOT IN ('Complete', 'Cancelled')
              ORDER BY o.order_date DESC",
             [ $patient_id ]
         );
