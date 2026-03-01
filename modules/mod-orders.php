@@ -927,6 +927,25 @@ class HearMed_Orders {
             return '<div class="hm-notice hm-notice--error">Order not ready for fitting yet.</div>';
         }
 
+        // ── Check for hearing-aid products that still have NO serial numbers ──
+        $missing_serials = $db->get_results(
+            "SELECT oi.id AS order_item_id, oi.item_id AS product_id, oi.ear_side,
+                    CONCAT(m.name,' ',p.product_name,' ',p.style) AS item_name
+             FROM hearmed_core.order_items oi
+             JOIN hearmed_reference.products p      ON p.id = oi.item_id
+             JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+             WHERE oi.order_id = \$1 AND oi.item_type = 'product'
+               AND NOT EXISTS (
+                   SELECT 1 FROM hearmed_core.patient_devices pd
+                   WHERE pd.patient_id = \$2
+                     AND pd.product_id = oi.item_id
+                     AND (pd.serial_number_left IS NOT NULL OR pd.serial_number_right IS NOT NULL)
+               )
+             ORDER BY oi.line_number",
+            [$order_id, $order->patient_id]
+        );
+        $has_missing_serials = !empty($missing_serials);
+
         $amount_due = $order->invoice_total ?? $order->grand_total;
 
         ob_start(); ?>
@@ -935,6 +954,45 @@ class HearMed_Orders {
                 <a href="<?php echo esc_url($base.'?hm_action=view&order_id='.$order_id); ?>" class="hm-back">← Order</a>
                 <h1 class="hm-page-title">Record Fitting + Payment</h1>
             </div>
+
+            <?php if ($has_missing_serials) : ?>
+            <!-- ── SERIAL NUMBERS REQUIRED ──────────────────────────────── -->
+            <div class="hm-card hm-card--action" style="max-width:600px;border-left:4px solid #e53e3e;">
+                <h3 class="hm-card-title" style="color:#e53e3e;">⚠ Serial Numbers Required</h3>
+                <p class="hm-form__hint">
+                    The following hearing aids have <strong>not been received in branch</strong> or
+                    serial numbers have not been entered. Enter them now before finalising.
+                </p>
+
+                <?php foreach ($missing_serials as $ms) :
+                    $need_left  = in_array($ms->ear_side, ['Left','Binaural']);
+                    $need_right = in_array($ms->ear_side, ['Right','Binaural']);
+                    if (!$need_left && !$need_right) { $need_left = true; $need_right = true; } // unknown → ask both
+                ?>
+                <div class="hm-card hm-card--inset" style="margin-bottom:1rem;">
+                    <strong><?php echo esc_html($ms->item_name); ?></strong>
+                    <span class="hm-muted">(<?php echo esc_html($ms->ear_side ?? 'Unknown'); ?>)</span>
+                    <input type="hidden" class="hm-serial-product" value="<?php echo $ms->product_id; ?>">
+                    <input type="hidden" class="hm-serial-oiid"    value="<?php echo $ms->order_item_id; ?>">
+
+                    <?php if ($need_left) : ?>
+                    <div class="hm-form-group" style="margin-top:0.75rem;">
+                        <label class="hm-label">Left Ear Serial Number <span style="color:#e53e3e;">*</span></label>
+                        <input type="text" class="hm-input hm-input--mono hm-serial-left"
+                               placeholder="Serial number..." required>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($need_right) : ?>
+                    <div class="hm-form-group" style="margin-top:0.5rem;">
+                        <label class="hm-label">Right Ear Serial Number <span style="color:#e53e3e;">*</span></label>
+                        <input type="text" class="hm-input hm-input--mono hm-serial-right"
+                               placeholder="Serial number..." required>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
 
             <div class="hm-card" style="max-width:520px;">
                 <div class="hm-complete-summary">
@@ -985,19 +1043,51 @@ class HearMed_Orders {
 
         <script>
         document.getElementById('hm-confirm-complete').addEventListener('click', function() {
+
+            // ── Collect inline serials if any are on-screen ──
+            var serialCards = document.querySelectorAll('.hm-serial-product');
+            var serials = [];
+            var serialsMissing = false;
+            serialCards.forEach(function(el) {
+                var card = el.closest('.hm-card--inset');
+                var pid  = el.value;
+                var oiid = card.querySelector('.hm-serial-oiid').value;
+                var leftEl  = card.querySelector('.hm-serial-left');
+                var rightEl = card.querySelector('.hm-serial-right');
+                var left  = leftEl  ? leftEl.value.trim()  : '';
+                var right = rightEl ? rightEl.value.trim() : '';
+                if ((leftEl && !left) || (rightEl && !right)) {
+                    serialsMissing = true;
+                    if (leftEl  && !left)  leftEl.style.borderColor  = '#e53e3e';
+                    if (rightEl && !right) rightEl.style.borderColor = '#e53e3e';
+                } else {
+                    if (leftEl)  leftEl.style.borderColor  = '';
+                    if (rightEl) rightEl.style.borderColor = '';
+                }
+                serials.push({product_id: pid, order_item_id: oiid, left: left, right: right});
+            });
+            if (serialsMissing) {
+                alert('Please enter ALL serial numbers before finalising.');
+                return;
+            }
+
             if (!confirm('Confirm patient fitted and payment received? This will finalise the invoice.')) return;
             const btn = this;
             btn.disabled=true; btn.textContent='Finalising...';
+
+            var params = {
+                action:'hm_complete_order',
+                order_id: btn.dataset.orderId,
+                nonce: btn.dataset.nonce,
+                fit_date: document.getElementById('hm-fit-date').value,
+                amount: document.getElementById('hm-fit-amount').value,
+                notes: document.getElementById('hm-fit-notes').value
+            };
+            if (serials.length) params.inline_serials = JSON.stringify(serials);
+
             fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
                 method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({
-                    action:'hm_complete_order',
-                    order_id: btn.dataset.orderId,
-                    nonce: btn.dataset.nonce,
-                    fit_date: document.getElementById('hm-fit-date').value,
-                    amount: document.getElementById('hm-fit-amount').value,
-                    notes: document.getElementById('hm-fit-notes').value
-                })
+                body: new URLSearchParams(params)
             }).then(r=>r.json()).then(d=>{
                 const msg=document.getElementById('hm-complete-msg');
                 msg.style.display='block';
@@ -1324,6 +1414,31 @@ class HearMed_Orders {
             "SELECT patient_id FROM hearmed_core.orders WHERE id = \$1", [$order_id]
         );
 
+        // Validate that every HA product item has at least one serial
+        $ha_items = $db->get_results(
+            "SELECT oi.id, oi.item_id AS product_id, oi.ear_side
+             FROM hearmed_core.order_items oi
+             WHERE oi.order_id = \$1 AND oi.item_type = 'product'
+             ORDER BY oi.line_number", [$order_id]
+        );
+
+        if (!empty($ha_items)) {
+            foreach ($ha_items as $ha) {
+                $item_key = null;
+                foreach ($items as $k => $d) {
+                    if (intval($d['product_id'] ?? 0) === intval($ha->product_id)) { $item_key = $k; break; }
+                }
+                $left  = sanitize_text_field($items[$item_key]['left']  ?? '');
+                $right = sanitize_text_field($items[$item_key]['right'] ?? '');
+                $need_left  = in_array($ha->ear_side, ['Left','Binaural']);
+                $need_right = in_array($ha->ear_side, ['Right','Binaural']);
+                if (!$need_left && !$need_right) { $need_left = true; $need_right = true; }
+                if (($need_left && !$left) || ($need_right && !$right)) {
+                    wp_send_json_error('Serial numbers are required for all hearing aid products. Please fill in every field.');
+                }
+            }
+        }
+
         // Save serials into patient_devices (not order_items)
         foreach ($items as $item_id => $data) {
             $product_id  = intval($data['product_id'] ?? 0);
@@ -1388,6 +1503,43 @@ class HearMed_Orders {
              WHERE o.id = \$1", [$order_id]
         );
         if (!$order) wp_send_json_error('Order not found.');
+
+        // ── Save inline serials submitted from the complete form ──
+        $inline_serials = json_decode(stripslashes($_POST['inline_serials'] ?? ''), true);
+        if (!empty($inline_serials) && is_array($inline_serials)) {
+            foreach ($inline_serials as $s) {
+                $pid   = intval($s['product_id'] ?? 0);
+                $left  = sanitize_text_field($s['left']  ?? '');
+                $right = sanitize_text_field($s['right'] ?? '');
+                if ($pid && ($left || $right)) {
+                    $db->insert('hearmed_core.patient_devices', [
+                        'patient_id'          => $order->patient_id,
+                        'product_id'          => $pid,
+                        'serial_number_left'  => $left  ?: null,
+                        'serial_number_right' => $right ?: null,
+                        'device_status'       => 'Active',
+                        'created_by'          => $user->id ?? null,
+                    ]);
+                }
+            }
+        }
+
+        // ── Server-side gate: every HA product must have a serial by now ──
+        $still_missing = $db->get_results(
+            "SELECT oi.id
+             FROM hearmed_core.order_items oi
+             WHERE oi.order_id = \$1 AND oi.item_type = 'product'
+               AND NOT EXISTS (
+                   SELECT 1 FROM hearmed_core.patient_devices pd
+                   WHERE pd.patient_id = \$2
+                     AND pd.product_id = oi.item_id
+                     AND (pd.serial_number_left IS NOT NULL OR pd.serial_number_right IS NOT NULL)
+               )",
+            [$order_id, $order->patient_id]
+        );
+        if (!empty($still_missing)) {
+            wp_send_json_error('Serial numbers are missing for one or more hearing aids. Please enter them before finalising.');
+        }
 
         // 1. Update order to Complete
         $db->update('hearmed_core.orders', [
