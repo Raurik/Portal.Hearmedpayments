@@ -1554,10 +1554,11 @@ function hm_ajax_record_order_payment() {
 
     try {
         $order_id       = intval( $_POST['order_id'] ?? 0 );
+        $order_number   = sanitize_text_field( $_POST['order_number'] ?? '' );
         $amount         = floatval( $_POST['amount'] ?? 0 );
         $payment_method = sanitize_text_field( $_POST['payment_method'] ?? '' );
 
-        if ( ! $order_id ) { wp_send_json_error( [ 'message' => 'No order specified.' ] ); return; }
+        if ( ! $order_id && ! $order_number ) { wp_send_json_error( [ 'message' => 'No order specified.' ] ); return; }
         if ( $amount <= 0 ) { wp_send_json_error( [ 'message' => 'Invalid amount.' ] ); return; }
         if ( ! $payment_method ) { wp_send_json_error( [ 'message' => 'Select a payment method.' ] ); return; }
 
@@ -1569,13 +1570,35 @@ function hm_ajax_record_order_payment() {
             [ $wp_uid ]
         );
 
-        $order = $db->get_row(
-            "SELECT o.id, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
-                    o.subtotal, o.discount_total, o.vat_total,
-                    o.grand_total, o.balance_due, o.prsi_applicable, o.prsi_amount,
-                    o.deposit_amount
-             FROM hearmed_core.orders o WHERE o.id = \$1", [$order_id]
-        );
+        $order = null;
+        if ( $order_id > 0 ) {
+            $order = $db->get_row(
+                "SELECT o.id, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
+                        o.subtotal, o.discount_total, o.vat_total,
+                        o.grand_total, o.balance_due, o.prsi_applicable, o.prsi_amount,
+                        o.deposit_amount
+                 FROM hearmed_core.orders o WHERE o.id = \$1",
+                [ $order_id ]
+            );
+        }
+
+        if ( ! $order && $order_number ) {
+            $order = $db->get_row(
+                "SELECT o.id, o.patient_id, o.clinic_id, o.staff_id, o.invoice_id,
+                        o.subtotal, o.discount_total, o.vat_total,
+                        o.grand_total, o.balance_due, o.prsi_applicable, o.prsi_amount,
+                        o.deposit_amount
+                 FROM hearmed_core.orders o
+                 WHERE UPPER(TRIM(COALESCE(o.order_number, ''))) = UPPER(TRIM(\$1))
+                 ORDER BY o.id DESC
+                 LIMIT 1",
+                [ $order_number ]
+            );
+            if ( $order ) {
+                $order_id = intval( $order->id );
+            }
+        }
+
         if ( ! $order ) { wp_send_json_error( [ 'message' => 'Order not found.' ] ); return; }
 
         // Ensure invoice exists and is linked to order

@@ -2048,6 +2048,7 @@ var Cal={
             var $btn=$(this);$btn.prop('disabled',true).text('Processing...');
             post('record_order_payment',{
                 order_id:orderId,
+                order_number:orderNumber,
                 amount:amt,
                 payment_method:method
             }).then(function(r){
@@ -2148,7 +2149,7 @@ var Cal={
             // Select existing order → open payment modal
             $(document).off('click.oselorder').on('click.oselorder','.hm-osel-order',function(){
                 var $card=$(this);
-                var ordId=$card.data('oid');
+                var ordId=parseInt($card.attr('data-oid'),10)||0;
                 var ordNum=$card.data('onum');
                 var bal=parseFloat($card.data('bal'))||0;
 
