@@ -19,3 +19,6 @@ jobs:
           script: |
             cd ~/www/portal.hearmedpayments.net/public_html/wp-content/plugins/hearmed-calendar
             git pull origin main
+            cd ~/www/portal.hearmedpayments.net/public_html
+            php -r "if(function_exists('opcache_reset')){opcache_reset();echo 'OPcache cleared';}else{echo 'OPcache not available';}"
+            wp cache flush --allow-root 2>/dev/null || true
