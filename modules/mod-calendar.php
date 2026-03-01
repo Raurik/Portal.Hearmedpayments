@@ -1643,14 +1643,25 @@ function hm_ajax_record_order_payment() {
             return;
         }
 
+        $has_balance_remaining = (bool) $db->get_var(
+            "SELECT 1
+               FROM information_schema.columns
+              WHERE table_schema = 'hearmed_core'
+                AND table_name = 'invoices'
+                AND column_name = 'balance_remaining'
+              LIMIT 1"
+        );
+
+        $invoice_select_sql = $has_balance_remaining
+            ? "SELECT id, invoice_number, grand_total, balance_remaining
+                 FROM hearmed_core.invoices WHERE id = \$1"
+            : "SELECT id, invoice_number, grand_total, grand_total AS balance_remaining
+                 FROM hearmed_core.invoices WHERE id = \$1";
+
         // Ensure invoice exists and is linked to order
         $invoice = null;
         if ( ! empty( $order->invoice_id ) ) {
-            $invoice = $db->get_row(
-                "SELECT id, invoice_number, grand_total, balance_remaining
-                   FROM hearmed_core.invoices WHERE id = \$1",
-                [ intval( $order->invoice_id ) ]
-            );
+            $invoice = $db->get_row( $invoice_select_sql, [ intval( $order->invoice_id ) ] );
         }
 
         if ( ! $invoice ) {
@@ -1664,15 +1675,11 @@ function hm_ajax_record_order_payment() {
                 return;
             }
 
-            $invoice = $db->get_row(
-                "SELECT id, invoice_number, grand_total, balance_remaining
-                   FROM hearmed_core.invoices WHERE id = \$1",
-                [ $inv_id ]
-            );
+            $invoice = $db->get_row( $invoice_select_sql, [ $inv_id ] );
         }
 
         if ( ! $invoice ) {
-            wp_send_json_error( [ 'message' => 'Invoice could not be loaded after creation.' ] );
+            wp_send_json_error( [ 'message' => 'Invoice could not be loaded after creation. ' . HearMed_DB::last_error() ] );
             return;
         }
 
@@ -1703,14 +1710,24 @@ function hm_ajax_record_order_payment() {
 
         $new_balance = max( 0, floatval( $invoice->balance_remaining ?? $invoice->grand_total ?? $order->grand_total ) - $amount );
         $payment_status = $new_balance <= 0 ? 'Paid' : 'Partial';
-        $db->query(
-            "UPDATE hearmed_core.invoices
-                SET balance_remaining = \$1,
-                    payment_status = \$2,
-                    updated_at = NOW()
-              WHERE id = \$3",
-            [ $new_balance, $payment_status, intval( $invoice->id ) ]
-        );
+        if ( $has_balance_remaining ) {
+            $db->query(
+                "UPDATE hearmed_core.invoices
+                    SET balance_remaining = \$1,
+                        payment_status = \$2,
+                        updated_at = NOW()
+                  WHERE id = \$3",
+                [ $new_balance, $payment_status, intval( $invoice->id ) ]
+            );
+        } else {
+            $db->query(
+                "UPDATE hearmed_core.invoices
+                    SET payment_status = \$1,
+                        updated_at = NOW()
+                  WHERE id = \$2",
+                [ $payment_status, intval( $invoice->id ) ]
+            );
+        }
 
         // Log in patient timeline
         $db->insert( 'hearmed_core.patient_timeline', [
