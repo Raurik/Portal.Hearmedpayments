@@ -501,10 +501,23 @@ function hm_render_fitting_page() {
             var valDelivery  = sumField(awaitingDelivery, 'subtotal');
             var valPipeline  = sumField(orders, 'subtotal');
 
-            // PRSI totals
-            var prsiCount = orders.filter(function(o) { return o.prsi_applicable; }).length;
-            var prsiVal   = sumField(orders, 'prsi_amount');
-            var patientPays = valPipeline - prsiVal;
+            // PRSI to claim — only count PRSI-applicable orders within PRSI cycle window
+            // Cycle: 2nd Tuesday of current month → 1st Monday of next month
+            var cycle = hmFitting.getPRSICycleDates();
+            var prsiInCycle = orders.filter(function(o) {
+                if (!o.prsi_applicable) return false;
+                if (!o.fitting_date_raw || !cycle.start || !cycle.end) return true; // no date yet = include
+                var fd = new Date(o.fitting_date_raw);
+                return fd >= cycle.start && fd <= cycle.end;
+            });
+            var prsiCount = prsiInCycle.length;
+            var prsiVal   = sumField(prsiInCycle, 'prsi_amount');
+            var patientPays = valPipeline - sumField(orders, 'prsi_amount');
+
+            var cycleLabel = '';
+            if (cycle.start && cycle.end) {
+                cycleLabel = hmFD(cycle.start) + ' – ' + hmFD(cycle.end);
+            }
 
             container.innerHTML =
                 '<div class="hmf-summary-row">' +
@@ -513,8 +526,9 @@ function hm_render_fitting_page() {
                         '<div class="hmf-summary-cell-val" style="font-size:22px;">' + euro(valPipeline) + '</div>' +
                     '</div>' +
                     '<div class="hmf-summary-cell">' +
-                        '<div class="hmf-summary-cell-label">PRSI Deduction (' + prsiCount + ')</div>' +
-                        '<div class="hmf-summary-cell-val" style="color:#059669;">−' + euro(prsiVal) + '</div>' +
+                        '<div class="hmf-summary-cell-label">PRSI to Claim (' + prsiCount + ')</div>' +
+                        '<div class="hmf-summary-cell-val" style="color:#059669;">' + euro(prsiVal) + '</div>' +
+                        '<div class="hmf-summary-cell-sub">' + hmFE(cycleLabel) + '</div>' +
                     '</div>' +
                     '<div class="hmf-summary-cell" style="border-left:2px solid #e2e8f0;">' +
                         '<div class="hmf-summary-cell-label">Patient Pays</div>' +
