@@ -697,8 +697,10 @@ function hm_ajax_update_patient() {
 
     $result = $db->update( 'hearmed_core.patients', $data, [ 'id' => $pid ] );
     if ( $result === false ) {
-        error_log( '[HearMed] update_patient FAILED for pid=' . $pid . ' — ' . HearMed_DB::last_error() );
-        wp_send_json_error( 'Update failed' );
+        $db_err = HearMed_DB::last_error();
+        error_log( '[HearMed] update_patient FAILED for pid=' . $pid . ' — ' . $db_err );
+        error_log( '[HearMed] update_patient data: ' . wp_json_encode( $data ) );
+        wp_send_json_error( 'Update failed: ' . $db_err );
     }
 
     hm_patient_audit( 'UPDATE', 'patient', $pid, $data );
