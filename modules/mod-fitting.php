@@ -504,6 +504,11 @@ function hm_render_fitting_page() {
             // PRSI to claim — only count PRSI-applicable orders within PRSI cycle window
             // Cycle: 2nd Tuesday of current month → 1st Monday of next month
             var cycle = hmFitting.getPRSICycleDates();
+            console.log('[PRSI Debug] Total orders:', orders.length);
+            console.log('[PRSI Debug] Cycle:', cycle);
+            orders.forEach(function(o) {
+                console.log('[PRSI Debug] Order', o.order_number, '| prsi_applicable:', o.prsi_applicable, '| prsi_amount:', o.prsi_amount, '| status:', o.current_status, '| fitting_date_raw:', o.fitting_date_raw);
+            });
             var prsiInCycle = orders.filter(function(o) {
                 if (!o.prsi_applicable) return false;
                 if (!o.fitting_date_raw || !cycle.start || !cycle.end) return true; // no date yet = include
@@ -512,6 +517,7 @@ function hm_render_fitting_page() {
             });
             var prsiCount = prsiInCycle.length;
             var prsiVal   = sumField(prsiInCycle, 'prsi_amount');
+            console.log('[PRSI Debug] prsiInCycle count:', prsiCount, '| prsiVal:', prsiVal);
             var patientPays = valPipeline - sumField(orders, 'prsi_amount');
 
             var cycleLabel = '';
@@ -968,6 +974,17 @@ function hm_ajax_fitting_load() {
             }
         }
 
+        $prsi_computed = (float) hm_fitting_compute_prsi($o);
+
+        // PRSI debug logging for every order
+        error_log("[HearMed PRSI Debug] Order #{$o->order_number} (id={$o->id}) status={$o->current_status}"
+            . " | prsi_applicable raw='" . ($o->prsi_applicable ?? 'NULL') . "' parsed=" . (hm_pg_bool($o->prsi_applicable ?? false) ? 'TRUE' : 'FALSE')
+            . " | prsi_amount raw='" . ($o->prsi_amount ?? 'NULL') . "'"
+            . " | prsi_left raw='" . ($o->prsi_left ?? 'NULL') . "' parsed=" . (hm_pg_bool($o->prsi_left ?? false) ? 'TRUE' : 'FALSE')
+            . " | prsi_right raw='" . ($o->prsi_right ?? 'NULL') . "' parsed=" . (hm_pg_bool($o->prsi_right ?? false) ? 'TRUE' : 'FALSE')
+            . " | computed={$prsi_computed}"
+        );
+
         $result[] = [
             'id'              => (int)$o->id,
             'order_number'    => $o->order_number,
@@ -984,7 +1001,7 @@ function hm_ajax_fitting_load() {
             'fitting_date'    => $o->fitting_date ? date('d M Y', strtotime($o->fitting_date)) : '',
             'fitting_date_raw'=> $o->fitting_date ?? '',
             'subtotal'        => (float)($o->subtotal ?? 0),
-            'prsi_amount'     => (float) hm_fitting_compute_prsi($o),
+            'prsi_amount'     => $prsi_computed,
             'grand_total'     => (float)($o->grand_total ?? 0),
             'invoice_id'      => $o->invoice_id ? (int)$o->invoice_id : null,
             'items'           => $items,
