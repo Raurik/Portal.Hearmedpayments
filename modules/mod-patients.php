@@ -876,12 +876,27 @@ function hm_ajax_get_patient_products() {
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
     $db   = HearMed_DB::instance();
+
+    // Check if model/tech_level columns exist in products table
+    $has_model = $db->get_var(
+        "SELECT column_name FROM information_schema.columns
+         WHERE table_schema = 'hearmed_reference' AND table_name = 'products' AND column_name = 'model'"
+    );
+    $has_tech = $db->get_var(
+        "SELECT column_name FROM information_schema.columns
+         WHERE table_schema = 'hearmed_reference' AND table_name = 'products' AND column_name = 'tech_level'"
+    );
+    $model_col = $has_model ? "COALESCE(pr.model, '') AS model," : "'' AS model,";
+    $tech_col  = $has_tech  ? "COALESCE(pr.tech_level, '') AS tech_level," : "'' AS tech_level,";
+
     $rows = $db->get_results(
         "SELECT pd.id, pd.product_id, pd.serial_number_left, pd.serial_number_right,
                 pd.fitting_date, pd.device_status, pd.inactive_reason, pd.warranty_expiry,
                 COALESCE(pr.product_name, 'Unknown') AS product_name,
                 COALESCE(m.name, '') AS manufacturer,
-                pr.style, pr.model, pr.tech_level,
+                pr.style,
+                $model_col
+                $tech_col
                 '' AS product_image
          FROM hearmed_core.patient_devices pd
          LEFT JOIN hearmed_reference.products pr ON pr.id = pd.product_id
