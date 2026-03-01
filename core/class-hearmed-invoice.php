@@ -478,7 +478,7 @@ class HearMed_Invoice {
 
         $invoice = $db->get_row(
             "SELECT inv.*,
-                    p.first_name, p.last_name, p.email, p.phone,
+                    p.first_name, p.last_name, p.email, p.phone, p.patient_number,
                     p.address_line1, p.address_line2, p.city AS p_city, p.county, p.eircode,
                     c.clinic_name, c.address_line1 AS c_addr1, c.address_line2 AS c_addr2,
                     c.city AS c_city, c.phone AS c_phone, c.email AS c_email, c.vat_number,
@@ -496,7 +496,11 @@ class HearMed_Invoice {
         if ( ! $invoice ) return null;
 
         $items = $db->get_results(
-            "SELECT * FROM hearmed_core.invoice_items WHERE invoice_id = $1 ORDER BY line_number",
+            "SELECT ii.*, COALESCE(pr.product_name, ii.item_description) AS product_name
+             FROM hearmed_core.invoice_items ii
+             LEFT JOIN hearmed_reference.products pr ON pr.id = ii.item_id AND ii.item_type = 'product'
+             WHERE ii.invoice_id = $1
+             ORDER BY ii.line_number",
             [ $invoice_id ]
         );
 
@@ -763,17 +767,63 @@ class HearMed_Invoice {
     public static function ajax_print_invoice() {
         check_ajax_referer( 'hearmed_nonce', 'nonce' );
 
-        $invoice_id = intval( $_GET['invoice_id'] ?? 0 );
+        $invoice_id = intval( $_GET['invoice_id'] ?? $_POST['invoice_id'] ?? 0 );
         $data       = self::get_invoice_data( $invoice_id );
         if ( ! $data ) wp_die( 'Invoice not found.' );
 
-        // Try stored snapshot first (preserves original formatting)
-        if ( ! empty( $data->invoice_template ) ) {
-            echo $data->invoice_template;
-        } else {
-            echo self::render_invoice_html( $data );
-        }
+        // Build a data object the template engine understands
+        $tpl = self::build_template_data( $data );
+
+        header( 'Content-Type: text/html; charset=utf-8' );
+        echo HearMed_Print_Templates::render( 'invoice', $tpl );
         exit;
+    }
+
+    /**
+     * Adapt get_invoice_data() result into the shape HearMed_Print_Templates expects.
+     */
+    public static function build_template_data( $inv ) {
+        $db  = HearMed_DB::instance();
+        $tpl = clone $inv;
+
+        // Template engine expects p_first / p_last
+        $tpl->p_first        = $inv->first_name ?? '';
+        $tpl->p_last         = $inv->last_name  ?? '';
+        $tpl->patient_number = $inv->patient_number ?? '';
+        $tpl->clinic_phone   = $inv->c_phone ?? '';
+
+        // Address fields (template expects flat names)
+        if ( empty( $tpl->address_line1 ) && ! empty( $inv->p_address_line1 ) ) {
+            $tpl->address_line1 = $inv->p_address_line1;
+        }
+        // City field — invoice loader aliases it as p_city
+        if ( empty( $tpl->city ) && ! empty( $inv->p_city ) ) {
+            $tpl->city = $inv->p_city;
+        }
+
+        // Wrap invoice data so section_invoice_itemsTable can read it
+        $tpl->invoice = $inv;
+
+        // Items already on $inv->items
+        $tpl->items = $inv->items ?? [];
+
+        // Payments
+        $tpl->payments = $db->get_results(
+            "SELECT * FROM hearmed_core.payments WHERE invoice_id = \$1 ORDER BY payment_date",
+            [ $inv->id ]
+        );
+
+        // Patient devices (serials)
+        $tpl->devices = $db->get_results(
+            "SELECT pd.serial_number_left, pd.serial_number_right, pr.product_name
+             FROM hearmed_core.patient_devices pd
+             LEFT JOIN hearmed_reference.products pr ON pr.id = pd.product_id
+             WHERE pd.patient_id = \$1 AND pd.fitting_date IS NOT NULL
+             ORDER BY pd.created_at DESC LIMIT 4",
+            [ $inv->patient_id ]
+        );
+
+        return $tpl;
     }
 
     public static function ajax_create_credit_note() {

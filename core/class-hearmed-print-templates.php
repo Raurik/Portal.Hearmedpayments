@@ -228,6 +228,7 @@ body {
 .hm-print-logo { width: 48px; height: 48px; border-radius: 8px; background: var(--hm-accent); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 18px; margin-bottom: 6px; }
 .hm-print-company { font-family: '<?php echo esc_attr($s['headerFont'] ?? 'Cormorant Garamond'); ?>', serif; font-size: <?php echo intval($s['headerSize'] ?? 18); ?>px; font-weight: 700; color: <?php echo esc_attr($s['headerColor'] ?? '#0BB4C4'); ?>; }
 .hm-print-tagline { font-size: 10px; color: #94a3b8; }
+.hm-print-form-type { display: inline-block; margin-top: 6px; padding: 2px 10px; border-radius: 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; background: var(--hm-accent); color: #fff; }
 .hm-print-meta { text-align: right; font-size: 10px; color: #64748b; }
 .hm-print-meta strong { color: #1e293b; display: block; }
 /* Info boxes */
@@ -331,7 +332,16 @@ tfoot td { font-weight: 600; border-bottom: none; }
         $company = esc_html($s['companyName'] ?? 'HearMed Acoustic Health Care Ltd');
         $tagline = esc_html($s['tagline'] ?? '');
         $logo_url = HearMed_Settings::get('hm_report_logo_url', '');
-        
+
+        // Human-readable form type labels
+        $type_labels = [
+            'invoice'    => 'Invoice',
+            'order'      => 'Order Form',
+            'repair'     => 'Repair Docket',
+            'creditnote' => 'Credit Note',
+        ];
+        $form_label = $type_labels[$type] ?? ucfirst($type);
+
         ob_start(); ?>
         <div class="hm-print-header">
             <div>
@@ -344,6 +354,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
                 <?php endif; ?>
                 <div class="hm-print-company"><?php echo $company; ?></div>
                 <?php if ($tagline): ?><div class="hm-print-tagline"><?php echo $tagline; ?></div><?php endif; ?>
+                <div class="hm-print-form-type"><?php echo esc_html($form_label); ?></div>
             </div>
             <div class="hm-print-meta">
                 <?php echo self::render_meta($type, $s, $d); ?>

@@ -68,6 +68,7 @@ class HearMed_Ajax {
         add_action( 'wp_ajax_hm_save_serials',   [ 'HearMed_Orders', 'ajax_save_serials' ] );   // Stage 4→5
         add_action( 'wp_ajax_hm_complete_order', [ 'HearMed_Orders', 'ajax_complete_order' ] ); // Stage 6 (fires QBO)
         add_action( 'wp_ajax_hm_patient_search', [ 'HearMed_Orders', 'ajax_patient_search' ] ); // Autocomplete
+        add_action( 'wp_ajax_hm_print_order_sheet', [ 'HearMed_Orders', 'ajax_print_order_sheet' ] ); // Print order
 
         // Accounting — ADD THESE 5 NEW ONES
 add_action('wp_ajax_hm_save_supplier_invoice', ['HearMed_Accounting', 'ajax_save_supplier_invoice']);

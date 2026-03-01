@@ -1197,13 +1197,19 @@ function hm_ajax_download_invoice() {
     $id = intval( $_GET['_ID'] ?? 0 );
     if ( ! $id ) wp_die( 'Missing invoice ID' );
 
+    // Log the download
     $db  = HearMed_DB::instance();
-    $inv = $db->get_row( "SELECT pdf_url, invoice_number FROM hearmed_core.invoices WHERE id = \$1", [ $id ] );
-    if ( ! $inv || ! $inv->pdf_url ) wp_die( 'Invoice PDF not available' );
-
+    $inv = $db->get_row( "SELECT invoice_number FROM hearmed_core.invoices WHERE id = \$1", [ $id ] );
+    if ( ! $inv ) wp_die( 'Invoice not found' );
     hm_patient_audit( 'DOWNLOAD_INVOICE', 'invoice', $id, [ 'invoice' => $inv->invoice_number ] );
 
-    wp_redirect( $inv->pdf_url );
+    // Render via the configurable template engine (same as fitting receipt)
+    $data = HearMed_Invoice::get_invoice_data( $id );
+    if ( ! $data ) wp_die( 'Invoice data not found' );
+
+    $tpl = HearMed_Invoice::build_template_data( $data );
+    header( 'Content-Type: text/html; charset=utf-8' );
+    echo HearMed_Print_Templates::render( 'invoice', $tpl );
     exit;
 }
 

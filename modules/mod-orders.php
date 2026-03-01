@@ -652,7 +652,7 @@ class HearMed_Orders {
                     <?php if ($can_order) : ?>
                     <div class="hm-card hm-card--action">
                         <h3 class="hm-card-title">Place Order with Supplier</h3>
-                        <a href="<?php echo esc_url($base.'?hm_action=print&order_id='.$order_id); ?>"
+                        <a href="<?php echo esc_url(admin_url('admin-ajax.php').'?action=hm_print_order_sheet&nonce='.wp_create_nonce('hearmed_nonce').'&order_id='.$order_id); ?>"
                            target="_blank" class="hm-btn hm-btn--secondary hm-btn--block" style="margin-bottom:0.75rem;">
                             Print Order Sheet
                         </a>
@@ -708,7 +708,7 @@ class HearMed_Orders {
 
                     <?php if ($can_print && !$can_order) : ?>
                     <div class="hm-card">
-                        <a href="<?php echo esc_url($base.'?hm_action=print&order_id='.$order_id); ?>"
+                        <a href="<?php echo esc_url(admin_url('admin-ajax.php').'?action=hm_print_order_sheet&nonce='.wp_create_nonce('hearmed_nonce').'&order_id='.$order_id); ?>"
                            target="_blank" class="hm-btn hm-btn--secondary hm-btn--block">
                             Print Order Sheet
                         </a>
@@ -1161,6 +1161,23 @@ class HearMed_Orders {
         }
 
         return '<p>Order template engine not available.</p>';
+    }
+
+    /**
+     * AJAX handler: print order sheet in a standalone browser tab.
+     * Outputs a complete HTML document and exits — avoids nesting inside WP template.
+     */
+    public static function ajax_print_order_sheet() {
+        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        if ( ! is_user_logged_in() ) wp_die( 'Access denied.' );
+
+        $order_id = intval( $_GET['order_id'] ?? $_POST['order_id'] ?? 0 );
+        if ( ! $order_id ) wp_die( 'Missing order ID.' );
+
+        $html = self::render_order_sheet( $order_id );
+        header( 'Content-Type: text/html; charset=utf-8' );
+        echo $html;
+        exit;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
