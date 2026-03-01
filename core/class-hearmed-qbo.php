@@ -289,11 +289,11 @@ class HearMed_QBO {
         $items = $db->get_results(
             "SELECT oi.quantity, oi.unit_retail_price, oi.line_total,
                     oi.vat_rate, oi.item_type, oi.item_description, oi.ear_side,
-                    COALESCE(CONCAT(m.name,' ',p.product_name,' ',p.style), s.product_name, oi.item_description) AS display_name
+                    COALESCE(CONCAT(m.name,' ',p.product_name,' ',p.style), s.service_name, oi.item_description) AS display_name
              FROM hearmed_core.order_items oi
              LEFT JOIN hearmed_reference.products p      ON p.id = oi.item_id AND oi.item_type='product'
              LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
-             LEFT JOIN hearmed_reference.products s      ON s.id = oi.item_id AND oi.item_type='service'
+             LEFT JOIN hearmed_reference.services s      ON s.id = oi.item_id AND oi.item_type='service'
              WHERE oi.order_id = \$1 ORDER BY oi.line_number", [$order_id]
         );
 

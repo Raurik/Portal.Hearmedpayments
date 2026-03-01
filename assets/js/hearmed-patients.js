@@ -466,7 +466,7 @@ function initProfile(){
                 payload.is_active=$('#es-active').length?($('#es-active').is(':checked')?'1':'0'):(p.is_active?'1':'0');
                 var $btn=$(this).prop('disabled',true).text('Saving…');
                 $.post(_hm.ajax,payload,function(r){
-                    if(r.success){toast('Updated');$.post(_hm.ajax,{action:'hm_get_patient',nonce:_hm.nonce,patient_id:pid},function(r2){if(r2.success){patient=r2.data;renderProfile();renderView();}});}
+                    if(r.success){toast('Updated');$.post(_hm.ajax,{action:'hm_get_patient',nonce:_hm.nonce,patient_id:pid},function(r2){if(r2.success){patient=r2.data;renderProfile();$c=$('#hm-tab-content');renderView();}});}
                     else{toast(r.data||'Error','error');$btn.prop('disabled',false).text('Save');}
                 });
             });

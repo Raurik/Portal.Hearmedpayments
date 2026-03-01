@@ -165,6 +165,19 @@ class HearMed_Admin_Products {
     }
 
     private function get_products($type = null) {
+        // Services live in their own table
+        if ($type === 'service') {
+            return HearMed_DB::get_results(
+                "SELECT id, service_name AS product_name, service_code AS product_code,
+                        retail_price, vat_rate AS vat_category, is_active,
+                        'service' AS item_type, 'Services' AS category,
+                        NULL AS manufacturer_name, NULL AS hearmed_range_name
+                 FROM hearmed_reference.services
+                 WHERE is_active = true
+                 ORDER BY service_name"
+            ) ?: [];
+        }
+
         $sql = "SELECT p.*, m.name AS manufacturer_name, hr.range_name AS hearmed_range_name
                 FROM hearmed_reference.products p
                 LEFT JOIN hearmed_reference.manufacturers m ON p.manufacturer_id = m.id
@@ -986,7 +999,7 @@ class HearMed_Admin_Products {
 
             del: function(id, name) {
                 if (!confirm('Delete "' + name + '"?')) return;
-                jQuery.post(HM.ajax_url, { action:'hm_admin_delete_product', nonce:HM.nonce, id:id }, function(r) {
+                jQuery.post(HM.ajax_url, { action:'hm_admin_delete_product', nonce:HM.nonce, id:id, item_type:hmProd.activeTab }, function(r) {
                     if (r.success) location.reload();
                     else alert(r.data || 'Error');
                 });
@@ -1106,13 +1119,32 @@ class HearMed_Admin_Products {
             $data['retail_price']    = $_POST['retail_price'] !== '' ? floatval($_POST['retail_price']) : null;
         }
 
-        $table = 'hearmed_reference.products';
-        if ($id) {
-            $result = HearMed_DB::update($table, $data, ['id' => $id]);
+        // Services go to their own table with mapped column names
+        if ($type === 'service') {
+            $svc_data = [
+                'service_name' => $name,
+                'service_code' => $data['product_code'],
+                'retail_price' => $data['retail_price'] ?? null,
+                'vat_rate'     => $data['vat_category'] ?? null,
+                'is_active'    => true,
+                'updated_at'   => current_time('mysql'),
+            ];
+            if ($id) {
+                $result = HearMed_DB::update('hearmed_reference.services', $svc_data, ['id' => $id]);
+            } else {
+                $svc_data['created_at'] = current_time('mysql');
+                $result = HearMed_DB::insert('hearmed_reference.services', $svc_data);
+                $id = $result ?: 0;
+            }
         } else {
-            $data['created_at'] = current_time('mysql');
-            $result = HearMed_DB::insert($table, $data);
-            $id = $result ?: 0;
+            $table = 'hearmed_reference.products';
+            if ($id) {
+                $result = HearMed_DB::update($table, $data, ['id' => $id]);
+            } else {
+                $data['created_at'] = current_time('mysql');
+                $result = HearMed_DB::insert($table, $data);
+                $id = $result ?: 0;
+            }
         }
 
         if ($result === false) {
@@ -1126,11 +1158,13 @@ class HearMed_Admin_Products {
         check_ajax_referer('hm_nonce', 'nonce');
         if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
 
-        $id = intval($_POST['id'] ?? 0);
+        $id   = intval($_POST['id'] ?? 0);
+        $type = sanitize_text_field($_POST['item_type'] ?? '');
         if (!$id) { wp_send_json_error('Invalid ID'); return; }
 
+        $table = ($type === 'service') ? 'hearmed_reference.services' : 'hearmed_reference.products';
         $result = HearMed_DB::update(
-            'hearmed_reference.products',
+            $table,
             ['is_active' => false, 'updated_at' => current_time('mysql')],
             ['id' => $id]
         );
@@ -1163,14 +1197,18 @@ class HearMed_Admin_Products {
         foreach ($mfrs as $m) $mfr_map[strtolower($m->name)] = (int)$m->id;
 
         $count = 0;
-        $table = 'hearmed_reference.products';
+        $table = ($type === 'service') ? 'hearmed_reference.services' : 'hearmed_reference.products';
         $now = current_time('mysql');
 
         while (($row = fgetcsv($handle)) !== false) {
             if (count($row) < 2) continue;
             $r = array_combine($headers, array_pad($row, count($headers), ''));
 
-            $data = [
+            $data = ($type === 'service') ? [
+                'is_active'  => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ] : [
                 'item_type'  => $type,
                 'category'   => self::$category_labels[$type] ?? 'Hearing Aid',
                 'is_active'  => true,
@@ -1195,9 +1233,9 @@ class HearMed_Admin_Products {
                     'style'             => $data['style'],
                 ]);
             } elseif ($type === 'service') {
-                $data['product_name']  = trim($r['service_name'] ?? '');
+                $data['service_name']  = trim($r['service_name'] ?? '');
                 $data['retail_price']  = ($r['retail_price'] ?? '') !== '' ? floatval($r['retail_price']) : null;
-                $data['product_code']  = self::generate_code('service', ['name' => $data['product_name']]);
+                $data['service_code']  = self::generate_code('service', ['name' => $data['service_name']]);
             } elseif ($type === 'bundled') {
                 $mfr_name = trim($r['manufacturer'] ?? '');
                 $mfr_id   = $mfr_map[strtolower($mfr_name)] ?? null;
@@ -1219,7 +1257,8 @@ class HearMed_Admin_Products {
                 $data['product_code']    = self::generate_code('bundled', ['name' => $data['product_name']]);
             }
 
-            if (!empty($data['product_name'])) {
+            $name_key = ($type === 'service') ? 'service_name' : 'product_name';
+            if (!empty($data[$name_key])) {
                 $result = HearMed_DB::insert($table, $data);
                 if ($result) $count++;
             }

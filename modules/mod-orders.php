@@ -20,7 +20,7 @@
  *  hearmed_reference.staff          staff data
  *  hearmed_reference.clinics        clinic data
  *  hearmed_reference.products       product catalogue
- *  hearmed_reference.products        service catalogue (item_type='service')
+ *  hearmed_reference.services         service catalogue
  *
  * ═══════════════════════════════════════════════════════════
  * ORDER STATUS FLOW (current_status column, has CHECK constraint)
@@ -243,10 +243,10 @@ class HearMed_Orders {
         );
 
         $services = $db->get_results(
-            "SELECT id, product_name AS service_name, retail_price AS default_price
-             FROM hearmed_reference.products
-             WHERE is_active = true AND item_type = 'service'
-             ORDER BY product_name", []
+            "SELECT id, service_name, retail_price AS default_price
+             FROM hearmed_reference.services
+             WHERE is_active = true
+             ORDER BY service_name", []
         );
 
         $base  = HearMed_Utils::page_url('orders');
@@ -485,13 +485,13 @@ class HearMed_Orders {
                     CASE
                         WHEN oi.item_type = 'product'
                             THEN CONCAT(m.name,' ',p.product_name,' ',p.style)
-                        ELSE s.product_name
+                        ELSE s.service_name
                     END AS item_name,
                     p.tech_level
              FROM hearmed_core.order_items oi
              LEFT JOIN hearmed_reference.products p      ON p.id = oi.item_id AND oi.item_type = 'product'
              LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
-             LEFT JOIN hearmed_reference.products s      ON s.id = oi.item_id AND oi.item_type = 'service'
+             LEFT JOIN hearmed_reference.services s      ON s.id = oi.item_id AND oi.item_type = 'service'
              WHERE oi.order_id = \$1 ORDER BY oi.line_number", [$order_id]
         );
 

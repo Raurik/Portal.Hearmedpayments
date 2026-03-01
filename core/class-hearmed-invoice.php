@@ -119,12 +119,12 @@ class HearMed_Invoice {
                     CASE
                         WHEN oi.item_type = 'product'
                             THEN CONCAT(m.name,' ',pr.product_name,' ',pr.style)
-                        ELSE svc.product_name
+                        ELSE svc.service_name
                     END AS item_name
              FROM hearmed_core.order_items oi
              LEFT JOIN hearmed_reference.products pr      ON pr.id = oi.item_id AND oi.item_type='product'
              LEFT JOIN hearmed_reference.manufacturers m  ON m.id = pr.manufacturer_id
-             LEFT JOIN hearmed_reference.products svc     ON svc.id = oi.item_id AND oi.item_type='service'
+             LEFT JOIN hearmed_reference.services svc     ON svc.id = oi.item_id AND oi.item_type='service'
              WHERE oi.order_id = $1
              ORDER BY oi.line_number",
             [ $order_id ]
