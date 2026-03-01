@@ -391,9 +391,10 @@ function initProfile(){
                 return '<div class="hm-detail-card" data-section="'+section+'">'+
                     '<div class="hm-detail-card-title" style="display:flex;justify-content:space-between;align-items:center;">'+
                     '<span>'+esc(title)+'</span>'+
-                    '<button class="hm-btn hm-btn-link hm-btn--sm hm-section-edit" data-section="'+section+'">'+HM_ICONS.edit+'Edit</button>'+
+                    '<button type="button" class="hm-btn hm-btn-link hm-btn--sm hm-section-edit" data-section="'+section+'">'+HM_ICONS.edit+'Edit</button>'+
                     '</div>'+body+'</div>';
             }
+            $c=$('#hm-tab-content');
             $c.html('<div class="hm-tab-section">'+
                 '<div class="hm-section-header"><h3>Patient Details</h3></div>'+
                 '<div class="hm-detail-grid">'+
@@ -405,15 +406,10 @@ function initProfile(){
                     '<div class="hm-detail-card hm-detail-card-gdpr"><div class="hm-detail-card-title">GDPR &amp; Marketing</div><div class="hm-detail-gdpr-row">'+dr('GDPR consent',p.gdpr_consent?'Consented '+fmtDate(p.gdpr_consent_date)+' (v'+(p.gdpr_consent_version||'1.0')+')':'No consent')+'</div>'+
                     '<div class="hm-pref-wrap"><strong class="hm-pref-title">Marketing preferences</strong>'+
                     '<div class="hm-pref-list">'+mt('marketing_email','Email',p.marketing_email)+mt('marketing_sms','SMS',p.marketing_sms)+mt('marketing_phone','Phone',p.marketing_phone)+'</div>'+
-                    '<button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-save-mkt">Update Preferences</button></div></div></div>'+
+                    '<button type="button" class="hm-btn hm-btn--primary hm-btn--sm" id="hm-save-mkt">Update Preferences</button></div></div></div>'+
                 '</div>'+
-                (p.is_admin?'<div class="hm-card" style="margin-top:16px;border:1px solid #fecdd3;"><div class="hm-card-hd" style="color:#e53e3e;">'+HM_ICONS.warning+' GDPR — Right to Erasure</div><div class="hm-card-body"><p style="font-size:13px;color:#64748b;">Anonymises personal data. Clinical + financial records retained. Irreversible.</p><button class="hm-btn hm-btn-danger hm-btn--sm" id="hm-anonymise-btn">Anonymise Patient</button></div></div>':'')+
+                (p.is_admin?'<div class="hm-card" style="margin-top:16px;border:1px solid #fecdd3;"><div class="hm-card-hd" style="color:#e53e3e;">'+HM_ICONS.warning+' GDPR — Right to Erasure</div><div class="hm-card-body"><p style="font-size:13px;color:#64748b;">Anonymises personal data. Clinical + financial records retained. Irreversible.</p><button type="button" class="hm-btn hm-btn-danger hm-btn--sm" id="hm-anonymise-btn">Anonymise Patient</button></div></div>':'')+
             '</div>');
-            $c.off('click','.hm-section-edit').on('click','.hm-section-edit',function(){editSection($(this).data('section'));});
-            $c.off('click','#hm-save-mkt').on('click','#hm-save-mkt',function(){
-                $.post(_hm.ajax,{action:'hm_update_marketing_prefs',nonce:_hm.nonce,patient_id:pid,marketing_email:$('[data-pref="marketing_email"]').is(':checked')?'1':'0',marketing_sms:$('[data-pref="marketing_sms"]').is(':checked')?'1':'0',marketing_phone:$('[data-pref="marketing_phone"]').is(':checked')?'1':'0'},function(r){if(r.success)toast('Preferences updated');else toast('Error','error');});
-            });
-            $c.off('click','#hm-anonymise-btn').on('click','#hm-anonymise-btn',showAnonymiseModal);
         }
 
         function editSection(section){
@@ -435,42 +431,55 @@ function initProfile(){
                     $.post(_hm.ajax,{action:'hm_get_staff_list',nonce:_hm.nonce},function(r){if(!r.success)return;r.data.forEach(function(d){$('#es-dispenser').append('<option value="'+d.id+'">'+esc(d.name)+'</option>');});$('#es-dispenser').val(p.assigned_dispenser_id||'');});
                 };
             }
-            $card.html('<div class="hm-detail-card-title" style="display:flex;justify-content:space-between;align-items:center;"><span>Editing</span></div>'+formHtml+'<div style="display:flex;gap:8px;margin-top:12px;"><button class="hm-btn hm-btn--primary hm-btn--sm hm-section-save" data-section="'+section+'">Save</button><button class="hm-btn hm-btn--secondary hm-btn--sm hm-section-cancel">Cancel</button></div>');
+            $card.html('<div class="hm-detail-card-title" style="display:flex;justify-content:space-between;align-items:center;"><span>Editing</span></div>'+formHtml+'<div style="display:flex;gap:8px;margin-top:12px;"><button type="button" class="hm-btn hm-btn--primary hm-btn--sm hm-section-save" data-section="'+section+'">Save</button><button type="button" class="hm-btn hm-btn--secondary hm-btn--sm hm-section-cancel">Cancel</button></div>');
             if(afterRender)afterRender();
-            $card.off('click','.hm-section-cancel').on('click','.hm-section-cancel',function(){renderView();});
-            $card.off('click','.hm-section-save').on('click','.hm-section-save',function(){
-                var payload={action:'hm_update_patient',nonce:_hm.nonce,patient_id:pid};
-                // Always send all fields — backend expects them. Fill from current patient and override section.
-                payload.patient_title=$('#es-title').length?$('#es-title').val():(p.patient_title||'');
-                payload.first_name=$('#es-fn').length?$('#es-fn').val():(p.first_name||'');
-                payload.last_name=$('#es-ln').length?$('#es-ln').val():(p.last_name||'');
-                payload.dob=$('#es-dob').length?$('#es-dob').val():(p.dob||'');
-                payload.patient_phone=$('#es-phone').length?$('#es-phone').val():(p.phone||'');
-                payload.patient_mobile=$('#es-mobile').length?$('#es-mobile').val():(p.mobile||'');
-                payload.patient_email=$('#es-email').length?$('#es-email').val():(p.email||'');
-                payload.address_line1=$('#es-addr1').length?$('#es-addr1').val():(p.address_line1||'');
-                payload.address_line2=$('#es-addr2').length?$('#es-addr2').val():(p.address_line2||'');
-                payload.city=$('#es-city').length?$('#es-city').val():(p.city||'');
-                payload.county=$('#es-county').length?$('#es-county').val():(p.county||'');
-                payload.patient_eircode=$('#es-eircode').length?$('#es-eircode').val():(p.eircode||'');
-                payload.gp_name=$('#es-gp-name').length?$('#es-gp-name').val():(p.gp_name||'');
-                payload.gp_address=$('#es-gp-addr').length?$('#es-gp-addr').val():(p.gp_address||'');
-                payload.nok_name=$('#es-nok-name').length?$('#es-nok-name').val():(p.nok_name||'');
-                payload.nok_phone=$('#es-nok-phone').length?$('#es-nok-phone').val():(p.nok_phone||'');
-                payload.prsi_number=$('#es-prsi-num').length?$('#es-prsi-num').val():(p.prsi_number||'');
-                payload.referral_source=$('#es-ref').length?$('#es-ref').val():(p.referral_source||'');
-                payload.assigned_clinic_id=$('#es-clinic').length?$('#es-clinic').val():(p.assigned_clinic_id||'');
-                payload.assigned_dispenser_id=$('#es-dispenser').length?$('#es-dispenser').val():(p.assigned_dispenser_id||'');
-                payload.annual_review_date=$('#es-review').length?$('#es-review').val():(p.annual_review_date||'');
-                payload.prsi_eligible=$('#es-prsi').length?($('#es-prsi').is(':checked')?'1':'0'):(p.prsi_eligible?'1':'0');
-                payload.is_active=$('#es-active').length?($('#es-active').is(':checked')?'1':'0'):(p.is_active?'1':'0');
-                var $btn=$(this).prop('disabled',true).text('Saving…');
-                $.post(_hm.ajax,payload,function(r){
-                    if(r.success){toast('Updated');$.post(_hm.ajax,{action:'hm_get_patient',nonce:_hm.nonce,patient_id:pid},function(r2){if(r2.success){patient=r2.data;renderProfile();$c=$('#hm-tab-content');renderView();}});}
-                    else{toast(r.data||'Error','error');$btn.prop('disabled',false).text('Save');}
-                });
-            });
         }
+
+        // ── ALL event delegation on $el (root element — never replaced) ──
+        $el.off('.hmdet');
+        $el.on('click.hmdet','.hm-section-edit',function(){editSection($(this).data('section'));});
+        $el.on('click.hmdet','.hm-section-cancel',function(){renderView();});
+        $el.on('click.hmdet','#hm-save-mkt',function(){
+            $.post(_hm.ajax,{action:'hm_update_marketing_prefs',nonce:_hm.nonce,patient_id:pid,marketing_email:$('[data-pref="marketing_email"]').is(':checked')?'1':'0',marketing_sms:$('[data-pref="marketing_sms"]').is(':checked')?'1':'0',marketing_phone:$('[data-pref="marketing_phone"]').is(':checked')?'1':'0'},function(r){if(r.success)toast('Preferences updated');else toast('Error','error');});
+        });
+        $el.on('click.hmdet','#hm-anonymise-btn',showAnonymiseModal);
+        $el.on('click.hmdet','.hm-section-save',function(){
+            console.log('[HM] section save clicked');
+            var p=patient;
+            var payload={action:'hm_update_patient',nonce:_hm.nonce,patient_id:pid};
+            // Always send all fields — backend expects them. Fill from current patient and override section.
+            payload.patient_title=$('#es-title').length?$('#es-title').val():(p.patient_title||'');
+            payload.first_name=$('#es-fn').length?$('#es-fn').val():(p.first_name||'');
+            payload.last_name=$('#es-ln').length?$('#es-ln').val():(p.last_name||'');
+            payload.dob=$('#es-dob').length?$('#es-dob').val():(p.dob||'');
+            payload.patient_phone=$('#es-phone').length?$('#es-phone').val():(p.phone||'');
+            payload.patient_mobile=$('#es-mobile').length?$('#es-mobile').val():(p.mobile||'');
+            payload.patient_email=$('#es-email').length?$('#es-email').val():(p.email||'');
+            payload.address_line1=$('#es-addr1').length?$('#es-addr1').val():(p.address_line1||'');
+            payload.address_line2=$('#es-addr2').length?$('#es-addr2').val():(p.address_line2||'');
+            payload.city=$('#es-city').length?$('#es-city').val():(p.city||'');
+            payload.county=$('#es-county').length?$('#es-county').val():(p.county||'');
+            payload.patient_eircode=$('#es-eircode').length?$('#es-eircode').val():(p.eircode||'');
+            payload.gp_name=$('#es-gp-name').length?$('#es-gp-name').val():(p.gp_name||'');
+            payload.gp_address=$('#es-gp-addr').length?$('#es-gp-addr').val():(p.gp_address||'');
+            payload.nok_name=$('#es-nok-name').length?$('#es-nok-name').val():(p.nok_name||'');
+            payload.nok_phone=$('#es-nok-phone').length?$('#es-nok-phone').val():(p.nok_phone||'');
+            payload.prsi_number=$('#es-prsi-num').length?$('#es-prsi-num').val():(p.prsi_number||'');
+            payload.referral_source=$('#es-ref').length?$('#es-ref').val():(p.referral_source||'');
+            payload.assigned_clinic_id=$('#es-clinic').length?$('#es-clinic').val():(p.assigned_clinic_id||'');
+            payload.assigned_dispenser_id=$('#es-dispenser').length?$('#es-dispenser').val():(p.assigned_dispenser_id||'');
+            payload.annual_review_date=$('#es-review').length?$('#es-review').val():(p.annual_review_date||'');
+            payload.prsi_eligible=$('#es-prsi').length?($('#es-prsi').is(':checked')?'1':'0'):(p.prsi_eligible?'1':'0');
+            payload.is_active=$('#es-active').length?($('#es-active').is(':checked')?'1':'0'):(p.is_active?'1':'0');
+            var $btn=$(this).prop('disabled',true).text('Saving…');
+            console.log('[HM] posting update_patient', payload);
+            $.post(_hm.ajax,payload,function(r){
+                console.log('[HM] update_patient response', r);
+                if(r.success){toast('Updated');$.post(_hm.ajax,{action:'hm_get_patient',nonce:_hm.nonce,patient_id:pid},function(r2){if(r2.success){patient=r2.data;renderProfile();$c=$('#hm-tab-content');renderView();}});}
+                else{toast(r.data||'Error','error');$btn.prop('disabled',false).text('Save');}
+            });
+        });
+
         renderView();
     }
 
