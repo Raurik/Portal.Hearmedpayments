@@ -27,6 +27,16 @@ class HearMed_Admin_Appointment_Type_Detail {
         add_action('wp_ajax_hm_admin_save_assignable_staff',    [$this, 'ajax_save_staff']);
     }
 
+    private function to_bool($value): bool {
+        if (is_bool($value)) return $value;
+        if (is_int($value) || is_float($value)) return ((int)$value) === 1;
+        if (is_string($value)) {
+            $v = strtolower(trim($value));
+            return in_array($v, ['1', 'true', 't', 'yes', 'y', 'on'], true);
+        }
+        return !empty($value);
+    }
+
     /* ═══════════════════════════════════════════════════════
        RENDER
        ═══════════════════════════════════════════════════════ */
@@ -72,6 +82,10 @@ class HearMed_Admin_Appointment_Type_Detail {
         ) ?: [];
 
         $colour      = $svc->service_color ?? '#3B82F6';
+        $svc_sales = $this->to_bool($svc->sales_opportunity ?? false);
+        $svc_income = $this->to_bool($svc->income_bearing ?? false);
+        $svc_reportable = $this->to_bool($svc->is_reportable ?? false);
+        $svc_reminder = $this->to_bool($svc->reminder_enabled ?? false);
         $assigned_ids = array_map(function($a) { return (int)$a->staff_id; }, $assigned);
 
         ob_start();
@@ -150,26 +164,26 @@ class HearMed_Admin_Appointment_Type_Detail {
                         ?><option value="<?php echo esc_attr($ck); ?>" <?php selected($cur, $ck); ?>><?php echo esc_html($cv); ?></option><?php endforeach; ?></select></span></div>
                         <div class="hm-srow">
                             <label class="hm-day-check">
-                                <input type="checkbox" id="hm-svc-sales" <?php checked(!empty($svc->sales_opportunity)); ?>>
+                                <input type="checkbox" id="hm-svc-sales" <?php checked($svc_sales); ?>>
                                 <span class="hm-check"></span>
                                 Sales opportunity
                             </label>
                         </div>
                         <div class="hm-srow">
                             <label class="hm-day-check">
-                                <input type="checkbox" id="hm-svc-income" <?php checked($svc->income_bearing !== false && $svc->income_bearing !== 'f'); ?>>
+                                <input type="checkbox" id="hm-svc-income" <?php checked($svc_income); ?>>
                                 <span class="hm-check"></span>
                                 Income bearing
                             </label>
                         </div>
                         <div class="hm-srow">
                             <label class="hm-day-check">
-                                <input type="checkbox" id="hm-svc-reportable" <?php checked(!empty($svc->is_reportable)); ?>>
+                                <input type="checkbox" id="hm-svc-reportable" <?php checked($svc_reportable); ?>>
                                 <span class="hm-check"></span>
                                 Include in Reports
                             </label>
                         </div>
-                        <div id="hm-svc-report-cat-wrap" style="margin-left:24px;margin-bottom:8px;<?php echo empty($svc->is_reportable) ? 'display:none;' : ''; ?>">
+                        <div id="hm-svc-report-cat-wrap" style="margin-left:24px;margin-bottom:8px;<?php echo !$svc_reportable ? 'display:none;' : ''; ?>">
                             <div class="hm-srow">
                                 <span class="hm-slbl">Report Category</span>
                                 <span class="hm-sval">
@@ -243,45 +257,52 @@ class HearMed_Admin_Appointment_Type_Detail {
                         <?php foreach ($outcomes as $o):
                             $oc = $o->outcome_color ?: '#cccccc';
                             $fu_ids = $o->followup_service_ids ? json_decode($o->followup_service_ids, true) : [];
+                            $o_triggers_order = $this->to_bool($o->triggers_order ?? false);
+                            $o_triggers_invoice = $this->to_bool($o->triggers_invoice ?? false);
+                            $o_requires_note = $this->to_bool($o->requires_note ?? false);
+                            $o_triggers_followup = $this->to_bool($o->triggers_followup ?? false);
+                            $o_triggers_reminder = $this->to_bool($o->triggers_reminder ?? false);
+                            $o_triggers_followup_call = $this->to_bool($o->triggers_followup_call ?? false);
+                            $o_is_reportable = $this->to_bool($o->is_reportable ?? false);
                         ?>
                         <div class="hm-srow hm-outcome-row" style="padding:8px 0;border-bottom:1px solid #f1f5f9;" data-id="<?php echo (int)$o->id; ?>" data-color="<?php echo esc_attr($oc); ?>" data-name="<?php echo esc_attr($o->outcome_name); ?>">
                             <span style="width:16px;height:16px;border-radius:4px;background:<?php echo esc_attr($oc); ?>;flex-shrink:0;display:inline-block;"></span>
                             <span class="hm-slbl" style="font-weight:600;color:#0f172a;"><?php echo esc_html($o->outcome_name); ?></span>
                             <span style="display:flex;gap:6px;align-items:center;">
-                                <?php if (!empty($o->triggers_order)): ?>
+                                <?php if ($o_triggers_order): ?>
                                     <span class="hm-badge hm-badge--sm hm-badge--amber">Order</span>
                                 <?php endif; ?>
-                                <?php if (!empty($o->triggers_invoice)): ?>
+                                <?php if ($o_triggers_invoice): ?>
                                     <span class="hm-badge hm-badge--sm hm-badge--cyan">Invoice</span>
                                 <?php endif; ?>
-                                <?php if (!empty($o->requires_note) && $o->requires_note): ?>
+                                <?php if ($o_requires_note): ?>
                                     <span class="hm-badge hm-badge--sm hm-badge--blue">Note</span>
                                 <?php endif; ?>
-                                <?php if (!empty($o->triggers_followup) && $o->triggers_followup): ?>
+                                <?php if ($o_triggers_followup): ?>
                                     <span class="hm-badge hm-badge--sm hm-badge--green">Follow-up</span>
                                 <?php endif; ?>
-                                <?php if (!empty($o->triggers_reminder) && $o->triggers_reminder): ?>
+                                <?php if ($o_triggers_reminder): ?>
                                     <span class="hm-badge hm-badge--sm hm-badge--purple">SMS</span>
                                 <?php endif; ?>
-                                <?php if (!empty($o->triggers_followup_call) && $o->triggers_followup_call): ?>
+                                <?php if ($o_triggers_followup_call): ?>
                                     <span class="hm-badge hm-badge--sm hm-badge--orange">Call <?php echo intval($o->followup_call_days ?? 7); ?>d</span>
                                 <?php endif; ?>
-                                <?php if (!empty($o->is_reportable) && $o->is_reportable): ?>
+                                <?php if ($o_is_reportable): ?>
                                     <span class="hm-badge hm-badge--sm hm-badge--teal">Report</span>
                                 <?php endif; ?>
                                 <button class="hm-btn hm-btn--sm hm-outcome-edit" data-row='<?php echo json_encode([
                                     'id'                    => (int)$o->id,
                                     'outcome_name'          => $o->outcome_name,
                                     'outcome_color'         => $oc,
-                                    'triggers_order'        => !empty($o->triggers_order) && $o->triggers_order,
-                                    'triggers_invoice'      => !empty($o->triggers_invoice) && $o->triggers_invoice,
-                                    'requires_note'         => !empty($o->requires_note) && $o->requires_note,
-                                    'triggers_followup'     => !empty($o->triggers_followup) && $o->triggers_followup,
+                                    'triggers_order'        => $o_triggers_order,
+                                    'triggers_invoice'      => $o_triggers_invoice,
+                                    'requires_note'         => $o_requires_note,
+                                    'triggers_followup'     => $o_triggers_followup,
                                     'followup_service_ids'  => $fu_ids,
-                                    'triggers_reminder'     => !empty($o->triggers_reminder) && $o->triggers_reminder,
-                                    'triggers_followup_call'=> !empty($o->triggers_followup_call) && $o->triggers_followup_call,
+                                    'triggers_reminder'     => $o_triggers_reminder,
+                                    'triggers_followup_call'=> $o_triggers_followup_call,
                                     'followup_call_days'    => intval($o->followup_call_days ?? 7),
-                                    'is_reportable'         => !empty($o->is_reportable) && $o->is_reportable,
+                                    'is_reportable'         => $o_is_reportable,
                                     'report_outcome'        => $o->report_outcome ?? '',
                                 ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>'>Edit</button>
                                 <button class="hm-btn hm-btn--sm hm-btn--danger hm-outcome-del" data-id="<?php echo (int)$o->id; ?>" data-name="<?php echo esc_attr($o->outcome_name); ?>">Delete</button>
@@ -325,7 +346,7 @@ class HearMed_Admin_Appointment_Type_Detail {
                     <div class="hm-card-body">
                         <div class="hm-srow">
                             <label class="hm-day-check">
-                                <input type="checkbox" id="hm-svc-reminder" <?php checked(!empty($svc->reminder_enabled)); ?>>
+                                <input type="checkbox" id="hm-svc-reminder" <?php checked($svc_reminder); ?>>
                                 <span class="hm-check"></span>
                                 Send SMS reminder for this type
                             </label>

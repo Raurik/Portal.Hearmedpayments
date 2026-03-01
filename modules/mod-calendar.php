@@ -1323,6 +1323,16 @@ function hm_ajax_create_patient_from_calendar() {
 function hm_ajax_get_outcome_templates() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     try {
+    $to_bool = static function ( $value ): bool {
+        if ( is_bool( $value ) ) return $value;
+        if ( is_int( $value ) || is_float( $value ) ) return ((int) $value) === 1;
+        if ( is_string( $value ) ) {
+            $v = strtolower( trim( $value ) );
+            return in_array( $v, [ '1', 'true', 't', 'yes', 'y', 'on' ], true );
+        }
+        return ! empty( $value );
+    };
+
     $sid = intval( $_POST['service_id'] ?? 0 );
     if ( ! $sid ) { wp_send_json_success( [] ); return; }
 
@@ -1369,11 +1379,11 @@ function hm_ajax_get_outcome_templates() {
             'id'                  => (int) $r->id,
             'outcome_name'        => $r->outcome_name,
             'outcome_color'       => $r->outcome_color ?: '#6b7280',
-            'triggers_order'      => (bool) ($r->triggers_order ?? false),
-            'triggers_invoice'    => (bool) ($r->triggers_invoice ?? false),
-            'requires_note'       => (bool) ($r->requires_note ?? false),
-            'triggers_followup'   => (bool) ($r->triggers_followup ?? false),
-            'triggers_reminder'   => (bool) ($r->triggers_reminder ?? false),
+            'triggers_order'      => $to_bool( $r->triggers_order ?? false ),
+            'triggers_invoice'    => $to_bool( $r->triggers_invoice ?? false ),
+            'requires_note'       => $to_bool( $r->requires_note ?? false ),
+            'triggers_followup'   => $to_bool( $r->triggers_followup ?? false ),
+            'triggers_reminder'   => $to_bool( $r->triggers_reminder ?? false ),
             'followup_service_ids'=> $fu_ids,
         ];
     }
