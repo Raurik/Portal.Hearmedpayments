@@ -881,7 +881,7 @@ function hm_ajax_get_patient_products() {
                 pd.fitting_date, pd.device_status, pd.inactive_reason, pd.warranty_expiry,
                 COALESCE(pr.product_name, 'Unknown') AS product_name,
                 COALESCE(m.name, '') AS manufacturer,
-                pr.style,
+                pr.style, pr.model, pr.tech_level,
                 '' AS product_image
          FROM hearmed_core.patient_devices pd
          LEFT JOIN hearmed_reference.products pr ON pr.id = pd.product_id
@@ -899,7 +899,8 @@ function hm_ajax_get_patient_products() {
             'product_name'   => $r->product_name,
             'manufacturer'   => $r->manufacturer,
             'style'          => $r->style ?: '',
-            'model'          => '',
+            'model'          => $r->model ?: '',
+            'tech_level'     => $r->tech_level ?: '',
             'serial_left'    => $r->serial_number_left ?: '',
             'serial_right'   => $r->serial_number_right ?: '',
             'fitting_date'   => $r->fitting_date,

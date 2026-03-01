@@ -363,7 +363,7 @@ function initProfile(){
         $.post(_hm.ajax,{action:'hm_get_patient_products',nonce:_hm.nonce,patient_id:pid},function(r){
             var $w=$('#hm-ov-aids');if(!r.success||!r.data.length){$w.find('div').last().text('No active hearing aids');return;}
             var act=r.data.filter(function(x){return x.status==='Active';});if(!act.length){$w.find('div').last().text('No active hearing aids');return;}
-            var h='';act.forEach(function(pr){h+='<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;">'+(pr.product_image?'<img src="'+esc(pr.product_image)+'" style="width:36px;height:36px;object-fit:contain;">':'<div style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;">'+HM_ICONS.hearing+'</div>')+'<div><div style="font-size:14px;font-weight:500;">'+esc(pr.product_name)+'</div><div style="font-size:12px;color:#94a3b8;">'+esc(pr.manufacturer)+' · Fitted '+fmtDate(pr.fitting_date)+'</div></div></div>';});
+            var h='';act.forEach(function(pr){var mt=[];if(pr.model)mt.push(esc(pr.model));if(pr.tech_level)mt.push(esc(pr.tech_level));var mtStr=mt.length?' · '+mt.join(' '):'';h+='<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;">'+(pr.product_image?'<img src="'+esc(pr.product_image)+'" style="width:36px;height:36px;object-fit:contain;">':'<div style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;">'+HM_ICONS.hearing+'</div>')+'<div><div style="font-size:14px;font-weight:500;">'+esc(pr.product_name)+mtStr+'</div><div style="font-size:12px;color:#94a3b8;">'+esc(pr.manufacturer)+' · Fitted '+fmtDate(pr.fitting_date)+'</div></div></div>';});
             $w.find('div').last().replaceWith(h);
         });
         $.post(_hm.ajax,{action:'hm_get_patient_appointments',nonce:_hm.nonce,patient_id:pid},function(r){
@@ -602,7 +602,8 @@ function initProfile(){
             card+='<div class="hm-ha-card-title">';
             card+='<strong>'+esc(pr.product_name)+'</strong> '+activeBadge+' '+wbadge;
             card+='</div>';
-            card+='<div class="hm-ha-card-meta">'+esc(pr.manufacturer)+(pr.style?' · '+esc(pr.style):'')+'</div>';
+            var mtParts=[];if(pr.model)mtParts.push(esc(pr.model));if(pr.tech_level)mtParts.push(esc(pr.tech_level));
+            card+='<div class="hm-ha-card-meta">'+esc(pr.manufacturer)+(mtParts.length?' · '+mtParts.join(' '):'')+(pr.style?' · '+esc(pr.style):'')+'</div>';
             card+='<div class="hm-ha-card-dates">Fitted: '+fmtDate(pr.fitting_date)+' · Warranty: '+fmtDate(pr.warranty_expiry)+'</div>';
             if(pr.inactive_reason) card+='<div class="hm-ha-card-dates" style="color:#e53e3e;">Reason: '+esc(pr.inactive_reason)+'</div>';
             card+='</div>';
