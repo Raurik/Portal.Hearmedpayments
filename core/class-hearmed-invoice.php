@@ -86,9 +86,9 @@ class HearMed_Invoice {
                     c.phone AS clinic_phone, c.email AS clinic_email,
                     CONCAT(s.first_name,' ',s.last_name) AS dispenser_name
              FROM hearmed_core.orders o
-             JOIN hearmed_core.patients p        ON p.id = o.patient_id
-             JOIN hearmed_reference.clinics c    ON c.id = o.clinic_id
-             LEFT JOIN hearmed_reference.staff s ON s.id = o.staff_id
+             JOIN hearmed_core.patients p         ON p.id = o.patient_id
+             LEFT JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
+             LEFT JOIN hearmed_reference.staff s  ON s.id = o.staff_id
              WHERE o.id = $1",
             [ $order_id ]
         );
@@ -484,10 +484,10 @@ class HearMed_Invoice {
                     CONCAT(s.first_name,' ',s.last_name) AS dispenser_name,
                     pay.payment_method, pay.payment_date AS paid_date
              FROM hearmed_core.invoices inv
-             JOIN hearmed_core.patients p        ON p.id = inv.patient_id
-             JOIN hearmed_reference.clinics c    ON c.id = inv.clinic_id
-             LEFT JOIN hearmed_reference.staff s ON s.id = inv.staff_id
-             LEFT JOIN hearmed_core.payments pay ON pay.invoice_id = inv.id AND pay.is_refund = false
+             JOIN hearmed_core.patients p         ON p.id = inv.patient_id
+             LEFT JOIN hearmed_reference.clinics c ON c.id = inv.clinic_id
+             LEFT JOIN hearmed_reference.staff s  ON s.id = inv.staff_id
+             LEFT JOIN hearmed_core.payments pay  ON pay.invoice_id = inv.id AND pay.is_refund = false
              WHERE inv.id = $1
              LIMIT 1",
             [ $invoice_id ]

@@ -470,11 +470,11 @@ class HearMed_Orders {
                     inv.grand_total AS invoice_total, inv.quickbooks_id,
                     inv.qbo_sync_status, inv.qbo_synced_at
              FROM hearmed_core.orders o
-             JOIN hearmed_core.patients p          ON p.id = o.patient_id
-             JOIN hearmed_reference.clinics c      ON c.id = o.clinic_id
-             LEFT JOIN hearmed_reference.staff s   ON s.id = o.staff_id
-             LEFT JOIN hearmed_reference.staff ap  ON ap.id = o.approved_by
-             LEFT JOIN hearmed_core.invoices inv   ON inv.id = o.invoice_id
+             JOIN hearmed_core.patients p           ON p.id = o.patient_id
+             LEFT JOIN hearmed_reference.clinics c  ON c.id = o.clinic_id
+             LEFT JOIN hearmed_reference.staff s    ON s.id = o.staff_id
+             LEFT JOIN hearmed_reference.staff ap   ON ap.id = o.approved_by
+             LEFT JOIN hearmed_core.invoices inv    ON inv.id = o.invoice_id
              WHERE o.id = \$1", [$order_id]
         );
         if (!$order) return '<div class="hm-notice hm-notice--error">Order not found.</div>';
@@ -1120,9 +1120,9 @@ class HearMed_Orders {
                     c.phone AS clinic_phone,
                     CONCAT(s.first_name,' ',s.last_name) AS dispenser_name
              FROM hearmed_core.orders o
-             JOIN hearmed_core.patients p        ON p.id = o.patient_id
-             JOIN hearmed_reference.clinics c    ON c.id = o.clinic_id
-             LEFT JOIN hearmed_reference.staff s ON s.id = o.staff_id
+             JOIN hearmed_core.patients p         ON p.id = o.patient_id
+             LEFT JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
+             LEFT JOIN hearmed_reference.staff s   ON s.id = o.staff_id
              WHERE o.id = \$1", [$order_id]
         );
         if (!$order) return '<p>Order not found.</p>';
@@ -1168,7 +1168,11 @@ class HearMed_Orders {
      * Outputs a complete HTML document and exits — avoids nesting inside WP template.
      */
     public static function ajax_print_order_sheet() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        // Accept both hearmed_nonce and hm_nonce for compatibility
+        if ( ! wp_verify_nonce( $_REQUEST['nonce'] ?? '', 'hearmed_nonce' )
+          && ! wp_verify_nonce( $_REQUEST['nonce'] ?? '', 'hm_nonce' ) ) {
+            wp_die( 'Security check failed — please refresh the page and try again.' );
+        }
         if ( ! is_user_logged_in() ) wp_die( 'Access denied.' );
 
         $order_id = intval( $_GET['order_id'] ?? $_POST['order_id'] ?? 0 );

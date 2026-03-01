@@ -1237,7 +1237,7 @@ function initProfile(){
                         '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:13px;">'+esc(o.description||'—')+'</td>'+
                         '<td style="font-weight:500;">'+euro(o.grand_total)+'</td>'+
                         '<td><span class="hm-badge hm-badge--sm '+bc+'">'+esc(o.status)+'</span></td>'+
-                        '<td><a href="/orders/?view='+o._ID+'" class="hm-btn hm-btn--secondary hm-btn--sm">View</a></td>'+
+                        '<td><a href="/orders/?hm_action=view&order_id='+o._ID+'" class="hm-btn hm-btn--secondary hm-btn--sm">View</a></td>'+
                     '</tr>';
                 });
                 h+='</tbody></table>';

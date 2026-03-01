@@ -573,7 +573,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
             $rows = [
                 ['Subtotal', '€' . number_format((float)($d->subtotal ?? 0), 2), ''],
                 ['Discount', !empty($d->discount_total) ? '-€' . number_format((float)$d->discount_total, 2) : '—', ''],
-                [$s['vatLabel'] ?? 'VAT (23%)', '€' . number_format((float)($d->vat_total ?? 0), 2), ''],
+                [$s['vatLabel'] ?? 'VAT', '€' . number_format((float)($d->vat_total ?? 0), 2), ''],
             ];
             if (!empty($d->prsi_applicable)) {
                 $rows[] = ['PRSI Grant', '-€' . number_format((float)($d->prsi_amount ?? 0), 2), 'color:var(--hm-accent)'];

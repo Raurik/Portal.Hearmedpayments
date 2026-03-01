@@ -1419,9 +1419,9 @@ function hm_ajax_fitting_receipt() {
                 c.clinic_name, CONCAT_WS(', ', c.address_line1, c.city, c.county, COALESCE(c.postcode, '')) AS clinic_address, c.phone AS clinic_phone,
                 CONCAT(s.first_name, ' ', s.last_name) AS dispenser_name
          FROM hearmed_core.orders o
-         JOIN hearmed_core.patients p ON p.id = o.patient_id
-         JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
-         LEFT JOIN hearmed_reference.staff s ON s.id = o.staff_id
+         JOIN hearmed_core.patients p          ON p.id = o.patient_id
+         LEFT JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
+         LEFT JOIN hearmed_reference.staff s   ON s.id = o.staff_id
          WHERE o.id = \$1",
         [$order_id]
     );
@@ -1460,14 +1460,14 @@ function hm_ajax_fitting_receipt() {
         [$invoice ? $invoice->id : 0]
     );
 
-    // Patient serials
+    // Patient serials — only for this order
     $devices = $db->get_results(
         "SELECT pd.serial_number_left, pd.serial_number_right, pr.product_name
          FROM hearmed_core.patient_devices pd
          LEFT JOIN hearmed_reference.products pr ON pr.id = pd.product_id
-         WHERE pd.patient_id = \$1 AND pd.fitting_date IS NOT NULL
-         ORDER BY pd.created_at DESC LIMIT 4",
-        [$order->patient_id]
+         WHERE pd.order_id = \$1
+         ORDER BY pd.created_at DESC",
+        [$order_id]
     );
 
     // Build data object for template engine
