@@ -175,6 +175,10 @@ function hm_render_fitting_page() {
             </div>
             <div class="hm-modal-body">
                 <input type="hidden" id="hmf-serial-order-id">
+                <div class="hm-form-group" style="margin-bottom:12px;">
+                    <label>Date Received <span class="hm-text--danger">*</span></label>
+                    <input type="date" id="hmf-serial-received-date">
+                </div>
                 <div id="hmf-serial-items"><!-- JS populates --></div>
             </div>
             <div class="hm-modal-ft">
@@ -234,6 +238,30 @@ function hm_render_fitting_page() {
                     <div class="hm-form-group">
                         <label>Amount (€)</label>
                         <input type="number" id="hmf-pay-amount" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="hm-form-group" style="margin-top:6px;">
+                    <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
+                        <input type="checkbox" id="hmf-pay-split">
+                        Split payment methods
+                    </label>
+                </div>
+
+                <div class="hm-form-row" id="hmf-pay-split-row" style="display:none;">
+                    <div class="hm-form-group">
+                        <label>Second Method</label>
+                        <select id="hmf-pay-method-2">
+                            <option value="">Select method</option>
+                            <option value="Card">Card</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div class="hm-form-group">
+                        <label>Second Amount (€)</label>
+                        <input type="number" id="hmf-pay-amount-2" step="0.01" min="0" placeholder="0.00">
                     </div>
                 </div>
                 <div id="hmf-pay-result"></div>
@@ -549,6 +577,10 @@ function hm_render_fitting_page() {
             }
 
             container.innerHTML = html;
+            var recInput = document.getElementById('hmf-serial-received-date');
+            if (recInput) {
+                recInput.value = new Date().toISOString().slice(0, 10);
+            }
             document.getElementById('hmf-serial-modal').classList.add('open');
         },
 
@@ -558,8 +590,14 @@ function hm_render_fitting_page() {
 
         saveSerials: function() {
             var orderId = document.getElementById('hmf-serial-order-id').value;
+            var receivedDate = document.getElementById('hmf-serial-received-date').value;
             var inputs = document.querySelectorAll('.hmf-serial-input');
             var serials = [];
+
+            if (!receivedDate) {
+                alert('Please select the received date.');
+                return;
+            }
 
             inputs.forEach(function(inp) {
                 var val = inp.value.trim();
@@ -596,6 +634,7 @@ function hm_render_fitting_page() {
                 action: 'hm_fitting_receive',
                 nonce: HM.nonce,
                 order_id: orderId,
+                received_date: receivedDate,
                 serials: JSON.stringify(serials)
             }, function(r) {
                 btn.textContent = 'Save & Receive';
@@ -646,6 +685,10 @@ function hm_render_fitting_page() {
             document.getElementById('hmf-pay-order-id').value = orderId;
             document.getElementById('hmf-pay-result').innerHTML = '';
             document.getElementById('hmf-pay-save').style.display = '';
+            document.getElementById('hmf-pay-split').checked = false;
+            document.getElementById('hmf-pay-split-row').style.display = 'none';
+            document.getElementById('hmf-pay-method-2').value = '';
+            document.getElementById('hmf-pay-amount-2').value = '';
             document.getElementById('hmf-invoice-info').innerHTML = '<div class="hm-loading"><div class="hm-loading-dots"><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div><div class="hm-loading-dot"></div></div><div class="hm-loading-text">Loading&hellip;</div></div>';
             document.getElementById('hmf-payment-modal').classList.add('open');
 
@@ -658,7 +701,8 @@ function hm_render_fitting_page() {
                 if (r.success) {
                     self.renderInvoiceInfo(r.data);
                 } else {
-                    document.getElementById('hmf-invoice-info').innerHTML = '<div class="hm-notice hm-notice--warning"><div class="hm-notice-body"><span class="hm-notice-icon">⚠</span> Could not load invoice details.</div></div>';
+                    var m = (r.data && r.data.msg) ? hmFE(r.data.msg) : 'Could not load invoice details.';
+                    document.getElementById('hmf-invoice-info').innerHTML = '<div class="hm-notice hm-notice--warning"><div class="hm-notice-body"><span class="hm-notice-icon">⚠</span> ' + m + '</div></div>';
                 }
             });
         },
@@ -702,11 +746,34 @@ function hm_render_fitting_page() {
             var orderId = document.getElementById('hmf-pay-order-id').value;
             var invoiceId = document.getElementById('hmf-pay-invoice-id').value;
             var method = document.getElementById('hmf-pay-method').value;
-            var amount = document.getElementById('hmf-pay-amount').value;
+            var amount = parseFloat(document.getElementById('hmf-pay-amount').value || '0');
+            var split = !!document.getElementById('hmf-pay-split').checked;
+            var method2 = document.getElementById('hmf-pay-method-2').value;
+            var amount2 = parseFloat(document.getElementById('hmf-pay-amount-2').value || '0');
+            var splitPayments = [];
 
-            if (!amount || parseFloat(amount) <= 0) {
+            if (!amount || amount <= 0) {
                 alert('Please enter a valid payment amount.');
                 return;
+            }
+
+            if (split) {
+                if (!method2) {
+                    alert('Please select the second payment method.');
+                    return;
+                }
+                if (!amount2 || amount2 <= 0 || amount2 >= amount) {
+                    alert('Second amount must be greater than 0 and less than total amount.');
+                    return;
+                }
+                splitPayments = [
+                    { method: method, amount: (amount - amount2) },
+                    { method: method2, amount: amount2 }
+                ];
+            } else {
+                splitPayments = [
+                    { method: method, amount: amount }
+                ];
             }
 
             var btn = document.getElementById('hmf-pay-save');
@@ -720,7 +787,8 @@ function hm_render_fitting_page() {
                 order_id: orderId,
                 invoice_id: invoiceId,
                 payment_method: method,
-                amount: amount
+                amount: amount,
+                split_payments_json: JSON.stringify(splitPayments)
             }, function(r) {
                 btn.textContent = 'Record Payment';
                 btn.disabled = false;
@@ -772,6 +840,14 @@ function hm_render_fitting_page() {
     }
 
     jQuery(function() { hmFitting.load(); });
+    jQuery(document).on('change', '#hmf-pay-split', function() {
+        var on = !!this.checked;
+        jQuery('#hmf-pay-split-row').toggle(on);
+        if (!on) {
+            jQuery('#hmf-pay-method-2').val('');
+            jQuery('#hmf-pay-amount-2').val('');
+        }
+    });
     </script>
     <?php
     return ob_get_clean();
@@ -888,8 +964,13 @@ function hm_ajax_fitting_receive() {
     $db       = HearMed_DB::instance();
     $order_id = intval($_POST['order_id'] ?? 0);
     $serials  = json_decode(stripslashes($_POST['serials'] ?? '[]'), true);
+    $received_date = sanitize_text_field($_POST['received_date'] ?? '');
     $uid      = get_current_user_id();
     $now      = current_time('Y-m-d H:i:s');
+    $received_at = $now;
+    if ($received_date) {
+        $received_at = $received_date . ' ' . date('H:i:s');
+    }
 
     $order = $db->get_row("SELECT * FROM hearmed_core.orders WHERE id = \$1", [$order_id]);
     if (!$order || $order->current_status !== 'Ordered') {
@@ -929,13 +1010,13 @@ function hm_ajax_fitting_receive() {
     // Update order status → Awaiting Fitting
     $db->query(
         "UPDATE hearmed_core.orders SET current_status = 'Awaiting Fitting', received_date = \$1, received_by = \$2, updated_at = \$1 WHERE id = \$3",
-        [$now, $staff_id ?: $uid, $order_id]
+        [$received_at, $staff_id ?: $uid, $order_id]
     );
 
     // Status history: Ordered → Received → Awaiting Fitting
     $db->query(
         "INSERT INTO hearmed_core.order_status_history (order_id, from_status, to_status, changed_by, changed_at, notes) VALUES (\$1, \$2, \$3, \$4, \$5, \$6)",
-        [$order_id, 'Ordered', 'Awaiting Fitting', $staff_id ?: $uid, $now, 'Received in branch — serial numbers entered']
+        [$order_id, 'Ordered', 'Awaiting Fitting', $staff_id ?: $uid, $received_at, 'Received in branch — serial numbers entered']
     );
 
     // Create/update fitting_queue entry
@@ -949,14 +1030,14 @@ function hm_ajax_fitting_receive() {
             'staff_id'      => $order->staff_id,
             'queue_status'  => 'Awaiting',
             'prsi_applicable' => $order->prsi_applicable,
-            'received_date' => $now,
+            'received_date' => $received_at,
             'received_by'   => $staff_id ?: $uid,
             'created_by'    => $staff_id ?: $uid,
         ]);
     } else {
         $db->query(
             "UPDATE hearmed_core.fitting_queue SET queue_status = 'Awaiting', received_date = \$1, received_by = \$2, updated_at = \$1 WHERE order_id = \$3",
-            [$now, $staff_id ?: $uid, $order_id]
+            [$received_at, $staff_id ?: $uid, $order_id]
         );
     }
 
@@ -1033,6 +1114,48 @@ function hm_ajax_fitting_load_invoice() {
         [$order_id]
     );
     if (!$order) { wp_send_json_error(['msg' => 'Order not found']); return; }
+
+    if (($order->current_status ?? '') !== 'Awaiting Fitting') {
+        if (($order->current_status ?? '') === 'Ordered') {
+            wp_send_json_error(['msg' => 'Receive date and serial numbers are required before payment. Use Receive in Branch first.']);
+            return;
+        }
+        wp_send_json_error(['msg' => 'Order must be in Awaiting Fitting before payment can be recorded.']);
+        return;
+    }
+
+    if (empty($order->received_date)) {
+        wp_send_json_error(['msg' => 'Received date is missing. Please receive the order in branch before payment.']);
+        return;
+    }
+
+    $product_ids = $db->get_results(
+        "SELECT DISTINCT item_id AS product_id
+         FROM hearmed_core.order_items
+         WHERE order_id = \$1 AND item_type = 'product' AND item_id IS NOT NULL",
+        [$order_id]
+    ) ?: [];
+    if (!empty($product_ids)) {
+        $pid_list = array_values(array_unique(array_filter(array_map(static function($r){ return intval($r->product_id ?? 0); }, $product_ids))));
+        if (!empty($pid_list)) {
+            $pid_sql = implode(',', $pid_list);
+            $serial_count = (int) $db->get_var(
+                "SELECT COUNT(DISTINCT product_id)
+                 FROM hearmed_core.patient_devices
+                 WHERE patient_id = \$1
+                   AND product_id IN ({$pid_sql})
+                   AND (
+                        (COALESCE(TRIM(serial_number_left), '') <> '')
+                        OR (COALESCE(TRIM(serial_number_right), '') <> '')
+                   )",
+                [$order->patient_id]
+            );
+            if ($serial_count < count($pid_list)) {
+                wp_send_json_error(['msg' => 'Serial numbers are required before payment. Please complete Receive in Branch first.']);
+                return;
+            }
+        }
+    }
 
     $invoice = null;
     $payments = [];
@@ -1135,6 +1258,8 @@ function hm_ajax_fitting_record_payment() {
     $invoice_id = intval($_POST['invoice_id'] ?? 0);
     $method     = sanitize_text_field($_POST['payment_method'] ?? 'Card');
     $amount     = floatval($_POST['amount'] ?? 0);
+    $split_raw  = wp_unslash($_POST['split_payments_json'] ?? '[]');
+    $split_payments = json_decode($split_raw, true);
     $uid        = get_current_user_id();
     $now        = current_time('Y-m-d H:i:s');
     $today      = date('Y-m-d');
@@ -1144,6 +1269,39 @@ function hm_ajax_fitting_record_payment() {
     $order = $db->get_row("SELECT * FROM hearmed_core.orders WHERE id = \$1", [$order_id]);
     if (!$order) { wp_send_json_error(['msg' => 'Order not found']); return; }
 
+    if (empty($order->received_date)) {
+        wp_send_json_error(['msg' => 'This order must be marked as received before payment. Please add received date and serial numbers first.']);
+        return;
+    }
+
+    $product_ids = $db->get_results(
+        "SELECT DISTINCT item_id AS product_id
+         FROM hearmed_core.order_items
+         WHERE order_id = \$1 AND item_type = 'product' AND item_id IS NOT NULL",
+        [$order_id]
+    ) ?: [];
+    if (!empty($product_ids)) {
+        $pid_list = array_values(array_unique(array_filter(array_map(static function($r){ return intval($r->product_id ?? 0); }, $product_ids))));
+        if (!empty($pid_list)) {
+            $pid_sql = implode(',', $pid_list);
+            $serial_count = (int) $db->get_var(
+                "SELECT COUNT(DISTINCT product_id)
+                 FROM hearmed_core.patient_devices
+                 WHERE patient_id = \$1
+                   AND product_id IN ({$pid_sql})
+                   AND (
+                        (COALESCE(TRIM(serial_number_left), '') <> '')
+                        OR (COALESCE(TRIM(serial_number_right), '') <> '')
+                   )",
+                [$order->patient_id]
+            );
+            if ($serial_count < count($pid_list)) {
+                wp_send_json_error(['msg' => 'Serial numbers are required before taking payment. Please receive the order and add serials first.']);
+                return;
+            }
+        }
+    }
+
     $staff_id = $db->get_var("SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1", [$uid]);
 
     // Use invoice from order if not provided
@@ -1151,20 +1309,102 @@ function hm_ajax_fitting_record_payment() {
         $invoice_id = (int)$order->invoice_id;
     }
 
+    if (!$invoice_id) {
+        $inv_number = 'INV-' . date('Ymd') . '-' . str_pad(rand(1,9999), 4, '0', STR_PAD_LEFT);
+        $invoice_id = $db->insert('hearmed_core.invoices', [
+            'invoice_number'    => $inv_number,
+            'patient_id'        => $order->patient_id,
+            'order_id'          => $order_id,
+            'staff_id'          => $order->staff_id,
+            'clinic_id'         => $order->clinic_id,
+            'invoice_date'      => date('Y-m-d'),
+            'subtotal'          => $order->subtotal,
+            'discount_total'    => $order->discount_total,
+            'vat_total'         => $order->vat_total,
+            'grand_total'       => $order->grand_total,
+            'balance_remaining' => $order->grand_total,
+            'payment_status'    => 'Unpaid',
+            'prsi_applicable'   => $order->prsi_applicable,
+            'prsi_amount'       => $order->prsi_amount ?? 0,
+            'created_by'        => $staff_id ?: $uid,
+        ]);
+
+        if (!$invoice_id) {
+            wp_send_json_error(['msg' => 'Unable to create invoice before payment.']);
+            return;
+        }
+
+        $items = $db->get_results(
+            "SELECT * FROM hearmed_core.order_items WHERE order_id = \$1 ORDER BY line_number",
+            [$order_id]
+        );
+        foreach ($items ?: [] as $it) {
+            $db->insert('hearmed_core.invoice_items', [
+                'invoice_id'       => $invoice_id,
+                'line_number'      => $it->line_number,
+                'item_type'        => $it->item_type,
+                'item_id'          => $it->item_id,
+                'item_description' => $it->item_description,
+                'ear_side'         => $it->ear_side,
+                'quantity'         => $it->quantity,
+                'unit_price'       => $it->unit_retail_price,
+                'discount_percent' => $it->discount_percent,
+                'discount_amount'  => $it->discount_amount,
+                'vat_rate'         => 23,
+                'line_total'       => $it->line_total,
+            ]);
+        }
+
+        $db->query("UPDATE hearmed_core.orders SET invoice_id = \$1 WHERE id = \$2", [$invoice_id, $order_id]);
+    }
+
     $invoice = $db->get_row("SELECT * FROM hearmed_core.invoices WHERE id = \$1", [$invoice_id]);
     if (!$invoice) { wp_send_json_error(['msg' => 'Invoice not found']); return; }
 
-    // Record payment
-    $db->insert('hearmed_core.payments', [
-        'invoice_id'     => $invoice_id,
-        'patient_id'     => $order->patient_id,
-        'amount'         => $amount,
-        'payment_date'   => $today,
-        'payment_method' => $method,
-        'received_by'    => $staff_id ?: $uid,
-        'clinic_id'      => $order->clinic_id,
-        'created_by'     => $staff_id ?: $uid,
-    ]);
+    $payment_rows = [];
+    if (is_array($split_payments) && count($split_payments) > 0) {
+        foreach ($split_payments as $sp) {
+            $sp_method = sanitize_text_field($sp['method'] ?? '');
+            $sp_amount = floatval($sp['amount'] ?? 0);
+            if ($sp_method && $sp_amount > 0) {
+                $payment_rows[] = [
+                    'invoice_id'     => $invoice_id,
+                    'patient_id'     => $order->patient_id,
+                    'amount'         => $sp_amount,
+                    'payment_date'   => $today,
+                    'payment_method' => $sp_method,
+                    'received_by'    => $staff_id ?: $uid,
+                    'clinic_id'      => $order->clinic_id,
+                    'created_by'     => $staff_id ?: $uid,
+                ];
+            }
+        }
+    }
+    if (empty($payment_rows)) {
+        $payment_rows[] = [
+            'invoice_id'     => $invoice_id,
+            'patient_id'     => $order->patient_id,
+            'amount'         => $amount,
+            'payment_date'   => $today,
+            'payment_method' => $method,
+            'received_by'    => $staff_id ?: $uid,
+            'clinic_id'      => $order->clinic_id,
+            'created_by'     => $staff_id ?: $uid,
+        ];
+    }
+
+    $sum = 0.0;
+    foreach ($payment_rows as $prow) {
+        $sum += floatval($prow['amount']);
+    }
+    if (abs($sum - $amount) > 0.01) {
+        wp_send_json_error(['msg' => 'Split payment amounts must equal the entered total amount.']);
+        return;
+    }
+
+    foreach ($payment_rows as $prow) {
+        $db->insert('hearmed_core.payments', $prow);
+    }
 
     // Update invoice balance
     $new_balance = max(0, (float)$invoice->balance_remaining - $amount);
@@ -1178,7 +1418,7 @@ function hm_ajax_fitting_record_payment() {
     $paid_in_full = ($new_balance <= 0);
 
     if ($paid_in_full) {
-        // Mark order as Complete
+        // Mark order as Complete (closed)
         $db->query(
             "UPDATE hearmed_core.orders SET current_status = 'Complete', fitted_date = \$1, updated_at = \$2 WHERE id = \$3",
             [$now, $now, $order_id]

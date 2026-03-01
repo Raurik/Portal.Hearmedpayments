@@ -1128,6 +1128,7 @@ function hm_ajax_get_patient_orders() {
                  WHERE oi.order_id = o.id) AS description
          FROM hearmed_core.orders o
          WHERE o.patient_id = \$1
+                     AND LOWER(TRIM(COALESCE(o.current_status, ''))) <> 'awaiting approval'
          ORDER BY o.created_at DESC",
         [ $pid ]
     );

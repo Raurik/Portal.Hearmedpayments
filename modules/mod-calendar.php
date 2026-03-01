@@ -1912,7 +1912,7 @@ function hm_ajax_get_patient_pipeline_orders() {
         $rows = $db->get_results(
             $base_select .
             " WHERE ({$where_sql})
-                AND LOWER(TRIM(COALESCE(o.current_status, ''))) <> 'cancelled'
+                                AND LOWER(TRIM(COALESCE(o.current_status, ''))) NOT IN ('cancelled', 'awaiting approval', 'complete', 'closed')
               ORDER BY o.order_date DESC"
         );
 
