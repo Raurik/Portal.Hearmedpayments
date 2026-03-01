@@ -485,7 +485,11 @@ if (!has_action('wp_ajax_hm_order_pdf')) {
 }
 
 function hm_ajax_os_order_pdf() {
-    if (!wp_verify_nonce($_GET['nonce'] ?? '', 'hm_nonce')) { wp_die('Invalid nonce'); }
+    // Accept both nonce types for compatibility
+    if (!wp_verify_nonce($_REQUEST['nonce'] ?? '', 'hm_nonce')
+     && !wp_verify_nonce($_REQUEST['nonce'] ?? '', 'hearmed_nonce')) {
+        wp_die('Invalid nonce — please refresh the page and try again.');
+    }
 
     $db       = HearMed_DB::instance();
     $order_id = intval($_GET['order_id'] ?? 0);

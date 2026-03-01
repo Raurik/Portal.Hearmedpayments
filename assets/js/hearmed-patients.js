@@ -1237,12 +1237,21 @@ function initProfile(){
                         '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:13px;">'+esc(o.description||'—')+'</td>'+
                         '<td style="font-weight:500;">'+euro(o.grand_total)+'</td>'+
                         '<td><span class="hm-badge hm-badge--sm '+bc+'">'+esc(o.status)+'</span></td>'+
-                        '<td><a href="/orders/?hm_action=view&order_id='+o._ID+'" class="hm-btn hm-btn--secondary hm-btn--sm">View</a></td>'+
+                        '<td style="white-space:nowrap;">'+
+                            '<a href="/orders/?hm_action=view&order_id='+o._ID+'" class="hm-btn hm-btn--secondary hm-btn--sm">View</a> '+
+                            '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-order-pdf-btn" data-id="'+o._ID+'" title="Download Order PDF">PDF</button>'+
+                        '</td>'+
                     '</tr>';
                 });
                 h+='</tbody></table>';
             }
             $c.html(h+'</div>');
+            // Order PDF download handler
+            $c.on('click','.hm-order-pdf-btn',function(e){
+                e.preventDefault();
+                var oid=$(this).data('id');
+                window.open(_hm.ajax+'?action=hm_download_order_pdf&nonce='+_hm.nonce+'&order_id='+oid,'_blank');
+            });
         });
     }
 

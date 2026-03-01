@@ -652,7 +652,7 @@ class HearMed_Orders {
                     <?php if ($can_order) : ?>
                     <div class="hm-card hm-card--action">
                         <h3 class="hm-card-title">Place Order with Supplier</h3>
-                        <a href="<?php echo esc_url(admin_url('admin-ajax.php').'?action=hm_print_order_sheet&nonce='.wp_create_nonce('hearmed_nonce').'&order_id='.$order_id); ?>"
+                        <a href="<?php echo esc_url(admin_url('admin-ajax.php').'?action=hm_download_order_pdf&nonce='.wp_create_nonce('hm_nonce').'&order_id='.$order_id); ?>"
                            target="_blank" class="hm-btn hm-btn--secondary hm-btn--block" style="margin-bottom:0.75rem;">
                             Print Order Sheet
                         </a>
@@ -708,7 +708,7 @@ class HearMed_Orders {
 
                     <?php if ($can_print && !$can_order) : ?>
                     <div class="hm-card">
-                        <a href="<?php echo esc_url(admin_url('admin-ajax.php').'?action=hm_print_order_sheet&nonce='.wp_create_nonce('hearmed_nonce').'&order_id='.$order_id); ?>"
+                        <a href="<?php echo esc_url(admin_url('admin-ajax.php').'?action=hm_download_order_pdf&nonce='.wp_create_nonce('hm_nonce').'&order_id='.$order_id); ?>"
                            target="_blank" class="hm-btn hm-btn--secondary hm-btn--block">
                             Print Order Sheet
                         </a>

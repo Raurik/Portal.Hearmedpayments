@@ -84,6 +84,7 @@ add_action( 'wp_ajax_hm_get_patient_appointments', 'hm_ajax_get_patient_appointm
 add_action( 'wp_ajax_hm_get_patient_orders',    'hm_ajax_get_patient_orders' );
 add_action( 'wp_ajax_hm_get_patient_invoices',  'hm_ajax_get_patient_invoices' );
 add_action( 'wp_ajax_hm_download_invoice',      'hm_ajax_download_invoice' );
+add_action( 'wp_ajax_hm_download_order_pdf',    'hm_ajax_download_order_pdf' );
 
 // Repairs & Returns
 add_action( 'wp_ajax_hm_get_patient_repairs',    'hm_ajax_get_patient_repairs' );
@@ -1210,6 +1211,31 @@ function hm_ajax_download_invoice() {
     $tpl = HearMed_Invoice::build_template_data( $data );
     header( 'Content-Type: text/html; charset=utf-8' );
     echo HearMed_Print_Templates::render( 'invoice', $tpl );
+    exit;
+}
+
+/**
+ * Download order PDF from patient file.
+ * Mirrors the invoice download pattern exactly — same nonce, same flow.
+ */
+function hm_ajax_download_order_pdf() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $order_id = intval( $_GET['order_id'] ?? 0 );
+    if ( ! $order_id ) wp_die( 'Missing order ID' );
+
+    // Log the download
+    $db    = HearMed_DB::instance();
+    $order = $db->get_row(
+        "SELECT order_number, patient_id FROM hearmed_core.orders WHERE id = \$1",
+        [ $order_id ]
+    );
+    if ( ! $order ) wp_die( 'Order not found' );
+    hm_patient_audit( 'DOWNLOAD_ORDER_PDF', 'order', $order_id, [ 'order' => $order->order_number ] );
+
+    // Delegate to existing render_order_sheet method
+    $html = HearMed_Orders::render_order_sheet( $order_id );
+    header( 'Content-Type: text/html; charset=utf-8' );
+    echo $html;
     exit;
 }
 
