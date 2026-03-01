@@ -221,7 +221,7 @@ class HearMed_Print_Templates {
 body {
     font-family: '<?php echo esc_attr($s['tableFont'] ?? 'Source Sans 3'); ?>', -apple-system, sans-serif;
     font-size: <?php echo intval($s['tableSize'] ?? 11); ?>px;
-    color: #1e293b; line-height: 1.5; padding: 30px; max-width: 700px; margin: 0 auto;
+    color: #1e293b; line-height: 1.5; padding: 30px; max-width: 100%; margin: 0 auto;
     min-height: 100vh;
     display: flex; flex-direction: column;
 }
