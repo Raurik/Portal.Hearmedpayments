@@ -270,10 +270,17 @@ function hm_ajax_get_dispensers() {
     // Build a map of staff_id => [scheduled day-of-week numbers] for selected clinic
     $staff_sched_days = [];
     $clinic_has_schedules = false;
+    $system_uses_schedules = false; // true if ANY clinic has schedule entries
     if ( $clinic_id ) {
         $schedule_table = 'hearmed_reference.dispenser_schedules';
         $has_schedule_table = HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $schedule_table ) ) !== null;
         if ( $has_schedule_table ) {
+            // Check if the scheduling system is in use at all (any active rows in any clinic)
+            $any_sched = HearMed_DB::get_var(
+                "SELECT 1 FROM hearmed_reference.dispenser_schedules WHERE is_active = true LIMIT 1"
+            );
+            $system_uses_schedules = ! empty( $any_sched );
+
             $sched_rows = HearMed_DB::get_results(
                 "SELECT staff_id, day_of_week
                  FROM hearmed_reference.dispenser_schedules
@@ -296,17 +303,14 @@ function hm_ajax_get_dispensers() {
         }
     }
 
-    // When a clinic is selected and has active schedules, ONLY show dispensers
-    // who have at least one schedule entry for that clinic.
-    // If no schedules exist, fall back to showing all staff assigned to the clinic.
-    if ( $clinic_id && $clinic_has_schedules ) {
-        // Only dispensers with active schedules for this clinic
-        $scheduled_ids = array_keys( $staff_sched_days );
-        if ( empty( $scheduled_ids ) ) {
-            // Edge case: schedules table has rows but staff_sched_days is empty
-            // (shouldn't happen, but guard against it)
-            $ps = [];
-        } else {
+    // When the scheduling system is in use and a clinic is selected,
+    // ONLY show dispensers with active schedules for that clinic.
+    // If the clinic has zero schedule entries, show NO dispensers (empty calendar).
+    // Only fall back to staff_clinics if no clinic selected or scheduling not in use.
+    if ( $clinic_id && $system_uses_schedules ) {
+        if ( $clinic_has_schedules ) {
+            // Show only dispensers with active schedules for this clinic
+            $scheduled_ids = array_keys( $staff_sched_days );
             $id_list = implode( ',', array_map( 'intval', $scheduled_ids ) );
             $ps = HearMed_DB::get_results(
                 "SELECT s.id, s.first_name, s.last_name,
@@ -320,6 +324,10 @@ function hm_ajax_get_dispensers() {
                 GROUP BY s.id, s.first_name, s.last_name, s.role, s.is_active, s.staff_color
                 ORDER BY s.first_name, s.last_name"
             );
+        } else {
+            // Clinic has no schedule entries — no one is scheduled here
+            $ps = [];
+            $clinic_has_schedules = true; // Signal JS to show "no staff" message
         }
     } else {
         $sql = "SELECT s.id, s.first_name, s.last_name,

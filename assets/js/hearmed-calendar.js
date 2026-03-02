@@ -647,7 +647,12 @@ var Cal={
         var slotH=slotMap[cfg.slotHt]||28;
         cfg.slotHpx=slotH;
 
-        if(!disps.length){gw.innerHTML='<div style="text-align:center;padding:80px;color:var(--hm-text-faint);font-size:15px">No dispensers match your filters. Try changing the clinic or assignee filter.</div>';return;}
+        if(!disps.length){
+            var noMsg=Cal.clinicHasSchedules
+                ?'No staff are scheduled for this clinic. Add dispenser schedules in Admin → Dispenser Schedules.'
+                :'No dispensers match your filters. Try changing the clinic or assignee filter.';
+            gw.innerHTML='<div style="text-align:center;padding:80px;color:var(--hm-text-faint);font-size:15px">'+noMsg+'</div>';return;
+        }
 
         var colW=Math.max(80,Math.min(140,Math.floor(900/disps.length)));
         var tc=disps.length*dates.length;
