@@ -5,7 +5,7 @@
 
 #hm-chat-app {
     display: flex;
-    height: calc(100vh - 60px);
+    height: calc(100vh - 80px);
     width: calc(100vw - 280px);
     max-width: 100%;
     box-sizing: border-box;
