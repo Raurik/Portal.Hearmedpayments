@@ -743,6 +743,9 @@ class HearMed_Admin_Dispenser_Schedules {
         check_ajax_referer( 'hm_nonce', 'nonce' );
         if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
 
+        // Ensure columns exist before insert (same connection)
+        $this->ensure_schedule_columns();
+
         $id = intval( $_POST['id'] ?? 0 );
         $staff_id = intval( $_POST['staff_id'] ?? 0 );
         $clinic_id = intval( $_POST['clinic_id'] ?? 0 );
