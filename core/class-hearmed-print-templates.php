@@ -122,7 +122,7 @@ class HearMed_Print_Templates {
             'footerFont'     => 'Source Sans 3',
             'footerSize'     => 9,
             'footerColor'    => '#94a3b8',
-            'sections'       => ['companyHeader','patient','creditReason','itemsTable','refundMethod','exchangeDetails','footer'],
+            'sections'       => ['companyHeader','patient','deviceSerials','creditReason','itemsTable','paymentBreakdown','refundMethod','exchangeDetails','footer'],
         ],
     ];
 
@@ -759,6 +759,59 @@ tfoot td { font-weight: 600; border-bottom: none; }
     }
     private static function section_creditnote_patientAddress() { return ''; }
     private static function section_creditnote_refundMethod() { return ''; }
+
+    private static function section_creditnote_deviceSerials(array $s, object $d): string {
+        $sl = $d->serial_left ?? '';
+        $sr = $d->serial_right ?? '';
+        if ( ! $sl && ! $sr ) return '';
+        $side = $d->return_side ?? 'both';
+        ob_start(); ?>
+        <div class="hm-print-row" style="margin-bottom:14px;">
+            <?php if ( $sl && ( $side === 'left' || $side === 'both' ) ): ?>
+            <div class="hm-print-box">
+                <div class="hm-print-box-label">Left Hearing Aid — Serial</div>
+                <strong style="font-size:13px;letter-spacing:.3px;"><?php echo esc_html( $sl ); ?></strong>
+            </div>
+            <?php endif; ?>
+            <?php if ( $sr && ( $side === 'right' || $side === 'both' ) ): ?>
+            <div class="hm-print-box">
+                <div class="hm-print-box-label">Right Hearing Aid — Serial</div>
+                <strong style="font-size:13px;letter-spacing:.3px;"><?php echo esc_html( $sr ); ?></strong>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php return ob_get_clean();
+    }
+
+    private static function section_creditnote_paymentBreakdown(array $s, object $d): string {
+        $patient_amt = (float) ( $d->patient_refund_amount ?? 0 );
+        $prsi_amt    = (float) ( $d->prsi_amount ?? 0 );
+        $orig_method = $d->original_payment_method ?? '';
+        $orig_inv    = $d->original_invoice_number ?? '';
+        ob_start(); ?>
+        <div style="background:#f8fafc;border-radius:6px;padding:14px 18px;margin-bottom:16px;border:1px solid #e2e8f0;">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--hm-accent);letter-spacing:.5px;margin-bottom:8px;">Payment Breakdown</div>
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:4px 0;color:#64748b;">Patient Paid</td><td style="padding:4px 0;text-align:right;font-weight:600;">&euro;<?php echo number_format( $patient_amt, 2 ); ?></td></tr>
+                <?php if ( $prsi_amt > 0 ): ?>
+                <tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:4px 0;color:#64748b;">PRSI Grant Applied</td><td style="padding:4px 0;text-align:right;font-weight:600;">&euro;<?php echo number_format( $prsi_amt, 2 ); ?></td></tr>
+                <?php endif; ?>
+                <tr style="font-weight:700;"><td style="padding:6px 0;">Total Credit</td><td style="padding:6px 0;text-align:right;">&euro;<?php echo number_format( $patient_amt + $prsi_amt, 2 ); ?></td></tr>
+            </table>
+            <?php if ( $orig_method ): ?>
+            <div style="margin-top:10px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:11px;color:#64748b;">Original Payment: <strong style="color:#1e293b;"><?php echo esc_html( $orig_method ); ?></strong></div>
+            <?php endif; ?>
+            <?php if ( $orig_inv ): ?>
+            <div style="font-size:11px;color:#64748b;margin-top:2px;">Original Invoice: <strong style="color:#1e293b;"><?php echo esc_html( $orig_inv ); ?></strong></div>
+            <?php endif; ?>
+            <?php if ( $prsi_amt > 0 ): ?>
+            <div style="margin-top:8px;padding:6px 10px;background:#fef3c7;border-radius:4px;font-size:11px;color:#92400e;">
+                <strong>PRSI Note:</strong> The PRSI grant of &euro;<?php echo number_format( $prsi_amt, 2 ); ?> is refunded to the Department of Social Protection, not to the patient.
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php return ob_get_clean();
+    }
 
     private static function section_creditnote_creditReason(array $s, object $d): string {
         if (!($s['creditReason'] ?? true) || empty($d->reason)) return '';

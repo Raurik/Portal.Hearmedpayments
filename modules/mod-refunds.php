@@ -389,7 +389,7 @@ class HearMed_Refunds {
                             '<td><a href="/patients/?id='+x.patient_id+'" style="color:var(--hm-teal);">'+esc(x.patient_name)+'</a></td>'+
                             '<td><code class="hm-mono">'+esc(x.credit_note_number)+'</code></td>'+
                             '<td style="font-weight:600;">€'+parseFloat(x.prsi_amount).toFixed(2)+'</td>'+
-                            '<td><span class="hm-badge hm-cn-type-'+esc(x.refund_type||'cheque')+'">'+esc(ucfirst(x.refund_type||'cheque'))+'</span></td>'+
+                            '<td><span class="hm-badge hm-cn-type-exchange" style="background:#fef3c7;color:#92400e;">Departmental</span></td>'+
                             '<td class="hm-mono hm-muted" style="font-size:12px;">'+fmtDate((x.credit_date||'').split(' ')[0])+'</td>'+
                             '<td><button class="hm-btn hm-btn--sm hm-btn--secondary hm-prsi-notify" data-id="'+x.id+'">Mark Notified</button></td>'+
                         '</tr>';
@@ -872,6 +872,60 @@ class HearMed_Refunds {
         $tpl_data->subtotal                = $cn->amount ?? 0;
         $tpl_data->vat_total               = 0;
         $tpl_data->grand_total             = $cn->amount ?? 0;
+
+        // Fetch device serial numbers — prefer returns table (preserved before clearing)
+        $tpl_data->serial_left  = '';
+        $tpl_data->serial_right = '';
+        $tpl_data->return_side  = 'both';
+        $has_returns_tbl = $db->get_var(
+            "SELECT 1 FROM information_schema.tables WHERE table_schema = 'hearmed_core' AND table_name = 'returns'"
+        );
+        if ( $has_returns_tbl ) {
+            $ret_row = $db->get_row(
+                "SELECT side, serial_left, serial_right FROM hearmed_core.returns WHERE credit_note_id = \$1",
+                [ $cn_id ]
+            );
+            if ( $ret_row ) {
+                $tpl_data->return_side  = $ret_row->side ?? 'both';
+                $tpl_data->serial_left  = $ret_row->serial_left ?? '';
+                $tpl_data->serial_right = $ret_row->serial_right ?? '';
+            }
+        }
+        // Fallback: get serials from device if returns table didn't have them
+        if ( ! $tpl_data->serial_left && ! $tpl_data->serial_right && ! empty( $cn->device_id ) ) {
+            $dev = $db->get_row(
+                "SELECT serial_left, serial_right FROM hearmed_core.patient_devices WHERE id = \$1",
+                [ $cn->device_id ]
+            );
+            if ( $dev ) {
+                $tpl_data->serial_left  = $dev->serial_left ?? '';
+                $tpl_data->serial_right = $dev->serial_right ?? '';
+            }
+        }
+
+        // PRSI / patient split amounts
+        $has_prsi_col = $db->get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'credit_notes' AND column_name = 'prsi_amount'"
+        );
+        $tpl_data->prsi_amount           = $has_prsi_col ? (float) ($cn->prsi_amount ?? 0) : 0;
+        $tpl_data->patient_refund_amount = $has_prsi_col ? (float) ($cn->patient_refund_amount ?? $cn->amount ?? 0) : (float) ($cn->amount ?? 0);
+
+        // Original payment method(s)
+        $tpl_data->original_payment_method = '';
+        if ( ! empty( $cn->invoice_id ) ) {
+            $payments = $db->get_results(
+                "SELECT payment_method, amount FROM hearmed_core.payments WHERE invoice_id = \$1 ORDER BY payment_date",
+                [ $cn->invoice_id ]
+            );
+            if ( $payments ) {
+                $methods = [];
+                foreach ( $payments as $pm ) {
+                    $methods[] = $pm->payment_method . ' (\xe2\x82\xac' . number_format( (float) $pm->amount, 2 ) . ')';
+                }
+                $tpl_data->original_payment_method = implode( ', ', $methods );
+            }
+        }
 
         if (!empty($cn->exchange_order_id)) {
             $ex = $db->get_row("SELECT order_number FROM hearmed_core.orders WHERE id = \$1", [$cn->exchange_order_id]);

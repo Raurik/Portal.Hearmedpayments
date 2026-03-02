@@ -2689,7 +2689,7 @@ function hm_ajax_create_return() {
             'created_at'            => date( 'Y-m-d H:i:s' ),
         ]);
 
-        // 3. Create return record
+        // 3. Create return record (store serials BEFORE they get cleared)
         $return_id = $db->insert( 'hearmed_core.returns', [
             'patient_id'            => $pid,
             'order_id'              => $device->order_id ?: null,
@@ -2699,6 +2699,8 @@ function hm_ajax_create_return() {
             'return_date'           => date( 'Y-m-d' ),
             'reason'                => $reason,
             'side'                  => $side,
+            'serial_left'           => $device->serial_left ?? null,
+            'serial_right'          => $device->serial_right ?? null,
             'total_refund_amount'   => $patient_refund + $prsi_amount,
             'patient_refund_amount' => $patient_refund,
             'prsi_refund_amount'    => $prsi_amount,
@@ -2974,6 +2976,8 @@ function hm_ensure_returns_tables() {
             return_date           DATE NOT NULL DEFAULT CURRENT_DATE,
             reason                TEXT,
             side                  VARCHAR(10) DEFAULT 'both',
+            serial_left           VARCHAR(100),
+            serial_right          VARCHAR(100),
             total_refund_amount   DECIMAL(10,2) DEFAULT 0,
             patient_refund_amount DECIMAL(10,2) DEFAULT 0,
             prsi_refund_amount    DECIMAL(10,2) DEFAULT 0,
@@ -2988,6 +2992,18 @@ function hm_ensure_returns_tables() {
             updated_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )"
     );
+
+    // Ensure serial columns exist on returns (for existing tables)
+    foreach ( ['serial_left' => 'VARCHAR(100)', 'serial_right' => 'VARCHAR(100)'] as $col => $type ) {
+        $exists = $db->get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'returns' AND column_name = \$1",
+            [ $col ]
+        );
+        if ( ! $exists ) {
+            $db->query( "ALTER TABLE hearmed_core.returns ADD COLUMN {$col} {$type}" );
+        }
+    }
 }
 
 
