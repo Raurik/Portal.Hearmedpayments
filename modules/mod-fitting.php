@@ -114,14 +114,17 @@ function hm_render_fitting_page() {
     .hmf-toolbar-reset{padding:6px 14px;border:none;border-radius:6px;font-size:11px;font-weight:600;color:var(--hm-text-light);background:#e2e8f0;cursor:pointer;transition:all .15s;}
     .hmf-toolbar-reset:hover{background:var(--hm-teal);color:#fff;}
 
-    /* Totals footer */
-    .hmf-summary{margin-top:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;}
-    .hmf-summary-row{display:flex;align-items:center;}
-    .hmf-summary-cell{flex:1;padding:14px 20px;text-align:center;position:relative;}
-    .hmf-summary-cell + .hmf-summary-cell{border-left:1px solid #e2e8f0;}
-    .hmf-summary-cell-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--hm-text-light);font-weight:600;margin-bottom:2px;}
-    .hmf-summary-cell-val{font-size:20px;font-weight:700;color:#0f172a;}
-    .hmf-summary-cell-sub{font-size:10px;color:var(--hm-text-muted);margin-top:2px;}
+    /* Totals footer — business ledger style */
+    .hmf-summary{margin-top:20px;max-width:340px;}
+    .hmf-summary-line{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;}
+    .hmf-summary-line + .hmf-summary-line{border-top:1px solid #e2e8f0;}
+    .hmf-summary-line-label{font-size:13px;color:#475569;font-weight:500;}
+    .hmf-summary-line-label .hmf-count{font-size:11px;color:#94a3b8;font-weight:400;margin-left:4px;}
+    .hmf-summary-line-val{font-size:14px;font-weight:600;color:#0f172a;text-align:right;}
+    .hmf-summary-line-sub{font-size:10px;color:#94a3b8;font-weight:400;margin-top:1px;text-align:right;}
+    .hmf-summary-line.hmf-summary-total{border-top:2px solid #334155;margin-top:4px;padding-top:8px;}
+    .hmf-summary-line.hmf-summary-total .hmf-summary-line-label{font-weight:700;color:#0f172a;font-size:14px;}
+    .hmf-summary-line.hmf-summary-total .hmf-summary-line-val{font-size:16px;font-weight:800;color:#0f172a;}
     </style>
 
     <div class="hm-calendar" data-module="admin" data-view="fitting">
@@ -532,20 +535,20 @@ function hm_render_fitting_page() {
             }
 
             container.innerHTML =
-                '<div class="hmf-summary-row">' +
-                    '<div class="hmf-summary-cell">' +
-                        '<div class="hmf-summary-cell-label">Total Pipeline (' + orders.length + ')</div>' +
-                        '<div class="hmf-summary-cell-val" style="font-size:22px;">' + euro(valPipeline) + '</div>' +
+                '<div class="hmf-summary-line">' +
+                    '<span class="hmf-summary-line-label">Total Pipeline<span class="hmf-count">(' + orders.length + ')</span></span>' +
+                    '<span class="hmf-summary-line-val">' + euro(valPipeline) + '</span>' +
+                '</div>' +
+                '<div class="hmf-summary-line">' +
+                    '<span class="hmf-summary-line-label">PRSI to Claim<span class="hmf-count">(' + prsiCount + ')</span></span>' +
+                    '<div style="text-align:right;">' +
+                        '<span class="hmf-summary-line-val" style="color:#059669;">' + euro(prsiVal) + '</span>' +
+                        (cycleLabel ? '<div class="hmf-summary-line-sub">' + hmFE(cycleLabel) + '</div>' : '') +
                     '</div>' +
-                    '<div class="hmf-summary-cell">' +
-                        '<div class="hmf-summary-cell-label">PRSI to Claim (' + prsiCount + ')</div>' +
-                        '<div class="hmf-summary-cell-val" style="color:#059669;">' + euro(prsiVal) + '</div>' +
-                        '<div class="hmf-summary-cell-sub">' + hmFE(cycleLabel) + '</div>' +
-                    '</div>' +
-                    '<div class="hmf-summary-cell" style="border-left:2px solid #e2e8f0;">' +
-                        '<div class="hmf-summary-cell-label">Patient Pays</div>' +
-                        '<div class="hmf-summary-cell-val" style="font-size:22px;font-weight:800;">' + euro(patientPays) + '</div>' +
-                    '</div>' +
+                '</div>' +
+                '<div class="hmf-summary-line hmf-summary-total">' +
+                    '<span class="hmf-summary-line-label">Patient Pays</span>' +
+                    '<span class="hmf-summary-line-val">' + euro(patientPays) + '</span>' +
                 '</div>';
 
             container.style.display = 'block';
