@@ -754,7 +754,7 @@ var Cal={
                     var isOff=!!clinicDayOff[key];
                     var cls='hm-slot'+(isHr?' hr':'')+(ci===clinics.length-1?' dl':'')+(isOff?' hm-slot-off':'');
                     var clColor=c.clinic_colour||c.color||'#94a3b8';
-                    var slotBg=isOff?';background:#d4d4d4;opacity:0.45':';background:'+hexToRgba(clColor,0.06);
+                    var slotBg=isOff?';background:rgba(212,212,212,0.55)':';background:'+hexToRgba(clColor,0.06);
                     var staff=clinicDayStaff[key]||[];
                     var slotTtl=staff.length?(' title="'+esc(staff.map(function(s){return s.name;}).join(', '))+'"'):(isOff?' title="No staff scheduled — double-click to add anyway"':'');
                     h+='<div class="'+cls+'"'+slotTtl+' data-date="'+fmt(d)+'" data-time="'+pad(hr)+':'+pad(mn)+'" data-clinic="'+c.id+'" data-day="'+di+'" data-slot="'+s+'"'+(isOff?' data-off="1"':'')+' style="height:'+slotH+'px'+slotBg+'"></div>';
@@ -875,7 +875,7 @@ var Cal={
                     var cls='hm-slot'+(isHr?' hr':'')+(pi===disps.length-1?' dl':'');
                     var isOff=!!dispOffDay[p.id+'-'+d.getDay()];
                     var slotCls=cls+(isOff?' hm-slot-off':'');
-                    var slotBg=isOff?';background:#d4d4d4;opacity:0.45':(dispClinicColor[p.id]?';background:'+hexToRgba(dispClinicColor[p.id],0.06):'');
+                    var slotBg=isOff?';background:rgba(212,212,212,0.55)':(dispClinicColor[p.id]?';background:'+hexToRgba(dispClinicColor[p.id],0.06):'');
                     var slotTtl=isOff?' title="Not scheduled — double-click to add anyway"':(dispClinicName[p.id]?(' title="'+dispClinicName[p.id]+'"'):'');
                     h+='<div class="'+slotCls+'"'+slotTtl+' data-date="'+fmt(d)+'" data-time="'+pad(hr)+':'+pad(mn)+'" data-disp="'+p.id+'" data-day="'+di+'" data-slot="'+s+'"'+(isOff?' data-off="1"':'')+' style="height:'+slotH+'px'+slotBg+'"></div>';
                 });
