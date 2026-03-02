@@ -2532,13 +2532,16 @@ function hm_ajax_create_exchange() {
             'created_by'  => $staff_id ?: null,
         ]);
 
+        // Return exchanged hearing aid(s) to stock
+        hm_return_device_to_stock( $device, $side, 'Exchange', $staff_id );
+
         // Timeline entry
         $db->insert( 'hearmed_core.patient_timeline', [
             'patient_id'  => $pid,
             'event_type'  => 'exchange_created',
             'event_date'  => date('Y-m-d'),
             'staff_id'    => $staff_id ?: null,
-            'description' => "Exchange initiated. Credit note {$cn_number} for €" . number_format($credit_amount, 2) . ". Patient credit: €" . number_format($patient_refund, 2) . ($prsi_amount > 0 ? ". PRSI: €" . number_format($prsi_amount, 2) : '') . ". Reason: {$reason}",
+            'description' => "Exchange initiated. Credit note {$cn_number} for \xe2\x82\xac" . number_format($credit_amount, 2) . ". Patient credit: \xe2\x82\xac" . number_format($patient_refund, 2) . ($prsi_amount > 0 ? ". PRSI: \xe2\x82\xac" . number_format($prsi_amount, 2) : '') . ". Reason: {$reason}. Original device added back to stock.",
         ]);
 
         $db->commit();
@@ -2719,14 +2722,17 @@ function hm_ajax_create_return() {
             'created_by'  => $staff_id ?: null,
         ]);
 
-        // 5. Timeline entry
+        // 5. Return hearing aid(s) to stock
+        hm_return_device_to_stock( $device, $side, 'Return', $staff_id );
+
+        // 6. Timeline entry
         $side_label = $side === 'both' ? 'both sides' : $side . ' side';
         $db->insert( 'hearmed_core.patient_timeline', [
             'patient_id'  => $pid,
             'event_type'  => 'return_created',
             'event_date'  => date('Y-m-d'),
             'staff_id'    => $staff_id ?: null,
-            'description' => "Hearing aid returned ({$side_label}). Credit note {$cn_number}. Patient refund: \xe2\x82\xac" . number_format($patient_refund, 2) . ($prsi_amount > 0 ? ". PRSI to reclaim: \xe2\x82\xac" . number_format($prsi_amount, 2) : '') . ". Reason: {$reason}",
+            'description' => "Hearing aid returned ({$side_label}). Credit note {$cn_number}. Patient refund: \xe2\x82\xac" . number_format($patient_refund, 2) . ($prsi_amount > 0 ? ". PRSI to reclaim: \xe2\x82\xac" . number_format($prsi_amount, 2) : '') . ". Reason: {$reason}. Added back to stock.",
         ]);
 
         $db->commit();
@@ -2852,6 +2858,126 @@ function hm_ajax_apply_credit_to_invoice() {
     } catch ( \Exception $e ) {
         $db->rollback();
         wp_send_json_error( 'Failed: ' . $e->getMessage() );
+    }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  RETURN TO STOCK — adds hearing aids back to inventory on return/exchange
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Add a returned/exchanged hearing aid back to inventory_stock.
+ *
+ * @param object $device   The patient_devices row (pre-update, so serials intact).
+ * @param string $side     'left', 'right', or 'both'.
+ * @param string $reason   'Return' or 'Exchange'.
+ * @param int|null $staff_id  Staff performing the action.
+ */
+function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null ) {
+    $db = HearMed_DB::instance();
+
+    // Lookup product + manufacturer info from the device's product_id
+    $product = null;
+    $manufacturer_id = null;
+    if ( ! empty( $device->product_id ) ) {
+        $product = $db->get_row(
+            "SELECT p.product_name, p.model, p.style, p.tech_level, p.manufacturer_id,
+                    m.name AS manufacturer_name
+             FROM hearmed_reference.products p
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+             WHERE p.id = \$1",
+            [ $device->product_id ]
+        );
+        if ( $product ) {
+            // Stock table join uses manufacturers._ID, so try to get that
+            $mfr_id_row = $db->get_row(
+                "SELECT id, _ID FROM hearmed_reference.manufacturers WHERE id = \$1",
+                [ $product->manufacturer_id ]
+            );
+            // Use _ID if available (for stock system compatibility), fallback to id
+            $manufacturer_id = $mfr_id_row->_ID ?? $mfr_id_row->id ?? $product->manufacturer_id;
+        }
+    }
+
+    // Determine clinic from original order if available
+    // Stock system uses hearmed_admin.clinics._ID, orders use hearmed_reference.clinics.id
+    $clinic_id = null;
+    if ( ! empty( $device->order_id ) ) {
+        $order_clinic = $db->get_var(
+            "SELECT clinic_id FROM hearmed_core.orders WHERE id = \$1",
+            [ $device->order_id ]
+        );
+        if ( $order_clinic ) {
+            // Try to find matching clinic in hearmed_admin.clinics by name
+            $ref_clinic = $db->get_row(
+                "SELECT clinic_name FROM hearmed_reference.clinics WHERE id = \$1",
+                [ $order_clinic ]
+            );
+            if ( $ref_clinic ) {
+                $admin_clinic_id = $db->get_var(
+                    "SELECT _ID FROM hearmed_admin.clinics WHERE name = \$1 LIMIT 1",
+                    [ $ref_clinic->clinic_name ]
+                );
+                $clinic_id = $admin_clinic_id ?: $order_clinic;
+            } else {
+                $clinic_id = $order_clinic;
+            }
+        }
+    }
+
+    $model_name = $product->model ?? $product->product_name ?? 'Unknown';
+    $style      = $product->style ?? '';
+    $tech_level = $product->tech_level ?? '';
+    $mfr_name   = $product->manufacturer_name ?? '';
+    $today      = date( 'Y-m-d H:i:s' );
+
+    $serials_to_add = [];
+    $sl = $device->serial_number_left ?? $device->serial_left ?? '';
+    $sr = $device->serial_number_right ?? $device->serial_right ?? '';
+
+    if ( $side === 'left' || $side === 'both' ) {
+        if ( $sl ) $serials_to_add[] = [ 'serial' => $sl, 'side' => 'Left' ];
+    }
+    if ( $side === 'right' || $side === 'both' ) {
+        if ( $sr ) $serials_to_add[] = [ 'serial' => $sr, 'side' => 'Right' ];
+    }
+    // If no serials at all, add a single entry without serial
+    if ( empty( $serials_to_add ) ) {
+        $serials_to_add[] = [ 'serial' => '', 'side' => ucfirst( $side ) ];
+    }
+
+    foreach ( $serials_to_add as $entry ) {
+        $stock_id = $db->insert( 'hearmed_core.inventory_stock', [
+            'manufacturer_id'  => $manufacturer_id,
+            'model_name'       => $model_name,
+            'style'            => $style,
+            'technology_level' => $tech_level,
+            'serial_number'    => $entry['serial'],
+            'clinic_id'        => $clinic_id,
+            'quantity'         => 1,
+            'status'           => 'Returned',
+            'fitted_to_patient_id' => null,
+            'created_at'       => $today,
+        ]);
+
+        // Log stock movement
+        if ( $stock_id ) {
+            $staff_name = '';
+            if ( $staff_id ) {
+                $sn_row = $db->get_row( "SELECT first_name, last_name FROM hearmed_reference.staff WHERE id = \$1", [ $staff_id ] );
+                $staff_name = $sn_row ? trim( $sn_row->first_name . ' ' . $sn_row->last_name ) : '';
+            }
+            $db->insert( 'hearmed_core.stock_movements', [
+                'stock_id'       => $stock_id,
+                'movement_type'  => strtolower( $reason ),
+                'to_clinic_id'   => $clinic_id,
+                'quantity'       => 1,
+                'notes'          => "{$reason}: {$mfr_name} {$model_name} ({$entry['side']}) — Serial: " . ( $entry['serial'] ?: 'N/A' ),
+                'created_by'     => $staff_name ?: null,
+                'created_at'     => $today,
+            ]);
+        }
     }
 }
 

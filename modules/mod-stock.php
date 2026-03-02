@@ -91,7 +91,8 @@ function hm_stock_render() {
 
             var h='<table class="hm-table"><thead><tr><th>Manufacturer</th><th>Model</th><th>Style</th><th>Tech Level</th><th>Serial #</th><th>Clinic</th><th>Qty</th><th>Status</th><th></th></tr></thead><tbody>';
             filtered.forEach(function(x){
-                var sc=x.status==='Available'?'hm-badge--green':x.status==='Reserved'?'hm-badge--amber':'hm-badge--grey';
+                var sc=x.status==='Available'?'hm-badge--green':x.status==='Reserved'?'hm-badge--amber':x.status==='Returned'?'hm-badge--red':x.status==='Fitted'?'hm-badge--blue':'hm-badge--grey';
+                var canAct=(x.status==='Available'||x.status==='Returned');
                 h+='<tr>'+
                     '<td>'+esc(x.manufacturer_name||'—')+'</td>'+
                     '<td style="font-weight:500;">'+esc(x.model_name||'—')+'</td>'+
@@ -102,8 +103,8 @@ function hm_stock_render() {
                     '<td style="text-align:center;">'+esc(x.quantity||0)+'</td>'+
                     '<td><span class="hm-badge hm-badge--sm '+sc+'">'+esc(x.status||'Available')+'</span></td>'+
                     '<td style="display:flex;gap:4px;">'+
-                        (x.status==='Available'?'<button class="hm-btn hm-btn--secondary hm-btn--sm hm-stock-transfer" data-id="'+x._ID+'">Transfer</button>'+
-                        '<button class="hm-btn hm-btn--primary hm-btn--sm hm-stock-fit" data-id="'+x._ID+'" data-name="'+esc(x.manufacturer_name+' '+x.model_name)+'">Fit</button>':'')+
+                        (canAct?'<button class="hm-btn hm-btn--secondary hm-btn--sm hm-stock-transfer" data-id="'+x._ID+'">Transfer</button>'+
+                        '<button class="hm-btn hm-btn--primary hm-btn--sm hm-stock-fit" data-id="'+x._ID+'" data-name="'+esc((x.manufacturer_name||'')+' '+(x.model_name||''))+'">Fit</button>':'')+
                     '</td>'+
                 '</tr>';
             });
