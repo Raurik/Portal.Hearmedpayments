@@ -87,25 +87,122 @@ $(function(){
 function initGlobalSearch(){
     var $wrap=$('.hm-patient-search-bar');
     if(!$wrap.length)return;
-    if(!$('#hm-gsr-dropdown').length)$('body').append('<div id="hm-gsr-dropdown" style="display:none;position:absolute;z-index:999999;background:#fff;border:1px solid #e2e8f0;border-radius:0 0 8px 8px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-height:320px;overflow-y:auto;"></div>');
+    if(!$('#hm-gsr-dropdown').length)$('body').append('<div id="hm-gsr-dropdown" style="display:none;position:absolute;z-index:999999;background:#fff;border:1px solid #e2e8f0;border-radius:0 0 8px 8px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-height:380px;overflow-y:auto;"></div>');
     var $dd=$('#hm-gsr-dropdown');
-    function posDD(){var $sb=$('.hm-patient-search-bar').first();if(!$sb.length)return;var o=$sb.offset();$dd.css({top:o.top+$sb.outerHeight(),left:o.left,width:$sb.outerWidth()});}
+    function posDD(){var $sb=$('.hm-patient-search-bar').first();if(!$sb.length)return;var o=$sb.offset();$dd.css({top:o.top+$sb.outerHeight(),left:o.left,width:Math.max($sb.outerWidth(),320)});}
+    function trunc(s,n){if(!s)return '';return s.length>n?s.substr(0,n)+'…':s;}
+    function renderResultCard(p){
+        var ph=p.phone||p.mobile||'';
+        var addr=p.address||'';
+        return '<a href="'+PG+'?id='+p.id+'" class="hm-gsr-item" style="display:flex;align-items:flex-start;gap:8px;padding:8px 12px;text-decoration:none;border-bottom:1px solid #f1f5f9;transition:background 0.15s;" onmouseover="this.style.background=\'#f0fdfa\'" onmouseout="this.style.background=\'\'">'+
+            '<div style="flex:1;min-width:0;">'+
+                '<div style="display:flex;align-items:center;gap:6px;">'+
+                    '<span style="font-weight:600;font-size:13px;color:#0d3c61;">'+esc(p.name)+'</span>'+
+                    (p.patient_number?'<span style="font-size:10px;color:#94a3b8;font-weight:500;background:#f1f5f9;padding:1px 5px;border-radius:3px;">'+esc(p.patient_number)+'</span>':'')+
+                '</div>'+
+                '<div style="display:flex;gap:10px;margin-top:2px;">'+
+                    (addr?'<span class="hm-gsr-detail" style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;cursor:default;" title="'+esc(addr)+'">'+esc(trunc(addr,22))+'</span>':'')+
+                    (ph?'<span class="hm-gsr-detail" style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;cursor:default;" title="'+esc(ph)+'">'+esc(trunc(ph,14))+'</span>':'')+
+                '</div>'+
+            '</div>'+
+        '</a>';
+    }
+    function renderDropdown(results,showAdvanced){
+        var h='';
+        if(!results||!results.length){
+            h='<div style="padding:12px 16px;text-align:center;color:#94a3b8;font-size:12px;">No patients found</div>';
+        } else {
+            for(var i=0;i<results.length;i++) h+=renderResultCard(results[i]);
+        }
+        if(showAdvanced){
+            h+='<a href="#" id="hm-gsr-advanced" style="display:block;padding:8px 12px;text-align:center;color:#0BB4C4;font-size:11px;font-weight:600;text-decoration:none;border-top:1px solid #edf2f7;transition:background 0.15s;" onmouseover="this.style.background=\'#f0fdfa\'" onmouseout="this.style.background=\'\'">Advanced Search</a>';
+        }
+        h+='<a href="#" id="hm-gsr-add" style="display:block;padding:8px 12px;text-align:center;color:#0BB4C4;font-size:11px;font-weight:500;text-decoration:none;border-top:1px solid #edf2f7;transition:background 0.15s;" onmouseover="this.style.background=\'#f0fdfa\'" onmouseout="this.style.background=\'\'">+ Add new patient</a>';
+        posDD();$dd.html(h).show();
+    }
     function run(){
         var q=$.trim($('.hm-patient-search-bar input').first().val());
         if(q.length<2){$dd.hide().empty();return;}
         $.post(_hm.ajax,{action:'hm_search_patients',nonce:_hm.nonce,q:q},function(r){
-            var h='';
-            if(!r.success||!r.data||!r.data.length)h='<div style="padding:12px 16px;text-align:center;color:#94a3b8;font-size:13px;">No patients found</div>';
-            else for(var i=0;i<r.data.length;i++){var p=r.data[i];h+='<a href="'+PG+'?id='+p.id+'" style="display:block;padding:10px 16px;text-decoration:none;color:#151B33;border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background=\'#f0fdfa\'" onmouseout="this.style.background=\'#fff\'"><span style="display:block;font-weight:500;font-size:14px;">'+esc(p.name)+'</span><span style="display:block;font-size:12px;color:#94a3b8;">'+esc(p.patient_number||'')+(p.phone?' · '+esc(p.phone):'')+'</span></a>';}
-            h+='<a href="#" id="hm-gsr-add" style="display:block;padding:12px 16px;text-align:center;color:var(--hm-teal);font-size:13px;font-weight:500;text-decoration:none;border-top:1px solid #edf2f7;" onmouseover="this.style.background=\'#f0fdfa\'" onmouseout="this.style.background=\'\'">+ Add new patient</a>';
-            posDD();$dd.html(h).show();
+            var results=r.success?r.data:[];
+            renderDropdown(results,true);
         });
     }
     var tmr;
     $(document).on('input','.hm-patient-search-bar input',function(){clearTimeout(tmr);tmr=setTimeout(run,300);});
     $(document).on('click','.hm-patient-search-bar button',function(e){e.preventDefault();run();});
-    $(document).on('click',function(e){if(!$(e.target).closest('.hm-patient-search-bar,#hm-gsr-dropdown').length)$dd.hide();});
+    $(document).on('click',function(e){if(!$(e.target).closest('.hm-patient-search-bar,#hm-gsr-dropdown,#hm-adv-search-overlay').length)$dd.hide();});
     $(document).on('click','#hm-gsr-add',function(e){e.preventDefault();$dd.hide();showCreateModal();});
+    $(document).on('click','#hm-gsr-advanced',function(e){e.preventDefault();$dd.hide();showAdvancedSearchModal();});
+}
+
+/* ════ ADVANCED SEARCH MODAL ════ */
+function showAdvancedSearchModal(){
+    if($('#hm-adv-search-overlay').length)return;
+    var html=
+    '<div id="hm-adv-search-overlay" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);z-index:100000;">'+
+    '<div style="position:relative;width:100%;max-width:480px;background:#fff;border-radius:10px;box-shadow:0 20px 60px rgba(15,23,42,0.35);overflow:hidden;">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #e2e8f0;background:#f8fafc;"><span style="font-size:14px;font-weight:600;color:#0f172a;">Advanced Patient Search</span><button id="hm-adv-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;line-height:1;">&times;</button></div>'+
+        '<div style="padding:16px 18px;">'+
+            '<p style="margin:0 0 12px;font-size:11px;color:#64748b;">Fill in one or more fields. All fields are combined (AND logic).</p>'+
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
+                '<div><label style="display:block;font-size:10px;font-weight:600;color:#64748b;margin-bottom:2px;">Name</label><input id="hm-as-name" type="text" placeholder="First or last name" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;outline:none;height:28px;"></div>'+
+                '<div><label style="display:block;font-size:10px;font-weight:600;color:#64748b;margin-bottom:2px;">H-Number</label><input id="hm-as-hnum" type="text" placeholder="e.g. H-12345" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;outline:none;height:28px;"></div>'+
+                '<div><label style="display:block;font-size:10px;font-weight:600;color:#64748b;margin-bottom:2px;">Phone / Mobile</label><input id="hm-as-phone" type="text" placeholder="Any contact number" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;outline:none;height:28px;"></div>'+
+                '<div><label style="display:block;font-size:10px;font-weight:600;color:#64748b;margin-bottom:2px;">Email</label><input id="hm-as-email" type="text" placeholder="Email address" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;outline:none;height:28px;"></div>'+
+                '<div><label style="display:block;font-size:10px;font-weight:600;color:#64748b;margin-bottom:2px;">PPS Number</label><input id="hm-as-pps" type="text" placeholder="e.g. 1234567AB" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;outline:none;height:28px;"></div>'+
+                '<div><label style="display:block;font-size:10px;font-weight:600;color:#64748b;margin-bottom:2px;">Date of Birth</label><input id="hm-as-dob" type="date" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;outline:none;height:28px;"></div>'+
+                '<div style="grid-column:1/-1;"><label style="display:block;font-size:10px;font-weight:600;color:#64748b;margin-bottom:2px;">Hearing Aid Serial Number</label><input id="hm-as-serial" type="text" placeholder="Left or right serial" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;outline:none;height:28px;"></div>'+
+            '</div>'+
+            '<div style="display:flex;gap:8px;margin-top:14px;">'+
+                '<button id="hm-as-search" style="flex:1;background:#0BB4C4;color:#fff;border:none;border-radius:4px;padding:0 14px;font-size:12px;font-weight:600;cursor:pointer;height:32px;">Search</button>'+
+                '<button id="hm-as-clear" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:4px;padding:0 14px;font-size:12px;font-weight:500;cursor:pointer;height:32px;">Clear</button>'+
+            '</div>'+
+        '</div>'+
+        '<div id="hm-as-results" style="max-height:240px;overflow-y:auto;border-top:1px solid #e2e8f0;"></div>'+
+    '</div></div>';
+    $('body').append(html);
+    var $ov=$('#hm-adv-search-overlay'),$res=$('#hm-as-results');
+    function trunc(s,n){if(!s)return '';return s.length>n?s.substr(0,n)+'…':s;}
+    function doSearch(){
+        var data={action:'hm_advanced_search_patients',nonce:_hm.nonce,
+            name:$.trim($('#hm-as-name').val()),phone:$.trim($('#hm-as-phone').val()),
+            serial:$.trim($('#hm-as-serial').val()),pps:$.trim($('#hm-as-pps').val()),
+            hnum:$.trim($('#hm-as-hnum').val()),dob:$('#hm-as-dob').val()||'',
+            email:$.trim($('#hm-as-email').val())
+        };
+        var anyField=data.name||data.phone||data.serial||data.pps||data.hnum||data.dob||data.email;
+        if(!anyField){$res.html('<div style="padding:12px;text-align:center;color:#94a3b8;font-size:12px;">Enter at least one search field</div>');return;}
+        $res.html('<div style="padding:12px;text-align:center;color:#94a3b8;font-size:12px;">Searching…</div>');
+        $.post(_hm.ajax,data,function(r){
+            if(!r.success||!r.data||!r.data.length){$res.html('<div style="padding:12px;text-align:center;color:#94a3b8;font-size:12px;">No patients found</div>');return;}
+            var h='';
+            r.data.forEach(function(p){
+                var ph=p.phone||p.mobile||'',addr=p.address||'';
+                var active=p.is_active!==false;
+                h+='<a href="'+PG+'?id='+p.id+'" style="display:flex;align-items:flex-start;gap:8px;padding:8px 12px;text-decoration:none;border-bottom:1px solid #f1f5f9;transition:background 0.15s;" onmouseover="this.style.background=\'#f0fdfa\'" onmouseout="this.style.background=\'\'">'+
+                    '<div style="flex:1;min-width:0;">'+
+                        '<div style="display:flex;align-items:center;gap:6px;">'+
+                            '<span style="font-weight:600;font-size:13px;color:#0d3c61;">'+esc(p.name)+'</span>'+
+                            (p.patient_number?'<span style="font-size:10px;color:#94a3b8;font-weight:500;background:#f1f5f9;padding:1px 5px;border-radius:3px;">'+esc(p.patient_number)+'</span>':'')+
+                            (!active?'<span style="font-size:9px;color:#ef4444;font-weight:600;background:#fef2f2;padding:1px 4px;border-radius:3px;">Inactive</span>':'')+
+                        '</div>'+
+                        '<div style="display:flex;gap:10px;margin-top:2px;">'+
+                            (addr?'<span style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;" title="'+esc(addr)+'">'+esc(trunc(addr,28))+'</span>':'')+
+                            (ph?'<span style="font-size:11px;color:#94a3b8;" title="'+esc(ph)+'">'+esc(trunc(ph,14))+'</span>':'')+
+                        '</div>'+
+                    '</div>'+
+                '</a>';
+            });
+            $res.html(h);
+        });
+    }
+    $('#hm-as-search').on('click',doSearch);
+    $ov.find('input').on('keydown',function(e){if(e.key==='Enter'){e.preventDefault();doSearch();}});
+    $('#hm-as-clear').on('click',function(){$ov.find('input').val('');$res.empty();});
+    $('#hm-adv-close').on('click',function(){$ov.remove();});
+    $ov.on('click',function(e){if(e.target===this)$ov.remove();});
+    setTimeout(function(){$('#hm-as-name').focus();},100);
 }
 
 /* ════ PATIENT LIST ════ */

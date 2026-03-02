@@ -485,15 +485,16 @@ function hm_ajax_search_patients() {
     $search_term = '%' . $q . '%';
     $results = HearMed_DB::get_results(
         "SELECT p.id, p.patient_number, p.first_name, p.last_name, p.phone, p.mobile, p.email,
+                p.address_line1, p.city, p.eircode,
                 p.referral_source_id, COALESCE(rs.source_name, '') AS referral_source_name,
                 p.marketing_sms
          FROM hearmed_core.patients p
          LEFT JOIN hearmed_reference.referral_sources rs ON rs.id = p.referral_source_id
          WHERE p.is_active = true
-           AND (p.first_name ILIKE $1 OR p.last_name ILIKE $2
-                OR (p.first_name || ' ' || p.last_name) ILIKE $3
-                OR p.patient_number ILIKE $4
-                OR p.phone ILIKE $5 OR p.mobile ILIKE $6)
+           AND (p.first_name ILIKE \$1 OR p.last_name ILIKE \$2
+                OR (p.first_name || ' ' || p.last_name) ILIKE \$3
+                OR p.patient_number ILIKE \$4
+                OR p.phone ILIKE \$5 OR p.mobile ILIKE \$6)
          ORDER BY p.last_name, p.first_name
          LIMIT 20",
         [ $search_term, $search_term, $search_term, $search_term, $search_term, $search_term ]
@@ -502,11 +503,14 @@ function hm_ajax_search_patients() {
     $d = [];
     if ( $results ) {
         foreach ( $results as $p ) {
+            $addr_parts = array_filter([ $p->address_line1 ?? '', $p->city ?? '', $p->eircode ?? '' ]);
             $d[] = [
                 'id'                    => (int) $p->id,
                 'name'                  => "{$p->first_name} {$p->last_name}",
-                'label'                 => ( $p->patient_number ? "{$p->patient_number} — " : '' ) . "{$p->first_name} {$p->last_name}",
+                'label'                 => ( $p->patient_number ? "{$p->patient_number} \xe2\x80\x94 " : '' ) . "{$p->first_name} {$p->last_name}",
                 'phone'                 => $p->phone ?? $p->mobile ?? '',
+                'mobile'                => $p->mobile ?? '',
+                'address'               => implode( ', ', $addr_parts ),
                 'patient_number'        => $p->patient_number ?? '',
                 'referral_source_id'    => (int) ($p->referral_source_id ?? 0),
                 'referral_source_name'  => $p->referral_source_name ?? '',
@@ -517,6 +521,119 @@ function hm_ajax_search_patients() {
     wp_send_json_success( $d );
     } catch ( Throwable $e ) {
         error_log( '[HearMed] search_patients error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+/**
+ * Advanced patient search — multi-field AND logic.
+ * Searches: name, phone/mobile, serial numbers, PPS, H-number, DOB, email.
+ */
+add_action( 'wp_ajax_hm_advanced_search_patients', 'hm_ajax_advanced_search_patients' );
+function hm_ajax_advanced_search_patients() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+
+    $name   = sanitize_text_field( $_POST['name']   ?? '' );
+    $phone  = sanitize_text_field( $_POST['phone']  ?? '' );
+    $serial = sanitize_text_field( $_POST['serial'] ?? '' );
+    $pps    = sanitize_text_field( $_POST['pps']    ?? '' );
+    $hnum   = sanitize_text_field( $_POST['hnum']   ?? '' );
+    $dob    = sanitize_text_field( $_POST['dob']    ?? '' );
+    $email  = sanitize_text_field( $_POST['email']  ?? '' );
+
+    // At least one field must have a value
+    if ( ! $name && ! $phone && ! $serial && ! $pps && ! $hnum && ! $dob && ! $email ) {
+        wp_send_json_success( [] );
+        return;
+    }
+
+    try {
+        $clauses = [];
+        $params  = [];
+        $idx     = 1;
+
+        if ( $name ) {
+            $term = '%' . $name . '%';
+            $clauses[] = "(p.first_name ILIKE \${$idx} OR p.last_name ILIKE \$" . ($idx+1) . " OR (p.first_name || ' ' || p.last_name) ILIKE \$" . ($idx+2) . ")";
+            $params[] = $term; $params[] = $term; $params[] = $term;
+            $idx += 3;
+        }
+
+        if ( $phone ) {
+            $term = '%' . $phone . '%';
+            $clauses[] = "(p.phone ILIKE \${$idx} OR p.mobile ILIKE \$" . ($idx+1) . ")";
+            $params[] = $term; $params[] = $term;
+            $idx += 2;
+        }
+
+        if ( $pps ) {
+            $term = '%' . $pps . '%';
+            $clauses[] = "p.prsi_number ILIKE \${$idx}";
+            $params[] = $term;
+            $idx++;
+        }
+
+        if ( $hnum ) {
+            $term = '%' . $hnum . '%';
+            $clauses[] = "p.patient_number ILIKE \${$idx}";
+            $params[] = $term;
+            $idx++;
+        }
+
+        if ( $dob ) {
+            $clauses[] = "p.date_of_birth = \${$idx}";
+            $params[] = $dob;
+            $idx++;
+        }
+
+        if ( $email ) {
+            $term = '%' . $email . '%';
+            $clauses[] = "p.email ILIKE \${$idx}";
+            $params[] = $term;
+            $idx++;
+        }
+
+        // Serial number search — joins to patient_devices
+        $serial_join = '';
+        if ( $serial ) {
+            $term = '%' . $serial . '%';
+            $serial_join = " LEFT JOIN hearmed_core.patient_devices pd ON pd.patient_id = p.id";
+            $clauses[] = "(pd.serial_number_left ILIKE \${$idx} OR pd.serial_number_right ILIKE \$" . ($idx+1) . ")";
+            $params[] = $term; $params[] = $term;
+            $idx += 2;
+        }
+
+        $where = implode( ' AND ', $clauses );
+
+        $sql = "SELECT DISTINCT p.id, p.patient_number, p.first_name, p.last_name,
+                       p.phone, p.mobile, p.email, p.address_line1, p.city, p.eircode,
+                       p.is_active
+                FROM hearmed_core.patients p
+                {$serial_join}
+                WHERE {$where}
+                ORDER BY p.last_name, p.first_name
+                LIMIT 30";
+
+        $results = HearMed_DB::get_results( $sql, $params );
+
+        $d = [];
+        if ( $results ) {
+            foreach ( $results as $p ) {
+                $addr_parts = array_filter([ $p->address_line1 ?? '', $p->city ?? '', $p->eircode ?? '' ]);
+                $d[] = [
+                    'id'             => (int) $p->id,
+                    'name'           => "{$p->first_name} {$p->last_name}",
+                    'phone'          => $p->phone ?? $p->mobile ?? '',
+                    'mobile'         => $p->mobile ?? '',
+                    'address'        => implode( ', ', $addr_parts ),
+                    'patient_number' => $p->patient_number ?? '',
+                    'is_active'      => ! empty( $p->is_active ) && $p->is_active !== 'f',
+                ];
+            }
+        }
+        wp_send_json_success( $d );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] advanced_search_patients error: ' . $e->getMessage() );
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
     }
 }
