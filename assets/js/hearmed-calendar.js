@@ -492,13 +492,19 @@ var Cal={
             this.loadExclusionTypes(),
             this.loadHolidays(),
             this.loadClinicCoverage()
-        ).always(function(){ self.refresh(); });
+        ).always(function(){ self.onCalViewChange(); });
     },
     onCalViewChange:function(){
         var self=this;
         if(this.calViewMode==='clinic'){
-            $('#hm-clinicMs,#hm-dispMs').addClass('hm-ms-disabled');
-            this.selClinics=[];this.selDisps=[];
+            $('#hm-clinicMs').removeClass('hm-ms-disabled');
+            $('#hm-dispMs').addClass('hm-ms-disabled');
+            this.selDisps=[];
+            // Auto-select first clinic if none selected
+            if(!this.selClinics.length&&this.clinics.length){
+                this.selClinics=[this.clinics[0].id];
+            }
+            this.renderMultiSelect();
             this.loadClinicCoverage().then(function(){self.refresh();});
         } else {
             $('#hm-clinicMs,#hm-dispMs').removeClass('hm-ms-disabled');
@@ -518,7 +524,11 @@ var Cal={
         }).fail(function(){Cal.clinicCoverage={};});
     },
     visClinics:function(){
-        return this.clinics.filter(function(c){return c.is_active!==false&&c.is_active!=='f';});
+        var active=this.clinics.filter(function(c){return c.is_active!==false&&c.is_active!=='f';});
+        if(this.selClinics.length){
+            return active.filter(function(c){return Cal.selClinics.indexOf(c.id)>-1;});
+        }
+        return active;
     },
     loadHolidays:function(){
         return post('get_holidays').then(function(r){
