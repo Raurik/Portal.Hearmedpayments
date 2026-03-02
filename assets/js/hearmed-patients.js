@@ -113,7 +113,8 @@ function initList(){
     var $el=$('#hm-patient-list'),state={page:1,search:'',clinic:'',dispenser:'',referral:'',active:'all'},clinics=[],dispensers=[];
     $.when($.post(_hm.ajax,{action:'hm_get_clinics',nonce:_hm.nonce}),$.post(_hm.ajax,{action:'hm_get_dispensers',nonce:_hm.nonce})).then(function(cr,dr){
         if(cr[0].success)clinics=cr[0].data||[];
-        if(dr[0].success)dispensers=dr[0].data||[];
+        var dd=dr[0].success?dr[0].data:null;
+        dispensers=Array.isArray(dd)?dd:(dd&&dd.dispensers?dd.dispensers:[]);
         renderShell();load();
     },function(){renderShell();load();});
 
