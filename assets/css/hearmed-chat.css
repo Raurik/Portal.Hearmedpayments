@@ -6,7 +6,7 @@
 #hm-chat-app {
     display: flex;
     height: 100%;
-    min-height: 0;
+    min-height: calc(98vh - 60px);
     flex: 1 1 auto;
     background: var(--hm-bg, #fff);
     border-radius: var(--hm-radius-lg, 12px);
