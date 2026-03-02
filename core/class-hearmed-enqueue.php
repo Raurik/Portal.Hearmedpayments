@@ -181,24 +181,51 @@ class HearMed_Enqueue {
             error_log( '[HearMed] Could not load calendar settings: ' . $e->getMessage() );
         }
         
-        // Localize script with global data
-        $user = wp_get_current_user();
-        wp_localize_script( 'hearmed-core', 'HM', [
-            'ajax_url' => admin_url( 'admin-ajax.php' ),
-            'ajax'     => admin_url( 'admin-ajax.php' ), // alias for legacy code paths
-            'nonce' => wp_create_nonce( 'hm_nonce' ),
-            'user_id' => $user->ID,
-            'user_name' => $user->display_name,
-            'user_role' => ! empty( $user->roles ) ? $user->roles[0] : '',
-            'is_admin' => ! empty( array_intersect( 
-                [ 'administrator', 'hm_clevel', 'hm_admin', 'hm_finance' ], 
-                (array) $user->roles 
-            )),
-            'logout_url' => wp_logout_url( home_url() ),
-            'home_url'   => home_url(),
-            'plugin_url' => HEARMED_URL,
-            'settings'   => $settings,
-        ]);
+        // Localize script with global data — prefer PortalAuth when V2 is active
+        if ( PortalAuth::is_v2() && PortalAuth::is_logged_in() ) {
+            $staff = PortalAuth::current_user();
+            $hm_data = [
+                'ajax_url'   => admin_url( 'admin-ajax.php' ),
+                'ajax'       => admin_url( 'admin-ajax.php' ),
+                'nonce'      => wp_create_nonce( 'hm_nonce' ),
+                'user_id'    => $staff->id,
+                'staff_id'   => $staff->id,
+                'user_name'  => $staff->display_name,
+                'user_role'  => $staff->role,
+                'is_admin'   => PortalAuth::is_admin_level(),
+                'is_clevel'  => PortalAuth::is_clevel(),
+                'logout_url' => admin_url( 'admin-ajax.php' ) . '?action=hm_auth_logout',
+                'home_url'   => home_url(),
+                'plugin_url' => HEARMED_URL,
+                'settings'   => $settings,
+                'csrf_token' => PortalAuth::csrf_token(),
+                'is_impersonating' => PortalAuth::is_impersonating(),
+            ];
+            if ( PortalAuth::is_impersonating() ) {
+                $actor = PortalAuth::actor_user();
+                $hm_data['actor_name'] = $actor->display_name;
+                $hm_data['actor_id']   = $actor->id;
+            }
+        } else {
+            $user = wp_get_current_user();
+            $hm_data = [
+                'ajax_url'   => admin_url( 'admin-ajax.php' ),
+                'ajax'       => admin_url( 'admin-ajax.php' ),
+                'nonce'      => wp_create_nonce( 'hm_nonce' ),
+                'user_id'    => $user->ID,
+                'user_name'  => $user->display_name,
+                'user_role'  => ! empty( $user->roles ) ? $user->roles[0] : '',
+                'is_admin'   => ! empty( array_intersect(
+                    [ 'administrator', 'hm_clevel', 'hm_admin', 'hm_finance' ],
+                    (array) $user->roles
+                )),
+                'logout_url' => wp_logout_url( home_url() ),
+                'home_url'   => home_url(),
+                'plugin_url' => HEARMED_URL,
+                'settings'   => $settings,
+            ];
+        }
+        wp_localize_script( 'hearmed-core', 'HM', $hm_data );
     }
 
     /**

@@ -20,49 +20,36 @@ class HearMed_Router {
      */
     private $shortcode_map = [
         // Calendar
-        'hearmed_calendar' => [ 'module' => 'calendar', 'view' => 'calendar' ],
-        // 'hearmed_calendar_settings' is provided by admin/admin-calendar-settings.php
-        // and registers its own shortcode; exclude it here to avoid overriding.
-        // 'hearmed_appointment_types' is provided by admin/admin-appointment-types.php
-        // and registers its own shortcode; exclude it here to avoid overriding.
-        'hearmed_blockouts' => [ 'module' => 'calendar', 'view' => 'blockouts' ],
-        'hearmed_holidays' => [ 'module' => 'calendar', 'view' => 'holidays' ],
-        'hearmed_exclusions' => [ 'module' => 'calendar', 'view' => 'exclusions' ],
+        'hearmed_calendar' => [ 'module' => 'calendar', 'view' => 'calendar', 'cap' => 'calendar' ],
+        'hearmed_blockouts' => [ 'module' => 'calendar', 'view' => 'blockouts', 'cap' => 'calendar' ],
+        'hearmed_holidays' => [ 'module' => 'calendar', 'view' => 'holidays', 'cap' => 'calendar' ],
+        'hearmed_exclusions' => [ 'module' => 'calendar', 'view' => 'exclusions', 'cap' => 'calendar' ],
         
         // Patients
-        'hearmed_patients' => [ 'module' => 'patients', 'view' => 'list' ],
+        'hearmed_patients' => [ 'module' => 'patients', 'view' => 'list', 'cap' => 'patients' ],
         
         // Orders & Finance
-        'hearmed_orders' => [ 'module' => 'orders', 'view' => 'list' ],
-        // 'hearmed_order_status' is provided by modules/mod-order-status.php
-        // and registers its own shortcode; exclude it here to avoid overriding.
-        // 'hearmed_approvals' is provided by modules/mod-approvals.php
-        // and registers its own shortcode; exclude it here to avoid overriding.
-        // 'hearmed_awaiting_fitting' is provided by modules/mod-fitting.php
-        // and registers its own shortcode; exclude it here to avoid overriding.
+        'hearmed_orders' => [ 'module' => 'orders', 'view' => 'list', 'cap' => 'patients' ],
         
         // Accounting
-        'hearmed_accounting' => [ 'module' => 'accounting', 'view' => 'dashboard' ],
-        'hearmed_invoices' => [ 'module' => 'accounting', 'view' => 'invoices' ],
-        'hearmed_payments' => [ 'module' => 'accounting', 'view' => 'payments' ],
-        'hearmed_credit_notes' => [ 'module' => 'accounting', 'view' => 'credit-notes' ],
-        'hearmed_prsi' => [ 'module' => 'accounting', 'view' => 'prsi' ],
+        'hearmed_accounting' => [ 'module' => 'accounting', 'view' => 'dashboard', 'cap' => 'finance_area' ],
+        'hearmed_invoices' => [ 'module' => 'accounting', 'view' => 'invoices', 'cap' => 'finance_area' ],
+        'hearmed_payments' => [ 'module' => 'accounting', 'view' => 'payments', 'cap' => 'finance_area' ],
+        'hearmed_credit_notes' => [ 'module' => 'accounting', 'view' => 'credit-notes', 'cap' => 'finance_area' ],
+        'hearmed_prsi' => [ 'module' => 'accounting', 'view' => 'prsi', 'cap' => 'finance_area' ],
         
         // Reports
-        'hearmed_reporting' => [ 'module' => 'reports', 'view' => 'dashboard' ],
-        'hearmed_my_stats' => [ 'module' => 'reports', 'view' => 'my-stats' ],
-        'hearmed_report_revenue' => [ 'module' => 'reports', 'view' => 'revenue' ],
-        'hearmed_report_gp' => [ 'module' => 'reports', 'view' => 'gp' ],
+        'hearmed_reporting' => [ 'module' => 'reports', 'view' => 'dashboard', 'cap' => 'reports' ],
+        'hearmed_my_stats' => [ 'module' => 'reports', 'view' => 'my-stats', 'cap' => 'kpi_view_self' ],
+        'hearmed_report_revenue' => [ 'module' => 'reports', 'view' => 'revenue', 'cap' => 'reports' ],
+        'hearmed_report_gp' => [ 'module' => 'reports', 'view' => 'gp', 'cap' => 'reports' ],
         
         // Other modules
-        'hearmed_repairs' => [ 'module' => 'repairs', 'view' => 'list' ],
-        'hearmed_refunds' => [ 'module' => 'refunds', 'view' => 'list' ],
-        'hearmed_stock' => [ 'module' => 'stock', 'view' => 'list' ],
-        'hearmed_notifications' => [ 'module' => 'notifications', 'view' => 'list' ],
-        'hearmed_kpi' => [ 'module' => 'kpi', 'view' => 'dashboard' ],
-        // NOTE: admin console / admin management shortcodes are registered
-        // by dedicated files under /admin and should not be routed through
-        // this module router (no modules/admin/admin.php exists).
+        'hearmed_repairs' => [ 'module' => 'repairs', 'view' => 'list', 'cap' => 'repairs' ],
+        'hearmed_refunds' => [ 'module' => 'refunds', 'view' => 'list', 'cap' => 'finance_area' ],
+        'hearmed_stock' => [ 'module' => 'stock', 'view' => 'list', 'cap' => 'stock' ],
+        'hearmed_notifications' => [ 'module' => 'notifications', 'view' => 'list', 'cap' => null ],
+        'hearmed_kpi' => [ 'module' => 'kpi', 'view' => 'dashboard', 'cap' => 'kpi_view_self' ],
     ];
     
     /**
@@ -92,9 +79,23 @@ class HearMed_Router {
         $module = $config['module'];
         $view = $config['view'];
         
-        // Check authentication
-        if ( ! is_user_logged_in() ) {
+        // Check authentication — PortalAuth is source of truth
+        $logged_in = PortalAuth::is_v2() ? PortalAuth::is_logged_in() : is_user_logged_in();
+        if ( ! $logged_in ) {
+            if ( PortalAuth::is_v2() ) {
+                wp_redirect( home_url( '/login/?redirect_to=' . urlencode( $_SERVER['REQUEST_URI'] ?? '' ) ) );
+                exit;
+            }
             return '<div id="hm-app"><p>Please log in to access this page.</p></div>';
+        }
+
+        // RBAC capability check (V2 only)
+        $required_cap = $config['cap'] ?? null;
+        if ( PortalAuth::is_v2() && $required_cap && ! PortalAuth::can( $required_cap ) ) {
+            PortalAuth::audit( 'ACCESS_DENIED', PortalAuth::current_id(), [
+                'module' => $module, 'view' => $view, 'cap' => $required_cap
+            ] );
+            return '<div id="hm-app" class="hm-access-denied"><p style="text-align:center;padding:48px;color:#64748b;">You do not have permission to access this section.</p></div>';
         }
         
         // Check privacy notice

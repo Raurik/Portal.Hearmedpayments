@@ -115,6 +115,14 @@ class HearMed_DB {
         'gdpr_deletions'           => 'hearmed_admin.gdpr_deletions',
         'gdpr_exports'             => 'hearmed_admin.gdpr_exports',
         'gdpr_settings'            => 'hearmed_admin.gdpr_settings',
+
+        // ── Auth V2 ───────────────────────────────────────────────────────
+        'staff_devices'            => 'hearmed_reference.staff_devices',
+        'staff_sessions'           => 'hearmed_reference.staff_sessions',
+        'staff_invites'            => 'hearmed_reference.staff_invites',
+        'auth_audit_log'           => 'hearmed_admin.auth_audit_log',
+        'impersonation_sessions'   => 'hearmed_admin.impersonation_sessions',
+        'report_permissions'       => 'hearmed_admin.report_permissions',
     ];
 
     // -------------------------------------------------------------------------
@@ -154,6 +162,13 @@ class HearMed_DB {
         );
 
         return self::$pg_conn;
+    }
+
+    /**
+     * Expose the raw PG connection resource for PortalAuth and other system classes.
+     */
+    public static function get_connection() {
+        return self::connect();
     }
 
     // -------------------------------------------------------------------------

@@ -57,6 +57,8 @@ class HearMed_Core {
         require_once HEARMED_PATH . 'core/class-hearmed-db.php';
         require_once HEARMED_PATH . 'core/class-hearmed-auth.php';
         require_once HEARMED_PATH . 'core/class-hearmed-staff-auth.php';
+        require_once HEARMED_PATH . 'core/class-portal-auth.php';
+        require_once HEARMED_PATH . 'core/class-hearmed-gdpr-retention.php';
         require_once HEARMED_PATH . 'core/class-hearmed-enqueue.php';
         require_once HEARMED_PATH . 'core/class-hearmed-router.php';
         require_once HEARMED_PATH . 'core/class-hearmed-ajax.php';

@@ -35,6 +35,9 @@ jobs:
           script: |
             cd ~/www/portal.hearmedpayments.net/public_html/wp-content/plugins/hearmed-calendar
             git pull origin main
+            # Deploy MU-plugin (WP login disable)
+            mkdir -p ~/www/portal.hearmedpayments.net/public_html/wp-content/mu-plugins
+            cp -f mu-plugins/disable-wp-login.php ~/www/portal.hearmedpayments.net/public_html/wp-content/mu-plugins/disable-wp-login.php
             cd ~/www/portal.hearmedpayments.net/public_html
             curl -s "https://portal.hearmedpayments.net/wp-content/plugins/hearmed-calendar/opcache-flush.php" || true
             wp cache flush --allow-root 2>/dev/null || true

@@ -43,16 +43,25 @@ class HearMed_Auth {
     // =========================================================================
 
     /**
-     * Is a WordPress user currently logged in?
+     * Is a user currently logged in?
+     * Delegates to PortalAuth when V2 is active.
      */
     public static function is_logged_in() {
+        if ( PortalAuth::is_v2() ) {
+            return PortalAuth::is_logged_in();
+        }
         return is_user_logged_in();
     }
 
     /**
-     * Get current WordPress user object, or null if not logged in
+     * Get current user object.
+     * Under V2: returns the PortalAuth staff object.
+     * Legacy: returns WP_User or null.
      */
     public static function current_user() {
+        if ( PortalAuth::is_v2() ) {
+            return PortalAuth::current_user();
+        }
         $user = wp_get_current_user();
         return ( $user && $user->ID ) ? $user : null;
     }
@@ -283,6 +292,10 @@ class HearMed_Auth {
      * @return string|null
      */
     public static function current_role() {
+        if ( PortalAuth::is_v2() ) {
+            return PortalAuth::current_role();
+        }
+
         $user = wp_get_current_user();
 
         if ( ! $user || ! $user->ID ) {
