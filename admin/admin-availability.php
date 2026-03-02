@@ -45,6 +45,8 @@ class HearMed_Admin_Availability {
              FROM hearmed_reference.dispenser_schedules ds
              JOIN hearmed_reference.clinics c ON ds.clinic_id = c.id
              WHERE ds.is_active = true AND c.is_active = true
+               AND (ds.effective_from IS NULL OR ds.effective_from <= CURRENT_DATE)
+               AND (ds.effective_to   IS NULL OR ds.effective_to   >= CURRENT_DATE)
              ORDER BY ds.day_of_week"
         ) ?: [];
     }

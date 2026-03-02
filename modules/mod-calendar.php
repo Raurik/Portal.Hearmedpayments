@@ -277,7 +277,9 @@ function hm_ajax_get_dispensers() {
                 "SELECT staff_id, day_of_week
                  FROM hearmed_reference.dispenser_schedules
                  WHERE clinic_id = $1
-                   AND is_active = true",
+                   AND is_active = true
+                   AND (effective_from IS NULL OR effective_from <= CURRENT_DATE)
+                   AND (effective_to   IS NULL OR effective_to   >= CURRENT_DATE)",
                 [ $clinic_id ]
             );
             if ( $sched_rows ) {

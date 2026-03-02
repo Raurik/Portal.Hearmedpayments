@@ -7,25 +7,87 @@ class HearMed_Admin_Dispenser_Schedules {
         add_shortcode('hearmed_dispenser_schedules', [ $this, 'render' ]);
         add_action('wp_ajax_hm_admin_save_dispenser_schedule', [ $this, 'ajax_save' ]);
         add_action('wp_ajax_hm_admin_delete_dispenser_schedule', [ $this, 'ajax_delete' ]);
+        add_action('wp_ajax_hm_admin_bulk_delete_schedules', [ $this, 'ajax_bulk_delete' ]);
     }
 
-    // Fetch all dispenser schedules with staff and clinic info
+    // Fetch current (active) schedules — effective_to IS NULL or >= today
     private function get_schedules() {
         return HearMed_DB::get_results(
-            "SELECT ds.id, ds.staff_id, s.first_name, s.last_name, s.role, ds.clinic_id, c.clinic_name, ds.day_of_week, ds.rotation_weeks, ds.week_number, ds.is_active
+            "SELECT ds.id, ds.staff_id, s.first_name, s.last_name, s.role,
+                    ds.clinic_id, c.clinic_name, ds.day_of_week,
+                    ds.rotation_weeks, ds.week_number, ds.is_active,
+                    ds.effective_from, ds.effective_to
              FROM hearmed_reference.dispenser_schedules ds
              JOIN hearmed_reference.staff s ON ds.staff_id = s.id
              JOIN hearmed_reference.clinics c ON ds.clinic_id = c.id
              WHERE ds.is_active = true AND s.is_active = true AND c.is_active = true
+               AND (ds.effective_to IS NULL OR ds.effective_to >= CURRENT_DATE)
              ORDER BY s.last_name, s.first_name, c.clinic_name, ds.day_of_week"
         ) ?: [];
     }
 
+    // Fetch historical (ended) schedules for a specific staff member
+    private function get_history( $staff_id ) {
+        return HearMed_DB::get_results(
+            "SELECT ds.id, ds.staff_id, ds.clinic_id, c.clinic_name,
+                    ds.day_of_week, ds.rotation_weeks, ds.week_number,
+                    ds.effective_from, ds.effective_to, ds.is_active
+             FROM hearmed_reference.dispenser_schedules ds
+             JOIN hearmed_reference.clinics c ON ds.clinic_id = c.id
+             WHERE ds.staff_id = $1
+               AND (ds.is_active = false OR (ds.effective_to IS NOT NULL AND ds.effective_to < CURRENT_DATE))
+             ORDER BY ds.effective_to DESC NULLS LAST, c.clinic_name, ds.day_of_week",
+            [ $staff_id ]
+        ) ?: [];
+    }
 
-    // Render a calendar-style detail page for a staff member
+    private function get_staff() {
+        return HearMed_DB::get_results(
+            "SELECT id, first_name, last_name, role
+             FROM hearmed_reference.staff
+             WHERE is_active = true
+             ORDER BY last_name, first_name"
+        ) ?: [];
+    }
+
+    private function get_clinics() {
+        return HearMed_DB::get_results(
+            "SELECT id, clinic_name
+             FROM hearmed_reference.clinics
+             WHERE is_active = true
+             ORDER BY clinic_name"
+        ) ?: [];
+    }
+
+    private function day_labels() {
+        return [ 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday' ];
+    }
+
+    private function format_date( $d ) {
+        if ( ! $d ) return '';
+        return date( 'j M Y', strtotime( $d ) );
+    }
+
+    // ─── DETAIL PAGE ───────────────────────────────────────────────
     private function render_detail_page($staff_data, $clinics, $days) {
+        $history = $this->get_history( (int) $staff_data['staff_id'] );
         ob_start();
         ?>
+        <style>
+        .hmsd-bulk-bar{display:none;align-items:center;gap:12px;padding:10px 16px;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;margin-bottom:16px;}
+        .hmsd-bulk-bar.visible{display:flex;}
+        .hmsd-bulk-bar .hmsd-bulk-count{font-weight:600;font-size:13px;color:#92400e;}
+        .hmsd-cb{width:16px;height:16px;cursor:pointer;accent-color:var(--hm-teal,#0d9488);}
+        .hmsd-dates{font-size:11px;color:#64748b;margin-top:2px;}
+        .hmsd-history{margin-top:40px;}
+        .hmsd-history h3{font-size:15px;font-weight:600;color:#475569;margin-bottom:12px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
+        .hmsd-history h3 .hmsd-arrow{transition:transform .2s;display:inline-block;}
+        .hmsd-history h3 .hmsd-arrow.open{transform:rotate(90deg);}
+        .hmsd-history-body{display:none;}
+        .hmsd-history-body.open{display:block;}
+        .hmsd-end-date-row{display:flex;align-items:center;gap:12px;margin-top:8px;}
+        </style>
+
         <div class="hm-admin" id="hm-schedule-detail-page">
             <a href="<?php echo esc_attr( strtok($_SERVER['REQUEST_URI'], '?') ); ?>" class="hm-back">← Back</a>
             <div class="hm-page-header">
@@ -34,9 +96,22 @@ class HearMed_Admin_Dispenser_Schedules {
                     <button class="hm-btn hm-btn--primary" onclick="hmSchedEdit.open({staff_id:<?php echo (int)$staff_data['staff_id']; ?>})">+ Add Schedule</button>
                 </div>
             </div>
+
+            <!-- Bulk action bar -->
+            <div class="hmsd-bulk-bar" id="hmsd-bulk-bar">
+                <span class="hmsd-bulk-count"><span id="hmsd-bulk-count">0</span> selected</span>
+                <div style="flex:1;"></div>
+                <div class="hmsd-end-date-row">
+                    <label style="font-size:12px;font-weight:500;color:#475569;white-space:nowrap;">End date:</label>
+                    <input type="date" id="hmsd-bulk-end-date" value="<?php echo date('Y-m-d'); ?>" style="font-size:12px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;">
+                </div>
+                <button class="hm-btn hm-btn--sm hm-btn--danger" onclick="hmSchedBulk.deleteSelected()">End Selected</button>
+                <button class="hm-btn hm-btn--sm" onclick="hmSchedBulk.clearAll()">Clear</button>
+            </div>
+
             <div style="display:flex;flex-wrap:wrap;gap:32px;">
                 <?php
-                // Group schedules by clinic
+                // Group current schedules by clinic
                 $clinicGroups = [];
                 foreach ($staff_data['schedules'] as $s) {
                     $cid = $s['clinic_id'];
@@ -48,6 +123,10 @@ class HearMed_Admin_Dispenser_Schedules {
                     }
                     $clinicGroups[$cid]['days'][] = $s;
                 }
+
+                if ( empty($clinicGroups) ): ?>
+                    <div class="hm-empty-state" style="width:100%;"><p>No current schedules.</p></div>
+                <?php else:
                 foreach ($clinicGroups as $clinic) {
                 ?>
                 <div style="min-width:260px;flex:1 1 320px;">
@@ -57,40 +136,104 @@ class HearMed_Admin_Dispenser_Schedules {
                     <table class="hm-table" style="width:100%;">
                         <thead>
                             <tr>
+                                <th style="width:30px;"><input type="checkbox" class="hmsd-cb hmsd-select-all" data-clinic="<?php echo esc_attr($clinic['name']); ?>"></th>
                                 <th>Day</th>
                                 <th>Rotation</th>
-                                <th>Status</th>
+                                <th>Effective From</th>
                                 <th style="width:60px;"></th>
                             </tr>
                         </thead>
                         <tbody>
                         <?php foreach ($clinic['days'] as $d):
-                            $badge = $d['is_active'] ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Inactive</span>';
-                            if ($d['rotation_weeks'] === 2) $rotation = 'Every 2 weeks (Week ' . $d['week_number'] . ')';
+                            if ($d['rotation_weeks'] === 2) $rotation = 'Every 2 weeks (Wk ' . $d['week_number'] . ')';
                             elseif ($d['rotation_weeks'] === 3) $rotation = 'Every 3 weeks';
                             elseif ($d['rotation_weeks'] === 4) $rotation = 'Once a month';
                             else $rotation = 'Weekly';
                         ?>
                             <tr>
+                                <td><input type="checkbox" class="hmsd-cb hmsd-row-cb" value="<?php echo (int)$d['id']; ?>"></td>
                                 <td><strong><?php echo esc_html($d['day_label']); ?></strong></td>
                                 <td><?php echo esc_html($rotation); ?></td>
-                                <td><?php echo $badge; ?></td>
-                                <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end;">
+                                <td>
+                                    <?php if (!empty($d['effective_from'])): ?>
+                                        <?php echo esc_html($this->format_date($d['effective_from'])); ?>
+                                    <?php else: ?>
+                                        <span style="color:#94a3b8;">—</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="text-align:right;">
                                     <button class="hm-btn hm-btn--sm" onclick='hmSchedEdit.open(<?php echo json_encode($d, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>)'>Edit</button>
-                                    <form method="post" style="display:inline;" onsubmit="return confirm('Delete this schedule?');">
-                                        <input type="hidden" name="delete_schedule_id" value="<?php echo (int)$d['id']; ?>">
-                                        <button class="hm-btn hm-btn--sm hm-btn--danger" type="submit">Delete</button>
-                                    </form>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
-                <?php } ?>
+                <?php }
+                endif; ?>
             </div>
 
-            <!-- Edit Modal (detail page) -->
+            <!-- Historical Schedules -->
+            <?php if ( !empty($history) ): ?>
+            <div class="hmsd-history">
+                <h3 onclick="hmSchedHistory.toggle()">
+                    <span class="hmsd-arrow" id="hmsd-history-arrow">▶</span>
+                    Schedule History (<?php echo count($history); ?>)
+                </h3>
+                <div class="hmsd-history-body" id="hmsd-history-body">
+                    <?php
+                    // Group history by clinic
+                    $histGroups = [];
+                    foreach ($history as $h) {
+                        $cid = (int) $h->clinic_id;
+                        if (!isset($histGroups[$cid])) {
+                            $histGroups[$cid] = [
+                                'name' => $h->clinic_name,
+                                'rows' => []
+                            ];
+                        }
+                        $histGroups[$cid]['rows'][] = $h;
+                    }
+                    foreach ($histGroups as $hg):
+                    ?>
+                    <div style="margin-bottom:20px;">
+                        <div style="font-weight:600;font-size:14px;margin-bottom:8px;color:#64748b;">
+                            <?php echo esc_html($hg['name']); ?>
+                        </div>
+                        <table class="hm-table" style="width:100%;opacity:0.75;">
+                            <thead>
+                                <tr>
+                                    <th>Day</th>
+                                    <th>Rotation</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php foreach ($hg['rows'] as $hr):
+                                $dayLabel = $days[(int)$hr->day_of_week] ?? 'Unknown';
+                                $rot = (int) $hr->rotation_weeks;
+                                if ($rot === 2) $rotLabel = 'Every 2 wks (Wk ' . (int)$hr->week_number . ')';
+                                elseif ($rot === 3) $rotLabel = 'Every 3 wks';
+                                elseif ($rot === 4) $rotLabel = 'Monthly';
+                                else $rotLabel = 'Weekly';
+                            ?>
+                                <tr>
+                                    <td><?php echo esc_html($dayLabel); ?></td>
+                                    <td><?php echo esc_html($rotLabel); ?></td>
+                                    <td><?php echo $hr->effective_from ? esc_html($this->format_date($hr->effective_from)) : '<span style="color:#94a3b8;">—</span>'; ?></td>
+                                    <td><?php echo $hr->effective_to ? esc_html($this->format_date($hr->effective_to)) : '<span style="color:#94a3b8;">—</span>'; ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Edit/Add Modal (detail page) -->
             <div class="hm-modal-bg" id="hm-sched-edit-modal">
                 <div class="hm-modal hm-modal--md">
                     <div class="hm-modal-hd">
@@ -103,13 +246,13 @@ class HearMed_Admin_Dispenser_Schedules {
                         <div class="hm-form-row">
                             <div class="hm-form-group">
                                 <label>Clinic *</label>
-                                    <select id="hmse-clinic" data-entity="clinic" data-label="Clinic">
-                                        <option value="">Select clinic</option>
-                                        <?php foreach ($clinics as $c): ?>
-                                            <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
-                                        <?php endforeach; ?>
-                                        <option value="__add_new__">+ Add New…</option>
-                                    </select>
+                                <select id="hmse-clinic" data-entity="clinic" data-label="Clinic">
+                                    <option value="">Select clinic</option>
+                                    <?php foreach ($clinics as $c): ?>
+                                        <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html($c->clinic_name); ?></option>
+                                    <?php endforeach; ?>
+                                    <option value="__add_new__">+ Add New…</option>
+                                </select>
                             </div>
                             <div class="hm-form-group">
                                 <label>Day(s) *</label>
@@ -141,6 +284,13 @@ class HearMed_Admin_Dispenser_Schedules {
                                 </select>
                             </div>
                         </div>
+                        <div class="hm-form-row">
+                            <div class="hm-form-group">
+                                <label>Effective From</label>
+                                <input type="date" id="hmse-effective-from" style="width:100%;">
+                                <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Leave blank for immediate / no start date</div>
+                            </div>
+                        </div>
                         <div class="hm-form-group">
                             <label class="hm-toggle">
                                 <input type="checkbox" id="hmse-active" checked>
@@ -158,13 +308,62 @@ class HearMed_Admin_Dispenser_Schedules {
         </div>
 
         <script>
+        /* ── Bulk selection ── */
+        var hmSchedBulk = {
+            update: function() {
+                var checked = document.querySelectorAll('.hmsd-row-cb:checked');
+                var bar = document.getElementById('hmsd-bulk-bar');
+                document.getElementById('hmsd-bulk-count').textContent = checked.length;
+                bar.classList.toggle('visible', checked.length > 0);
+            },
+            clearAll: function() {
+                document.querySelectorAll('.hmsd-row-cb, .hmsd-select-all').forEach(function(cb) { cb.checked = false; });
+                this.update();
+            },
+            deleteSelected: function() {
+                var ids = [];
+                document.querySelectorAll('.hmsd-row-cb:checked').forEach(function(cb) { ids.push(parseInt(cb.value)); });
+                if (!ids.length) return;
+                var endDate = document.getElementById('hmsd-bulk-end-date').value;
+                if (!confirm('End ' + ids.length + ' schedule(s)' + (endDate ? ' effective ' + endDate : '') + '?')) return;
+                jQuery.post(HM.ajax_url, {
+                    action: 'hm_admin_bulk_delete_schedules',
+                    nonce: HM.nonce,
+                    ids: ids.join(','),
+                    effective_to: endDate
+                }, function(r) {
+                    if (r.success) location.reload();
+                    else alert(r.data || 'Error');
+                });
+            }
+        };
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('hmsd-row-cb')) hmSchedBulk.update();
+            if (e.target.classList.contains('hmsd-select-all')) {
+                var table = e.target.closest('table');
+                table.querySelectorAll('.hmsd-row-cb').forEach(function(cb) { cb.checked = e.target.checked; });
+                hmSchedBulk.update();
+            }
+        });
+
+        /* ── History toggle ── */
+        var hmSchedHistory = {
+            toggle: function() {
+                var body = document.getElementById('hmsd-history-body');
+                var arrow = document.getElementById('hmsd-history-arrow');
+                if (!body) return;
+                body.classList.toggle('open');
+                arrow.classList.toggle('open');
+            }
+        };
+
+        /* ── Edit / Add modal ── */
         var hmSchedEdit = {
             open: function(data) {
                 var isEdit = !!(data && data.id);
                 document.getElementById('hm-sched-edit-title').textContent = isEdit ? 'Edit Schedule' : 'Add Schedule';
                 document.getElementById('hmse-id').value       = isEdit ? data.id : '';
                 document.getElementById('hmse-clinic').value   = data.clinic_id || '';
-                // Clear all day checkboxes, then check the appropriate one(s)
                 document.querySelectorAll('.hmse-day-check').forEach(function(cb) { cb.checked = false; });
                 if (data.day_of_week !== undefined) {
                     var dayCheck = document.querySelector('.hmse-day-check[value="'+data.day_of_week+'"]');
@@ -173,6 +372,7 @@ class HearMed_Admin_Dispenser_Schedules {
                 document.getElementById('hmse-rotation').value = data.rotation_weeks || '1';
                 document.getElementById('hmse-week').value     = data.week_number || '1';
                 document.getElementById('hmse-active').checked = data.is_active !== false;
+                document.getElementById('hmse-effective-from').value = data.effective_from || '';
                 document.getElementById('hmse-week-row').style.display = (data.rotation_weeks == 2) ? '' : 'none';
                 document.getElementById('hm-sched-edit-modal').classList.add('open');
             },
@@ -181,9 +381,7 @@ class HearMed_Admin_Dispenser_Schedules {
                 var clinic = document.getElementById('hmse-clinic').value;
                 if (!clinic) { alert('Please select a clinic.'); return; }
                 var days = [];
-                document.querySelectorAll('.hmse-day-check:checked').forEach(function(cb) {
-                    days.push(parseInt(cb.value));
-                });
+                document.querySelectorAll('.hmse-day-check:checked').forEach(function(cb) { days.push(parseInt(cb.value)); });
                 if (!days.length) { alert('Please select at least one day.'); return; }
                 var btn = document.getElementById('hmse-save');
                 btn.textContent = 'Saving...'; btn.disabled = true;
@@ -192,6 +390,7 @@ class HearMed_Admin_Dispenser_Schedules {
                 var rotation = document.getElementById('hmse-rotation').value;
                 var week     = document.getElementById('hmse-week').value;
                 var isActive = document.getElementById('hmse-active').checked ? 1 : 0;
+                var effectiveFrom = document.getElementById('hmse-effective-from').value;
                 var total = days.length, done = 0, errors = [];
                 days.forEach(function(day, idx) {
                     jQuery.post(HM.ajax_url, {
@@ -204,6 +403,7 @@ class HearMed_Admin_Dispenser_Schedules {
                         rotation_weeks: rotation,
                         week_number: week,
                         is_active: isActive,
+                        effective_from: effectiveFrom,
                         is_multi_day: days.length > 1 ? 1 : 0,
                         day_index: idx + 1
                     }, function(r) {
@@ -219,37 +419,10 @@ class HearMed_Admin_Dispenser_Schedules {
         };
         </script>
         <?php
-        // Handle delete
-        if (!empty($_POST['delete_schedule_id'])) {
-            $del_id = intval($_POST['delete_schedule_id']);
-            HearMed_DB::update('hearmed_reference.dispenser_schedules', ['is_active'=>false,'updated_at'=>current_time('mysql')], ['id'=>$del_id]);
-            echo "<script>window.location.href='" . strtok($_SERVER['REQUEST_URI'], '?') . "?staff=" . (int)$staff_data['staff_id'] . "';</script>";
-        }
         return ob_get_clean();
     }
 
-    private function get_staff() {
-        return HearMed_DB::get_results(
-            "SELECT id, first_name, last_name, role
-             FROM hearmed_reference.staff
-             WHERE is_active = true
-             ORDER BY last_name, first_name"
-        ) ?: [];
-    }
-
-    private function get_clinics() {
-        return HearMed_DB::get_results(
-            "SELECT id, clinic_name
-             FROM hearmed_reference.clinics
-             WHERE is_active = true
-             ORDER BY clinic_name"
-        ) ?: [];
-    }
-
-    private function day_labels() {
-        return [ 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday' ];
-    }
-
+    // ─── MAIN LISTING PAGE ────────────────────────────────────────────
     public function render() {
         if ( ! is_user_logged_in() ) return '<p>Please log in.</p>';
 
@@ -260,7 +433,6 @@ class HearMed_Admin_Dispenser_Schedules {
 
         // Group schedules by staff_id
         $staff_schedules = [];
-        $all_schedules = [];
         foreach ( $rows as $r ) {
             $sid = (int) $r->staff_id;
             if ( ! isset( $staff_schedules[ $sid ] ) ) {
@@ -271,7 +443,7 @@ class HearMed_Admin_Dispenser_Schedules {
                     'schedules' => [],
                 ];
             }
-            $schedule_entry = [
+            $staff_schedules[ $sid ]['schedules'][] = [
                 'id' => (int) $r->id,
                 'clinic_id' => (int) $r->clinic_id,
                 'clinic_name' => $r->clinic_name,
@@ -279,22 +451,17 @@ class HearMed_Admin_Dispenser_Schedules {
                 'day_label' => $days[ (int) $r->day_of_week ] ?? 'Unknown',
                 'rotation_weeks' => (int) $r->rotation_weeks,
                 'week_number' => (int) $r->week_number,
-                'is_active' => (bool) $r->is_active,
+                'is_active' => true,
+                'effective_from' => $r->effective_from ?? null,
+                'effective_to' => $r->effective_to ?? null,
             ];
-            $staff_schedules[ $sid ]['schedules'][] = $schedule_entry;
-            $all_schedules[] = $schedule_entry;
         }
 
-        // Build payload for unique staff members only
-        $payload = [];
-        foreach ( $staff_schedules as $staff_data ) {
-            $payload[] = $staff_data;
-        }
+        $payload = array_values( $staff_schedules );
 
-        // If viewing details for a staff member
+        // Detail page for a staff member
         $detail_id = isset($_GET['staff']) ? intval($_GET['staff']) : 0;
         if ($detail_id && isset($staff_schedules[$detail_id])) {
-            // Only output the detail page, nothing else
             echo $this->render_detail_page($staff_schedules[$detail_id], $clinics, $days);
             return;
         }
@@ -323,52 +490,24 @@ class HearMed_Admin_Dispenser_Schedules {
                 </thead>
                 <tbody>
                 <?php foreach ( $payload as $staff_data ):
-                    $clinic_ids = [];
                     $clinic_names = [];
                     foreach ( $staff_data['schedules'] as $schedule ) {
-                        if ( ! in_array( $schedule['clinic_id'], $clinic_ids ) ) {
-                            $clinic_ids[] = $schedule['clinic_id'];
-                            $clinic_names[] = $schedule['clinic_name'];
-                        }
-                    }
-                    $all_active = true;
-                    foreach ( $staff_data['schedules'] as $schedule ) {
-                        if ( ! $schedule['is_active'] ) {
-                            $all_active = false;
-                            break;
-                        }
+                        $cn = $schedule['clinic_name'];
+                        if ( ! in_array( $cn, $clinic_names ) ) $clinic_names[] = $cn;
                     }
                 ?>
                     <tr class="hm-disp-row" data-staff="<?php echo (int)$staff_data['staff_id']; ?>">
                         <td><strong><?php echo esc_html( $staff_data['staff_name'] ); ?></strong></td>
                         <td><?php echo esc_html( $staff_data['staff_role'] ?: '—' ); ?></td>
                         <td><?php echo esc_html( implode( ', ', $clinic_names ) ?: '—' ); ?></td>
-                        <td><?php echo $all_active ? '<span class="hm-badge hm-badge--green">Active</span>' : '<span class="hm-badge hm-badge--red">Inactive</span>'; ?></td>
+                        <td><span class="hm-badge hm-badge--green">Active</span></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>
             </table>
             <?php endif; ?>
 
-            <!-- Detail View Modal -->
-            <div class="hm-modal-bg" id="hm-schedule-detail-modal">
-                <div class="hm-modal hm-modal--lg">
-                    <div class="hm-modal-hd">
-                        <h3 id="hm-detail-title">Schedule Details</h3>
-                        <button class="hm-close" onclick="hmSchedules.closeDetail()">&times;</button>
-                    </div>
-                    <div class="hm-modal-body">
-                        <div id="hm-detail-content" style="max-height:500px;overflow-y:auto;">
-                            <!-- Content filled by JavaScript -->
-                        </div>
-                    </div>
-                    <div class="hm-modal-ft">
-                        <button class="hm-btn hm-btn--primary" onclick="hmSchedules.openAdd()">+ Add Schedule</button>
-                        <button class="hm-btn" onclick="hmSchedules.closeDetail()">Close</button>
-                    </div>
-                </div>
-            </div>
-
+            <!-- Add Schedule Modal -->
             <div class="hm-modal-bg" id="hm-schedule-modal">
                 <div class="hm-modal hm-modal--lg">
                     <div class="hm-modal-hd">
@@ -391,13 +530,13 @@ class HearMed_Admin_Dispenser_Schedules {
                             </div>
                             <div class="hm-form-group">
                                 <label>Clinic *</label>
-                                    <select id="hms-clinic" data-entity="clinic" data-label="Clinic">
-                                        <option value="">Select clinic</option>
-                                        <?php foreach ( $clinics as $c ): ?>
-                                            <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html( $c->clinic_name ); ?></option>
-                                        <?php endforeach; ?>
-                                        <option value="__add_new__">+ Add New…</option>
-                                    </select>
+                                <select id="hms-clinic" data-entity="clinic" data-label="Clinic">
+                                    <option value="">Select clinic</option>
+                                    <?php foreach ( $clinics as $c ): ?>
+                                        <option value="<?php echo (int) $c->id; ?>"><?php echo esc_html( $c->clinic_name ); ?></option>
+                                    <?php endforeach; ?>
+                                    <option value="__add_new__">+ Add New…</option>
+                                </select>
                             </div>
                         </div>
                         <div class="hm-form-row">
@@ -411,7 +550,6 @@ class HearMed_Admin_Dispenser_Schedules {
                                 </select>
                             </div>
                         </div>
-
                         <div class="hm-form-row" id="hms-week-row" style="display:none;">
                             <div class="hm-form-group">
                                 <label>Week</label>
@@ -421,7 +559,6 @@ class HearMed_Admin_Dispenser_Schedules {
                                 </select>
                             </div>
                         </div>
-
                         <div class="hm-form-group">
                             <label>Days *</label>
                             <div style="display:flex;flex-wrap:wrap;gap:12px;padding:8px 0;">
@@ -433,7 +570,13 @@ class HearMed_Admin_Dispenser_Schedules {
                                 <?php endforeach; ?>
                             </div>
                         </div>
-
+                        <div class="hm-form-row">
+                            <div class="hm-form-group">
+                                <label>Effective From</label>
+                                <input type="date" id="hms-effective-from" style="width:100%;">
+                                <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Leave blank for immediate / no start date</div>
+                            </div>
+                        </div>
                         <div class="hm-form-row">
                             <div class="hm-form-group">
                                 <label class="hm-toggle">
@@ -467,7 +610,7 @@ class HearMed_Admin_Dispenser_Schedules {
                     document.getElementById('hms-rotation').value = data.rotation_weeks || '1';
                     document.getElementById('hms-week').value = data.week_number || '1';
                     document.getElementById('hms-active').checked = data.is_active !== false;
-                    // Clear day checkboxes and check the right one
+                    document.getElementById('hms-effective-from').value = data.effective_from || '';
                     document.querySelectorAll('.hms-day-check').forEach(function(cb) { cb.checked = false; });
                     if (data.day_of_week !== undefined) {
                         var dayCheck = document.querySelector('.hms-day-check[value="'+data.day_of_week+'"]');
@@ -479,6 +622,7 @@ class HearMed_Admin_Dispenser_Schedules {
                     document.getElementById('hms-rotation').value = '1';
                     document.getElementById('hms-week').value = '1';
                     document.getElementById('hms-active').checked = true;
+                    document.getElementById('hms-effective-from').value = '';
                     document.querySelectorAll('.hms-day-check').forEach(function(cb) { cb.checked = false; });
                 }
                 hmSchedules.toggleWeekRow();
@@ -486,7 +630,6 @@ class HearMed_Admin_Dispenser_Schedules {
             },
             openAdd: function() { hmSchedules.open(); },
             close: function() { document.getElementById('hm-schedule-modal').classList.remove('open'); },
-            closeDetail: function() { document.getElementById('hm-schedule-detail-modal').classList.remove('open'); },
             toggleWeekRow: function() {
                 var rot = document.getElementById('hms-rotation').value;
                 document.getElementById('hms-week-row').style.display = (rot === '2') ? '' : 'none';
@@ -498,14 +641,13 @@ class HearMed_Admin_Dispenser_Schedules {
                 var week     = document.getElementById('hms-week').value;
                 var isActive = document.getElementById('hms-active').checked ? 1 : 0;
                 var schedId  = document.getElementById('hms-id').value;
+                var effectiveFrom = document.getElementById('hms-effective-from').value;
 
                 if (!staffId)  { alert('Please select a staff member.'); return; }
                 if (!clinicId) { alert('Please select a clinic.'); return; }
 
                 var days = [];
-                document.querySelectorAll('.hms-day-check:checked').forEach(function(cb) {
-                    days.push(parseInt(cb.value));
-                });
+                document.querySelectorAll('.hms-day-check:checked').forEach(function(cb) { days.push(parseInt(cb.value)); });
                 if (!days.length) { alert('Please select at least one day.'); return; }
 
                 var btn = document.getElementById('hms-save');
@@ -523,6 +665,7 @@ class HearMed_Admin_Dispenser_Schedules {
                         rotation_weeks: rotation,
                         week_number: week,
                         is_active: isActive,
+                        effective_from: effectiveFrom,
                         is_multi_day: days.length > 1 ? 1 : 0,
                         day_index: idx + 1
                     }, function(r) {
@@ -537,10 +680,8 @@ class HearMed_Admin_Dispenser_Schedules {
             }
         };
 
-        // Toggle week selector on rotation change
         document.getElementById('hms-rotation').addEventListener('change', hmSchedules.toggleWeekRow);
 
-        // Make each row clickable
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.hm-disp-row').forEach(function(row) {
                 row.style.cursor = 'pointer';
@@ -557,6 +698,7 @@ class HearMed_Admin_Dispenser_Schedules {
         return ob_get_clean();
     }
 
+    // ─── AJAX: Save ────────────────────────────────────────────────
     public function ajax_save() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
         if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
@@ -570,31 +712,23 @@ class HearMed_Admin_Dispenser_Schedules {
         $is_multi_day = intval( $_POST['is_multi_day'] ?? 0 ) === 1;
         $day_index = intval( $_POST['day_index'] ?? 1 );
         $is_active = intval( $_POST['is_active'] ?? 1 );
+        $effective_from = ! empty( $_POST['effective_from'] ) ? sanitize_text_field( $_POST['effective_from'] ) : null;
 
         if ( ! $staff_id || ! $clinic_id || $day < 0 || $day > 6 ) {
             wp_send_json_error( 'Missing fields' );
             return;
         }
 
-        // Validate and normalize rotation
-        if ( ! in_array( $rotation, [ 1, 2, 3, 4 ] ) ) {
-            $rotation = 1;
-        }
+        if ( ! in_array( $rotation, [ 1, 2, 3, 4 ] ) ) $rotation = 1;
+        if ( $rotation !== 2 ) { $week = 1; } else { $week = $week === 2 ? 2 : 1; }
 
-        // Only show week selector for 2-week rotation
-        if ( $rotation !== 2 ) {
-            $week = 1;
-        } else {
-            $week = $week === 2 ? 2 : 1;
-        }
-
-        // If this is a multi-day save and it's the first day, delete old schedules for this staff/clinic combo
+        // Multi-day save: delete old entries for this staff/clinic on first day
         if ( $is_multi_day && $day_index === 1 && $id ) {
             HearMed_DB::get_results(
                 "DELETE FROM hearmed_reference.dispenser_schedules WHERE staff_id = $1 AND clinic_id = $2",
                 [ $staff_id, $clinic_id ]
             );
-            $id = 0; // Force insert instead of update
+            $id = 0;
         }
 
         $data = [
@@ -604,6 +738,7 @@ class HearMed_Admin_Dispenser_Schedules {
             'rotation_weeks' => $rotation,
             'week_number' => $week,
             'is_active' => $is_active,
+            'effective_from' => $effective_from,
             'updated_at' => current_time( 'mysql' ),
         ];
 
@@ -622,6 +757,7 @@ class HearMed_Admin_Dispenser_Schedules {
         }
     }
 
+    // ─── AJAX: Delete (single — sets effective_to) ────────────────
     public function ajax_delete() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
         if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
@@ -629,9 +765,15 @@ class HearMed_Admin_Dispenser_Schedules {
         $id = intval( $_POST['id'] ?? 0 );
         if ( ! $id ) { wp_send_json_error( 'Invalid ID' ); return; }
 
+        $effective_to = ! empty( $_POST['effective_to'] ) ? sanitize_text_field( $_POST['effective_to'] ) : date( 'Y-m-d' );
+
         $result = HearMed_DB::update(
             'hearmed_reference.dispenser_schedules',
-            [ 'is_active' => false, 'updated_at' => current_time( 'mysql' ) ],
+            [
+                'is_active' => false,
+                'effective_to' => $effective_to,
+                'updated_at' => current_time( 'mysql' ),
+            ],
             [ 'id' => $id ]
         );
 
@@ -640,6 +782,35 @@ class HearMed_Admin_Dispenser_Schedules {
         } else {
             wp_send_json_success();
         }
+    }
+
+    // ─── AJAX: Bulk delete ────────────────────────────────────────
+    public function ajax_bulk_delete() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+        if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+
+        $ids_raw = sanitize_text_field( $_POST['ids'] ?? '' );
+        $effective_to = ! empty( $_POST['effective_to'] ) ? sanitize_text_field( $_POST['effective_to'] ) : date( 'Y-m-d' );
+
+        if ( ! $ids_raw ) { wp_send_json_error( 'No IDs provided' ); return; }
+
+        $ids = array_filter( array_map( 'intval', explode( ',', $ids_raw ) ) );
+        if ( empty( $ids ) ) { wp_send_json_error( 'Invalid IDs' ); return; }
+
+        $placeholders = [];
+        $params = [ $effective_to, current_time( 'mysql' ) ];
+        foreach ( $ids as $i => $id ) {
+            $placeholders[] = '$' . ( $i + 3 );
+            $params[] = $id;
+        }
+
+        $sql = "UPDATE hearmed_reference.dispenser_schedules
+                SET is_active = false, effective_to = $1, updated_at = $2
+                WHERE id IN (" . implode( ',', $placeholders ) . ")";
+
+        $result = HearMed_DB::get_results( $sql, $params );
+
+        wp_send_json_success( [ 'count' => count( $ids ) ] );
     }
 }
 
