@@ -1476,6 +1476,17 @@ function hm_ajax_save_appointment_outcome() {
         } catch ( Throwable $ignored ) {}
     }
 
+    // Get appointment details for patient_id and report_category
+    $appt_row = HearMed_DB::get_row(
+        "SELECT a.patient_id, a.service_id, COALESCE(sv.report_category, '') AS report_category
+         FROM hearmed_core.appointments a
+         LEFT JOIN hearmed_reference.services sv ON sv.id = a.service_id
+         WHERE a.id = $1",
+        [ $appt_id ]
+    );
+    $patient_id      = $appt_row ? (int) $appt_row->patient_id : null;
+    $report_category = $appt_row ? ($appt_row->report_category ?: null) : null;
+
     // Update the appointment — known schema: appointment_status + outcome (varchar)
     $outcome_text = $ot ? $ot->outcome_name : 'Completed';
     $data = [
@@ -1490,9 +1501,11 @@ function hm_ajax_save_appointment_outcome() {
     try {
         $ao_data = [
             'appointment_id'     => $appt_id,
+            'patient_id'         => $patient_id,
             'outcome_template_id'=> $outcome_id ?: null,
             'outcome_name'       => $outcome_text,
             'outcome_color'      => $ot ? $ot->outcome_color : '#6b7280',
+            'report_category'    => $report_category,
             'notes'              => $note,
             'created_at'         => current_time( 'mysql' ),
             'created_by'         => get_current_user_id(),
@@ -1503,18 +1516,23 @@ function hm_ajax_save_appointment_outcome() {
             "CREATE TABLE IF NOT EXISTS hearmed_core.appointment_outcomes (
                 id SERIAL PRIMARY KEY,
                 appointment_id INT NOT NULL,
+                patient_id INT,
                 outcome_template_id INT,
                 outcome_name VARCHAR(255),
                 outcome_color VARCHAR(20),
+                report_category VARCHAR(100),
                 notes TEXT,
                 created_at TIMESTAMP DEFAULT NOW(),
                 created_by INT
             )"
         );
 
-        // Ensure outcome_template_id column exists (may be missing on older installs)
+        // Ensure new columns exist on older installs
         HearMed_DB::query(
-            "ALTER TABLE hearmed_core.appointment_outcomes ADD COLUMN IF NOT EXISTS outcome_template_id INT"
+            "ALTER TABLE hearmed_core.appointment_outcomes
+                ADD COLUMN IF NOT EXISTS outcome_template_id INT,
+                ADD COLUMN IF NOT EXISTS patient_id INT,
+                ADD COLUMN IF NOT EXISTS report_category VARCHAR(100)"
         );
 
         HearMed_DB::insert( 'hearmed_core.appointment_outcomes', $ao_data );
