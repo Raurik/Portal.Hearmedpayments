@@ -88,7 +88,7 @@ var App={
 var Cal={
     $el:null,date:new Date(),mode:'week',viewMode:'people',
     dispensers:[],services:[],clinics:[],appts:[],holidays:[],blockouts:[],exclusionTypes:[],referralSources:[],
-    selClinics:[],selDisps:[],svcMap:{},cfg:{},
+    selClinics:[],selDisps:[],svcMap:{},cfg:{},clinicHasSchedules:false,
     _hoverTimer:null,_popAppt:null,
 
     init:function($el){
@@ -530,7 +530,14 @@ var Cal={
         var cid=this.selClinics.length===1?this.selClinics[0]:0;
         return post('get_dispensers',{clinic:cid,date:fmt(this.date)}).then(function(r){
             if(!r.success)return;
-            Cal.dispensers=r.data;
+            // Response may be { dispensers: [...], has_schedules: bool } or flat array (backwards compat)
+            if(r.data&&r.data.dispensers){
+                Cal.dispensers=r.data.dispensers;
+                Cal.clinicHasSchedules=!!r.data.has_schedules;
+            } else {
+                Cal.dispensers=r.data;
+                Cal.clinicHasSchedules=false;
+            }
             Cal.renderMultiSelect();
         }).fail(function(){ console.warn('[HearMed] get_dispensers failed'); });
     },
@@ -671,23 +678,42 @@ var Cal={
         });
 
         // Build a set of which dispenser+day combos are NOT scheduled
-        // p.scheduled_days = [0,1,2,...6] (JS day-of-week). Empty = scheduled everywhere (no filter).
+        // p.scheduled_days = [0,1,2,...6] (JS day-of-week).
+        // When clinicHasSchedules is true, empty scheduled_days means OFF all days.
+        // When false (legacy / no schedules configured), empty means available all days.
         var dispOffDay={}; // key: dispId+'-'+jsDay  => true means OFF
         if(Cal.selClinics.length===1){
             disps.forEach(function(p){
                 var sd=p.scheduled_days;
                 if(sd&&sd.length){
                     for(var wd=0;wd<7;wd++){if(sd.indexOf(wd)===-1)dispOffDay[p.id+'-'+wd]=true;}
+                } else if(Cal.clinicHasSchedules){
+                    // Clinic uses schedules but this dispenser has none — mark off all days
+                    for(var wd=0;wd<7;wd++){dispOffDay[p.id+'-'+wd]=true;}
                 }
             });
+        }
+        // Build set of days where ALL dispensers are off (entire day greyed out)
+        var dayAllOff={};
+        if(Cal.clinicHasSchedules&&Cal.selClinics.length===1&&disps.length){
+            for(var wd=0;wd<7;wd++){
+                var allOff=true;
+                for(var di2=0;di2<disps.length;di2++){
+                    if(!dispOffDay[disps[di2].id+'-'+wd]){allOff=false;break;}
+                }
+                if(allOff)dayAllOff[wd]=true;
+            }
         }
 
         var h='<div class="hm-grid" style="grid-template-columns:44px repeat('+tc+',minmax('+colW+'px,1fr));--hm-cal-bg:'+(cfg.calBg||'#ffffff')+';--hm-cal-grid:'+(cfg.gridLineColor||'#e2e8f0')+';--hm-cal-today:'+(cfg.todayHighlight||'#e6f7f9')+'">';
         h+='<div class="hm-time-corner"></div>';
         dates.forEach(function(d){
             var td=isToday(d);
-            h+='<div class="hm-day-hd'+(td?' today':'')+'" style="grid-column:span '+disps.length+(td?';background:'+cfg.todayHighlight:'')+'">';
+            var dOff=!!dayAllOff[d.getDay()];
+            var dayHdStyle='grid-column:span '+disps.length+(td&&!dOff?';background:'+cfg.todayHighlight:'')+(dOff?';background:#e0e0e0;opacity:0.6':'');
+            h+='<div class="hm-day-hd'+(td?' today':'')+(dOff?' hm-day-off':'')+'" style="'+dayHdStyle+'">';
             h+='<span class="hm-day-lbl">'+DAYS[d.getDay()]+'</span> <span class="hm-day-num">'+d.getDate()+'</span> <span class="hm-day-lbl">'+MO[d.getMonth()]+'</span>';
+            if(dOff){h+=' <span class="hm-day-lbl" style="font-size:10px;color:#888;margin-left:4px">(No staff scheduled)</span>';}
             h+='<div class="hm-prov-row">';
             disps.forEach(function(p){
                 var lbl=esc(p.initials);

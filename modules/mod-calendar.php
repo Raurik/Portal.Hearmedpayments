@@ -269,6 +269,7 @@ function hm_ajax_get_dispensers() {
 
     // Build a map of staff_id => [scheduled day-of-week numbers] for selected clinic
     $staff_sched_days = [];
+    $clinic_has_schedules = false;
     if ( $clinic_id ) {
         $schedule_table = 'hearmed_reference.dispenser_schedules';
         $has_schedule_table = HearMed_DB::get_var( HearMed_DB::prepare( "SELECT to_regclass(%s)", $schedule_table ) ) !== null;
@@ -282,7 +283,8 @@ function hm_ajax_get_dispensers() {
                    AND (effective_to   IS NULL OR effective_to   >= CURRENT_DATE)",
                 [ $clinic_id ]
             );
-            if ( $sched_rows ) {
+            if ( $sched_rows && count( $sched_rows ) > 0 ) {
+                $clinic_has_schedules = true;
                 foreach ( $sched_rows as $sr ) {
                     $sid = (int) $sr->staff_id;
                     if ( ! isset( $staff_sched_days[ $sid ] ) ) {
@@ -294,21 +296,48 @@ function hm_ajax_get_dispensers() {
         }
     }
 
-    $sql = "SELECT s.id, s.first_name, s.last_name,
-                   (s.first_name || ' ' || s.last_name) AS full_name,
-                   s.role, s.is_active, s.staff_color,
-                   ARRAY_AGG(sc.clinic_id) as clinic_ids
-            FROM hearmed_reference.staff s
-            LEFT JOIN hearmed_reference.staff_clinics sc ON s.id = sc.staff_id
-            WHERE s.is_active = true
-              AND LOWER(s.role) IN ('dispenser','audiologist','c_level','hm_clevel')";
-    if ( $clinic_id ) {
-        $sql .= " AND (sc.clinic_id = $clinic_id OR sc.clinic_id IS NULL)";
+    // When a clinic is selected and has active schedules, ONLY show dispensers
+    // who have at least one schedule entry for that clinic.
+    // If no schedules exist, fall back to showing all staff assigned to the clinic.
+    if ( $clinic_id && $clinic_has_schedules ) {
+        // Only dispensers with active schedules for this clinic
+        $scheduled_ids = array_keys( $staff_sched_days );
+        if ( empty( $scheduled_ids ) ) {
+            // Edge case: schedules table has rows but staff_sched_days is empty
+            // (shouldn't happen, but guard against it)
+            $ps = [];
+        } else {
+            $id_list = implode( ',', array_map( 'intval', $scheduled_ids ) );
+            $ps = HearMed_DB::get_results(
+                "SELECT s.id, s.first_name, s.last_name,
+                       (s.first_name || ' ' || s.last_name) AS full_name,
+                       s.role, s.is_active, s.staff_color,
+                       ARRAY_AGG(sc.clinic_id) as clinic_ids
+                FROM hearmed_reference.staff s
+                LEFT JOIN hearmed_reference.staff_clinics sc ON s.id = sc.staff_id
+                WHERE s.is_active = true
+                  AND s.id IN ({$id_list})
+                GROUP BY s.id, s.first_name, s.last_name, s.role, s.is_active, s.staff_color
+                ORDER BY s.first_name, s.last_name"
+            );
+        }
+    } else {
+        $sql = "SELECT s.id, s.first_name, s.last_name,
+                       (s.first_name || ' ' || s.last_name) AS full_name,
+                       s.role, s.is_active, s.staff_color,
+                       ARRAY_AGG(sc.clinic_id) as clinic_ids
+                FROM hearmed_reference.staff s
+                LEFT JOIN hearmed_reference.staff_clinics sc ON s.id = sc.staff_id
+                WHERE s.is_active = true
+                  AND LOWER(s.role) IN ('dispenser','audiologist','c_level','hm_clevel')";
+        if ( $clinic_id ) {
+            $sql .= " AND (sc.clinic_id = $clinic_id OR sc.clinic_id IS NULL)";
+        }
+        $sql .= " GROUP BY s.id, s.first_name, s.last_name, s.role, s.is_active, s.staff_color ORDER BY s.first_name, s.last_name";
+        $ps = HearMed_DB::get_results( $sql );
     }
-    $sql .= " GROUP BY s.id, s.first_name, s.last_name, s.role, s.is_active, s.staff_color ORDER BY s.first_name, s.last_name";
-    $ps = HearMed_DB::get_results( $sql );
     $d = [];
-    foreach ( $ps as $p ) {
+    foreach ( ($ps ?: []) as $p ) {
         if ( !$p->is_active ) continue;
         $fname = $p->full_name ?: trim( $p->first_name . ' ' . $p->last_name );
         $initials = strtoupper( substr( $p->first_name, 0, 1 ) . substr( $p->last_name, 0, 1 ) );
@@ -336,7 +365,8 @@ function hm_ajax_get_dispensers() {
             'staff_color'    => $p->staff_color ?: '#0BB4C4',
         ];
     }
-    wp_send_json_success( $d );
+    // Tell JS whether this clinic has schedule-based filtering active
+    wp_send_json_success( [ 'dispensers' => $d, 'has_schedules' => $clinic_has_schedules ] );
     } catch ( Throwable $e ) {
         error_log( '[HearMed] get_dispensers error: ' . $e->getMessage() );
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
