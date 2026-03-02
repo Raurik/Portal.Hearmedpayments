@@ -549,7 +549,7 @@ function hm_ajax_get_patient() {
     }
 
     // Patient stats — revenue, payments, balance (from invoices module)
-    $stats = [ 'revenue' => 0, 'payments' => 0, 'balance' => 0 ];
+    $stats = [ 'revenue' => 0, 'payments' => 0, 'balance' => 0, 'credit' => 0 ];
     $inv_row = $db->get_row(
         "SELECT COALESCE(SUM(grand_total),0) AS revenue,
                 COALESCE(SUM(grand_total - balance_remaining),0) AS payments,
@@ -562,6 +562,22 @@ function hm_ajax_get_patient() {
         $stats['revenue']  = (float) $inv_row->revenue;
         $stats['payments'] = (float) $inv_row->payments;
         $stats['balance']  = (float) $inv_row->balance;
+    }
+
+    // Pending credits — credit notes where cheque not yet sent (patient refund portion)
+    $has_prsi_col = $db->get_var(
+        "SELECT column_name FROM information_schema.columns
+         WHERE table_schema = 'hearmed_core' AND table_name = 'credit_notes' AND column_name = 'patient_refund_amount'"
+    );
+    $credit_col = $has_prsi_col ? 'patient_refund_amount' : 'amount';
+    $credit_row = $db->get_row(
+        "SELECT COALESCE(SUM({$credit_col}), 0) AS pending_credit
+         FROM hearmed_core.credit_notes
+         WHERE patient_id = \$1 AND (cheque_sent = false OR cheque_sent IS NULL)",
+        [ $pid ]
+    );
+    if ( $credit_row ) {
+        $stats['credit'] = (float) $credit_row->pending_credit;
     }
 
     // Admin settings integration
@@ -1465,11 +1481,29 @@ function hm_ajax_get_patient_returns() {
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
-    $db   = HearMed_DB::instance();
+    $db = HearMed_DB::instance();
+
+    // Check if returns table exists for join
+    $has_returns = $db->get_var(
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'hearmed_core' AND table_name = 'returns'"
+    );
+
+    $return_join  = $has_returns ? "LEFT JOIN hearmed_core.returns ret ON ret.credit_note_id = cn.id" : "";
+    $return_cols  = $has_returns ? "ret.return_date, ret.side AS return_side, ret.patient_refund_amount AS ret_patient_amt, ret.prsi_refund_amount AS ret_prsi_amt," : "cn.credit_date AS return_date, 'both' AS return_side, cn.amount AS ret_patient_amt, 0::numeric AS ret_prsi_amt,";
+
+    // Check if prsi columns exist
+    $has_prsi = $db->get_var(
+        "SELECT column_name FROM information_schema.columns
+         WHERE table_schema = 'hearmed_core' AND table_name = 'credit_notes' AND column_name = 'prsi_amount'"
+    );
+    $prsi_cols = $has_prsi ? "cn.prsi_amount, cn.patient_refund_amount," : "0 AS prsi_amount, cn.amount AS patient_refund_amount,";
+
     $rows = $db->get_results(
         "SELECT cn.id, cn.credit_note_number, cn.amount AS refund_amount,
                 cn.reason, cn.credit_date, cn.cheque_sent,
                 cn.cheque_sent_date,
+                {$prsi_cols}
+                {$return_cols}
                 COALESCE(
                     (SELECT string_agg(pr.product_name, ', ')
                      FROM hearmed_core.order_items oi
@@ -1478,6 +1512,7 @@ function hm_ajax_get_patient_returns() {
                     'N/A'
                 ) AS product_name
          FROM hearmed_core.credit_notes cn
+         {$return_join}
          WHERE cn.patient_id = \$1
          ORDER BY cn.credit_date DESC",
         [ $pid ]
@@ -1486,12 +1521,19 @@ function hm_ajax_get_patient_returns() {
     $out = [];
     foreach ( $rows as $r ) {
         $out[] = [
-            '_ID'              => (int) $r->id,
-            'credit_note_num'  => $r->credit_note_number,
-            'refund_amount'    => (float) $r->refund_amount,
-            'product_name'     => $r->product_name,
-            'cheque_sent'      => hm_pg_bool( $r->cheque_sent ),
-            'cheque_sent_date' => $r->cheque_sent_date,
+            '_ID'                  => (int) $r->id,
+            'credit_note_id'       => (int) $r->id,
+            'credit_note_num'      => $r->credit_note_number,
+            'refund_amount'        => (float) $r->refund_amount,
+            'patient_refund_amount'=> (float) ($r->patient_refund_amount ?? $r->refund_amount),
+            'prsi_amount'          => (float) ($r->prsi_amount ?? 0),
+            'product_name'         => $r->product_name,
+            'return_date'          => $r->return_date ?? $r->credit_date,
+            'return_side'          => $r->return_side ?? 'both',
+            'credit_date'          => $r->credit_date,
+            'cheque_sent'          => hm_pg_bool( $r->cheque_sent ),
+            'cheque_sent_date'     => $r->cheque_sent_date,
+            'reason'               => $r->reason ?? '',
         ];
     }
     wp_send_json_success( $out );
@@ -2551,11 +2593,11 @@ function hm_ajax_create_return() {
     if ( ! $device ) wp_send_json_error( 'Device not found' );
 
     // Get original order/invoice info for amounts + PRSI
-    $order = null;
-    $invoice = null;
+    $order       = null;
     $total_amount = 0;
-    $prsi_amount = 0;
+    $prsi_amount  = 0;
     $patient_paid = 0;
+    $per_ear      = floatval( HearMed_Settings::get( 'hm_prsi_amount_per_ear', '500' ) );
 
     if ( $device->order_id ) {
         $order = $db->get_row(
@@ -2566,11 +2608,25 @@ function hm_ajax_create_return() {
             [ $device->order_id ]
         );
         if ( $order ) {
-            $total_amount = floatval( $order->grand_total ?? 0 );
-            $prsi_amount  = floatval( $order->prsi_amount ?? 0 );
-            // Grand total already has PRSI deducted, so patient paid = grand_total
-            $patient_paid = $total_amount;
+            $total_amount   = floatval( $order->grand_total ?? 0 );
+            $order_prsi     = floatval( $order->prsi_amount ?? 0 );
+            $prsi_left_flag = hm_pg_bool( $order->prsi_left ?? false );
+            $prsi_right_flag= hm_pg_bool( $order->prsi_right ?? false );
+            $patient_paid   = $total_amount; // grand_total already has PRSI deducted
         }
+    }
+
+    // ── Side-aware PRSI calculation ──
+    if ( $side === 'left' ) {
+        $prsi_amount  = $prsi_left_flag ? $per_ear : 0;
+        // Half the patient-paid amount for single-side return
+        $patient_paid = $patient_paid / 2;
+    } elseif ( $side === 'right' ) {
+        $prsi_amount  = $prsi_right_flag ? $per_ear : 0;
+        $patient_paid = $patient_paid / 2;
+    } else {
+        // Both sides — full PRSI
+        $prsi_amount = $order_prsi ?? 0;
     }
 
     // Allow override of refund amount from POST
@@ -2580,18 +2636,40 @@ function hm_ajax_create_return() {
     $db->begin_transaction();
 
     try {
-        // 1. Mark device as Returned
-        $db->update( 'hearmed_core.patient_devices', [
-            'device_status'  => 'Returned',
-            'inactive_reason'=> 'Return: ' . $reason,
-            'inactive_date'  => date( 'Y-m-d' ),
-            'updated_at'     => date( 'c' ),
-        ], [ 'id' => $device_id ] );
+        // 1. Side-aware device update
+        if ( $side === 'both' ) {
+            // Return both — mark entire device as Returned
+            $db->update( 'hearmed_core.patient_devices', [
+                'device_status'  => 'Returned',
+                'inactive_reason'=> 'Return: ' . $reason,
+                'inactive_date'  => date( 'Y-m-d' ),
+                'updated_at'     => date( 'c' ),
+            ], [ 'id' => $device_id ] );
+        } else {
+            // Single-side return: clear that side's serial
+            $clear_col = ( $side === 'left' ) ? 'serial_left' : 'serial_right';
+            $other_col = ( $side === 'left' ) ? 'serial_right' : 'serial_left';
+            $other_serial = $device->$other_col ?? null;
 
-        // 2. Generate credit note
+            $upd = [
+                $clear_col      => null,
+                'inactive_reason'=> ( $device->inactive_reason ? $device->inactive_reason . '; ' : '' ) . ucfirst($side) . ' returned: ' . $reason,
+                'updated_at'     => date( 'c' ),
+            ];
+
+            // If other side has no serial left, mark whole device as Returned
+            if ( ! $other_serial ) {
+                $upd['device_status'] = 'Returned';
+                $upd['inactive_date'] = date( 'Y-m-d' );
+            }
+
+            $db->update( 'hearmed_core.patient_devices', $upd, [ 'id' => $device_id ] );
+        }
+
+        // 2. Generate credit note — aligned with existing HMCN-YYYY-NNNN format
         $cn_prefix = HearMed_Settings::get( 'hm_credit_note_prefix', 'HMCN' );
-        $cn_seq    = $db->get_var( "SELECT COALESCE(MAX(id), 0) + 1 FROM hearmed_core.credit_notes" );
-        $cn_number = $cn_prefix . '-' . str_pad( $cn_seq, 4, '0', STR_PAD_LEFT );
+        $cn_count  = (int) $db->get_var( "SELECT COUNT(*) FROM hearmed_core.credit_notes" );
+        $cn_number = $cn_prefix . '-' . date('Y') . '-' . str_pad( $cn_count + 1, 4, '0', STR_PAD_LEFT );
 
         $cn_id = $db->insert( 'hearmed_core.credit_notes', [
             'credit_note_number'    => $cn_number,
@@ -2602,12 +2680,13 @@ function hm_ajax_create_return() {
             'amount'                => $patient_refund + $prsi_amount,
             'prsi_amount'           => $prsi_amount,
             'patient_refund_amount' => $patient_refund,
-            'reason'                => 'Return: ' . $reason,
+            'reason'                => 'Return (' . $side . '): ' . $reason,
             'credit_date'           => date( 'Y-m-d' ),
             'refund_type'           => 'cheque',
             'cheque_sent'           => false,
             'prsi_notified'         => false,
             'created_by'            => $staff_id ?: null,
+            'created_at'            => date( 'Y-m-d H:i:s' ),
         ]);
 
         // 3. Create return record
@@ -2639,12 +2718,13 @@ function hm_ajax_create_return() {
         ]);
 
         // 5. Timeline entry
+        $side_label = $side === 'both' ? 'both sides' : $side . ' side';
         $db->insert( 'hearmed_core.patient_timeline', [
             'patient_id'  => $pid,
             'event_type'  => 'return_created',
             'event_date'  => date('Y-m-d'),
             'staff_id'    => $staff_id ?: null,
-            'description' => "Hearing aid returned. Credit note {$cn_number}. Patient refund: €" . number_format($patient_refund, 2) . ($prsi_amount > 0 ? ". PRSI to reclaim: €" . number_format($prsi_amount, 2) : '') . ". Reason: {$reason}",
+            'description' => "Hearing aid returned ({$side_label}). Credit note {$cn_number}. Patient refund: \xe2\x82\xac" . number_format($patient_refund, 2) . ($prsi_amount > 0 ? ". PRSI to reclaim: \xe2\x82\xac" . number_format($prsi_amount, 2) : '') . ". Reason: {$reason}",
         ]);
 
         $db->commit();
@@ -2652,6 +2732,7 @@ function hm_ajax_create_return() {
         hm_patient_audit( 'CREATE_RETURN', 'return', $return_id, [
             'patient_id'      => $pid,
             'device_id'       => $device_id,
+            'side'            => $side,
             'credit_note'     => $cn_number,
             'patient_refund'  => $patient_refund,
             'prsi_amount'     => $prsi_amount,
@@ -2663,6 +2744,7 @@ function hm_ajax_create_return() {
             'credit_note_number' => $cn_number,
             'patient_refund'     => $patient_refund,
             'prsi_amount'        => $prsi_amount,
+            'side'               => $side,
         ]);
     } catch ( \Exception $e ) {
         $db->rollback();

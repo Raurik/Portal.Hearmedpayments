@@ -349,7 +349,14 @@ function initProfile(){
     /* ── OVERVIEW ── */
     function loadOverview($c){
         var p=patient,s=p.stats;
-        var fh=p.has_finance?'<div class="hm-overview-card"><h3>Outstanding Balance</h3><div style="font-size:24px;font-weight:500;color:'+(s.balance>0?'#e53e3e':'var(--hm-teal)')+';">'+euro(s.balance)+'</div><div style="font-size:12px;color:#94a3b8;margin-top:4px;">Revenue: '+euro(s.revenue)+' · Paid: '+euro(s.payments)+'</div><a href="#" class="hm-ov-tab" data-tab="invoices" style="font-size:13px;color:var(--hm-teal);text-decoration:none;display:block;margin-top:8px;">View invoices →</a></div>':'';
+        var fh='';
+        if(p.has_finance){
+            var netBal=s.balance-(s.credit||0);
+            var balColor=netBal>0?'#e53e3e':netBal<0?'var(--hm-teal)':'#64748b';
+            fh='<div class="hm-overview-card"><h3>Outstanding Balance</h3><div style="font-size:24px;font-weight:500;color:'+balColor+';">'+euro(netBal)+'</div><div style="font-size:12px;color:#94a3b8;margin-top:4px;">Revenue: '+euro(s.revenue)+' · Paid: '+euro(s.payments)+'</div>';
+            if((s.credit||0)>0) fh+='<div style="font-size:13px;color:var(--hm-teal);margin-top:6px;font-weight:600;">Credit on account: '+euro(s.credit)+' <span style="font-weight:400;color:#94a3b8;font-size:11px;">(cheque pending)</span></div>';
+            fh+='<a href="#" class="hm-ov-tab" data-tab="invoices" style="font-size:13px;color:var(--hm-teal);text-decoration:none;display:block;margin-top:8px;">View invoices &rarr;</a></div>';
+        }
         var rh='';if(p.annual_review_date){var rc=p.review_status==='overdue'?'#e53e3e':p.review_status==='soon'?'#d97706':'var(--hm-teal)';var rl=p.review_status==='overdue'?'Overdue '+Math.abs(p.review_days)+'d':'Review in '+p.review_days+'d';rh='<div class="hm-overview-card"><h3>Annual Review</h3><div style="font-size:14px;">'+fmtDate(p.annual_review_date)+'</div><div style="font-size:13px;color:'+rc+';margin-top:4px;">'+rl+'</div></div>';}
         $c.html('<div class="hm-tab-section"><div class="hm-overview-grid">'+
             '<div class="hm-overview-card" id="hm-ov-aids"><h3>Current Hearing Aids</h3><div style="color:#94a3b8;font-size:13px;">Loading…</div></div>'+
@@ -980,7 +987,20 @@ function initProfile(){
             if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
             var ret=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Returns / Credit Notes ('+ret.length+')</h3></div>';
             if(!ret.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.returns+'</div><div class="hm-empty-text">No returns</div></div>';
-            else{h+='<table class="hm-table"><thead><tr><th>Hearing aid</th><th>Credit note #</th><th>Refund amount</th><th>Cheque status</th><th></th></tr></thead><tbody>';ret.forEach(function(x){var ch=x.cheque_sent?'<span class="hm-badge hm-badge--green">'+HM_ICONS.check+' Sent '+fmtDate(x.cheque_sent_date)+'</span>':'<span class="hm-badge hm-badge--red">'+HM_ICONS.x+' Cheque Outstanding</span>';h+='<tr><td>'+esc(x.product_name)+'</td><td><code>'+esc(x.credit_note_num)+'</code></td><td>'+euro(x.refund_amount)+'</td><td>'+ch+'</td><td>'+(!x.cheque_sent?'<button class="hm-btn hm-btn--secondary hm-btn--sm hm-log-cheque" data-id="'+x._ID+'">Log Cheque Sent</button>':'')+'</td></tr>';});h+='</tbody></table>';}
+            else{
+                h+='<table class="hm-table"><thead><tr><th>Date Returned</th><th>Hearing Aid</th><th>Side</th><th>Credit Note #</th><th>Patient Refund</th><th>PRSI</th><th>Cheque Status</th><th></th></tr></thead><tbody>';
+                ret.forEach(function(x){
+                    var ch=x.cheque_sent?'<span class="hm-badge hm-badge--green">'+HM_ICONS.check+' Sent '+fmtDate(x.cheque_sent_date)+'</span>':'<span class="hm-badge hm-badge--red">'+HM_ICONS.x+' Cheque Outstanding</span>';
+                    var sideLabel=(x.return_side||'both')==='both'?'Both':x.return_side.charAt(0).toUpperCase()+x.return_side.slice(1);
+                    var prsiCol=parseFloat(x.prsi_amount||0)>0?euro(x.prsi_amount):'<span style="color:#94a3b8;">—</span>';
+                    var pdfUrl=_hm.ajax+'?action=hm_print_credit_note&nonce='+_hm.nonce+'&credit_note_id='+x.credit_note_id;
+                    h+='<tr><td>'+fmtDate(x.return_date)+'</td><td>'+esc(x.product_name)+'</td><td>'+sideLabel+'</td><td><code>'+esc(x.credit_note_num)+'</code></td><td>'+euro(x.patient_refund_amount)+'</td><td>'+prsiCol+'</td><td>'+ch+'</td><td style="white-space:nowrap;">'+
+                        '<a href="'+pdfUrl+'" target="_blank" class="hm-btn hm-btn--secondary hm-btn--sm" style="margin-right:4px;" title="Download Credit Note PDF">PDF</a>'+
+                        (!x.cheque_sent?'<button class="hm-btn hm-btn--secondary hm-btn--sm hm-log-cheque" data-id="'+x._ID+'">Log Cheque</button>':'')+
+                    '</td></tr>';
+                });
+                h+='</tbody></table>';
+            }
             $c.html(h+'</div>');
         });
         $c.off('click','.hm-log-cheque').on('click','.hm-log-cheque',function(){var id=$(this).data('id');showLogChequeModal(id,function(){loadReturns($c);});});

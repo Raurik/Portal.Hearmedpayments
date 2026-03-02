@@ -658,7 +658,18 @@ class HearMed_Refunds {
              ORDER BY cn.cheque_sent ASC, cn.created_at DESC",
             []
         );
-        wp_send_json_success( $rows ?: [] );
+
+        // Convert PG booleans ('t'/'f') to proper PHP booleans for JSON
+        $out = [];
+        if ( $rows ) {
+            foreach ( $rows as $r ) {
+                $item = (array) $r;
+                if ( isset( $item['cheque_sent'] ) )    $item['cheque_sent']    = hm_pg_bool( $item['cheque_sent'] );
+                if ( isset( $item['prsi_notified'] ) )  $item['prsi_notified']  = hm_pg_bool( $item['prsi_notified'] );
+                $out[] = $item;
+            }
+        }
+        wp_send_json_success( $out );
     }
 
     // ─── AJAX: create credit note ─────────────────────────────────────────────
