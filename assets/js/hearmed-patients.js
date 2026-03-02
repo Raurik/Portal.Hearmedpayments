@@ -574,7 +574,7 @@ function initProfile(){
             var h='<div class="hm-tab-section">';
             h+='<div class="hm-section-header" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><h3 style="margin:0;">Hearing Aids</h3>';
             if(act.length) h+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-btn-icon-teal" id="hm-exchange-top-btn">'+HM_ICONS.returns+' Exchange</button>';
-            if(act.length) h+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-btn-danger-outline" id="hm-return-top-btn">↩ Return</button>';
+            if(act.length) h+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-btn-danger-outline" id="hm-return-top-btn">Return</button>';
             h+='<button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-add-product-btn">+ Add Hearing Aid</button>';
             h+='</div>';
 
