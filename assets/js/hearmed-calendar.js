@@ -87,7 +87,7 @@ var App={
 // ═══════════════════════════════════════════════════════
 var Cal={
     $el:null,date:new Date(),mode:'week',viewMode:'people',
-    dispensers:[],services:[],clinics:[],appts:[],holidays:[],blockouts:[],exclusionTypes:[],
+    dispensers:[],services:[],clinics:[],appts:[],holidays:[],blockouts:[],exclusionTypes:[],referralSources:[],
     selClinics:[],selDisps:[],svcMap:{},cfg:{},
     _hoverTimer:null,_popAppt:null,
 
@@ -540,6 +540,12 @@ var Cal={
             Cal.services=r.data;Cal.svcMap={};
             r.data.forEach(function(s){Cal.svcMap[s.id]=s;});
         }).fail(function(){ console.warn('[HearMed] get_services failed'); });
+    },
+    loadReferralSources:function(){
+        if(Cal.referralSources&&Cal.referralSources.length)return $.Deferred().resolve();
+        return post('get_referral_sources').then(function(r){
+            if(r.success) Cal.referralSources=r.data||[];
+        }).fail(function(){ Cal.referralSources=[]; });
     },
     loadExclusionTypes:function(){
         return post('get_exclusion_types').then(function(r){
@@ -1118,15 +1124,18 @@ var Cal={
         var a=this._popAppt;if(!a)return;
         $('#hm-pop').removeClass('open');
         var self=this;
-        // Ensure services & clinics loaded for the edit modal
+        // Ensure services, clinics & referral sources loaded for the edit modal
         var ready=$.Deferred();
         if(!self.services.length||!self.clinics.length){
             $.when(
                 self.services.length?null:self.loadServices(),
                 self.clinics.length?null:self.loadClinics(),
-                self.dispensers.length?null:self.loadDispensers()
+                self.dispensers.length?null:self.loadDispensers(),
+                self.loadReferralSources()
             ).always(function(){ready.resolve();});
-        } else { ready.resolve(); }
+        } else {
+            self.loadReferralSources().always(function(){ready.resolve();});
+        }
         ready.then(function(){ self._buildEditModal(a); });
     },
     _buildEditModal:function(a){
@@ -1137,6 +1146,9 @@ var Cal={
         var svcOpts=self.services.map(function(s){return'<option value="'+s.id+'"'+(parseInt(s.id)===parseInt(a.service_id)?' selected':'')+'>'+esc(s.name)+'</option>';}).join('');
         var cliOpts=self.clinics.map(function(c){return'<option value="'+c.id+'"'+(parseInt(c.id)===parseInt(a.clinic_id)?' selected':'')+'>'+esc(c.name)+'</option>';}).join('');
         var dispOpts=self.dispensers.map(function(d){return'<option value="'+d.id+'"'+(parseInt(d.id)===parseInt(a.dispenser_id)?' selected':'')+'>'+esc(d.name)+'</option>';}).join('');
+        var refOpts='<option value="">— Select Referral Type —</option>';
+        if(self.referralSources&&self.referralSources.length){refOpts+=self.referralSources.map(function(rs){return'<option value="'+rs.id+'"'+(parseInt(rs.id)===parseInt(a.referral_source_id||0)?' selected':'')+'>'+esc(rs.name)+'</option>';}).join('');}
+        var curSmsHrs=parseInt(a.sms_reminder_hours||0);
         var title=isLocked?(canAdminReopen?'Reopen / Edit Appointment':'Appointment Details'):'Edit Appointment';
         var dis=closedNotesOnly?' disabled':'';
         var statusDis=(isLocked&&canAdminReopen)?'':' disabled';
@@ -1153,7 +1165,16 @@ var Cal={
                 '<div class="hm-row"><div class="hm-fld"><label>Date</label><input type="date" class="hm-inp" id="hme-date" value="'+a.appointment_date+'"'+dis+'></div>'+
                 '<div class="hm-fld"><label>Start Time</label><input type="time" class="hm-inp" id="hme-time" value="'+(a.start_time||'').substring(0,5)+'"'+dis+'></div></div>'+
                 '<div class="hm-row"><div class="hm-fld"><label>Status</label><select class="hm-inp" id="hme-status"'+statusDis+'><option>Not Confirmed</option><option>Confirmed</option><option>Arrived</option><option>In Progress</option><option>Completed</option><option>Late</option><option>No Show</option><option>Cancelled</option><option>Rescheduled</option><option>Pending</option></select></div>'+
-                '<div class="hm-fld"></div></div>'+
+                '<div class="hm-fld"><label>Referral Type <span style="color:#ef4444">*</span></label><select class="hm-inp" id="hme-referral-source"'+dis+'>'+refOpts+'</select></div></div>'+
+                '<div style="margin:12px 0;padding:12px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px">'+
+                    '<div style="font-size:11px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Confirmation &amp; Reminders</div>'+
+                    '<div class="hm-fld" style="margin:0"><label style="font-size:12px">SMS Reminder</label><select class="hm-inp" id="hme-sms-reminder"'+dis+'>'+
+                        '<option value="0"'+(curSmsHrs===0?' selected':'')+'>No reminder</option>'+
+                        '<option value="24"'+(curSmsHrs===24?' selected':'')+'>24 hours before</option>'+
+                        '<option value="48"'+(curSmsHrs===48?' selected':'')+'>48 hours before</option>'+
+                        '<option value="72"'+(curSmsHrs===72?' selected':'')+'>72 hours before</option>'+
+                    '</select></div>'+
+                '</div>'+
                 '<div class="hm-fld"><label>Notes</label><textarea class="hm-inp" id="hme-notes" rows="3">'+esc(a.notes||'')+'</textarea></div>'+
             '</div>';
         if(closedNotesOnly){
@@ -1169,6 +1190,8 @@ var Cal={
         $(document).off('click.editsave').on('click.editsave','.hm-edit-save',function(){
             var payload={appointment_id:a._ID,notes:$('#hme-notes').val()};
             if(!closedNotesOnly){
+                var refSrcId=$('#hme-referral-source').val();
+                if(!refSrcId){alert('Please select a Referral Type.');$('#hme-referral-source').focus();return;}
                 payload.appointment_date=$('#hme-date').val();
                 payload.start_time=$('#hme-time').val();
                 payload.status=$('#hme-status').val();
@@ -1176,6 +1199,8 @@ var Cal={
                 payload.service_id=$('#hme-service').val();
                 payload.clinic_id=$('#hme-clinic').val();
                 payload.dispenser_id=$('#hme-disp').val();
+                payload.referral_source_id=refSrcId;
+                payload.sms_reminder_hours=$('#hme-sms-reminder').val();
             }
             post('update_appointment',payload)
             .then(function(r){if(r.success){$('.hm-modal-bg').remove();$(document).off('.editclose .editsave .editdel');self.refresh();}else{alert(r.data||'Error');}});
@@ -2494,6 +2519,7 @@ var Cal={
                     start_time:ft,
                     duration:$('#hm-fu-dur').val(),
                     location_type:'Clinic',
+                    referral_source_id:a.referral_source_id||'',
                     notes:$('#hm-fu-notes').val()||''
                 };
                 var doPost=function(skip){
@@ -2533,13 +2559,14 @@ var Cal={
 
     openNewApptModal:function(date,time,dispId){
         var self=this;
-        // Ensure services & clinics are loaded before building dropdown HTML
+        // Ensure services, clinics & referral sources are loaded before building dropdown HTML
         var ready=$.Deferred();
-        if(!self.services.length||!self.clinics.length){
+        if(!self.services.length||!self.clinics.length||!self.referralSources||!self.referralSources.length){
             $.when(
                 self.services.length?null:self.loadServices(),
                 self.clinics.length?null:self.loadClinics(),
-                self.dispensers.length?null:self.loadDispensers()
+                self.dispensers.length?null:self.loadDispensers(),
+                self.loadReferralSources()
             ).always(function(){ready.resolve();});
         } else { ready.resolve(); }
         ready.then(function(){ self._buildApptModal(date,time,dispId); });
@@ -2548,6 +2575,8 @@ var Cal={
         var self=this;
         var svcOpts=self.services.length?self.services.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join(''):'<option value="">No types available</option>';
         var cliOpts=self.clinics.length?self.clinics.map(function(c){return'<option value="'+c.id+'">'+esc(c.name)+'</option>';}).join(''):'<option value="">No clinics</option>';
+        var refOpts='<option value="">— Select Referral Type —</option>';
+        if(self.referralSources&&self.referralSources.length){refOpts+=self.referralSources.map(function(rs){return'<option value="'+rs.id+'">'+esc(rs.name)+'</option>';}).join('');}
         var html='<div class="hm-modal-bg open"><div class="hm-modal hm-modal--md">'+
             '<div class="hm-modal-hd"><h3>New Appointment</h3><button class="hm-close hm-new-close">'+IC.x+'</button></div>'+
             '<div class="hm-modal-body">'+
@@ -2572,8 +2601,17 @@ var Cal={
                     '<option value="105">105 min</option><option value="120">120 min</option>'+
                 '</select></div>'+
                 '<div class="hm-fld"><label>Location</label><select class="hm-inp" id="hmn-loc"><option>Clinic</option><option>Home</option></select></div></div>'+
-                '<div class="hm-fld"><label>Referral Source</label><input class="hm-inp" id="hmn-referral" placeholder="Auto-filled from patient" readonly></div>'+
-                '<div class="hm-fld"><label>Notes</label><textarea class="hm-inp" id="hmn-notes" placeholder="Optional notes..."></textarea></div>'+
+                '<div class="hm-fld"><label>Referral Type <span style="color:#ef4444">*</span></label><select class="hm-inp" id="hmn-referral-source" required>'+refOpts+'</select></div>'+
+                '<div style="margin-top:12px;padding:12px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px">'+
+                    '<div style="font-size:11px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Confirmation &amp; Reminders</div>'+
+                    '<div class="hm-fld" style="margin:0"><label style="font-size:12px">SMS Reminder</label><select class="hm-inp" id="hmn-sms-reminder">'+
+                        '<option value="0">No reminder</option><option value="24">24 hours before</option><option value="48">48 hours before</option><option value="72">72 hours before</option>'+
+                    '</select></div>'+
+                    '<div id="hmn-sms-gdpr-warn" style="display:none;margin-top:6px;padding:6px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:11px;color:#991b1b">'+
+                        '⚠ This patient has not consented to SMS. Reminder will not be sent.'+
+                    '</div>'+
+                '</div>'+
+                '<div class="hm-fld" style="margin-top:12px"><label>Notes</label><textarea class="hm-inp" id="hmn-notes" placeholder="Optional notes..."></textarea></div>'+
             '</div>'+
             '<div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hm-new-close">Cancel</button><button class="hm-btn hm-btn--primary hm-new-save">Create Appointment</button></div></div>'+
         '</div></div>';
@@ -2598,7 +2636,7 @@ var Cal={
                     if(!r.success||!r.data||!r.data.length){$('#hmn-ptresults').removeClass('open').html('<div class="hm-pt-item" style="color:#94a3b8;cursor:default">No patients found</div>').addClass('open');return;}
                     var h='';r.data.forEach(function(p){
                         var lbl=p.label||p.name;
-                        h+='<div class="hm-pt-item" data-id="'+p.id+'" data-refsource="'+esc(p.referral_source_name||'')+'"><span>'+esc(lbl)+'</span><span class="hm-pt-newtab">Select</span></div>';
+                        h+='<div class="hm-pt-item" data-id="'+p.id+'" data-refsource="'+esc(p.referral_source_name||'')+'" data-refsourceid="'+(p.referral_source_id||0)+'" data-smsok="'+(p.marketing_sms?'1':'0')+'"><span>'+esc(lbl)+'</span><span class="hm-pt-newtab">Select</span></div>';
                     });
                     $('#hmn-ptresults').html(h).addClass('open');
                 }).fail(function(){ $('#hmn-ptresults').removeClass('open').empty(); });
@@ -2607,8 +2645,17 @@ var Cal={
         $(document).on('click.newmodal','.hm-pt-item[data-id]',function(){
             var id=$(this).data('id'),name=$(this).find('span:first').text();
             var ref=$(this).data('refsource')||'';
+            var refId=$(this).data('refsourceid')||0;
+            var smsOk=$(this).data('smsok');
             $('#hmn-ptsearch').val(name);$('#hmn-patientid').val(id);$('#hmn-ptresults').removeClass('open');
-            $('#hmn-referral').val(ref);$('#hmn-refsource').val(ref);
+            $('#hmn-refsource').val(ref);
+            // Auto-select referral source if patient has one
+            if(refId&&$('#hmn-referral-source option[value="'+refId+'"]').length){
+                $('#hmn-referral-source').val(refId);
+            }
+            // Show GDPR warning if patient hasn't consented to SMS
+            if(smsOk==='1'||smsOk===1){$('#hmn-sms-gdpr-warn').hide();}
+            else{$('#hmn-sms-gdpr-warn').show();}
         });
         // Quick-add patient inline
         $(document).on('click.newmodal','#hmn-quickadd',function(e){
@@ -2622,6 +2669,8 @@ var Cal={
         $(document).off('click.newsave').on('click.newsave','.hm-new-save',function(){
             var pid=$('#hmn-patientid').val();
             if(!pid||pid==='0'){alert('Please search and select a patient first.');return;}
+            var refSrcId=$('#hmn-referral-source').val();
+            if(!refSrcId){alert('Please select a Referral Type.');$('#hmn-referral-source').focus();return;}
             var apptData={
                 patient_id:pid,service_id:$('#hmn-service').val(),
                 clinic_id:$('#hmn-clinic').val(),dispenser_id:$('#hmn-disp').val(),
@@ -2629,6 +2678,8 @@ var Cal={
                 start_time:$('#hmn-time').val(),duration:$('#hmn-duration').val(),
                 location_type:$('#hmn-loc').val(),
                 referring_source:$('#hmn-refsource').val(),
+                referral_source_id:refSrcId,
+                sms_reminder_hours:$('#hmn-sms-reminder').val(),
                 notes:$('#hmn-notes').val()
             };
             self._submitNewAppt(apptData,false);

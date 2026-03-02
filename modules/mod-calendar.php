@@ -389,7 +389,8 @@ function hm_ajax_search_patients() {
     $search_term = '%' . $q . '%';
     $results = HearMed_DB::get_results(
         "SELECT p.id, p.patient_number, p.first_name, p.last_name, p.phone, p.mobile, p.email,
-                p.referral_source_id, COALESCE(rs.source_name, '') AS referral_source_name
+                p.referral_source_id, COALESCE(rs.source_name, '') AS referral_source_name,
+                p.marketing_sms
          FROM hearmed_core.patients p
          LEFT JOIN hearmed_reference.referral_sources rs ON rs.id = p.referral_source_id
          WHERE p.is_active = true
@@ -413,6 +414,7 @@ function hm_ajax_search_patients() {
                 'patient_number'        => $p->patient_number ?? '',
                 'referral_source_id'    => (int) ($p->referral_source_id ?? 0),
                 'referral_source_name'  => $p->referral_source_name ?? '',
+                'marketing_sms'         => ! empty( $p->marketing_sms ) && $p->marketing_sms !== 'f' && $p->marketing_sms !== '0',
             ];
         }
     }
@@ -420,6 +422,156 @@ function hm_ajax_search_patients() {
     } catch ( Throwable $e ) {
         error_log( '[HearMed] search_patients error: ' . $e->getMessage() );
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+// ================================================================
+// AUTO-MIGRATE: referral_source_id, sms_reminder_hours, sms_reminder_sent
+// ================================================================
+function hm_ensure_appointment_referral_sms_columns() {
+    static $done = false;
+    if ( $done ) return;
+    $done = true;
+    try {
+        $cols = HearMed_DB::get_results(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'appointments'
+               AND column_name IN ('referral_source_id','sms_reminder_hours','sms_reminder_sent')"
+        );
+        $existing = [];
+        if ( $cols ) {
+            foreach ( $cols as $c ) {
+                $existing[] = $c->column_name;
+            }
+        }
+        if ( ! in_array( 'referral_source_id', $existing ) ) {
+            HearMed_DB::query( "ALTER TABLE hearmed_core.appointments ADD COLUMN referral_source_id INT" );
+        }
+        if ( ! in_array( 'sms_reminder_hours', $existing ) ) {
+            HearMed_DB::query( "ALTER TABLE hearmed_core.appointments ADD COLUMN sms_reminder_hours INT" );
+        }
+        if ( ! in_array( 'sms_reminder_sent', $existing ) ) {
+            HearMed_DB::query( "ALTER TABLE hearmed_core.appointments ADD COLUMN sms_reminder_sent BOOLEAN DEFAULT FALSE" );
+        }
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] auto-migrate appointment referral/sms cols: ' . $e->getMessage() );
+    }
+}
+
+// ================================================================
+// SMS REMINDER CRON — sends reminders, checking GDPR consent
+// ================================================================
+add_action( 'hm_send_sms_reminders', 'hm_cron_send_sms_reminders' );
+
+// Schedule the cron on init if not already scheduled
+add_action( 'init', function() {
+    if ( ! wp_next_scheduled( 'hm_send_sms_reminders' ) ) {
+        wp_schedule_event( time(), 'hourly', 'hm_send_sms_reminders' );
+    }
+});
+
+function hm_cron_send_sms_reminders() {
+    try {
+        // Find appointments that have sms_reminder_hours set, are not yet sent, and fall within the window
+        $rows = HearMed_DB::get_results(
+            "SELECT a.id, a.patient_id, a.appointment_date, a.start_time,
+                    a.sms_reminder_hours, a.service_id,
+                    p.first_name, p.last_name, p.patient_mobile, p.patient_phone,
+                    p.marketing_sms, p.gdpr_consent,
+                    sv.service_name,
+                    COALESCE(sv.reminder_sms_template_id, 0) AS sms_template_id
+             FROM hearmed_core.appointments a
+             JOIN hearmed_core.patients p ON p.id = a.patient_id
+             LEFT JOIN hearmed_reference.appointment_types sv ON sv.id = a.service_id
+             WHERE a.sms_reminder_hours IS NOT NULL
+               AND a.sms_reminder_hours > 0
+               AND (a.sms_reminder_sent IS NULL OR a.sms_reminder_sent = false)
+               AND a.appointment_status NOT IN ('Cancelled','Rescheduled','Completed')
+               AND a.appointment_date >= CURRENT_DATE
+               AND (a.appointment_date || ' ' || a.start_time)::TIMESTAMP
+                   <= (NOW() + (a.sms_reminder_hours || ' hours')::INTERVAL)
+               AND (a.appointment_date || ' ' || a.start_time)::TIMESTAMP > NOW()"
+        );
+
+        if ( empty( $rows ) ) return;
+
+        foreach ( $rows as $r ) {
+            // ── GDPR CHECK ──
+            // Only send if patient has marketing_sms consent ticked
+            $sms_ok = ! empty( $r->marketing_sms ) && $r->marketing_sms !== 'f' && $r->marketing_sms !== '0';
+            if ( ! $sms_ok ) {
+                // Mark as sent so we don't keep checking — patient hasn't consented
+                HearMed_DB::update( 'hearmed_core.appointments',
+                    [ 'sms_reminder_sent' => true ],
+                    [ 'id' => (int) $r->id ]
+                );
+                error_log( '[HearMed] SMS reminder skipped for appointment #' . $r->id
+                    . ' — patient #' . $r->patient_id . ' has not consented to SMS (marketing_sms).' );
+                continue;
+            }
+
+            // Get the mobile number
+            $mobile = $r->patient_mobile ?: $r->patient_phone;
+            if ( empty( $mobile ) ) {
+                HearMed_DB::update( 'hearmed_core.appointments',
+                    [ 'sms_reminder_sent' => true ],
+                    [ 'id' => (int) $r->id ]
+                );
+                error_log( '[HearMed] SMS reminder skipped for appointment #' . $r->id
+                    . ' — patient #' . $r->patient_id . ' has no mobile number.' );
+                continue;
+            }
+
+            // Build SMS message — use template if set, otherwise default
+            $sms_body = '';
+            $tpl_id = (int) $r->sms_template_id;
+            if ( $tpl_id ) {
+                $tpl = HearMed_DB::get_row(
+                    "SELECT template_content FROM hearmed_communication.sms_templates WHERE id = $1",
+                    [ $tpl_id ]
+                );
+                if ( $tpl && $tpl->template_content ) {
+                    $sms_body = $tpl->template_content;
+                    // Replace placeholders
+                    $sms_body = str_replace( '{first_name}', $r->first_name, $sms_body );
+                    $sms_body = str_replace( '{last_name}', $r->last_name, $sms_body );
+                    $sms_body = str_replace( '{service_name}', $r->service_name ?? '', $sms_body );
+                    $sms_body = str_replace( '{appointment_date}', $r->appointment_date, $sms_body );
+                    $sms_body = str_replace( '{start_time}', substr( $r->start_time, 0, 5 ), $sms_body );
+                }
+            }
+            if ( empty( $sms_body ) ) {
+                $sms_body = 'Hi ' . $r->first_name . ', this is a reminder of your appointment on '
+                    . $r->appointment_date . ' at ' . substr( $r->start_time, 0, 5 )
+                    . ( $r->service_name ? ' (' . $r->service_name . ')' : '' )
+                    . '. Please call us if you need to reschedule.';
+            }
+
+            // Send via HearMed SMS gateway (if class exists)
+            $sent = false;
+            if ( class_exists( 'HearMed_SMS' ) && method_exists( 'HearMed_SMS', 'send' ) ) {
+                $sent = HearMed_SMS::send( $mobile, $sms_body );
+            } else {
+                // Fallback: fire an action so external integrations can hook in
+                do_action( 'hm_send_sms', $mobile, $sms_body, [
+                    'appointment_id' => (int) $r->id,
+                    'patient_id'     => (int) $r->patient_id,
+                    'type'           => 'appointment_reminder',
+                ] );
+                $sent = true; // assume sent by hook consumers
+            }
+
+            if ( $sent ) {
+                HearMed_DB::update( 'hearmed_core.appointments',
+                    [ 'sms_reminder_sent' => true ],
+                    [ 'id' => (int) $r->id ]
+                );
+                error_log( '[HearMed] SMS reminder sent for appointment #' . $r->id
+                    . ' to patient #' . $r->patient_id . ' (' . $mobile . ').' );
+            }
+        }
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] SMS reminder cron error: ' . $e->getMessage() );
     }
 }
 
@@ -443,6 +595,7 @@ function hm_ajax_get_appointments() {
                    a.appointment_status, a.location_type, a.notes, a.outcome,
                    a.duration_minutes,
                    a.created_by,
+                   a.referral_source_id, a.sms_reminder_hours,
                    p.first_name AS patient_first, p.last_name AS patient_last, p.patient_number,
                    (st.first_name || ' ' || st.last_name) AS dispenser_name,
                    c.clinic_name,
@@ -522,6 +675,8 @@ function hm_ajax_get_appointments() {
             'created_by'            => (int) ($r->created_by ?? 0),
             'sales_opportunity'     => !empty($r->sales_opportunity) && $r->sales_opportunity !== 'f',
             'income_bearing'        => !empty($r->income_bearing) && $r->income_bearing !== 'f',
+            'referral_source_id'    => (int) ($r->referral_source_id ?? 0),
+            'sms_reminder_hours'    => (int) ($r->sms_reminder_hours ?? 0),
         ];
 
         // Fallback: if outcome name exists but no banner colour, look up from templates
@@ -682,11 +837,17 @@ function hm_ajax_create_appointment() {
         'appointment_status' => sanitize_text_field( $_POST['status'] ?? 'Not Confirmed' ),
         'location_type'      => sanitize_text_field( $_POST['location_type'] ?? 'Clinic' ),
         'referring_source'   => sanitize_text_field( $_POST['referring_source'] ?? '' ),
+        'referral_source_id' => intval( $_POST['referral_source_id'] ?? 0 ) ?: null,
+        'sms_reminder_hours' => intval( $_POST['sms_reminder_hours'] ?? 0 ) ?: null,
+        'sms_reminder_sent'  => false,
         'notes'              => sanitize_textarea_field( $_POST['notes'] ?? '' ),
         'created_by'         => get_current_user_id(),
         'created_at'         => current_time( 'mysql' ),
         'updated_at'         => current_time( 'mysql' ),
     ];
+
+    // Auto-migrate: ensure referral_source_id, sms_reminder_hours, sms_reminder_sent columns exist
+    hm_ensure_appointment_referral_sms_columns();
 
     $new_id = HearMed_DB::insert( $t, $insert_data );
 
@@ -802,6 +963,17 @@ function hm_ajax_update_appointment() {
     // Outcome (varchar column)
     if ( isset( $_POST['outcome'] ) ) {
         $data['outcome'] = sanitize_text_field( $_POST['outcome'] );
+    }
+
+    // Referral source
+    if ( isset( $_POST['referral_source_id'] ) ) {
+        $data['referral_source_id'] = intval( $_POST['referral_source_id'] ) ?: null;
+    }
+
+    // SMS reminder hours
+    if ( isset( $_POST['sms_reminder_hours'] ) ) {
+        $data['sms_reminder_hours'] = intval( $_POST['sms_reminder_hours'] ) ?: null;
+        $data['sms_reminder_sent']  = false; // reset if timing changed
     }
 
     HearMed_DB::update( $t, $data, [ 'id' => $id ] );
@@ -971,6 +1143,9 @@ function hm_ajax_update_appointment_status() {
                         'duration_minutes'   => $dur,
                         'appointment_status' => 'Not Confirmed',
                         'location_type'      => $appt->location_type ?? 'Clinic',
+                        'referral_source_id' => $appt->referral_source_id ?? null,
+                        'sms_reminder_hours' => $appt->sms_reminder_hours ?? null,
+                        'sms_reminder_sent'  => false,
                         'notes'              => '',
                         'created_by'         => get_current_user_id(),
                         'created_at'         => current_time( 'mysql' ),
