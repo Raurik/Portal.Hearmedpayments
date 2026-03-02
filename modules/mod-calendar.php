@@ -1486,17 +1486,41 @@ function hm_ajax_save_appointment_outcome() {
 
     HearMed_DB::update( HearMed_Portal::table( 'appointments' ), $data, [ 'id' => $appt_id ] );
 
-    // Also save to appointment_outcomes table for history (may not exist)
+    // Also save to appointment_outcomes table for history
     try {
-        HearMed_DB::insert( 'hearmed_core.appointment_outcomes', [
-            'appointment_id' => $appt_id,
-            'outcome_name'   => $outcome_text,
-            'outcome_color'  => $ot ? $ot->outcome_color : '#6b7280',
-            'notes'          => $note,
-            'created_at'     => current_time( 'mysql' ),
-            'created_by'     => get_current_user_id(),
-        ] );
-    } catch ( Throwable $ignored ) {}
+        $ao_data = [
+            'appointment_id'     => $appt_id,
+            'outcome_template_id'=> $outcome_id ?: null,
+            'outcome_name'       => $outcome_text,
+            'outcome_color'      => $ot ? $ot->outcome_color : '#6b7280',
+            'notes'              => $note,
+            'created_at'         => current_time( 'mysql' ),
+            'created_by'         => get_current_user_id(),
+        ];
+
+        // Auto-create table if it doesn't exist
+        HearMed_DB::query(
+            "CREATE TABLE IF NOT EXISTS hearmed_core.appointment_outcomes (
+                id SERIAL PRIMARY KEY,
+                appointment_id INT NOT NULL,
+                outcome_template_id INT,
+                outcome_name VARCHAR(255),
+                outcome_color VARCHAR(20),
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                created_by INT
+            )"
+        );
+
+        // Ensure outcome_template_id column exists (may be missing on older installs)
+        HearMed_DB::query(
+            "ALTER TABLE hearmed_core.appointment_outcomes ADD COLUMN IF NOT EXISTS outcome_template_id INT"
+        );
+
+        HearMed_DB::insert( 'hearmed_core.appointment_outcomes', $ao_data );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] appointment_outcomes insert failed: ' . $e->getMessage() );
+    }
 
     HearMed_Portal::log( 'outcome_set', 'appointment', $appt_id, [
         'outcome_id'   => $outcome_id,
