@@ -40,7 +40,7 @@
         onlineCount:  document.getElementById('hm-chat-online-count'),
         newDmBtn:     document.querySelector('.hm-chat-new-dm-btn'),
         dmModal:      document.getElementById('hm-chat-dm-modal'),
-        dmModalClose: document.querySelector('.hm-chat-modal-close'),
+        dmModalClose: document.querySelector('#hm-chat-dm-modal .hm-close'),
         dmSearch:     document.getElementById('hm-chat-dm-search'),
         dmResults:    document.getElementById('hm-chat-dm-results'),
     };

@@ -92,9 +92,12 @@ class HearMed_TeamChat {
             <!-- SIDEBAR -->
             <div class="hm-chat-sidebar">
                 <div class="hm-chat-sidebar-header">
-                    <span class="hm-chat-logo">💬 Team Chat</span>
+                    <span class="hm-chat-logo">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        Team Chat
+                    </span>
                     <button class="hm-chat-new-dm-btn" title="New direct message">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </button>
                 </div>
 
@@ -123,7 +126,9 @@ class HearMed_TeamChat {
 
                 <div id="hm-chat-messages" class="hm-chat-messages">
                     <div class="hm-chat-welcome">
-                        <div class="hm-chat-welcome-icon">💬</div>
+                        <div class="hm-chat-welcome-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        </div>
                         <p>Select a channel or colleague to start chatting.</p>
                     </div>
                 </div>
@@ -149,12 +154,12 @@ class HearMed_TeamChat {
                 <div class="hm-chat-modal-box">
                     <div class="hm-chat-modal-header">
                         <h3>New Direct Message</h3>
-                        <button class="hm-close">×</button>
+                        <button class="hm-close" title="Close">&times;</button>
                     </div>
                     <input type="text"
                            id="hm-chat-dm-search"
                            class="hm-chat-dm-search"
-                           placeholder="Search staff name…" />
+                           placeholder="Search staff by name…" />
                     <div id="hm-chat-dm-results" class="hm-chat-dm-results"></div>
                 </div>
             </div>
