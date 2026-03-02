@@ -37,6 +37,13 @@
   min-height: 50px;
 }
 
+.hm-tb-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
 .hm-tb-left {
   display: flex;
   align-items: center;
@@ -123,7 +130,7 @@
   font-size: 12px;
   font-weight: 600;
   font-family: var(--hm-font-btn, 'Plus Jakarta Sans', sans-serif);
-  color: var(--hm-text-muted, #94a3b8);
+  color: var(--hm-text-muted, #b0b8c9);
   background: transparent;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -149,7 +156,7 @@
   font-size: 11px;
   font-weight: 600;
   font-family: var(--hm-font-btn, 'Plus Jakarta Sans', sans-serif);
-  color: var(--hm-text-muted, #94a3b8);
+  color: var(--hm-text-muted, #b0b8c9);
   background: transparent;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -161,6 +168,16 @@
   color: #fff;
   box-shadow: 0 1px 3px rgba(0,0,0,0.12);
   font-weight: 700;
+}
+
+/* ── Disabled multi-select (greyed out in clinic view) ── */
+.hm-ms.hm-ms-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.hm-ms.hm-ms-disabled .hm-ms-btn {
+  cursor: not-allowed;
+  background: var(--hm-bg-alt, #f8fafc);
 }
 
 /* ── Icon Button (print) ── */

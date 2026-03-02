@@ -177,18 +177,20 @@ var Cal={
                     '<button class="hm-nav-btn" id="hm-next">'+IC.chevR+'</button>'+
                     '<div class="hm-date-box" id="hm-dateBox">'+IC.cal+' <span id="hm-dateLbl"></span><input type="date" id="hm-datePick" style="position:absolute;opacity:0;width:1px;height:1px;"></div>'+
                 '</div>'+
+                '<div class="hm-tb-center">'+
+                    '<div class="hm-view-tog" id="hm-calViewTog"><button class="hm-cview-btn on" data-cv="clinic">Clinic View</button><button class="hm-cview-btn" data-cv="dispenser">Dispenser View</button></div>'+
+                '</div>'+
                 '<div class="hm-tb-right">'+
                     '<div class="hm-view-tog"><button class="hm-view-btn" data-v="day">Day</button><button class="hm-view-btn" data-v="week">Week</button></div>'+
-                    '<div class="hm-view-tog" id="hm-calViewTog"><button class="hm-cview-btn on" data-cv="clinic">Clinic View</button><button class="hm-cview-btn" data-cv="dispenser">Dispenser View</button></div>'+
                     '<button class="hm-icon-btn" onclick="window.print()" title="Print">'+IC.print+'</button>'+
                     '<div class="hm-sep"></div>'+
-                    /* Multi-select clinic (dispenser view only) */
-                    '<div class="hm-ms" id="hm-clinicMs" style="display:none">'+
+                    /* Multi-select clinic */
+                    '<div class="hm-ms hm-ms-disabled" id="hm-clinicMs">'+
                         '<button class="hm-ms-btn" id="hm-clinicMsBtn"><span class="hm-ms-lbl">Select Clinic</span><span class="hm-ms-chev">'+IC.chevDown+'</span></button>'+
                         '<div class="hm-ms-drop" id="hm-clinicMsDrop"></div>'+
                     '</div>'+
-                    /* Multi-select dispenser (dispenser view only) */
-                    '<div class="hm-ms" id="hm-dispMs" style="display:none">'+
+                    /* Multi-select dispenser */
+                    '<div class="hm-ms hm-ms-disabled" id="hm-dispMs">'+
                         '<button class="hm-ms-btn" id="hm-dispMsBtn"><span class="hm-ms-lbl">All Assignees</span><span class="hm-ms-chev">'+IC.chevDown+'</span></button>'+
                         '<div class="hm-ms-drop" id="hm-dispMsDrop"></div>'+
                     '</div>'+
@@ -226,8 +228,8 @@ var Cal={
         });
 
         // Multi-select toggles
-        $(document).on('click','#hm-clinicMsBtn',function(e){e.stopPropagation();$('#hm-clinicMsDrop').toggleClass('open');$('#hm-dispMsDrop').removeClass('open');});
-        $(document).on('click','#hm-dispMsBtn',function(e){e.stopPropagation();$('#hm-dispMsDrop').toggleClass('open');$('#hm-clinicMsDrop').removeClass('open');});
+        $(document).on('click','#hm-clinicMsBtn',function(e){e.stopPropagation();if($('#hm-clinicMs').hasClass('hm-ms-disabled'))return;$('#hm-clinicMsDrop').toggleClass('open');$('#hm-dispMsDrop').removeClass('open');});
+        $(document).on('click','#hm-dispMsBtn',function(e){e.stopPropagation();if($('#hm-dispMs').hasClass('hm-ms-disabled'))return;$('#hm-dispMsDrop').toggleClass('open');$('#hm-clinicMsDrop').removeClass('open');});
         $(document).on('click','.hm-ms-item',function(e){
             e.stopPropagation();
             var $t=$(this),id=parseInt($t.data('id')),group=$t.data('group');
@@ -495,11 +497,11 @@ var Cal={
     onCalViewChange:function(){
         var self=this;
         if(this.calViewMode==='clinic'){
-            $('#hm-clinicMs,#hm-dispMs').hide();
+            $('#hm-clinicMs,#hm-dispMs').addClass('hm-ms-disabled');
             this.selClinics=[];this.selDisps=[];
             this.loadClinicCoverage().then(function(){self.refresh();});
         } else {
-            $('#hm-clinicMs,#hm-dispMs').show();
+            $('#hm-clinicMs,#hm-dispMs').removeClass('hm-ms-disabled');
             this.renderMultiSelect();
             // Auto-select first clinic if none selected
             if(!this.selClinics.length&&this.clinics.length){

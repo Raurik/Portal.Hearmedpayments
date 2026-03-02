@@ -135,6 +135,13 @@ add_action( 'wp_ajax_hm_update_repair_status', 'hm_ajax_update_repair_status' );
 // Exchange flow
 add_action( 'wp_ajax_hm_create_exchange',  'hm_ajax_create_exchange' );
 
+// Return flow (full return with PRSI tracking)
+add_action( 'wp_ajax_hm_create_return',  'hm_ajax_create_return' );
+
+// Patient credits
+add_action( 'wp_ajax_hm_get_patient_credits',  'hm_ajax_get_patient_credits' );
+add_action( 'wp_ajax_hm_apply_credit_to_invoice', 'hm_ajax_apply_credit_to_invoice' );
+
 // PRSI claim tracking
 add_action( 'wp_ajax_hm_get_prsi_info',  'hm_ajax_get_prsi_info' );
 
@@ -2377,18 +2384,42 @@ function hm_ajax_create_exchange() {
     $device_id     = intval( $_POST['device_id'] ?? 0 );
     $reason        = sanitize_textarea_field( $_POST['reason'] ?? '' );
     $credit_amount = floatval( $_POST['credit_amount'] ?? 0 );
+    $side          = sanitize_text_field( $_POST['side'] ?? 'both' );
+    $refund_type   = sanitize_text_field( $_POST['refund_type'] ?? 'credit' );
 
     if ( ! $pid || ! $device_id ) wp_send_json_error( 'Patient and device required' );
 
     $db       = HearMed_DB::instance();
     $staff_id = hm_patient_staff_id();
 
+    hm_ensure_returns_tables();
+
     $device = $db->get_row( "SELECT * FROM hearmed_core.patient_devices WHERE id = \$1", [ $device_id ] );
     if ( ! $device ) wp_send_json_error( 'Device not found' );
+
+    // Get original order/invoice for PRSI info
+    $order = null;
+    $prsi_amount = 0;
+    if ( $device->order_id ) {
+        $order = $db->get_row(
+            "SELECT o.*, inv.grand_total AS inv_total, inv.id AS inv_id
+             FROM hearmed_core.orders o
+             LEFT JOIN hearmed_core.invoices inv ON inv.id = o.invoice_id
+             WHERE o.id = \$1",
+            [ $device->order_id ]
+        );
+        if ( $order ) {
+            $prsi_amount = floatval( $order->prsi_amount ?? 0 );
+        }
+    }
+
+    // Patient refund = credit amount minus PRSI (PRSI never goes back to patient)
+    $patient_refund = max( 0, $credit_amount - $prsi_amount );
 
     $db->begin_transaction();
 
     try {
+        // Mark device as Replaced
         $db->update( 'hearmed_core.patient_devices', [
             'device_status'  => 'Replaced',
             'inactive_reason'=> 'Exchange: ' . $reason,
@@ -2396,38 +2427,485 @@ function hm_ajax_create_exchange() {
             'updated_at'     => date( 'c' ),
         ], [ 'id' => $device_id ] );
 
+        // Generate credit note number
         $cn_prefix = HearMed_Settings::get( 'hm_credit_note_prefix', 'HMCN' );
         $cn_seq    = $db->get_var( "SELECT COALESCE(MAX(id), 0) + 1 FROM hearmed_core.credit_notes" );
         $cn_number = $cn_prefix . '-' . str_pad( $cn_seq, 4, '0', STR_PAD_LEFT );
 
+        // Create credit note with PRSI tracking
         $cn_id = $db->insert( 'hearmed_core.credit_notes', [
-            'credit_note_number' => $cn_number,
+            'credit_note_number'  => $cn_number,
+            'patient_id'          => $pid,
+            'invoice_id'          => $order->inv_id ?? null,
+            'order_id'            => $device->order_id ?: null,
+            'device_id'           => $device_id,
+            'amount'              => $credit_amount,
+            'prsi_amount'         => $prsi_amount,
+            'patient_refund_amount' => $patient_refund,
+            'reason'              => 'Exchange: ' . $reason,
+            'credit_date'         => date( 'Y-m-d' ),
+            'refund_type'         => 'exchange',
+            'exchange_type'       => sanitize_text_field( $_POST['exchange_type'] ?? 'same_value' ),
+            'cheque_sent'         => false,
+            'prsi_notified'       => false,
+            'created_by'          => $staff_id ?: null,
+        ]);
+
+        // Create patient credit (always for exchanges)
+        $credit_id = $db->insert( 'hearmed_core.patient_credits', [
             'patient_id'         => $pid,
-            'invoice_id'         => $device->invoice_id ?: null,
-            'amount'             => $credit_amount,
-            'reason'             => 'Exchange: ' . $reason,
-            'credit_date'        => date( 'Y-m-d' ),
-            'refund_type'        => sanitize_text_field( $_POST['refund_type'] ?? 'transfer' ),
+            'credit_note_id'     => $cn_id,
+            'original_invoice_id'=> $order->inv_id ?? null,
+            'original_order_id'  => $device->order_id ?: null,
+            'amount'             => $patient_refund,
+            'used_amount'        => 0,
+            'status'             => 'active',
+            'notes'              => "Exchange credit from CN {$cn_number}. Total: €" . number_format($credit_amount, 2) . ", PRSI: €" . number_format($prsi_amount, 2) . ", Patient credit: €" . number_format($patient_refund, 2),
             'created_by'         => $staff_id ?: null,
+        ]);
+
+        // Create exchange record
+        $exchange_id = $db->insert( 'hearmed_core.exchanges', [
+            'patient_id'          => $pid,
+            'original_order_id'   => $device->order_id ?: null,
+            'original_invoice_id' => $order->inv_id ?? null,
+            'credit_note_id'      => $cn_id,
+            'patient_credit_id'   => $credit_id,
+            'device_id'           => $device_id,
+            'exchange_type'       => sanitize_text_field( $_POST['exchange_type'] ?? 'same_value' ),
+            'original_amount'     => $credit_amount,
+            'credit_amount'       => $patient_refund,
+            'prsi_amount'         => $prsi_amount,
+            'reason'              => $reason,
+            'status'              => 'pending',
+            'created_by'          => $staff_id ?: null,
+        ]);
+
+        // Queue credit note for QBO
+        $db->insert( 'hearmed_admin.qbo_batch_queue', [
+            'entity_type' => 'credit_note',
+            'entity_id'   => $cn_id,
+            'status'      => 'pending',
+            'queued_at'   => date('Y-m-d H:i:s'),
+            'created_by'  => $staff_id ?: null,
+        ]);
+
+        // Timeline entry
+        $db->insert( 'hearmed_core.patient_timeline', [
+            'patient_id'  => $pid,
+            'event_type'  => 'exchange_created',
+            'event_date'  => date('Y-m-d'),
+            'staff_id'    => $staff_id ?: null,
+            'description' => "Exchange initiated. Credit note {$cn_number} for €" . number_format($credit_amount, 2) . ". Patient credit: €" . number_format($patient_refund, 2) . ($prsi_amount > 0 ? ". PRSI: €" . number_format($prsi_amount, 2) : '') . ". Reason: {$reason}",
         ]);
 
         $db->commit();
 
-        hm_patient_audit( 'CREATE_EXCHANGE', 'credit_note', $cn_id, [
+        hm_patient_audit( 'CREATE_EXCHANGE', 'exchange', $exchange_id, [
             'patient_id'    => $pid,
             'device_id'     => $device_id,
             'credit_note'   => $cn_number,
             'credit_amount' => $credit_amount,
+            'prsi_amount'   => $prsi_amount,
+            'patient_credit'=> $patient_refund,
         ]);
 
         wp_send_json_success( [
             'credit_note_id'     => $cn_id,
             'credit_note_number' => $cn_number,
+            'exchange_id'        => $exchange_id,
+            'patient_credit_id'  => $credit_id,
+            'patient_credit'     => $patient_refund,
+            'prsi_amount'        => $prsi_amount,
         ]);
     } catch ( \Exception $e ) {
         $db->rollback();
         wp_send_json_error( 'Exchange failed: ' . $e->getMessage() );
     }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  RETURN FLOW — Full hearing aid return with PRSI tracking
+//  Creates: credit note, return record, PRSI notification if applicable
+//  Refund amount = patient-paid amount ONLY (excludes PRSI)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_create_return() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $pid       = intval( $_POST['patient_id'] ?? 0 );
+    $device_id = intval( $_POST['device_id'] ?? 0 );
+    $reason    = sanitize_textarea_field( $_POST['reason'] ?? '' );
+    $side      = sanitize_text_field( $_POST['side'] ?? 'both' );
+    $notes     = sanitize_textarea_field( $_POST['notes'] ?? '' );
+
+    if ( ! $pid || ! $device_id ) wp_send_json_error( 'Patient and device required' );
+    if ( ! $reason ) wp_send_json_error( 'Reason for return is required' );
+
+    $db       = HearMed_DB::instance();
+    $staff_id = hm_patient_staff_id();
+
+    hm_ensure_returns_tables();
+
+    $device = $db->get_row( "SELECT * FROM hearmed_core.patient_devices WHERE id = \$1", [ $device_id ] );
+    if ( ! $device ) wp_send_json_error( 'Device not found' );
+
+    // Get original order/invoice info for amounts + PRSI
+    $order = null;
+    $invoice = null;
+    $total_amount = 0;
+    $prsi_amount = 0;
+    $patient_paid = 0;
+
+    if ( $device->order_id ) {
+        $order = $db->get_row(
+            "SELECT o.*, inv.grand_total AS inv_total, inv.id AS inv_id
+             FROM hearmed_core.orders o
+             LEFT JOIN hearmed_core.invoices inv ON inv.id = o.invoice_id
+             WHERE o.id = \$1",
+            [ $device->order_id ]
+        );
+        if ( $order ) {
+            $total_amount = floatval( $order->grand_total ?? 0 );
+            $prsi_amount  = floatval( $order->prsi_amount ?? 0 );
+            // Grand total already has PRSI deducted, so patient paid = grand_total
+            $patient_paid = $total_amount;
+        }
+    }
+
+    // Allow override of refund amount from POST
+    $refund_override = isset( $_POST['refund_amount'] ) ? floatval( $_POST['refund_amount'] ) : null;
+    $patient_refund  = $refund_override !== null ? $refund_override : $patient_paid;
+
+    $db->begin_transaction();
+
+    try {
+        // 1. Mark device as Returned
+        $db->update( 'hearmed_core.patient_devices', [
+            'device_status'  => 'Returned',
+            'inactive_reason'=> 'Return: ' . $reason,
+            'inactive_date'  => date( 'Y-m-d' ),
+            'updated_at'     => date( 'c' ),
+        ], [ 'id' => $device_id ] );
+
+        // 2. Generate credit note
+        $cn_prefix = HearMed_Settings::get( 'hm_credit_note_prefix', 'HMCN' );
+        $cn_seq    = $db->get_var( "SELECT COALESCE(MAX(id), 0) + 1 FROM hearmed_core.credit_notes" );
+        $cn_number = $cn_prefix . '-' . str_pad( $cn_seq, 4, '0', STR_PAD_LEFT );
+
+        $cn_id = $db->insert( 'hearmed_core.credit_notes', [
+            'credit_note_number'    => $cn_number,
+            'patient_id'            => $pid,
+            'invoice_id'            => $order->inv_id ?? null,
+            'order_id'              => $device->order_id ?: null,
+            'device_id'             => $device_id,
+            'amount'                => $patient_refund + $prsi_amount,
+            'prsi_amount'           => $prsi_amount,
+            'patient_refund_amount' => $patient_refund,
+            'reason'                => 'Return: ' . $reason,
+            'credit_date'           => date( 'Y-m-d' ),
+            'refund_type'           => 'cheque',
+            'cheque_sent'           => false,
+            'prsi_notified'         => false,
+            'created_by'            => $staff_id ?: null,
+        ]);
+
+        // 3. Create return record
+        $return_id = $db->insert( 'hearmed_core.returns', [
+            'patient_id'            => $pid,
+            'order_id'              => $device->order_id ?: null,
+            'invoice_id'            => $order->inv_id ?? null,
+            'credit_note_id'        => $cn_id,
+            'device_id'             => $device_id,
+            'return_date'           => date( 'Y-m-d' ),
+            'reason'                => $reason,
+            'side'                  => $side,
+            'total_refund_amount'   => $patient_refund + $prsi_amount,
+            'patient_refund_amount' => $patient_refund,
+            'prsi_refund_amount'    => $prsi_amount,
+            'refund_status'         => 'pending',
+            'prsi_notified'         => false,
+            'notes'                 => $notes,
+            'created_by'            => $staff_id ?: null,
+        ]);
+
+        // 4. Queue credit note for QBO
+        $db->insert( 'hearmed_admin.qbo_batch_queue', [
+            'entity_type' => 'credit_note',
+            'entity_id'   => $cn_id,
+            'status'      => 'pending',
+            'queued_at'   => date('Y-m-d H:i:s'),
+            'created_by'  => $staff_id ?: null,
+        ]);
+
+        // 5. Timeline entry
+        $db->insert( 'hearmed_core.patient_timeline', [
+            'patient_id'  => $pid,
+            'event_type'  => 'return_created',
+            'event_date'  => date('Y-m-d'),
+            'staff_id'    => $staff_id ?: null,
+            'description' => "Hearing aid returned. Credit note {$cn_number}. Patient refund: €" . number_format($patient_refund, 2) . ($prsi_amount > 0 ? ". PRSI to reclaim: €" . number_format($prsi_amount, 2) : '') . ". Reason: {$reason}",
+        ]);
+
+        $db->commit();
+
+        hm_patient_audit( 'CREATE_RETURN', 'return', $return_id, [
+            'patient_id'      => $pid,
+            'device_id'       => $device_id,
+            'credit_note'     => $cn_number,
+            'patient_refund'  => $patient_refund,
+            'prsi_amount'     => $prsi_amount,
+        ]);
+
+        wp_send_json_success( [
+            'return_id'          => $return_id,
+            'credit_note_id'     => $cn_id,
+            'credit_note_number' => $cn_number,
+            'patient_refund'     => $patient_refund,
+            'prsi_amount'        => $prsi_amount,
+        ]);
+    } catch ( \Exception $e ) {
+        $db->rollback();
+        wp_send_json_error( 'Return failed: ' . $e->getMessage() );
+    }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PATIENT CREDITS — get credits for a patient
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_get_patient_credits() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $pid = intval( $_POST['patient_id'] ?? 0 );
+    if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
+
+    hm_ensure_returns_tables();
+    $db = HearMed_DB::instance();
+
+    $rows = $db->get_results(
+        "SELECT pc.id, pc.amount, pc.used_amount,
+                (pc.amount - pc.used_amount) AS remaining,
+                pc.status, pc.notes, pc.created_at,
+                cn.credit_note_number
+         FROM hearmed_core.patient_credits pc
+         LEFT JOIN hearmed_core.credit_notes cn ON cn.id = pc.credit_note_id
+         WHERE pc.patient_id = \$1
+         ORDER BY pc.created_at DESC",
+        [ $pid ]
+    );
+
+    wp_send_json_success( $rows ?: [] );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  APPLY CREDIT — apply patient credit to an invoice
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_apply_credit_to_invoice() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $credit_id  = intval( $_POST['credit_id'] ?? 0 );
+    $invoice_id = intval( $_POST['invoice_id'] ?? 0 );
+    $amount     = floatval( $_POST['amount'] ?? 0 );
+
+    if ( ! $credit_id || ! $invoice_id ) wp_send_json_error( 'Credit and invoice required' );
+    if ( $amount <= 0 ) wp_send_json_error( 'Amount must be positive' );
+
+    hm_ensure_returns_tables();
+    $db       = HearMed_DB::instance();
+    $staff_id = hm_patient_staff_id();
+
+    $credit = $db->get_row( "SELECT * FROM hearmed_core.patient_credits WHERE id = \$1", [ $credit_id ] );
+    if ( ! $credit ) wp_send_json_error( 'Credit not found' );
+    if ( $credit->status !== 'active' ) wp_send_json_error( 'Credit is no longer active' );
+
+    $remaining = floatval( $credit->amount ) - floatval( $credit->used_amount );
+    if ( $amount > $remaining ) wp_send_json_error( 'Amount exceeds available credit (€' . number_format($remaining, 2) . ')' );
+
+    $invoice = $db->get_row( "SELECT * FROM hearmed_core.invoices WHERE id = \$1", [ $invoice_id ] );
+    if ( ! $invoice ) wp_send_json_error( 'Invoice not found' );
+
+    $balance = floatval( $invoice->balance_remaining );
+    $apply   = min( $amount, $balance );
+
+    $db->begin_transaction();
+    try {
+        // Record application
+        $db->insert( 'hearmed_core.credit_applications', [
+            'patient_credit_id' => $credit_id,
+            'invoice_id'        => $invoice_id,
+            'amount'            => $apply,
+            'applied_by'        => $staff_id ?: null,
+        ]);
+
+        // Update credit used amount
+        $new_used = floatval( $credit->used_amount ) + $apply;
+        $new_status = $new_used >= floatval( $credit->amount ) ? 'used' : 'active';
+        $db->update( 'hearmed_core.patient_credits', [
+            'used_amount' => $new_used,
+            'status'      => $new_status,
+            'updated_at'  => date( 'c' ),
+        ], [ 'id' => $credit_id ] );
+
+        // Update invoice balance
+        $new_balance = max( 0, $balance - $apply );
+        $credit_applied = floatval( $invoice->credit_applied ?? 0 ) + $apply;
+        $payment_status = $new_balance <= 0 ? 'Paid' : ( $credit_applied > 0 ? 'Partially Paid' : $invoice->payment_status );
+        $db->update( 'hearmed_core.invoices', [
+            'balance_remaining' => $new_balance,
+            'credit_applied'    => $credit_applied,
+            'payment_status'    => $payment_status,
+        ], [ 'id' => $invoice_id ] );
+
+        $db->commit();
+
+        wp_send_json_success( [
+            'applied'            => $apply,
+            'credit_remaining'   => floatval( $credit->amount ) - $new_used,
+            'invoice_balance'    => $new_balance,
+        ]);
+    } catch ( \Exception $e ) {
+        $db->rollback();
+        wp_send_json_error( 'Failed: ' . $e->getMessage() );
+    }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  AUTO-MIGRATE — ensures returns/exchanges/credits tables exist
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ensure_returns_tables() {
+    static $done = false;
+    if ( $done ) return;
+    $done = true;
+
+    $db = HearMed_DB::instance();
+
+    // Ensure credit_notes has new columns
+    $cols = [
+        'prsi_amount'           => 'DECIMAL(10,2) DEFAULT 0',
+        'patient_refund_amount' => 'DECIMAL(10,2) DEFAULT 0',
+        'prsi_notified'         => 'BOOLEAN DEFAULT FALSE',
+        'prsi_notified_date'    => 'DATE',
+        'prsi_notified_by'      => 'BIGINT',
+        'device_id'             => 'BIGINT',
+        'exchange_type'         => 'VARCHAR(20)',
+    ];
+    foreach ( $cols as $col => $type ) {
+        $exists = $db->get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'credit_notes' AND column_name = \$1",
+            [ $col ]
+        );
+        if ( ! $exists ) {
+            $db->query( "ALTER TABLE hearmed_core.credit_notes ADD COLUMN {$col} {$type}" );
+        }
+    }
+
+    // Ensure invoices has credit columns
+    $inv_cols = [
+        'credit_applied' => 'DECIMAL(10,2) DEFAULT 0',
+        'is_exchange'    => 'BOOLEAN DEFAULT FALSE',
+        'exchange_id'    => 'BIGINT',
+    ];
+    foreach ( $inv_cols as $col => $type ) {
+        $exists = $db->get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'invoices' AND column_name = \$1",
+            [ $col ]
+        );
+        if ( ! $exists ) {
+            $db->query( "ALTER TABLE hearmed_core.invoices ADD COLUMN {$col} {$type}" );
+        }
+    }
+
+    // Create patient_credits table
+    $db->query(
+        "CREATE TABLE IF NOT EXISTS hearmed_core.patient_credits (
+            id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+            patient_id      BIGINT NOT NULL,
+            credit_note_id  BIGINT,
+            original_invoice_id BIGINT,
+            original_order_id   BIGINT,
+            amount          DECIMAL(10,2) NOT NULL DEFAULT 0,
+            used_amount     DECIMAL(10,2) NOT NULL DEFAULT 0,
+            status          VARCHAR(20) NOT NULL DEFAULT 'active',
+            notes           TEXT,
+            created_by      BIGINT,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )"
+    );
+
+    // Create credit_applications table
+    $db->query(
+        "CREATE TABLE IF NOT EXISTS hearmed_core.credit_applications (
+            id                  BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+            patient_credit_id   BIGINT NOT NULL,
+            invoice_id          BIGINT NOT NULL,
+            amount              DECIMAL(10,2) NOT NULL,
+            applied_by          BIGINT,
+            applied_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )"
+    );
+
+    // Create exchanges table
+    $db->query(
+        "CREATE TABLE IF NOT EXISTS hearmed_core.exchanges (
+            id                  BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+            patient_id          BIGINT NOT NULL,
+            original_order_id   BIGINT,
+            original_invoice_id BIGINT,
+            new_order_id        BIGINT,
+            new_invoice_id      BIGINT,
+            credit_note_id      BIGINT,
+            patient_credit_id   BIGINT,
+            device_id           BIGINT,
+            exchange_type       VARCHAR(20) NOT NULL DEFAULT 'same_value',
+            original_amount     DECIMAL(10,2) DEFAULT 0,
+            new_amount          DECIMAL(10,2) DEFAULT 0,
+            credit_amount       DECIMAL(10,2) DEFAULT 0,
+            balance_due         DECIMAL(10,2) DEFAULT 0,
+            refund_amount       DECIMAL(10,2) DEFAULT 0,
+            prsi_amount         DECIMAL(10,2) DEFAULT 0,
+            reason              TEXT,
+            status              VARCHAR(20) NOT NULL DEFAULT 'pending',
+            completed_at        TIMESTAMP,
+            completed_by        BIGINT,
+            created_by          BIGINT,
+            created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )"
+    );
+
+    // Create returns table
+    $db->query(
+        "CREATE TABLE IF NOT EXISTS hearmed_core.returns (
+            id                    BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+            patient_id            BIGINT NOT NULL,
+            order_id              BIGINT,
+            invoice_id            BIGINT,
+            credit_note_id        BIGINT,
+            device_id             BIGINT,
+            return_date           DATE NOT NULL DEFAULT CURRENT_DATE,
+            reason                TEXT,
+            side                  VARCHAR(10) DEFAULT 'both',
+            total_refund_amount   DECIMAL(10,2) DEFAULT 0,
+            patient_refund_amount DECIMAL(10,2) DEFAULT 0,
+            prsi_refund_amount    DECIMAL(10,2) DEFAULT 0,
+            refund_status         VARCHAR(20) NOT NULL DEFAULT 'pending',
+            refund_sent_date      DATE,
+            prsi_notified         BOOLEAN DEFAULT FALSE,
+            prsi_notified_date    DATE,
+            prsi_notified_by      BIGINT,
+            notes                 TEXT,
+            created_by            BIGINT,
+            created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )"
+    );
 }
 
 

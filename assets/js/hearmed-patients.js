@@ -574,6 +574,7 @@ function initProfile(){
             var h='<div class="hm-tab-section">';
             h+='<div class="hm-section-header" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><h3 style="margin:0;">Hearing Aids</h3>';
             if(act.length) h+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-btn-icon-teal" id="hm-exchange-top-btn">'+HM_ICONS.returns+' Exchange</button>';
+            if(act.length) h+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-btn-danger-outline" id="hm-return-top-btn">↩ Return</button>';
             h+='<button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-add-product-btn">+ Add Hearing Aid</button>';
             h+='</div>';
 
@@ -682,6 +683,9 @@ function initProfile(){
         });
         $c.off('click','#hm-exchange-top-btn').on('click','#hm-exchange-top-btn',function(){
             showExchangePickerModal(function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));});
+        });
+        $c.off('click','#hm-return-top-btn').on('click','#hm-return-top-btn',function(){
+            showReturnPickerModal(function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));});
         });
         $c.off('click','#hm-add-product-btn').on('click','#hm-add-product-btn',function(){showAddProductModal(function(){loadHearingAids($c);});});
     }
@@ -818,21 +822,100 @@ function initProfile(){
         if($('#hm-modal-overlay').length)return;
         var sideNote=side&&side!=='both'?' ('+side.charAt(0).toUpperCase()+side.slice(1)+' side only)':'';
         $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Exchange Hearing Aid</span><button class="hm-close">&times;</button></div><div class="hm-modal-body">'+
-            '<p style="font-size:13px;color:#64748b;margin-bottom:16px;">This will mark <strong>'+esc(productName)+'</strong>'+esc(sideNote)+' as "Replaced" and create a credit note.</p>'+
+            '<p style="font-size:13px;color:#64748b;margin-bottom:16px;">This will mark <strong>'+esc(productName)+'</strong>'+esc(sideNote)+' as "Replaced", create a credit note, and apply the payment as a patient credit for the new device.</p>'+
+            '<div class="hm-form-group"><label class="hm-label">Exchange type *</label><select class="hm-dd" id="exch-type"><option value="same_value">Same value</option><option value="upgrade">Upgrade (patient pays balance)</option><option value="downgrade">Downgrade (refund difference)</option></select></div>'+
             '<div class="hm-form-group"><label class="hm-label">Reason for exchange *</label><select class="hm-dd" id="exch-reason"><option value="">— Select —</option><option>Upgrade</option><option>Downgrade</option><option>Manufacturer recall</option><option>Repeated faults</option><option>Patient dissatisfaction</option><option>Style change</option><option>Other</option></select></div>'+
-            '<div class="hm-form-group"><label class="hm-label">Credit amount (€)</label><input type="number" class="hm-inp" id="exch-amount" step="0.01" min="0" placeholder="0.00"></div>'+
-            '<div class="hm-form-group"><label class="hm-label">Refund type</label><select class="hm-dd" id="exch-refund-type"><option value="credit">Credit towards new device</option><option value="cheque">Cheque refund</option></select></div>'+
+            '<div class="hm-form-group"><label class="hm-label">Credit amount (€) *</label><input type="number" class="hm-inp" id="exch-amount" step="0.01" min="0" placeholder="0.00"><p style="font-size:11px;color:#94a3b8;margin-top:4px;">The original invoice amount. PRSI will be automatically separated.</p></div>'+
             '<div class="hm-form-group"><label class="hm-label">Notes (optional)</label><textarea class="hm-textarea" id="exch-notes" rows="2"></textarea></div>'+
         '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="exch-save">Process Exchange</button></div></div></div>');
         $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#exch-save').on('click',function(){
             var reason=$('#exch-reason').val();if(!reason){toast('Select a reason','error');return;}
             var amt=parseFloat($('#exch-amount').val())||0;
+            if(!amt){toast('Enter a credit amount','error');return;}
             $(this).prop('disabled',true).text('Processing…');
-            $.post(_hm.ajax,{action:'hm_create_exchange',nonce:_hm.nonce,patient_id:pid,device_id:ppId,reason:reason,credit_amount:amt,refund_type:$('#exch-refund-type').val(),notes:$('#exch-notes').val(),side:side||'both'},function(r){
+            $.post(_hm.ajax,{action:'hm_create_exchange',nonce:_hm.nonce,patient_id:pid,device_id:ppId,reason:reason,credit_amount:amt,exchange_type:$('#exch-type').val(),notes:$('#exch-notes').val(),side:side||'both'},function(r){
                 closeModal();
-                if(r.success){toast('Exchange processed — Credit Note '+r.data.credit_note_number);if(cb)cb();}
-                else toast(r.data||'Error','error');
+                if(r.success){
+                    var msg='Exchange processed — Credit Note '+r.data.credit_note_number+'. Patient credit: €'+parseFloat(r.data.patient_credit||0).toFixed(2);
+                    if(parseFloat(r.data.prsi_amount||0)>0) msg+=' (PRSI: €'+parseFloat(r.data.prsi_amount).toFixed(2)+' tracked separately)';
+                    toast(msg);
+                    if(cb)cb();
+                }else toast(r.data||'Error','error');
+            });
+        });
+    }
+
+    /* ── RETURN PICKER (similar to exchange picker) ── */
+    function showReturnPickerModal(cb){
+        if($('#hm-modal-overlay').length)return;
+        $.post(_hm.ajax,{action:'hm_get_patient_products',nonce:_hm.nonce,patient_id:pid},function(r){
+            var act=(r&&r.success?r.data:[]).filter(function(p){return p.status==='Active';});
+            if(!act.length){toast('No active devices to return','error');return;}
+            var h='<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md">'+
+                '<div class="hm-modal-hd"><span>Return Hearing Aid</span><button class="hm-close">&times;</button></div>'+
+                '<div class="hm-modal-body"><p style="font-size:13px;color:#64748b;margin-bottom:12px;">Select device(s) to return. The patient will be refunded their paid amount <strong>only</strong> — PRSI amounts are tracked separately for department notification.</p>';
+            act.forEach(function(d){
+                if(d.serial_left){
+                    h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
+                        '<input type="radio" name="hm-ret-pick" class="hm-return-radio" value="'+d._ID+'" data-side="left" data-name="'+esc(d.product_name)+' (Left)" style="width:18px;height:18px;accent-color:#dc2626;">'+
+                        '<div><strong>'+esc(d.product_name)+' — LEFT</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · Serial: '+esc(d.serial_left)+'</div></div></label>';
+                }
+                if(d.serial_right){
+                    h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
+                        '<input type="radio" name="hm-ret-pick" class="hm-return-radio" value="'+d._ID+'" data-side="right" data-name="'+esc(d.product_name)+' (Right)" style="width:18px;height:18px;accent-color:#dc2626;">'+
+                        '<div><strong>'+esc(d.product_name)+' — RIGHT</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · Serial: '+esc(d.serial_right)+'</div></div></label>';
+                }
+                if(d.serial_left && d.serial_right){
+                    h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #fef2f2;border-radius:8px;margin-bottom:8px;cursor:pointer;background:#fef2f2;">'+
+                        '<input type="radio" name="hm-ret-pick" class="hm-return-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(d.product_name)+' (Both)" style="width:18px;height:18px;accent-color:#dc2626;">'+
+                        '<div><strong>'+esc(d.product_name)+' — BOTH SIDES</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · L: '+esc(d.serial_left)+' · R: '+esc(d.serial_right)+'</div></div></label>';
+                }
+                if(!d.serial_left && !d.serial_right){
+                    h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
+                        '<input type="radio" name="hm-ret-pick" class="hm-return-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(d.product_name)+'" style="width:18px;height:18px;accent-color:#dc2626;">'+
+                        '<div><strong>'+esc(d.product_name)+'</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · No serial on file</div></div></label>';
+                }
+            });
+            h+='</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn-danger" id="return-next">Continue Return →</button></div></div></div>';
+            $('body').append(h);
+            $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+            $('#return-next').on('click',function(){
+                var $sel=$('.hm-return-radio:checked');
+                if(!$sel.length){toast('Select a device to return','error');return;}
+                var devId=$sel.val(), devName=$sel.data('name'), side=$sel.data('side');
+                closeModal();
+                showReturnModal(devId,devName,side,cb);
+            });
+        });
+    }
+
+    function showReturnModal(ppId,productName,side,cb){
+        if($('#hm-modal-overlay').length)return;
+        var sideNote=side&&side!=='both'?' ('+side.charAt(0).toUpperCase()+side.slice(1)+' side only)':'';
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Return Hearing Aid</span><button class="hm-close">&times;</button></div><div class="hm-modal-body">'+
+            '<div style="background:#fef2f2;border:1px solid #fecdd3;border-radius:8px;padding:12px 16px;margin-bottom:16px;">'+
+                '<p style="font-size:13px;color:#991b1b;margin:0;"><strong>Returning: '+esc(productName)+'</strong>'+esc(sideNote)+'</p>'+
+                '<p style="font-size:12px;color:#dc2626;margin:4px 0 0;">This will mark the device as "Returned", create a credit note, and add the refund to the pending queue. PRSI amounts are NOT refunded to the patient — they are tracked for department notification.</p>'+
+            '</div>'+
+            '<div class="hm-form-group"><label class="hm-label">Reason for return *</label><select class="hm-dd" id="ret-reason"><option value="">— Select —</option><option>Patient dissatisfaction</option><option>No benefit</option><option>Uncomfortable fit</option><option>Financial reasons</option><option>Medical reasons</option><option>Repeated faults</option><option>Within trial period</option><option>Other</option></select></div>'+
+            '<div class="hm-form-group"><label class="hm-label">Refund amount (€)</label><input type="number" class="hm-inp" id="ret-amount" step="0.01" min="0" placeholder="Patient-paid amount (auto-calculated)"><p style="font-size:11px;color:#94a3b8;margin-top:4px;">Leave blank to auto-calculate from original invoice (excluding PRSI).</p></div>'+
+            '<div class="hm-form-group"><label class="hm-label">Notes (optional)</label><textarea class="hm-textarea" id="ret-notes" rows="2" placeholder="Any additional details…"></textarea></div>'+
+        '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn-danger" id="ret-save">Process Return</button></div></div></div>');
+        $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+        $('#ret-save').on('click',function(){
+            var reason=$('#ret-reason').val();if(!reason){toast('Select a reason for return','error');return;}
+            $(this).prop('disabled',true).text('Processing…');
+            var data={action:'hm_create_return',nonce:_hm.nonce,patient_id:pid,device_id:ppId,reason:reason,notes:$('#ret-notes').val(),side:side||'both'};
+            var amt=$('#ret-amount').val();if(amt)data.refund_amount=parseFloat(amt);
+            $.post(_hm.ajax,data,function(r){
+                closeModal();
+                if(r.success){
+                    var msg='Return processed — Credit Note '+r.data.credit_note_number+'. Patient refund: €'+parseFloat(r.data.patient_refund||0).toFixed(2);
+                    if(parseFloat(r.data.prsi_amount||0)>0) msg+='. PRSI €'+parseFloat(r.data.prsi_amount).toFixed(2)+' added to PRSI notification queue.';
+                    toast(msg);
+                    if(cb)cb();
+                }else toast(r.data||'Error','error');
             });
         });
     }

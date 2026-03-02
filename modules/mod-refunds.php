@@ -35,6 +35,17 @@ class HearMed_Refunds {
         <style>
         .hm-cn-type-cheque   { background:#eff6ff; color:#2563eb; }
         .hm-cn-type-exchange { background:#f0fdf4; color:#16a34a; }
+        .hm-cn-type-return   { background:#fef3c7; color:#d97706; }
+        .hm-prsi-section { margin-top:24px; }
+        .hm-prsi-card { background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:16px; }
+        .hm-prsi-card h3 { margin:0 0 12px; color:#92400e; font-size:15px; }
+        .hm-tab-pills { display:flex; gap:4px; margin-bottom:16px; }
+        .hm-tab-pill { padding:8px 16px; border:1px solid #e2e8f0; border-radius:8px; background:white; cursor:pointer; font-size:13px; font-weight:500; color:#64748b; transition: all .15s; }
+        .hm-tab-pill.active { background:#151B33; color:white; border-color:#151B33; }
+        .hm-tab-pill .hm-pill-count { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; border-radius:10px; font-size:11px; font-weight:600; margin-left:6px; }
+        .hm-tab-pill.active .hm-pill-count { background:rgba(255,255,255,.2); color:white; }
+        .hm-pill-red { background:#fef2f2; color:#dc2626; }
+        .hm-pill-amber { background:#fffbeb; color:#d97706; }
         </style>
 
         <div class="hm-content hm-refunds-page">
@@ -44,16 +55,18 @@ class HearMed_Refunds {
                     <?php if ( HearMed_Auth::can('create_credit_note') ) : ?>
                     <button class="hm-btn hm-btn--primary" id="hm-cn-new-btn">+ New Credit Note</button>
                     <?php endif; ?>
-                    <select id="hm-cn-filter" class="hm-input hm-input--sm" style="width:auto;min-width:160px;">
-                        <option value="pending">Pending (Outstanding)</option>
-                        <option value="all">All Credit Notes</option>
-                        <option value="processed">Processed / Exchanged</option>
-                        <option value="cheque">Cheque Refunds Only</option>
-                        <option value="exchange">Exchanges Only</option>
-                    </select>
                     <input type="text" id="hm-cn-search" class="hm-input hm-input--sm"
                            style="width:200px;" placeholder="Search patient or CN#…">
                 </div>
+            </div>
+
+            <!-- Tab pills -->
+            <div class="hm-tab-pills" id="hm-refund-tabs">
+                <div class="hm-tab-pill active" data-tab="pending">Pending <span class="hm-pill-count hm-pill-red" id="hm-count-pending">0</span></div>
+                <div class="hm-tab-pill" data-tab="prsi">PRSI Notifications <span class="hm-pill-count hm-pill-amber" id="hm-count-prsi">0</span></div>
+                <div class="hm-tab-pill" data-tab="all">All</div>
+                <div class="hm-tab-pill" data-tab="processed">Processed</div>
+                <div class="hm-tab-pill" data-tab="exchange">Exchanges</div>
             </div>
 
             <div class="hm-stats" id="hm-stats"></div>
@@ -191,6 +204,7 @@ class HearMed_Refunds {
             var nonce = '<?php echo esc_js($nonce); ?>';
             var allNotes = [];
             var processingId = null;
+            var currentTab = 'pending';
 
             // ── Load ──────────────────────────────────────────────────────────
 
@@ -199,30 +213,57 @@ class HearMed_Refunds {
                     if (!r || !r.success) { $('#hm-cn-table').html('<div class="hm-empty"><div class="hm-empty-text">Failed to load</div></div>'); return; }
                     allNotes = r.data || [];
                     renderStats();
+                    updateTabCounts();
                     renderTable();
                 });
             }
 
+            // ── Tab switching ─────────────────────────────────────────────────
+            $(document).on('click', '.hm-tab-pill', function(){
+                currentTab = $(this).data('tab');
+                $('.hm-tab-pill').removeClass('active');
+                $(this).addClass('active');
+                renderTable();
+            });
+
             // ── Stats ─────────────────────────────────────────────────────────
 
             function renderStats() {
-                var pCheque=0, pChequeAmt=0, pExch=0, done=0, doneAmt=0;
+                var pCheque=0, pChequeAmt=0, pExch=0, pPrsi=0, pPrsiAmt=0, done=0, doneAmt=0;
                 allNotes.forEach(function(x){
                     var amt = parseFloat(x.amount||0);
-                    if (x.refund_type==='exchange') {
+                    var prsi = parseFloat(x.prsi_amount||0);
+                    var type = x.refund_type || 'cheque';
+
+                    if (type==='exchange') {
                         if (!x.processed_at) pExch++;
                         else done++;
                     } else {
-                        if (!x.cheque_sent) { pCheque++; pChequeAmt+=amt; }
-                        else { done++; doneAmt+=amt; }
+                        if (!x.cheque_sent) { pCheque++; pChequeAmt+=parseFloat(x.patient_refund_amount||amt); }
+                        else { done++; doneAmt+=parseFloat(x.patient_refund_amount||amt); }
                     }
+                    if (prsi > 0 && !x.prsi_notified) { pPrsi++; pPrsiAmt += prsi; }
                 });
                 $('#hm-stats').html(
-                    stat(pCheque,  'Cheques Outstanding', '#dc2626') +
+                    stat(pCheque,  'Refunds Pending', '#dc2626') +
                     stat('€'+pChequeAmt.toFixed(2), 'Pending Amount', '#dc2626') +
                     stat(pExch,    'Exchanges Pending',  '#ea580c') +
+                    stat(pPrsi,    'PRSI to Notify',     '#d97706') +
+                    stat('€'+pPrsiAmt.toFixed(2), 'PRSI Amount', '#d97706') +
                     stat(done,     'Processed',          '#16a34a')
                 );
+            }
+
+            function updateTabCounts() {
+                var pending=0, prsi=0;
+                allNotes.forEach(function(x){
+                    var type = x.refund_type || 'cheque';
+                    var done = type==='exchange' ? !!x.processed_at : !!x.cheque_sent;
+                    if (!done) pending++;
+                    if (parseFloat(x.prsi_amount||0) > 0 && !x.prsi_notified) prsi++;
+                });
+                $('#hm-count-pending').text(pending);
+                $('#hm-count-prsi').text(prsi);
             }
 
             function stat(v,l,c){
@@ -232,8 +273,11 @@ class HearMed_Refunds {
             // ── Table ─────────────────────────────────────────────────────────
 
             function renderTable() {
-                var filter = $('#hm-cn-filter').val();
+                var filter = currentTab;
                 var q      = $.trim($('#hm-cn-search').val()).toLowerCase();
+
+                // PRSI tab — special render
+                if (filter === 'prsi') { renderPrsiTable(q); return; }
 
                 var filtered = allNotes.filter(function(x){
                     var type = x.refund_type || 'cheque';
@@ -241,7 +285,6 @@ class HearMed_Refunds {
 
                     if (filter==='pending'  && done)               return false;
                     if (filter==='processed'&& !done)              return false;
-                    if (filter==='cheque'   && type!=='cheque')    return false;
                     if (filter==='exchange' && type!=='exchange')  return false;
 
                     if (q) {
@@ -257,16 +300,17 @@ class HearMed_Refunds {
                 }
 
                 var h = '<table class="hm-table"><thead><tr>' +
-                    '<th>Credit Note #</th><th>Patient</th><th>Type</th><th>Amount</th>' +
-                    '<th>Reason</th><th>Date</th><th>Status</th><th></th>' +
+                    '<th>Credit Note #</th><th>Patient</th><th>Type</th><th>Patient Amount</th>' +
+                    '<th>PRSI</th><th>Reason</th><th>Date</th><th>Status</th><th></th>' +
                     '</tr></thead><tbody>';
 
                 filtered.forEach(function(x){
                     var type  = x.refund_type || 'cheque';
-                    var amt   = '€'+parseFloat(x.amount||0).toFixed(2);
-                    var typeBadge = type==='exchange'
-                        ? '<span class="hm-badge hm-cn-type-exchange">Exchange</span>'
-                        : '<span class="hm-badge hm-cn-type-cheque">Cheque</span>';
+                    var patAmt = parseFloat(x.patient_refund_amount || x.amount || 0);
+                    var prsiAmt = parseFloat(x.prsi_amount || 0);
+                    var typeBadge;
+                    if (type==='exchange') typeBadge='<span class="hm-badge hm-cn-type-exchange">Exchange</span>';
+                    else typeBadge='<span class="hm-badge hm-cn-type-cheque">Refund</span>';
 
                     var statusHtml, actHtml = '';
                     if (type==='exchange') {
@@ -278,11 +322,18 @@ class HearMed_Refunds {
                         }
                     } else {
                         if (x.cheque_sent) {
-                            statusHtml = '<span class="hm-badge hm-badge--green">Cheque Sent ' + fmtDate(x.cheque_sent_date) + '</span>';
+                            statusHtml = '<span class="hm-badge hm-badge--green">Refund Sent ' + fmtDate(x.cheque_sent_date) + '</span>';
                         } else {
-                            statusHtml = '<span class="hm-badge hm-badge--red">Cheque Outstanding</span>';
-                            actHtml    = '<button class="hm-btn hm-btn--sm hm-btn--secondary hm-proc-btn" data-id="'+x.id+'">Process</button>';
+                            statusHtml = '<span class="hm-badge hm-badge--red">Refund Pending</span>';
+                            actHtml    = '<button class="hm-btn hm-btn--sm hm-btn--secondary hm-proc-btn" data-id="'+x.id+'">Mark Sent</button>';
                         }
+                    }
+
+                    var prsiHtml = '—';
+                    if (prsiAmt > 0) {
+                        prsiHtml = '€'+prsiAmt.toFixed(2);
+                        if (x.prsi_notified) prsiHtml += ' <span class="hm-badge hm-badge--sm hm-badge--green">Notified</span>';
+                        else prsiHtml += ' <span class="hm-badge hm-badge--sm hm-badge--amber">Pending</span>';
                     }
 
                     var printBtn = '<button class="hm-btn hm-btn--sm hm-btn--ghost" onclick="window.open(HM.ajax_url+\'?action=hm_print_credit_note&nonce=\'+HM.nonce+\'&credit_note_id='+x.id+'\',\'_blank\')" style="margin-left:4px;">Print</button>';
@@ -291,7 +342,8 @@ class HearMed_Refunds {
                         '<td><code class="hm-mono">'+esc(x.credit_note_number)+'</code></td>' +
                         '<td><a href="/patients/?id='+x.patient_id+'" style="color:var(--hm-teal);">'+esc(x.patient_name)+'</a></td>' +
                         '<td>'+typeBadge+'</td>' +
-                        '<td style="font-weight:600;">'+amt+'</td>' +
+                        '<td style="font-weight:600;">€'+patAmt.toFixed(2)+'</td>' +
+                        '<td>'+prsiHtml+'</td>' +
                         '<td class="hm-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(x.reason)+'">'+esc(x.reason||'\u2014')+'</td>' +
                         '<td class="hm-mono hm-muted" style="font-size:12px;">'+fmtDate((x.credit_date||'').split(' ')[0])+'</td>' +
                         '<td>'+statusHtml+'</td>' +
@@ -303,12 +355,71 @@ class HearMed_Refunds {
                 $('#hm-cn-table').html(h);
             }
 
+            // ── PRSI Table (separate view) ────────────────────────────────────
+
+            function renderPrsiTable(q) {
+                var prsi = allNotes.filter(function(x){
+                    if (parseFloat(x.prsi_amount||0) <= 0) return false;
+                    if (q) {
+                        var hay = ((x.credit_note_number||'')+' '+(x.patient_name||'')).toLowerCase();
+                        if (hay.indexOf(q)===-1) return false;
+                    }
+                    return true;
+                });
+
+                if (!prsi.length) {
+                    $('#hm-cn-table').html('<div class="hm-empty"><div class="hm-empty-text">No PRSI refunds to track.</div></div>');
+                    return;
+                }
+
+                var pending = prsi.filter(function(x){ return !x.prsi_notified; });
+                var notified = prsi.filter(function(x){ return !!x.prsi_notified; });
+
+                var h = '';
+                if (pending.length) {
+                    h += '<div class="hm-prsi-card" style="margin-bottom:16px;">'+
+                         '<h3>⚠ PRSI Department Notifications Pending ('+pending.length+')</h3>'+
+                         '<p style="font-size:13px;color:#92400e;margin-bottom:12px;">These patients had PRSI grant applied to their original order. The PRSI department needs to be notified of the return/exchange.</p>';
+                    if (pending.length > 1) {
+                        h += '<button class="hm-btn hm-btn--sm hm-btn--primary" id="hm-prsi-notify-all" style="margin-bottom:12px;">Mark All as Notified</button>';
+                    }
+                    h += '<table class="hm-table"><thead><tr><th>Patient</th><th>Credit Note</th><th>PRSI Amount</th><th>Type</th><th>Date</th><th></th></tr></thead><tbody>';
+                    pending.forEach(function(x){
+                        h += '<tr>'+
+                            '<td><a href="/patients/?id='+x.patient_id+'" style="color:var(--hm-teal);">'+esc(x.patient_name)+'</a></td>'+
+                            '<td><code class="hm-mono">'+esc(x.credit_note_number)+'</code></td>'+
+                            '<td style="font-weight:600;">€'+parseFloat(x.prsi_amount).toFixed(2)+'</td>'+
+                            '<td><span class="hm-badge hm-cn-type-'+esc(x.refund_type||'cheque')+'">'+esc(ucfirst(x.refund_type||'cheque'))+'</span></td>'+
+                            '<td class="hm-mono hm-muted" style="font-size:12px;">'+fmtDate((x.credit_date||'').split(' ')[0])+'</td>'+
+                            '<td><button class="hm-btn hm-btn--sm hm-btn--secondary hm-prsi-notify" data-id="'+x.id+'">Mark Notified</button></td>'+
+                        '</tr>';
+                    });
+                    h += '</tbody></table></div>';
+                }
+
+                if (notified.length) {
+                    h += '<details style="margin-top:16px;"><summary style="font-size:14px;font-weight:600;color:#94a3b8;cursor:pointer;">PRSI Department Notified ('+notified.length+')</summary>';
+                    h += '<table class="hm-table" style="margin-top:8px;"><thead><tr><th>Patient</th><th>Credit Note</th><th>PRSI Amount</th><th>Notified Date</th></tr></thead><tbody>';
+                    notified.forEach(function(x){
+                        h += '<tr>'+
+                            '<td><a href="/patients/?id='+x.patient_id+'" style="color:var(--hm-teal);">'+esc(x.patient_name)+'</a></td>'+
+                            '<td><code class="hm-mono">'+esc(x.credit_note_number)+'</code></td>'+
+                            '<td>€'+parseFloat(x.prsi_amount).toFixed(2)+'</td>'+
+                            '<td class="hm-mono hm-muted" style="font-size:12px;">'+fmtDate(x.prsi_notified_date||'')+'</td>'+
+                        '</tr>';
+                    });
+                    h += '</tbody></table></details>';
+                }
+
+                $('#hm-cn-table').html(h);
+            }
+
             function hmOrderUrl(id){ return '/orders/?hm_action=view&order_id='+id; }
             function esc(s){ return $('<span>').text(s||'').html(); }
+            function ucfirst(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
             function fmtDate(d){ if(!d||d==='null')return '—'; var p=d.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d; }
 
             // ── Filters ───────────────────────────────────────────────────────
-            $(document).on('change','#hm-cn-filter', renderTable);
             $(document).on('input','#hm-cn-search',  renderTable);
 
             // ── New credit note modal ─────────────────────────────────────────
@@ -483,6 +594,32 @@ class HearMed_Refunds {
                 });
             });
 
+            // ── PRSI notification handlers ───────────────────────────────────
+
+            $(document).on('click', '.hm-prsi-notify', function(){
+                var $btn = $(this);
+                var cnId = $btn.data('id');
+                if (!confirm('Mark this PRSI notification as sent to the department?')) return;
+                $btn.prop('disabled',true).text('Saving…');
+                $.post(ajax, {action:'hm_mark_prsi_notified', nonce:nonce, credit_note_id:cnId}, function(r){
+                    if (r.success) { load(); }
+                    else { $btn.prop('disabled',false).text('Mark Notified'); alert(r.data||'Error'); }
+                });
+            });
+
+            $(document).on('click', '#hm-prsi-notify-all', function(){
+                if (!confirm('Mark ALL pending PRSI notifications as sent to the department?')) return;
+                var $btn = $(this).prop('disabled',true).text('Saving…');
+                var pending = allNotes.filter(function(x){ return parseFloat(x.prsi_amount||0) > 0 && !x.prsi_notified; });
+                var done = 0;
+                pending.forEach(function(x){
+                    $.post(ajax, {action:'hm_mark_prsi_notified', nonce:nonce, credit_note_id:x.id}, function(){
+                        done++;
+                        if (done >= pending.length) load();
+                    });
+                });
+            });
+
             // ── Boot ──────────────────────────────────────────────────────────
             load();
 
@@ -499,10 +636,21 @@ class HearMed_Refunds {
         if ( ! is_user_logged_in() ) wp_send_json_error('Not logged in.');
 
         $db  = HearMed_DB::instance();
+
+        // Auto-migrate: check for new columns
+        $has_prsi = $db->get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'credit_notes' AND column_name = 'prsi_amount'"
+        );
+        $prsi_cols = $has_prsi
+            ? "cn.prsi_amount, cn.patient_refund_amount, cn.prsi_notified, cn.prsi_notified_date,"
+            : "0 AS prsi_amount, cn.amount AS patient_refund_amount, false AS prsi_notified, NULL AS prsi_notified_date,";
+
         $rows = $db->get_results(
             "SELECT cn.id, cn.credit_note_number, cn.amount, cn.reason, cn.credit_date,
                     cn.refund_type, cn.exchange_order_id, cn.cheque_sent, cn.cheque_sent_date,
                     cn.processed_at,
+                    {$prsi_cols}
                     CONCAT(p.first_name,' ',p.last_name) AS patient_name,
                     p.id AS patient_id
              FROM hearmed_core.credit_notes cn
@@ -723,6 +871,38 @@ class HearMed_Refunds {
         echo HearMed_Print_Templates::render('creditnote', $tpl_data);
         exit;
     }
+
+    // ─── AJAX: mark PRSI department notified ──────────────────────────────────
+
+    public static function ajax_mark_prsi_notified() {
+        check_ajax_referer('hm_nonce','nonce');
+        if ( ! is_user_logged_in() ) wp_send_json_error('Not logged in.');
+
+        $cn_id = intval( $_POST['credit_note_id'] ?? 0 );
+        if ( ! $cn_id ) wp_send_json_error('Invalid credit note.');
+
+        $user = HearMed_Auth::current_user();
+
+        // Update credit note
+        HearMed_DB::instance()->update( 'hearmed_core.credit_notes', [
+            'prsi_notified'      => true,
+            'prsi_notified_date' => date('Y-m-d'),
+            'prsi_notified_by'   => $user->id ?? null,
+        ], [ 'id' => $cn_id ] );
+
+        // Also update return record if one exists
+        $has_returns = HearMed_DB::instance()->get_var(
+            "SELECT 1 FROM information_schema.tables WHERE table_schema = 'hearmed_core' AND table_name = 'returns'"
+        );
+        if ( $has_returns ) {
+            HearMed_DB::instance()->query(
+                "UPDATE hearmed_core.returns SET prsi_notified = true, prsi_notified_date = \$1, prsi_notified_by = \$2 WHERE credit_note_id = \$3",
+                [ date('Y-m-d'), $user->id ?? null, $cn_id ]
+            );
+        }
+
+        wp_send_json_success('PRSI notification marked.');
+    }
 }
 
 // Register AJAX actions directly here (supplementary to class-hearmed-ajax.php)
@@ -731,3 +911,4 @@ add_action( 'wp_ajax_hm_create_credit_note',       ['HearMed_Refunds', 'ajax_cre
 add_action( 'wp_ajax_hm_process_refund',           ['HearMed_Refunds', 'ajax_process'] );
 add_action( 'wp_ajax_hm_get_patient_invoices',     ['HearMed_Refunds', 'ajax_get_patient_invoices'] );
 add_action( 'wp_ajax_hm_print_credit_note',        ['HearMed_Refunds', 'ajax_print_credit_note'] );
+add_action( 'wp_ajax_hm_mark_prsi_notified',       ['HearMed_Refunds', 'ajax_mark_prsi_notified'] );
