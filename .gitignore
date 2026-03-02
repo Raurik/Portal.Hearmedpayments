@@ -46,6 +46,10 @@ desktop.ini
 *.backup
 *~
 
-# Compressed files (unless intentional)
-# *.zip
-# *.tar.gz
+# Dangerous artifacts — NEVER deploy to web-served directories
+*.sql
+*.dump
+*.zip
+*.gz
+*.tar
+*.tar.gz

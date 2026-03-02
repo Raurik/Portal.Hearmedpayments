@@ -5,7 +5,23 @@ on:
     branches: ["main"]
 
 jobs:
+  safety-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Block dangerous files from deploying
+        run: |
+          FOUND=$(find . -maxdepth 3 \( -name '*.sql' -o -name '*.dump' -o -name '*.bak' -o -name '*.zip' -o -name '*.gz' -o -name '*.tar' \) \
+            ! -path './.github/*' | head -20)
+          if [ -n "$FOUND" ]; then
+            echo "::error::Dangerous files found in plugin directory — refusing to deploy:"
+            echo "$FOUND"
+            exit 1
+          fi
+          echo "✅ No dangerous artifacts found."
+
   deploy:
+    needs: safety-check
     runs-on: ubuntu-latest
     steps:
       - name: Deploy via SSH
