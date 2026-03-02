@@ -8,6 +8,46 @@ class HearMed_Admin_Dispenser_Schedules {
         add_action('wp_ajax_hm_admin_save_dispenser_schedule', [ $this, 'ajax_save' ]);
         add_action('wp_ajax_hm_admin_delete_dispenser_schedule', [ $this, 'ajax_delete' ]);
         add_action('wp_ajax_hm_admin_bulk_delete_schedules', [ $this, 'ajax_bulk_delete' ]);
+
+        // Auto-migrate: ensure effective_from / effective_to columns exist
+        $this->ensure_schedule_columns();
+    }
+
+    /**
+     * Auto-add effective_from and effective_to columns if missing.
+     */
+    private function ensure_schedule_columns() {
+        static $done = false;
+        if ( $done ) return;
+        $done = true;
+
+        $cols = HearMed_DB::get_results(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_reference'
+               AND table_name   = 'dispenser_schedules'
+               AND column_name IN ('effective_from','effective_to')"
+        );
+        $existing = [];
+        if ( $cols ) {
+            foreach ( $cols as $c ) { $existing[] = $c->column_name; }
+        }
+        $alters = [];
+        if ( ! in_array( 'effective_from', $existing ) ) {
+            $alters[] = 'ADD COLUMN effective_from DATE';
+        }
+        if ( ! in_array( 'effective_to', $existing ) ) {
+            $alters[] = 'ADD COLUMN effective_to DATE';
+        }
+        if ( ! empty( $alters ) ) {
+            $sql = 'ALTER TABLE hearmed_reference.dispenser_schedules ' . implode( ', ', $alters );
+            HearMed_DB::query( $sql );
+            // Add performance index
+            HearMed_DB::query(
+                "CREATE INDEX IF NOT EXISTS idx_dispenser_schedules_dates
+                 ON hearmed_reference.dispenser_schedules (staff_id, clinic_id, effective_from, effective_to)"
+            );
+            error_log( '[HearMed] Auto-migrated dispenser_schedules: added ' . implode( ', ', $alters ) );
+        }
     }
 
     // Fetch current (active) schedules — effective_to IS NULL or >= today
