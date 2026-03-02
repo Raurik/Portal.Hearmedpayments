@@ -672,15 +672,16 @@ class HearMed_Admin_Appointment_Type_Detail {
         $id = intval($_POST['id'] ?? 0);
         if (!$id) { wp_send_json_error('Invalid ID'); return; }
 
+        // Auto-migrate: ensure all expected columns exist on appointment_types
+        $this->ensure_appointment_type_columns();
+
         $colour = sanitize_hex_color($_POST['colour'] ?? '#3B82F6') ?: '#3B82F6';
         $dur    = intval($_POST['duration'] ?? 30);
 
         $data = [
             'service_name'        => sanitize_text_field($_POST['service_name'] ?? ''),
             'service_color'       => $colour,
-            'colour'              => $colour,
             'duration_minutes'    => $dur,
-            'duration'            => $dur,
             'appointment_category'=> sanitize_text_field($_POST['appointment_category'] ?? ''),
             'sales_opportunity'   => !empty($_POST['sales_opportunity']),
             'income_bearing'      => !empty($_POST['income_bearing']),
@@ -696,6 +697,54 @@ class HearMed_Admin_Appointment_Type_Detail {
             wp_send_json_error(HearMed_DB::last_error() ?: 'Database error');
         } else {
             wp_send_json_success(['id' => $id]);
+        }
+    }
+
+    /**
+     * Ensure all expected columns exist on hearmed_reference.appointment_types.
+     * Auto-creates any missing columns so the save query doesn't fail.
+     */
+    private function ensure_appointment_type_columns() {
+        static $done = false;
+        if ($done) return;
+        $done = true;
+
+        try {
+            $cols = HearMed_DB::get_results(
+                "SELECT column_name FROM information_schema.columns
+                 WHERE table_schema = 'hearmed_reference' AND table_name = 'appointment_types'"
+            );
+            $existing = [];
+            if ($cols) {
+                foreach ($cols as $c) {
+                    $existing[] = $c->column_name;
+                }
+            }
+
+            $needed = [
+                'service_name'            => "VARCHAR(200) NOT NULL DEFAULT ''",
+                'service_color'           => "VARCHAR(10) DEFAULT '#3B82F6'",
+                'text_color'              => "VARCHAR(10) DEFAULT '#FFFFFF'",
+                'duration_minutes'        => 'INT DEFAULT 30',
+                'appointment_category'    => "VARCHAR(50) DEFAULT ''",
+                'sales_opportunity'       => 'BOOLEAN DEFAULT FALSE',
+                'income_bearing'          => 'BOOLEAN DEFAULT TRUE',
+                'is_reportable'           => 'BOOLEAN DEFAULT FALSE',
+                'report_category'         => "VARCHAR(100) DEFAULT ''",
+                'reminder_enabled'        => 'BOOLEAN DEFAULT FALSE',
+                'reminder_sms_template_id'=> 'INT',
+            ];
+
+            foreach ($needed as $col_name => $col_def) {
+                if (!in_array($col_name, $existing)) {
+                    HearMed_DB::query(
+                        "ALTER TABLE hearmed_reference.appointment_types ADD COLUMN {$col_name} {$col_def}"
+                    );
+                    error_log("[HearMed] Auto-migrated: added column {$col_name} to hearmed_reference.appointment_types");
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[HearMed] ensure_appointment_type_columns error: ' . $e->getMessage());
         }
     }
 
