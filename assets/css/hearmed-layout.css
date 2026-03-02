@@ -87,6 +87,9 @@ body.hm-portal-page .hm-app-shell > .e-con-inner {
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 0 !important;
 }
 
 /* .e-con-inner inside .hm-content */
