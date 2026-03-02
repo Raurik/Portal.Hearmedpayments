@@ -1072,11 +1072,8 @@
 }
 .hm-ha-side-actions {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-}
-.hm-ha-side-actions .hm-btn {
+  flex-wrap: wrap;
+  gap: 4px 10px;
   width: 100%;
   justify-content: center;
 }
@@ -1085,11 +1082,27 @@
 .hm-ha-both-row {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid #edf2f7;
 }
+
+/* ── Borderless text-link buttons ── */
+.hm-link-btn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--hm-font-btn, 'Plus Jakarta Sans', sans-serif);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.hm-link-btn:hover { opacity: 0.7; }
+.hm-link-teal { color: var(--hm-teal, #0d9488); }
+.hm-link-red { color: #dc2626; }
+.hm-link-muted { color: #94a3b8; }
 
 /* ── Extra-small button ── */
 .hm-btn-xs {

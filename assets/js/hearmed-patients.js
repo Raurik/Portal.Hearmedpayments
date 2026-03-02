@@ -574,8 +574,6 @@ function initProfile(){
 
             var h='<div class="hm-tab-section">';
             h+='<div class="hm-section-header" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><h3 style="margin:0;">Hearing Aids</h3>';
-            if(act.length) h+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-btn-icon-teal" id="hm-exchange-top-btn">'+HM_ICONS.returns+' Exchange</button>';
-            if(act.length) h+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-btn-danger-outline" id="hm-return-top-btn">Return</button>';
             h+='<button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-add-product-btn">+ Add Hearing Aid</button>';
             h+='</div>';
 
@@ -631,8 +629,10 @@ function initProfile(){
             card+='<div class="hm-ha-side-serial">'+(pr.serial_left?'<span class="hm-serial">'+esc(pr.serial_left)+'</span>':'<span style="color:#cbd5e1;font-size:12px;">No serial</span>')+'</div>';
             if(isAct){
                 card+='<div class="hm-ha-side-actions">';
-                card+='<button class="hm-btn hm-btn--secondary hm-btn-xs hm-btn-icon-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_left||'')+'">'+HM_ICONS.repair+' Repair</button>';
-                card+='<button class="hm-btn hm-btn--secondary hm-btn-xs hm-btn-danger-outline hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+' (Left)">Mark Inactive</button>';
+                card+='<button class="hm-link-btn hm-link-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_left||'')+'">Repair</button>';
+                card+='<button class="hm-link-btn hm-link-teal hm-exchange-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+' (Left)">Exchange</button>';
+                card+='<button class="hm-link-btn hm-link-red hm-return-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+' (Left)">Return</button>';
+                card+='<button class="hm-link-btn hm-link-muted hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+' (Left)">Inactive</button>';
                 card+='</div>';
             }
             card+='</div>';
@@ -644,8 +644,10 @@ function initProfile(){
             card+='<div class="hm-ha-side-serial">'+(pr.serial_right?'<span class="hm-serial">'+esc(pr.serial_right)+'</span>':'<span style="color:#cbd5e1;font-size:12px;">No serial</span>')+'</div>';
             if(isAct){
                 card+='<div class="hm-ha-side-actions">';
-                card+='<button class="hm-btn hm-btn--secondary hm-btn-xs hm-btn-icon-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_right||'')+'">'+HM_ICONS.repair+' Repair</button>';
-                card+='<button class="hm-btn hm-btn--secondary hm-btn-xs hm-btn-danger-outline hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+' (Right)">Mark Inactive</button>';
+                card+='<button class="hm-link-btn hm-link-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_right||'')+'">Repair</button>';
+                card+='<button class="hm-link-btn hm-link-teal hm-exchange-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+' (Right)">Exchange</button>';
+                card+='<button class="hm-link-btn hm-link-red hm-return-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+' (Right)">Return</button>';
+                card+='<button class="hm-link-btn hm-link-muted hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+' (Right)">Inactive</button>';
                 card+='</div>';
             }
             card+='</div>';
@@ -653,10 +655,12 @@ function initProfile(){
             card+='</div>'; // end lr-grid
 
             // Both devices action row (only for active)
-            if(isAct && (pr.serial_left || pr.serial_right)){
+            if(isAct && pr.serial_left && pr.serial_right){
                 card+='<div class="hm-ha-both-row">';
-                card+='<button class="hm-btn hm-btn--secondary hm-btn-xs hm-btn-icon-teal hm-log-repair" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+'" data-sl="'+esc(pr.serial_left||'')+'" data-sr="'+esc(pr.serial_right||'')+'">'+HM_ICONS.repair+' Repair Both</button>';
-                card+='<button class="hm-btn hm-btn--secondary hm-btn-xs hm-btn-danger-outline hm-mark-inactive" data-id="'+pr._ID+'">Mark Both Inactive</button>';
+                card+='<button class="hm-link-btn hm-link-teal hm-log-repair" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+'" data-sl="'+esc(pr.serial_left)+'" data-sr="'+esc(pr.serial_right)+'">Repair Both</button>';
+                card+='<button class="hm-link-btn hm-link-teal hm-exchange-both" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+' (Both)">Exchange Both</button>';
+                card+='<button class="hm-link-btn hm-link-red hm-return-both" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+' (Both)">Return Both</button>';
+                card+='<button class="hm-link-btn hm-link-muted hm-mark-inactive" data-id="'+pr._ID+'">Inactive Both</button>';
                 card+='</div>';
             }
 
@@ -682,11 +686,21 @@ function initProfile(){
             var sr=$b.data('side')==='right'?$b.data('serial'):'';
             showLogRepairModal($b.data('id'),$b.data('name'),sl,sr,function(){toast('Repair logged');loadRepairs($('#hm-tab-content'));});
         });
-        $c.off('click','#hm-exchange-top-btn').on('click','#hm-exchange-top-btn',function(){
-            showExchangePickerModal(function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));});
+        $c.off('click','.hm-exchange-side').on('click','.hm-exchange-side',function(){
+            var $b=$(this);
+            showExchangeModal($b.data('id'),$b.data('name'),function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));},$b.data('side'));
         });
-        $c.off('click','#hm-return-top-btn').on('click','#hm-return-top-btn',function(){
-            showReturnPickerModal(function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));});
+        $c.off('click','.hm-exchange-both').on('click','.hm-exchange-both',function(){
+            var $b=$(this);
+            showExchangeModal($b.data('id'),$b.data('name'),function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));},'both');
+        });
+        $c.off('click','.hm-return-side').on('click','.hm-return-side',function(){
+            var $b=$(this);
+            showReturnModal($b.data('id'),$b.data('name'),$b.data('side'),function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));});
+        });
+        $c.off('click','.hm-return-both').on('click','.hm-return-both',function(){
+            var $b=$(this);
+            showReturnModal($b.data('id'),$b.data('name'),'both',function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));});
         });
         $c.off('click','#hm-add-product-btn').on('click','#hm-add-product-btn',function(){showAddProductModal(function(){loadHearingAids($c);});});
     }
