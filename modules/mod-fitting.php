@@ -536,19 +536,19 @@ function hm_render_fitting_page() {
 
             container.innerHTML =
                 '<div class="hmf-summary-line">' +
-                    '<span class="hmf-summary-line-label">Total Pipeline<span class="hmf-count">(' + orders.length + ')</span></span>' +
-                    '<span class="hmf-summary-line-val">' + euro(valPipeline) + '</span>' +
+                    '<span class="hmf-summary-line-label">Total Patient Contributions</span>' +
+                    '<span class="hmf-summary-line-val">' + euro(patientPays) + '</span>' +
                 '</div>' +
                 '<div class="hmf-summary-line">' +
-                    '<span class="hmf-summary-line-label">PRSI to Claim<span class="hmf-count">(' + prsiCount + ')</span></span>' +
+                    '<span class="hmf-summary-line-label">Amount of PRSI to Claim for Period<span class="hmf-count">(' + prsiCount + ')</span></span>' +
                     '<div style="text-align:right;">' +
                         '<span class="hmf-summary-line-val" style="color:#059669;">' + euro(prsiVal) + '</span>' +
                         (cycleLabel ? '<div class="hmf-summary-line-sub">' + hmFE(cycleLabel) + '</div>' : '') +
                     '</div>' +
                 '</div>' +
                 '<div class="hmf-summary-line hmf-summary-total">' +
-                    '<span class="hmf-summary-line-label">Patient Pays</span>' +
-                    '<span class="hmf-summary-line-val">' + euro(patientPays) + '</span>' +
+                    '<span class="hmf-summary-line-label">Total Left to Fit in Period<span class="hmf-count">(' + orders.length + ')</span></span>' +
+                    '<span class="hmf-summary-line-val">' + euro(valPipeline) + '</span>' +
                 '</div>';
 
             container.style.display = 'block';
