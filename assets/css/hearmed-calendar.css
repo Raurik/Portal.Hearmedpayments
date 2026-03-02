@@ -141,6 +141,28 @@
   font-weight: 700;
 }
 
+/* ── Calendar View Toggle (Clinic / Dispenser) ── */
+.hm-cview-btn {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--hm-font-btn, 'Plus Jakarta Sans', sans-serif);
+  color: var(--hm-text-muted, #94a3b8);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.hm-cview-btn:hover { color: var(--hm-text, #334155); }
+.hm-cview-btn.on {
+  background: var(--hm-teal, #0d9488);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  font-weight: 700;
+}
+
 /* ── Icon Button (print) ── */
 .hm-icon-btn {
   display: inline-flex;

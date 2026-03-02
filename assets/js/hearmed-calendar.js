@@ -86,9 +86,9 @@ var App={
 // CALENDAR VIEW — v3.1
 // ═══════════════════════════════════════════════════════
 var Cal={
-    $el:null,date:new Date(),mode:'week',viewMode:'people',
+    $el:null,date:new Date(),mode:'week',viewMode:'people',calViewMode:'clinic',
     dispensers:[],services:[],clinics:[],appts:[],holidays:[],blockouts:[],exclusionTypes:[],referralSources:[],
-    selClinics:[],selDisps:[],svcMap:{},cfg:{},clinicHasSchedules:false,
+    selClinics:[],selDisps:[],svcMap:{},cfg:{},clinicHasSchedules:false,clinicCoverage:{},
     _hoverTimer:null,_popAppt:null,
 
     init:function($el){
@@ -179,15 +179,16 @@ var Cal={
                 '</div>'+
                 '<div class="hm-tb-right">'+
                     '<div class="hm-view-tog"><button class="hm-view-btn" data-v="day">Day</button><button class="hm-view-btn" data-v="week">Week</button></div>'+
+                    '<div class="hm-view-tog" id="hm-calViewTog"><button class="hm-cview-btn on" data-cv="clinic">Clinic View</button><button class="hm-cview-btn" data-cv="dispenser">Dispenser View</button></div>'+
                     '<button class="hm-icon-btn" onclick="window.print()" title="Print">'+IC.print+'</button>'+
                     '<div class="hm-sep"></div>'+
-                    /* Multi-select clinic */
-                    '<div class="hm-ms" id="hm-clinicMs">'+
-                        '<button class="hm-ms-btn" id="hm-clinicMsBtn"><span class="hm-ms-lbl">All Clinics</span><span class="hm-ms-chev">'+IC.chevDown+'</span></button>'+
+                    /* Multi-select clinic (dispenser view only) */
+                    '<div class="hm-ms" id="hm-clinicMs" style="display:none">'+
+                        '<button class="hm-ms-btn" id="hm-clinicMsBtn"><span class="hm-ms-lbl">Select Clinic</span><span class="hm-ms-chev">'+IC.chevDown+'</span></button>'+
                         '<div class="hm-ms-drop" id="hm-clinicMsDrop"></div>'+
                     '</div>'+
-                    /* Multi-select dispenser */
-                    '<div class="hm-ms" id="hm-dispMs">'+
+                    /* Multi-select dispenser (dispenser view only) */
+                    '<div class="hm-ms" id="hm-dispMs" style="display:none">'+
                         '<button class="hm-ms-btn" id="hm-dispMsBtn"><span class="hm-ms-lbl">All Assignees</span><span class="hm-ms-chev">'+IC.chevDown+'</span></button>'+
                         '<div class="hm-ms-drop" id="hm-dispMsDrop"></div>'+
                     '</div>'+
@@ -215,6 +216,15 @@ var Cal={
         $(document).on('change','#hm-datePick',function(){var v=$(this).val();if(v){self.date=new Date(v+'T12:00:00');self.refresh();}});
         $(document).on('click','.hm-view-btn',function(){self.mode=$(this).data('v');self.refreshUI();});
 
+        // Clinic View / Dispenser View toggle
+        $(document).on('click','.hm-cview-btn',function(){
+            var cv=$(this).data('cv');
+            if(cv===self.calViewMode)return;
+            self.calViewMode=cv;
+            $('.hm-cview-btn').removeClass('on');$(this).addClass('on');
+            self.onCalViewChange();
+        });
+
         // Multi-select toggles
         $(document).on('click','#hm-clinicMsBtn',function(e){e.stopPropagation();$('#hm-clinicMsDrop').toggleClass('open');$('#hm-dispMsDrop').removeClass('open');});
         $(document).on('click','#hm-dispMsBtn',function(e){e.stopPropagation();$('#hm-dispMsDrop').toggleClass('open');$('#hm-clinicMsDrop').removeClass('open');});
@@ -222,11 +232,11 @@ var Cal={
             e.stopPropagation();
             var $t=$(this),id=parseInt($t.data('id')),group=$t.data('group');
             if(id===0){
-                // "All" clicked — clear selection
-                if(group==='clinic'){self.selClinics=[];}else{self.selDisps=[];}
+                // "All" clicked — clear dispenser selection only
+                if(group==='disp'){self.selDisps=[];}
             } else if(group==='clinic'){
-                // Single-select for clinics: toggle same or replace
-                self.selClinics=self.selClinics.length===1&&self.selClinics[0]===id?[]:[id];
+                // Single-select for clinics: always select one (can't deselect to none)
+                self.selClinics=[id];
             } else {
                 var arr=self.selDisps;
                 var idx=arr.indexOf(id);
@@ -478,8 +488,35 @@ var Cal={
             this.loadDispensers(),
             this.loadServices(),
             this.loadExclusionTypes(),
-            this.loadHolidays()
+            this.loadHolidays(),
+            this.loadClinicCoverage()
         ).always(function(){ self.refresh(); });
+    },
+    onCalViewChange:function(){
+        var self=this;
+        if(this.calViewMode==='clinic'){
+            $('#hm-clinicMs,#hm-dispMs').hide();
+            this.selClinics=[];this.selDisps=[];
+            this.loadClinicCoverage().then(function(){self.refresh();});
+        } else {
+            $('#hm-clinicMs,#hm-dispMs').show();
+            this.renderMultiSelect();
+            // Auto-select first clinic if none selected
+            if(!this.selClinics.length&&this.clinics.length){
+                this.selClinics=[this.clinics[0].id];
+                this.renderMultiSelect();
+            }
+            this.loadDispensers().then(function(){self.refresh();});
+        }
+    },
+    loadClinicCoverage:function(){
+        return post('get_clinic_coverage').then(function(r){
+            if(r.success&&r.data&&r.data.coverage){Cal.clinicCoverage=r.data.coverage;}
+            else{Cal.clinicCoverage={};}
+        }).fail(function(){Cal.clinicCoverage={};});
+    },
+    visClinics:function(){
+        return this.clinics.filter(function(c){return c.is_active!==false&&c.is_active!=='f';});
     },
     loadHolidays:function(){
         return post('get_holidays').then(function(r){
@@ -570,14 +607,14 @@ var Cal={
 
     // ── Multi-select rendering ──
     renderMultiSelect:function(){
-        // Clinics
-        var ch='<div class="hm-ms-item'+(this.selClinics.length===0?' on':'')+'" data-id="0" data-group="clinic">All Clinics</div>';
+        // Clinics — no "All Clinics" option; require selecting one
+        var ch='';
         this.clinics.forEach(function(c){
             var on=Cal.selClinics.indexOf(c.id)>-1;
             ch+='<div class="hm-ms-item'+(on?' on':'')+'" data-id="'+c.id+'" data-group="clinic"><span class="hm-ms-dot" style="background:'+(on?'#fff':c.color)+'"></span>'+esc(c.name)+'</div>';
         });
         $('#hm-clinicMsDrop').html(ch);
-        var cLbl=this.selClinics.length===0?'All Clinics':this.selClinics.length===1?this.clinics.find(function(c){return c.id===Cal.selClinics[0];})?.name||'1 selected':this.selClinics.length+' selected';
+        var cLbl=this.selClinics.length===0?'Select Clinic':this.selClinics.length===1?this.clinics.find(function(c){return c.id===Cal.selClinics[0];})?.name||'1 selected':this.selClinics.length+' selected';
         $('#hm-clinicMsBtn .hm-ms-lbl').text(cLbl);
 
         // Dispensers — filtered by selected clinics
@@ -639,10 +676,94 @@ var Cal={
     },
     // ── GRID ──
     renderGrid:function(){
-        var dates=this.visDates(),disps=this.visDisps(),cfg=this.cfg,gw=document.getElementById('hm-gridWrap');
+        if(this.calViewMode==='clinic') return this.renderGridClinicView();
+        return this.renderGridDispenserView();
+    },
+
+    // ── CLINIC VIEW GRID ──
+    renderGridClinicView:function(){
+        var dates=this.visDates(),clinics=this.visClinics(),cfg=this.cfg,gw=document.getElementById('hm-gridWrap');
         if(!gw)return;
         this.updateDateLbl(dates);this.updateViewBtns();
 
+        var slotMap={compact:32,regular:40,large:52};
+        var slotH=slotMap[cfg.slotHt]||28;
+        cfg.slotHpx=slotH;
+
+        if(!clinics.length){gw.innerHTML='<div style="text-align:center;padding:80px;color:var(--hm-text-faint);font-size:15px">No clinics found.</div>';return;}
+
+        var colW=Math.max(100,Math.min(180,Math.floor(900/clinics.length)));
+        var tc=clinics.length*dates.length;
+        var cov=this.clinicCoverage||{};
+
+        function hexToRgba(hex,a){hex=(hex||'#ccc').replace('#','');if(hex.length===3)hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];var r=parseInt(hex.substring(0,2),16),g=parseInt(hex.substring(2,4),16),b=parseInt(hex.substring(4,6),16);return 'rgba('+r+','+g+','+b+','+a+')';}
+
+        // Build per-clinic per-dayOfWeek info
+        var clinicDayOff={}; // key: clinicId+'-'+dayOfWeek => true if no staff scheduled
+        var clinicDayStaff={}; // key: clinicId+'-'+dayOfWeek => [{name,initials,color}]
+        clinics.forEach(function(c){
+            var cc=cov[String(c.id)]||{};
+            for(var wd=0;wd<7;wd++){
+                var staff=cc[String(wd)]||[];
+                var key=c.id+'-'+wd;
+                clinicDayStaff[key]=staff;
+                if(!staff.length)clinicDayOff[key]=true;
+            }
+        });
+
+        var h='<div class="hm-grid" style="grid-template-columns:44px repeat('+tc+',minmax('+colW+'px,1fr));--hm-cal-bg:'+(cfg.calBg||'#ffffff')+';--hm-cal-grid:'+(cfg.gridLineColor||'#e2e8f0')+';--hm-cal-today:'+(cfg.todayHighlight||'#e6f7f9')+'">';
+        h+='<div class="hm-time-corner"></div>';
+        dates.forEach(function(d){
+            var td=isToday(d);
+            h+='<div class="hm-day-hd'+(td?' today':'')+'" style="grid-column:span '+clinics.length+(td?';background:'+cfg.todayHighlight:'')+'">';
+            h+='<span class="hm-day-lbl">'+DAYS[d.getDay()]+'</span> <span class="hm-day-num">'+d.getDate()+'</span> <span class="hm-day-lbl">'+MO[d.getMonth()]+'</span>';
+            h+='<div class="hm-prov-row">';
+            clinics.forEach(function(c){
+                var key=c.id+'-'+d.getDay();
+                var staff=clinicDayStaff[key]||[];
+                var isOff=!!clinicDayOff[key];
+                var clColor=c.clinic_colour||c.color||'#94a3b8';
+                var dotCls=isOff?'hm-dot hm-dot--grey':'hm-dot hm-dot--green';
+                var provBg=isOff?';background:#d4d4d4;opacity:0.55':';background:'+hexToRgba(clColor,0.15);
+                var ttl=isOff?'No staff scheduled':staff.map(function(s){return s.name;}).join(', ');
+                h+='<div class="hm-prov-cell" style="border-radius:4px'+provBg+'" title="'+esc(ttl)+'"><div class="hm-prov-ini"><span class="'+dotCls+' hm-dot--sm"></span>'+esc(c.name.substring(0,3).toUpperCase())+'</div></div>';
+            });
+            h+='</div></div>';
+        });
+
+        for(var s=0;s<cfg.totalSlots;s++){
+            var tm=cfg.startH*60+s*cfg.slotMin;
+            var hr=Math.floor(tm/60),mn=tm%60;
+            var isHr=mn===0;
+            h+='<div class="hm-time-cell'+(isHr?' hr':'')+'">'+(isHr?pad(hr)+':00':'')+'</div>';
+            dates.forEach(function(d,di){
+                clinics.forEach(function(c,ci){
+                    var key=c.id+'-'+d.getDay();
+                    var isOff=!!clinicDayOff[key];
+                    var cls='hm-slot'+(isHr?' hr':'')+(ci===clinics.length-1?' dl':'');
+                    var clColor=c.clinic_colour||c.color||'#94a3b8';
+                    var slotBg=isOff?';background:#d4d4d4;pointer-events:none':';background:'+hexToRgba(clColor,0.06);
+                    var staff=clinicDayStaff[key]||[];
+                    var slotTtl=staff.length?(' title="'+esc(staff.map(function(s){return s.name;}).join(', '))+'"'):(isOff?' title="No staff scheduled"':'');
+                    h+='<div class="'+cls+'"'+slotTtl+' data-date="'+fmt(d)+'" data-time="'+pad(hr)+':'+pad(mn)+'" data-clinic="'+c.id+'" data-day="'+di+'" data-slot="'+s+'" style="height:'+slotH+'px'+slotBg+'"></div>';
+                });
+            });
+        }
+        h+='</div>';
+        gw.innerHTML=h;
+    },
+
+    // ── DISPENSER VIEW GRID (original) ──
+    renderGridDispenserView:function(){
+        var dates=this.visDates(),cfg=this.cfg,gw=document.getElementById('hm-gridWrap');
+        if(!gw)return;
+        this.updateDateLbl(dates);this.updateViewBtns();
+
+        if(!this.selClinics.length){
+            gw.innerHTML='<div style="text-align:center;padding:80px;color:var(--hm-text-faint);font-size:15px">Select a clinic from the dropdown above to view dispenser schedules.</div>';return;
+        }
+
+        var disps=this.visDisps();
         var slotMap={compact:32,regular:40,large:52};
         var slotH=slotMap[cfg.slotHt]||28;
         cfg.slotHpx=slotH;
@@ -754,24 +875,37 @@ var Cal={
     // ── APPOINTMENTS ──
     renderAppts:function(){
         $('.hm-appt').remove();
-        var dates=this.visDates(),disps=this.visDisps(),cfg=this.cfg,slotH=cfg.slotHpx;
-        if(!disps.length)return;
+        var dates=this.visDates(),cfg=this.cfg,slotH=cfg.slotHpx;
+        var isClinicView=this.calViewMode==='clinic';
+        var disps=isClinicView?[]:this.visDisps();
+        var clinics=isClinicView?this.visClinics():[];
+        if(!isClinicView&&!disps.length)return;
+        if(isClinicView&&!clinics.length)return;
 
         var self=this;
         // Collect card metadata for overlap detection
         var cardMeta=[];
         this.appts.forEach(function(a){
-            // Filter by multi-select
-            if(Cal.selDisps.length&&Cal.selDisps.indexOf(parseInt(a.dispenser_id))===-1)return;
-            if(Cal.selClinics.length&&Cal.selClinics.indexOf(parseInt(a.clinic_id))===-1)return;
-            // Cancelled/rescheduled are always shown (half-height with overlay text)
+            // Filter by multi-select (dispenser view only)
+            if(!isClinicView){
+                if(Cal.selDisps.length&&Cal.selDisps.indexOf(parseInt(a.dispenser_id))===-1)return;
+                if(Cal.selClinics.length&&Cal.selClinics.indexOf(parseInt(a.clinic_id))===-1)return;
+            }
 
             var di=-1;
             for(var i=0;i<dates.length;i++){if(fmt(dates[i])===a.appointment_date){di=i;break;}}
             if(di===-1)return;
-            var found=false;
-            for(var j=0;j<disps.length;j++){if(parseInt(disps[j].id)===parseInt(a.dispenser_id)){found=true;break;}}
-            if(!found)return;
+
+            if(isClinicView){
+                // In clinic view, check clinic column exists
+                var clinicFound=false;
+                for(var j=0;j<clinics.length;j++){if(parseInt(clinics[j].id)===parseInt(a.clinic_id)){clinicFound=true;break;}}
+                if(!clinicFound)return;
+            } else {
+                var found=false;
+                for(var j=0;j<disps.length;j++){if(parseInt(disps[j].id)===parseInt(a.dispenser_id)){found=true;break;}}
+                if(!found)return;
+            }
 
             var tp=a.start_time.split(':');
             var aMn=parseInt(tp[0])*60+parseInt(tp[1]);
@@ -784,7 +918,12 @@ var Cal={
             var spanSlots=dur/cfg.slotMin;
             var h=Math.max(slotH*0.8, spanSlots*slotH - 2);
 
-            var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+a.dispenser_id+'"]');
+            var $t;
+            if(isClinicView){
+                $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-clinic="'+a.clinic_id+'"]');
+            } else {
+                $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+a.dispenser_id+'"]');
+            }
             if(!$t.length)return;
 
             var col=a.service_colour||cfg.apptBg||'#3B82F6';
@@ -886,7 +1025,8 @@ var Cal={
             $t.append(el);
 
             // Track for overlap detection
-            cardMeta.push({el:el, di:di, disp:parseInt(a.dispenser_id), startMn:aMn, endMn:aMn+dur});
+            var colKey=isClinicView?parseInt(a.clinic_id):parseInt(a.dispenser_id);
+            cardMeta.push({el:el, di:di, disp:colKey, startMn:aMn, endMn:aMn+dur});
 
             // Click / Double-click: use delay so dblclick can cancel single-click popup
             (function(el,a){
@@ -960,6 +1100,7 @@ var Cal={
     // ── EXCLUSION BLOCKS ──
     renderExclusions:function(){
         $('.hm-excl').remove();$('.hm-excl-pop').remove();
+        if(this.calViewMode==='clinic')return; // Exclusions only render in dispenser view
         var dates=this.visDates(),disps=this.visDisps(),cfg=this.cfg,slotH=cfg.slotHpx;
         if(!disps.length||!this.exclusions||!this.exclusions.length)return;
         var self=this;
@@ -1060,7 +1201,9 @@ var Cal={
     // ── NOW LINE ──
     renderNow:function(){
         $('.hm-now').remove();
-        var now=new Date(),dates=this.visDates(),disps=this.visDisps(),cfg=this.cfg;
+        var now=new Date(),dates=this.visDates(),cfg=this.cfg;
+        var isClinicView=this.calViewMode==='clinic';
+        var columns=isClinicView?this.visClinics():this.visDisps();
         var di=-1;
         for(var i=0;i<dates.length;i++){if(isToday(dates[i])){di=i;break;}}
         if(di===-1)return;
@@ -1068,8 +1211,9 @@ var Cal={
         if(nm<cfg.startH*60||nm>=cfg.endH*60)return;
         var si=Math.floor((nm-cfg.startH*60)/cfg.slotMin);
         var off=((nm-cfg.startH*60)%cfg.slotMin)/cfg.slotMin*cfg.slotHpx;
-        disps.forEach(function(p){
-            var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"][data-disp="'+p.id+'"]');
+        var dataAttr=isClinicView?'data-clinic':'data-disp';
+        columns.forEach(function(p){
+            var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"]['+dataAttr+'="'+p.id+'"]');
             if($t.length)$t.append('<div class="hm-now" style="top:'+off+'px;background:'+(cfg.indicatorColor||'#00d59b')+'"><div class="hm-now-dot" style="background:'+(cfg.indicatorColor||'#00d59b')+'"></div></div>');
         });
     },
@@ -2585,10 +2729,15 @@ var Cal={
 
     onSlot:function(el){
         var d=el.dataset;
-        this.openNewApptModal(d.date,d.time,parseInt(d.disp));
+        if(this.calViewMode==='clinic'){
+            // Clinic view: open appointment modal with clinic pre-selected, no dispenser
+            this.openNewApptModal(d.date,d.time,0,parseInt(d.clinic));
+        } else {
+            this.openNewApptModal(d.date,d.time,parseInt(d.disp));
+        }
     },
 
-    openNewApptModal:function(date,time,dispId){
+    openNewApptModal:function(date,time,dispId,clinicId){
         var self=this;
         // Ensure services, clinics & referral sources are loaded before building dropdown HTML
         var ready=$.Deferred();
@@ -2600,12 +2749,12 @@ var Cal={
                 self.loadReferralSources()
             ).always(function(){ready.resolve();});
         } else { ready.resolve(); }
-        ready.then(function(){ self._buildApptModal(date,time,dispId); });
+        ready.then(function(){ self._buildApptModal(date,time,dispId,clinicId); });
     },
-    _buildApptModal:function(date,time,dispId){
+    _buildApptModal:function(date,time,dispId,clinicId){
         var self=this;
         var svcOpts=self.services.length?self.services.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join(''):'<option value="">No types available</option>';
-        var cliOpts=self.clinics.length?self.clinics.map(function(c){return'<option value="'+c.id+'">'+esc(c.name)+'</option>';}).join(''):'<option value="">No clinics</option>';
+        var cliOpts=self.clinics.length?self.clinics.map(function(c){return'<option value="'+c.id+'"'+(clinicId&&parseInt(c.id)===clinicId?' selected':'')+'>'+esc(c.name)+'</option>';}).join(''):'<option value="">No clinics</option>';
         var refOpts='<option value="">— Select Referral Type —</option>';
         if(self.referralSources&&self.referralSources.length){refOpts+=self.referralSources.map(function(rs){return'<option value="'+rs.id+'">'+esc(rs.name)+'</option>';}).join('');}
         var html='<div class="hm-modal-bg open"><div class="hm-modal hm-modal--md">'+

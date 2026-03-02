@@ -37,6 +37,7 @@ add_action( 'wp_ajax_hm_get_settings',         'hm_ajax_get_settings' );
 add_action( 'wp_ajax_hm_save_settings',        'hm_ajax_save_settings' );
 add_action( 'wp_ajax_hm_get_clinics',          'hm_ajax_get_clinics' );
 add_action( 'wp_ajax_hm_get_dispensers',       'hm_ajax_get_dispensers' );
+add_action( 'wp_ajax_hm_get_clinic_coverage',  'hm_ajax_get_clinic_coverage' );
 add_action( 'wp_ajax_hm_get_services',         'hm_ajax_get_services' );
 add_action( 'wp_ajax_hm_search_patients',      'hm_ajax_search_patients' );
 add_action( 'wp_ajax_hm_get_appointments',     'hm_ajax_get_appointments' );
@@ -380,6 +381,63 @@ function hm_ajax_get_dispensers() {
         wp_send_json_error( [ 'message' => $e->getMessage() ] );
     }
 }
+
+/**
+ * Get clinic schedule coverage — for each clinic, which dispensers are scheduled on which days.
+ * Used by the Clinic View in the calendar.
+ */
+function hm_ajax_get_clinic_coverage() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    try {
+        $coverage = [];
+        $schedule_table = 'hearmed_reference.dispenser_schedules';
+        $has_schedule_table = HearMed_DB::get_var(
+            HearMed_DB::prepare( "SELECT to_regclass(%s)", $schedule_table )
+        ) !== null;
+
+        if ( $has_schedule_table ) {
+            // Check if effective_from/effective_to columns exist
+            $has_eff = (bool) HearMed_DB::get_var(
+                "SELECT 1 FROM information_schema.columns
+                 WHERE table_schema='hearmed_reference' AND table_name='dispenser_schedules'
+                   AND column_name='effective_from'"
+            );
+            $date_filter = $has_eff
+                ? " AND (ds.effective_from IS NULL OR ds.effective_from <= CURRENT_DATE)
+                     AND (ds.effective_to IS NULL OR ds.effective_to >= CURRENT_DATE)"
+                : "";
+
+            $rows = HearMed_DB::get_results(
+                "SELECT ds.clinic_id, ds.day_of_week, ds.staff_id,
+                        s.first_name, s.last_name, s.staff_color
+                 FROM hearmed_reference.dispenser_schedules ds
+                 JOIN hearmed_reference.staff s ON ds.staff_id = s.id
+                 WHERE ds.is_active = true AND s.is_active = true
+                   {$date_filter}
+                 ORDER BY ds.clinic_id, ds.day_of_week, s.last_name"
+            );
+
+            foreach ( ( $rows ?: [] ) as $r ) {
+                $cid = (string) (int) $r->clinic_id;
+                $dow = (string) (int) $r->day_of_week;
+                if ( ! isset( $coverage[ $cid ] ) ) $coverage[ $cid ] = [];
+                if ( ! isset( $coverage[ $cid ][ $dow ] ) ) $coverage[ $cid ][ $dow ] = [];
+                $coverage[ $cid ][ $dow ][] = [
+                    'id'       => (int) $r->staff_id,
+                    'name'     => trim( $r->first_name . ' ' . $r->last_name ),
+                    'initials' => strtoupper( substr( $r->first_name, 0, 1 ) . substr( $r->last_name, 0, 1 ) ),
+                    'color'    => $r->staff_color ?: '#0BB4C4',
+                ];
+            }
+        }
+
+        wp_send_json_success( [ 'coverage' => $coverage ] );
+    } catch ( Throwable $e ) {
+        error_log( '[HearMed] get_clinic_coverage error: ' . $e->getMessage() );
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
 function hm_ajax_get_services() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     try {
