@@ -1767,12 +1767,12 @@ var Cal={
         var _backLabel=(window._hmOrderOpts&&window._hmOrderOpts.backLabel)||'Calendar';
         // Hide calendar, show loading inside .hm-main
         var $hmMain=$('.hm-main').first();
-        $hmMain.find('#hm-app').hide();
+        $hmMain.children('.e-con-inner').hide();
         $hmMain.css({display:'flex',flexDirection:'column'});
         $hmMain.append('<div id="hm-op-loading" style="display:flex;align-items:center;justify-content:center;min-height:400px"><div style="text-align:center;color:var(--hm-text-muted,#94a3b8);font-family:var(--hm-font)"><div style="font-size:16px;font-weight:600;margin-bottom:6px">Loading Order Page</div><div style="font-size:13px;opacity:.6">'+esc(a.patient_name||'')+'</div></div></div>');
 
         post('get_order_products',{}).then(function(pR){
-            if(!pR.success){$('#hm-op-loading').remove();$hmMain.css({display:'',flexDirection:''});$hmMain.find('#hm-app').show();self.toast('Failed to load products');return;}
+            if(!pR.success){$('#hm-op-loading').remove();$hmMain.css({display:'',flexDirection:''});$hmMain.children('.e-con-inner').show();self.toast('Failed to load products');return;}
             var allProducts=pR.data.products||[];
             var allSvcs=pR.data.services||[];
             var allRanges=pR.data.ranges||[];
@@ -2076,7 +2076,7 @@ var Cal={
                 var pendingCredits=[]; // credits user intends to apply to this new order
                 var _cleanupNs='.opback .opexcard .opexhover .opcancelex .opexconfirm .opcat .opbrowse .oprange .opmfr .opstyle .opprod .opadd .oprem .opdisc .opdiscmode .opprsi .opsubmit .oppaybtn .oppaycancel .oppayconfirm .opaddmethod .opremmethod .oppayrowamt .oppayexback .opstockbtn .opstockclose .opstocksearch .opstockpick .opapplycreditnew .oprefundcredit';
 
-                function cleanupEvents(){$(document).off(_cleanupNs);$('#hm-op').remove();$hmMain.css({display:'',flexDirection:''});$hmMain.find('#hm-app').show();}
+                function cleanupEvents(){$(document).off(_cleanupNs);$('#hm-op').remove();$hmMain.css({display:'',flexDirection:''});$hmMain.children('.e-con-inner').show();}
 
                 // ═══════ HELPERS ═══════
                 function updateQuickpayState(){
@@ -2992,7 +2992,7 @@ var Cal={
         }).fail(function(){
             $('#hm-op-loading').remove();
             $hmMain.css({display:'',flexDirection:''});
-            $hmMain.find('#hm-app').show();
+            $hmMain.children('.e-con-inner').show();
             self.toast('Failed to load product data');
         });
     },
