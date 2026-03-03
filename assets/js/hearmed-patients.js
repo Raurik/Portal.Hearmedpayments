@@ -1070,12 +1070,12 @@ function initProfile(){
             h+='<div style="font-size:12px;color:#64748b;margin-top:2px">'+esc(sideLabel)+'</div>';
             h+='</div>';
 
-            // Original amount
+            // Original order info
             if(hasOrder&&itemAmt>0){
                 h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
                 h+='<div style="font-size:12px;color:#64748b;margin-bottom:4px">Original Order'+(orderNum?' — '+esc(orderNum):'')+'</div>';
                 h+='<div style="font-size:22px;font-weight:700;color:var(--hm-navy,#151B33)">€'+itemAmt.toFixed(2)+'</div>';
-                if(prsiAmt>0) h+='<div style="font-size:12px;color:#94a3b8;margin-top:4px">PRSI: €'+prsiAmt.toFixed(2)+' (tracked separately) · Patient paid: €'+patientAmt.toFixed(2)+'</div>';
+                if(prsiAmt>0) h+='<div style="font-size:12px;color:#94a3b8;margin-top:4px">PRSI: €'+prsiAmt.toFixed(2)+' · Patient paid: €'+patientAmt.toFixed(2)+'</div>';
                 h+='</div>';
             } else {
                 h+='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
@@ -1092,38 +1092,16 @@ function initProfile(){
             h+='<option value="Change of Technology">Change of Technology</option>';
             h+='</select></div>';
 
+            // Notes
             h+='<div class="hm-form-group"><label class="hm-label">Notes (optional)</label>';
             h+='<textarea class="hm-textarea" id="exch-notes" rows="2" placeholder="Any additional notes…"></textarea></div>';
-
-            // Exchange type
-            h+='<p style="font-size:13px;font-weight:600;color:var(--hm-navy,#151B33);margin-bottom:10px">Exchange type</p>';
-
-            h+='<div id="exch-opt-exchange" class="hm-exch-opt" style="border:2px solid var(--hm-teal,#0BB4C4);border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;background:#f0fdfa">';
-            h+='<label style="display:flex;align-items:center;gap:10px;cursor:pointer">';
-            h+='<input type="radio" name="exch-type" value="exchange" checked style="accent-color:#0BB4C4;width:16px;height:16px">';
-            h+='<div><strong style="font-size:13px;color:var(--hm-navy,#151B33)">Exchange — Credit to Account</strong>';
-            h+='<div style="font-size:11px;color:#64748b;margin-top:1px">Credit original amount to patient account. Apply it on the new order.</div>';
-            h+='</div></label></div>';
-
-            h+='<div id="exch-opt-sametech" class="hm-exch-opt" style="border:2px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer">';
-            h+='<label style="display:flex;align-items:center;gap:10px;cursor:pointer">';
-            h+='<input type="radio" name="exch-type" value="same_tech" style="accent-color:#0BB4C4;width:16px;height:16px">';
-            h+='<div><strong style="font-size:13px;color:var(--hm-navy,#151B33)">Same Technology — Just Swap</strong>';
-            h+='<div style="font-size:11px;color:#64748b;margin-top:1px">No money changes hands. Old device returned to stock.</div>';
-            h+='</div></label></div>';
 
             h+='</div>';
             h+='<div class="hm-modal-ft" style="border-top:1px solid #e2e8f0;padding-top:16px;display:flex;gap:8px;justify-content:flex-end">';
             h+='<button class="hm-btn hm-btn--secondary hm-close">Cancel</button>';
-            h+='<button class="hm-btn hm-btn--primary" id="exch-confirm">Confirm Exchange</button>';
+            h+='<button class="hm-btn hm-btn--primary" id="exch-confirm">Confirm & Select New Device →</button>';
             h+='</div>';
             $('#exch-body').html(h);
-
-            // Radio toggle styling
-            $('input[name="exch-type"]').on('change',function(){
-                $('.hm-exch-opt').css({borderColor:'#e2e8f0',background:'#fff'});
-                $(this).closest('.hm-exch-opt').css({borderColor:'var(--hm-teal,#0BB4C4)',background:'#f0fdfa'});
-            });
 
             $('#exch-confirm').on('click',function(){
                 var reason=$('#exch-reason').val();
@@ -1133,24 +1111,20 @@ function initProfile(){
                     if(!manual){toast('Enter the original item amount','error');return;}
                     itemAmt=manual;patientAmt=manual;
                 }
-                var exchType=$('input[name="exch-type"]:checked').val();
                 var notes=$('#exch-notes').val();
-                $(this).prop('disabled',true).text('Processing…');
+                $(this).prop('disabled',true).text('Initiating…');
 
-                $.post(_hm.ajax,{action:'hm_create_exchange',nonce:_hm.nonce,
+                $.post(_hm.ajax,{action:'hm_initiate_exchange',nonce:_hm.nonce,
                     patient_id:pid,device_id:ppId,reason:reason,
-                    credit_amount:itemAmt,refund_type:exchType,
-                    refund_amount:0,notes:notes,side:side||'both'
+                    credit_amount:itemAmt,notes:notes,side:side||'both'
                 },function(r){
-                    closeModal();
                     if(r.success){
-                        if(exchType==='same_tech'){
-                            toast('Same-tech exchange complete. Old device returned to stock.');
-                        } else {
-                            toast('Exchange processed — '+r.data.credit_note_number+'. €'+parseFloat(r.data.patient_credit||0).toFixed(2)+' credited to patient account. Apply it on the new order.');
-                        }
-                        if(cb)cb();
-                    } else { toast(r.data||'Error','error'); }
+                        // Redirect to calendar exchange order page
+                        window.location='/calendar/?exchange_id='+r.data.exchange_id;
+                    } else {
+                        closeModal();
+                        toast(r.data||'Error initiating exchange','error');
+                    }
                 });
             });
         }

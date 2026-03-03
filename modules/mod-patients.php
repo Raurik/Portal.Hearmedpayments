@@ -137,6 +137,9 @@ add_action( 'wp_ajax_hm_update_repair_status', 'hm_ajax_update_repair_status' );
 add_action( 'wp_ajax_hm_create_exchange',  'hm_ajax_create_exchange' );
 add_action( 'wp_ajax_hm_get_exchange_item_amount', 'hm_ajax_get_exchange_item_amount' );
 add_action( 'wp_ajax_hm_get_patient_exchanges', 'hm_ajax_get_patient_exchanges' );
+add_action( 'wp_ajax_hm_initiate_exchange', 'hm_ajax_initiate_exchange' );
+add_action( 'wp_ajax_hm_get_exchange_details', 'hm_ajax_get_exchange_details' );
+add_action( 'wp_ajax_hm_complete_exchange', 'hm_ajax_complete_exchange' );
 
 // Return flow (full return with PRSI tracking)
 add_action( 'wp_ajax_hm_create_return',  'hm_ajax_create_return' );
@@ -3054,6 +3057,508 @@ function hm_ajax_get_patient_exchanges() {
         ];
     }
     wp_send_json_success( $out );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  24-D. INITIATE EXCHANGE
+//       Creates a pending exchange record, returns exchange_id for
+//       redirect to the calendar exchange order page.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_initiate_exchange() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $pid       = intval( $_POST['patient_id'] ?? 0 );
+    $device_id = intval( $_POST['device_id'] ?? 0 );
+    $reason    = sanitize_textarea_field( $_POST['reason'] ?? '' );
+    $side      = sanitize_text_field( $_POST['side'] ?? 'both' );
+    $credit_amount = floatval( $_POST['credit_amount'] ?? 0 );
+    $notes     = sanitize_textarea_field( $_POST['notes'] ?? '' );
+
+    if ( ! $pid || ! $device_id ) wp_send_json_error( 'Patient and device required' );
+    if ( ! $reason ) wp_send_json_error( 'Reason is required' );
+
+    $db       = HearMed_DB::instance();
+    $staff_id = hm_patient_staff_id();
+
+    hm_ensure_returns_tables();
+
+    $device = $db->get_row( "SELECT * FROM hearmed_core.patient_devices WHERE id = \$1", [ $device_id ] );
+    if ( ! $device ) wp_send_json_error( 'Device not found' );
+
+    // Lookup linked order
+    if ( ! $device->order_id && $device->product_id ) {
+        $fallback = $db->get_row(
+            "SELECT o.id FROM hearmed_core.orders o
+             JOIN hearmed_core.order_items oi ON oi.order_id = o.id
+             WHERE o.patient_id = \$1 AND oi.item_id = \$2 AND oi.item_type = 'product'
+             ORDER BY o.id DESC LIMIT 1",
+            [ $pid, $device->product_id ]
+        );
+        if ( $fallback ) {
+            $db->update( 'hearmed_core.patient_devices', [ 'order_id' => $fallback->id ], [ 'id' => $device_id ] );
+            $device->order_id = $fallback->id;
+        }
+    }
+
+    $order = null;
+    $prsi_amount = 0;
+    $inv_id = null;
+    if ( $device->order_id ) {
+        $order = $db->get_row(
+            "SELECT o.*, inv.grand_total AS inv_total, inv.id AS inv_id
+             FROM hearmed_core.orders o
+             LEFT JOIN hearmed_core.invoices inv ON inv.id = o.invoice_id
+             WHERE o.id = \$1",
+            [ $device->order_id ]
+        );
+        if ( $order ) {
+            $inv_id = $order->inv_id ?? null;
+            if ( $side === 'both' ) {
+                $prsi_amount = floatval( $order->prsi_amount ?? 0 );
+            } else {
+                $prsi_field  = 'prsi_' . $side;
+                $prsi_amount = ! empty( $order->$prsi_field ) ? 500 : 0;
+            }
+        }
+    }
+
+    // Generate exchange number
+    $exchange_number = HearMed_Utils::generate_exchange_number();
+
+    // Create exchange record (status = initiated)
+    $exchange_id = $db->insert( 'hearmed_core.exchanges', [
+        'patient_id'          => $pid,
+        'original_order_id'   => $device->order_id ?: null,
+        'original_invoice_id' => $inv_id,
+        'device_id'           => $device_id,
+        'exchange_number'     => $exchange_number,
+        'exchange_type'       => 'pending',
+        'original_amount'     => $credit_amount ?: 0,
+        'prsi_amount'         => $prsi_amount,
+        'reason'              => $reason,
+        'notes'               => $notes ?: null,
+        'status'              => 'initiated',
+        'created_by'          => $staff_id ?: null,
+    ]);
+
+    hm_patient_audit( 'INITIATE_EXCHANGE', 'exchange', $exchange_id, [
+        'patient_id' => $pid, 'device_id' => $device_id, 'reason' => $reason
+    ]);
+
+    wp_send_json_success( [
+        'exchange_id'     => $exchange_id,
+        'exchange_number' => $exchange_number,
+    ]);
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  24-E. GET EXCHANGE DETAILS
+//       Returns full exchange data for the calendar exchange order page.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_get_exchange_details() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $exchange_id = intval( $_POST['exchange_id'] ?? $_GET['exchange_id'] ?? 0 );
+    if ( ! $exchange_id ) wp_send_json_error( 'Missing exchange_id' );
+
+    $db = HearMed_DB::instance();
+
+    $ex = $db->get_row(
+        "SELECT e.*,
+                pd.product_id, pd.product_name AS device_name, pd.manufacturer,
+                pd.serial_left, pd.serial_right, pd.fitting_date,
+                p.first_name AS p_first, p.last_name AS p_last, p.patient_number,
+                p.prsi_eligible, p.date_of_birth
+         FROM hearmed_core.exchanges e
+         LEFT JOIN hearmed_core.patient_devices pd ON pd.id = e.device_id
+         LEFT JOIN hearmed_core.patients p ON p.id = e.patient_id
+         WHERE e.id = \$1",
+        [ $exchange_id ]
+    );
+    if ( ! $ex ) wp_send_json_error( 'Exchange not found' );
+
+    // Determine how many aids were on original order (1 or 2)
+    $original_qty = 1;
+    if ( $ex->original_order_id ) {
+        $item_count = $db->get_var(
+            "SELECT COUNT(*) FROM hearmed_core.order_items
+             WHERE order_id = \$1 AND item_type = 'product'",
+            [ $ex->original_order_id ]
+        );
+        $original_qty = max( 1, intval( $item_count ) );
+    } else {
+        // If both serials present, it's binaural
+        if ( ! empty( $ex->serial_left ) && ! empty( $ex->serial_right ) ) {
+            $original_qty = 2;
+        }
+    }
+
+    // Get original order items for display
+    $original_items = [];
+    if ( $ex->original_order_id ) {
+        $original_items = $db->get_results(
+            "SELECT oi.*, COALESCE(p.product_name, oi.item_description) AS product_name
+             FROM hearmed_core.order_items oi
+             LEFT JOIN hearmed_reference.products p ON p.id = oi.item_id AND oi.item_type = 'product'
+             WHERE oi.order_id = \$1
+             ORDER BY oi.id",
+            [ $ex->original_order_id ]
+        );
+    }
+
+    // Get PRSI info from original order
+    $prsi_left  = false;
+    $prsi_right = false;
+    if ( $ex->original_order_id ) {
+        $ord = $db->get_row(
+            "SELECT prsi_left, prsi_right, prsi_amount FROM hearmed_core.orders WHERE id = \$1",
+            [ $ex->original_order_id ]
+        );
+        if ( $ord ) {
+            $prsi_left  = ! empty( $ord->prsi_left );
+            $prsi_right = ! empty( $ord->prsi_right );
+        }
+    }
+
+    $out_items = [];
+    foreach ( $original_items as $it ) {
+        $out_items[] = [
+            'id'          => (int) $it->id,
+            'product_name'=> $it->product_name,
+            'item_type'   => $it->item_type,
+            'ear_side'    => $it->ear_side ?? '',
+            'quantity'    => (int) ($it->quantity ?? 1),
+            'unit_price'  => (float) ($it->unit_retail_price ?? $it->unit_price ?? 0),
+            'line_total'  => (float) ($it->line_total ?? 0),
+        ];
+    }
+
+    wp_send_json_success( [
+        'exchange_id'      => (int) $ex->id,
+        'exchange_number'  => $ex->exchange_number ?? '',
+        'patient_id'       => (int) $ex->patient_id,
+        'patient_name'     => trim(($ex->p_first ?? '') . ' ' . ($ex->p_last ?? '')),
+        'patient_number'   => $ex->patient_number ?? '',
+        'patient_dob'      => $ex->date_of_birth ?? '',
+        'prsi_eligible'    => ! empty( $ex->prsi_eligible ),
+        'device_id'        => (int) $ex->device_id,
+        'device_name'      => $ex->device_name ?? 'Unknown Device',
+        'manufacturer'     => $ex->manufacturer ?? '',
+        'serial_left'      => $ex->serial_left ?? '',
+        'serial_right'     => $ex->serial_right ?? '',
+        'fitting_date'     => $ex->fitting_date ?? '',
+        'original_order_id'=> (int) ($ex->original_order_id ?? 0),
+        'original_invoice_id'=> (int) ($ex->original_invoice_id ?? 0),
+        'original_amount'  => (float) $ex->original_amount,
+        'prsi_amount'      => (float) $ex->prsi_amount,
+        'prsi_left'        => $prsi_left,
+        'prsi_right'       => $prsi_right,
+        'reason'           => $ex->reason ?? '',
+        'notes'            => $ex->notes ?? '',
+        'status'           => $ex->status,
+        'original_qty'     => $original_qty,
+        'original_items'   => $out_items,
+        'side'             => '', // side is captured in device serial context
+    ]);
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  24-F. COMPLETE EXCHANGE
+//       Called from calendar exchange page after new device selected.
+//       Creates: new order, credit note on old, new invoice, applies credit,
+//       handles PRSI carryover, handles balance difference.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_complete_exchange() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $exchange_id    = intval( $_POST['exchange_id'] ?? 0 );
+    $items_json     = stripslashes( $_POST['items_json'] ?? '[]' );
+    $notes          = sanitize_textarea_field( $_POST['notes'] ?? '' );
+    $prsi_left      = intval( $_POST['prsi_left'] ?? 0 );
+    $prsi_right     = intval( $_POST['prsi_right'] ?? 0 );
+    $discount_pct   = floatval( $_POST['discount_pct'] ?? 0 );
+    $discount_euro  = floatval( $_POST['discount_euro'] ?? 0 );
+    $from_stock     = intval( $_POST['from_stock'] ?? 0 );
+
+    if ( ! $exchange_id ) wp_send_json_error( 'Missing exchange_id' );
+
+    $new_items = json_decode( $items_json, true );
+    if ( ! is_array( $new_items ) || empty( $new_items ) ) wp_send_json_error( 'No items selected' );
+
+    $db       = HearMed_DB::instance();
+    $staff_id = hm_patient_staff_id();
+
+    $ex = $db->get_row( "SELECT * FROM hearmed_core.exchanges WHERE id = \$1", [ $exchange_id ] );
+    if ( ! $ex ) wp_send_json_error( 'Exchange not found' );
+    if ( $ex->status !== 'initiated' ) wp_send_json_error( 'Exchange already processed' );
+
+    $pid            = (int) $ex->patient_id;
+    $device_id      = (int) $ex->device_id;
+    $original_amount= (float) $ex->original_amount;
+    $prsi_amount    = (float) $ex->prsi_amount;
+    $side_info      = '';
+
+    // Load device
+    $device = $db->get_row( "SELECT * FROM hearmed_core.patient_devices WHERE id = \$1", [ $device_id ] );
+
+    // Calculate new order totals
+    $new_subtotal = 0;
+    $new_vat      = 0;
+    foreach ( $new_items as $it ) {
+        $qty   = intval( $it['qty'] ?? 1 );
+        $price = floatval( $it['unit_price'] ?? 0 );
+        $vat   = floatval( $it['vat_amount'] ?? 0 );
+        $new_subtotal += $price * $qty;
+        $new_vat      += $vat;
+    }
+
+    // Apply discount
+    $discount_total = 0;
+    if ( $discount_pct > 0 ) {
+        $discount_total = round( $new_subtotal * ( min( $discount_pct, 100 ) / 100 ), 2 );
+    } elseif ( $discount_euro > 0 ) {
+        $discount_total = min( $discount_euro, $new_subtotal );
+    }
+
+    // PRSI carryover
+    $new_prsi = ( $prsi_left ? 500 : 0 ) + ( $prsi_right ? 500 : 0 );
+
+    $new_grand_total = max( 0, $new_subtotal - $discount_total - $new_prsi );
+
+    // Determine exchange type based on price difference
+    $credit_amount = $original_amount; // amount to credit from old
+    $balance_due   = $new_grand_total; // what new invoice will be
+    $patient_credit_amount = max( 0, $credit_amount - $balance_due ); // surplus if step-down
+    $exchange_type = 'same_value';
+    if ( $new_grand_total > $credit_amount ) {
+        $exchange_type = 'step_up';
+    } elseif ( $new_grand_total < $credit_amount ) {
+        $exchange_type = 'step_down';
+    }
+
+    $db->begin_transaction();
+
+    try {
+        // 1. Mark old device as Replaced
+        $db->update( 'hearmed_core.patient_devices', [
+            'device_status'  => 'Replaced',
+            'inactive_reason'=> 'Exchange: ' . ( $ex->reason ?? '' ),
+            'inactive_date'  => date( 'Y-m-d' ),
+            'updated_at'     => date( 'c' ),
+        ], [ 'id' => $device_id ] );
+
+        // 2. Return old device to stock
+        if ( $device ) {
+            hm_return_device_to_stock( $device, 'both', 'Exchange', $staff_id );
+        }
+
+        // 3. Create credit note on old invoice
+        $cn_prefix = HearMed_Settings::get( 'hm_credit_note_prefix', 'HMCN' );
+        $cn_seq    = $db->get_var( "SELECT COALESCE(MAX(id), 0) + 1 FROM hearmed_core.credit_notes" );
+        $cn_number = $cn_prefix . '-' . str_pad( $cn_seq, 4, '0', STR_PAD_LEFT );
+
+        $cn_id = $db->insert( 'hearmed_core.credit_notes', [
+            'credit_note_number'    => $cn_number,
+            'patient_id'            => $pid,
+            'invoice_id'            => $ex->original_invoice_id ?: null,
+            'order_id'              => $ex->original_order_id ?: null,
+            'device_id'             => $device_id,
+            'amount'                => $credit_amount,
+            'prsi_amount'           => $prsi_amount,
+            'patient_refund_amount' => max( 0, $credit_amount - $prsi_amount ),
+            'reason'                => 'Exchange: ' . ( $ex->reason ?? '' ),
+            'credit_date'           => date( 'Y-m-d' ),
+            'refund_type'           => 'exchange',
+            'exchange_type'         => $exchange_type,
+            'cheque_sent'           => false,
+            'prsi_notified'         => false,
+            'created_by'            => $staff_id ?: null,
+        ]);
+
+        // 4. Create new order
+        $order_number = HearMed_Utils::generate_order_number();
+
+        $new_order_id = $db->insert( 'hearmed_core.orders', [
+            'patient_id'     => $pid,
+            'order_number'   => $order_number,
+            'order_date'     => date( 'Y-m-d' ),
+            'subtotal'       => $new_subtotal,
+            'discount_total' => $discount_total,
+            'vat_total'      => $new_vat,
+            'prsi_amount'    => $new_prsi,
+            'prsi_left'      => $prsi_left ? true : false,
+            'prsi_right'     => $prsi_right ? true : false,
+            'grand_total'    => $new_grand_total,
+            'deposit'        => 0,
+            'balance_due'    => $new_grand_total,
+            'notes'          => 'Exchange from ' . ( $ex->exchange_number ?? '' ) . '. ' . ( $notes ?: '' ),
+            'status'         => $from_stock ? 'Approved' : 'Pending Approval',
+            'is_exchange'    => true,
+            'exchange_id'    => $exchange_id,
+            'created_by'     => $staff_id ?: null,
+        ]);
+
+        // 5. Insert new order items
+        foreach ( $new_items as $it ) {
+            $db->insert( 'hearmed_core.order_items', [
+                'order_id'          => $new_order_id,
+                'item_id'           => intval( $it['product_id'] ?? 0 ) ?: null,
+                'item_type'         => $it['type'] ?? 'product',
+                'item_description'  => $it['name'] ?? '',
+                'ear_side'          => $it['ear'] ?? null,
+                'quantity'          => intval( $it['qty'] ?? 1 ),
+                'unit_retail_price' => floatval( $it['unit_price'] ?? 0 ),
+                'unit_price'        => floatval( $it['unit_price'] ?? 0 ),
+                'vat_rate'          => floatval( $it['vat_rate'] ?? 0 ),
+                'vat_amount'        => floatval( $it['vat_amount'] ?? 0 ),
+                'line_total'        => floatval( $it['unit_price'] ?? 0 ) * intval( $it['qty'] ?? 1 ),
+            ]);
+        }
+
+        // 6. Create patient credit from old invoice amount
+        $credit_id = $db->insert( 'hearmed_core.patient_credits', [
+            'patient_id'          => $pid,
+            'credit_note_id'      => $cn_id,
+            'original_invoice_id' => $ex->original_invoice_id ?: null,
+            'original_order_id'   => $ex->original_order_id ?: null,
+            'amount'              => $credit_amount,
+            'used_amount'         => min( $credit_amount, $new_grand_total ),
+            'status'              => $credit_amount <= $new_grand_total ? 'used' : 'active',
+            'notes'               => "Exchange credit from CN {$cn_number}",
+            'created_by'          => $staff_id ?: null,
+        ]);
+
+        // 7. Create new invoice
+        $inv_prefix = HearMed_Settings::get( 'hm_invoice_prefix', 'INV' );
+        $inv_seq    = HearMed_Settings::get( 'hm_invoice_last_number', 0 ) + 1;
+        HearMed_Settings::set( 'hm_invoice_last_number', $inv_seq );
+        $inv_number = $inv_prefix . '-' . date( 'Y' ) . '-' . str_pad( $inv_seq, 4, '0', STR_PAD_LEFT );
+
+        // Amount still to pay after applying credit
+        $amount_after_credit = max( 0, $new_grand_total - $credit_amount );
+
+        $new_invoice_id = $db->insert( 'hearmed_core.invoices', [
+            'patient_id'     => $pid,
+            'order_id'       => $new_order_id,
+            'invoice_number' => $inv_number,
+            'invoice_date'   => date( 'Y-m-d' ),
+            'subtotal'       => $new_subtotal,
+            'discount_total' => $discount_total,
+            'vat_total'      => $new_vat,
+            'prsi_amount'    => $new_prsi,
+            'grand_total'    => $new_grand_total,
+            'amount_paid'    => min( $credit_amount, $new_grand_total ),
+            'balance_due'    => $amount_after_credit,
+            'status'         => $amount_after_credit <= 0.01 ? 'paid' : 'unpaid',
+            'created_by'     => $staff_id ?: null,
+        ]);
+
+        // Link order to invoice
+        $db->update( 'hearmed_core.orders', [
+            'invoice_id' => $new_invoice_id,
+        ], [ 'id' => $new_order_id ] );
+
+        // 8. Apply credit to new invoice
+        $apply_amount = min( $credit_amount, $new_grand_total );
+        if ( $apply_amount > 0 ) {
+            $db->insert( 'hearmed_core.credit_applications', [
+                'patient_credit_id' => $credit_id,
+                'invoice_id'        => $new_invoice_id,
+                'amount'            => $apply_amount,
+                'applied_by'        => $staff_id ?: null,
+            ]);
+
+            // Record as payment on invoice
+            $db->insert( 'hearmed_core.payments', [
+                'patient_id'     => $pid,
+                'invoice_id'     => $new_invoice_id,
+                'order_id'       => $new_order_id,
+                'amount'         => $apply_amount,
+                'payment_method' => 'Credit Applied',
+                'payment_date'   => date( 'Y-m-d' ),
+                'notes'          => "Exchange credit from CN {$cn_number}",
+                'created_by'     => $staff_id ?: null,
+            ]);
+        }
+
+        // 9. Update exchange record
+        $db->update( 'hearmed_core.exchanges', [
+            'new_order_id'       => $new_order_id,
+            'new_invoice_id'     => $new_invoice_id,
+            'credit_note_id'     => $cn_id,
+            'patient_credit_id'  => $credit_id,
+            'exchange_type'      => $exchange_type,
+            'new_amount'         => $new_grand_total,
+            'credit_amount'      => $apply_amount,
+            'balance_due'        => $amount_after_credit,
+            'refund_amount'      => $exchange_type === 'step_down' ? max( 0, $credit_amount - $new_grand_total ) : 0,
+            'status'             => $amount_after_credit <= 0.01 ? 'completed' : 'pending_payment',
+            'completed_at'       => $amount_after_credit <= 0.01 ? date( 'c' ) : null,
+            'completed_by'       => $staff_id ?: null,
+            'updated_at'         => date( 'c' ),
+        ], [ 'id' => $exchange_id ] );
+
+        // 10. Queue credit note for QBO
+        $db->insert( 'hearmed_admin.qbo_batch_queue', [
+            'entity_type' => 'credit_note',
+            'entity_id'   => $cn_id,
+            'status'      => 'pending',
+            'queued_at'   => date( 'Y-m-d H:i:s' ),
+            'created_by'  => $staff_id ?: null,
+        ]);
+
+        // 11. Timeline
+        $desc = "Exchange {$ex->exchange_number} completed. CN {$cn_number} issued. New order {$order_number} created.";
+        if ( $amount_after_credit > 0 ) {
+            $desc .= " Balance due: €" . number_format( $amount_after_credit, 2 );
+        } else {
+            $desc .= " Fully covered by credit.";
+        }
+        if ( $exchange_type === 'step_down' ) {
+            $surplus = $credit_amount - $new_grand_total;
+            $desc .= " Surplus credit: €" . number_format( $surplus, 2 );
+        }
+        $db->insert( 'hearmed_core.patient_timeline', [
+            'patient_id'  => $pid,
+            'event_type'  => 'exchange_completed',
+            'event_date'  => date( 'Y-m-d' ),
+            'staff_id'    => $staff_id ?: null,
+            'description' => $desc,
+        ]);
+
+        $db->commit();
+
+        hm_patient_audit( 'COMPLETE_EXCHANGE', 'exchange', $exchange_id, [
+            'patient_id'     => $pid,
+            'new_order_id'   => $new_order_id,
+            'new_invoice_id' => $new_invoice_id,
+            'credit_note'    => $cn_number,
+            'exchange_type'  => $exchange_type,
+            'balance_due'    => $amount_after_credit,
+        ]);
+
+        wp_send_json_success( [
+            'exchange_id'        => $exchange_id,
+            'exchange_number'    => $ex->exchange_number ?? '',
+            'new_order_id'       => $new_order_id,
+            'order_number'       => $order_number,
+            'new_invoice_id'     => $new_invoice_id,
+            'invoice_number'     => $inv_number,
+            'credit_note_id'     => $cn_id,
+            'credit_note_number' => $cn_number,
+            'exchange_type'      => $exchange_type,
+            'credit_applied'     => $apply_amount,
+            'balance_due'        => $amount_after_credit,
+            'new_grand_total'    => $new_grand_total,
+            'from_stock'         => $from_stock,
+        ]);
+    } catch ( \Exception $e ) {
+        $db->rollback();
+        wp_send_json_error( 'Exchange failed: ' . $e->getMessage() );
+    }
 }
 
 
