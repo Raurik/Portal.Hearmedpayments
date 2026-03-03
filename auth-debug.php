@@ -1,14 +1,19 @@
 <?php
 /**
- * Temporary auth debug page — DELETE AFTER DEBUGGING
- * Visit: https://portal.hearmedpayments.net/wp-content/plugins/hearmed-calendar/auth-debug.php
+ * Temporary auth debug — DELETE AFTER DEBUGGING
+ * Visit: https://portal.hearmedpayments.net/wp-admin/admin-ajax.php?action=hm_auth_debug
  */
 
-// Bootstrap WordPress
-require_once dirname( __FILE__, 4 ) . '/wp-load.php';
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 
-header( 'Content-Type: text/plain; charset=utf-8' );
-header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+add_action( 'wp_ajax_hm_auth_debug', 'hm_auth_debug_output' );
+add_action( 'wp_ajax_nopriv_hm_auth_debug', 'hm_auth_debug_output' );
+
+function hm_auth_debug_output() {
+    header( 'Content-Type: text/plain; charset=utf-8' );
+    header( 'Cache-Control: no-cache, no-store, must-revalidate' );
 
 echo "=== HearMed Auth Debug ===\n\n";
 
@@ -111,3 +116,5 @@ if (is_user_logged_in()) {
 }
 
 echo "\n=== END DEBUG ===\n";
+    die();
+}
