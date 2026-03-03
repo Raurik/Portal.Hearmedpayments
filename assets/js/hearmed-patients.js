@@ -1042,7 +1042,9 @@ function initProfile(){
             $(this).prop('disabled',true).text('Processing…');
             var data={action:'hm_create_return',nonce:_hm.nonce,patient_id:pid,device_id:ppId,reason:reason,notes:$('#ret-notes').val(),side:side||'both'};
             var amt=$('#ret-amount').val();if(amt)data.refund_amount=parseFloat(amt);
+            console.log('[HM] Creating return',data,'→',_hm.ajax);
             $.post(_hm.ajax,data,function(r){
+                console.log('[HM] Return response',r);
                 closeModal();
                 if(r.success){
                     var msg='Return processed — Credit Note '+r.data.credit_note_number+'. Patient refund: €'+parseFloat(r.data.patient_refund||0).toFixed(2);
@@ -1474,7 +1476,8 @@ function initProfile(){
         $.post(_hm.ajax,{action:'hm_get_patient_orders',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.warning+'</div><div class="hm-empty-text">'+(r.data||'Error loading orders')+'</div></div>');return;}
             var d=r.data;
-            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Orders ('+d.length+')</h3><a href="/orders/?hm_action=create&patient_id='+pid+'" class="hm-btn hm-btn--primary hm-btn--sm">+ Create Order</a></div>';
+            var ordUrl=(_hm.orders_url||'/order-status/').replace(/\/$/,'');
+            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Orders ('+d.length+')</h3><a href="'+ordUrl+'?hm_action=create&patient_id='+pid+'" class="hm-btn hm-btn--primary hm-btn--sm">+ Create Order</a></div>';
             if(!d.length){h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.order+'</div><div class="hm-empty-text">No orders for this patient</div></div>';}
             else{
                 var sc={Fitted:'hm-badge--green',Pending:'hm-badge--amber',Cancelled:'hm-badge--red',Refunded:'hm-badge--grey'};
@@ -1742,7 +1745,7 @@ function initProfile(){
                 '<p style="font-size:13px;color:#64748b;margin-bottom:20px;">Would you like to create an order for this device?</p>'+
                 '<div style="display:flex;gap:10px;justify-content:center;">'+
                     '<button class="hm-btn hm-btn--secondary hm-close" style="min-width:100px;">Not Now</button>'+
-                    '<a href="/orders/?hm_action=create&patient_id='+pid+'&product_id='+(prodId||'')+'" class="hm-btn hm-btn--primary" style="min-width:140px;text-decoration:none;">Create Order →</a>'+
+                    '<a href="'+((_hm.orders_url||'/order-status/').replace(/\/$/,''))+'?hm_action=create&patient_id='+pid+'&product_id='+(prodId||'')+'" class="hm-btn hm-btn--primary" style="min-width:140px;text-decoration:none;">Create Order →</a>'+
                 '</div>'+
             '</div></div></div>'
         );

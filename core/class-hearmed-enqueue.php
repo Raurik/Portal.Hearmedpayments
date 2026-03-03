@@ -197,6 +197,7 @@ class HearMed_Enqueue {
                 'logout_url' => admin_url( 'admin-ajax.php' ) . '?action=hm_auth_logout',
                 'home_url'   => home_url(),
                 'plugin_url' => HEARMED_URL,
+                'orders_url' => HearMed_Utils::page_url( 'orders' ),
                 'settings'   => $settings,
                 'csrf_token' => PortalAuth::csrf_token(),
                 'is_impersonating' => PortalAuth::is_impersonating(),
@@ -222,6 +223,7 @@ class HearMed_Enqueue {
                 'logout_url' => wp_logout_url( home_url() ),
                 'home_url'   => home_url(),
                 'plugin_url' => HEARMED_URL,
+                'orders_url' => HearMed_Utils::page_url( 'orders' ),
                 'settings'   => $settings,
             ];
         }
@@ -551,7 +553,9 @@ class HearMed_Enqueue {
      */
     private function get_file_version( $file ) {
         $full_path = HEARMED_PATH . $file;
-        return file_exists( $full_path ) ? filemtime( $full_path ) : HEARMED_VERSION;
+        // Use filemtime + a hard bump suffix to defeat CDN/server caches
+        $v = file_exists( $full_path ) ? filemtime( $full_path ) : HEARMED_VERSION;
+        return $v . '.3';
     }
     
     /**
