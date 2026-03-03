@@ -140,6 +140,16 @@ function hm_notif_staff_id() {
     static $sid = null;
     if ( $sid !== null ) return $sid;
 
+    // Auth V2: PortalAuth::current_id() returns staff.id directly from PG session
+    if ( class_exists( 'PortalAuth' ) && PortalAuth::is_v2() ) {
+        $portal_id = PortalAuth::current_id();
+        if ( $portal_id ) {
+            $sid = (int) $portal_id;
+            return $sid;
+        }
+    }
+
+    // Fallback: WP user → staff lookup
     $uid = get_current_user_id();
     if ( ! $uid ) { $sid = 0; return 0; }
 
@@ -405,9 +415,12 @@ function hm_notifications_bell_widget() {
         </a>
     </div>
 
+    <!-- Toast container for real-time popups -->
+    <div class="hm-notif-toast-container" id="hm-notif-toast-container"></div>
+
     <script>
     (function(){
-        /* Position bell in #hm-midsidebar — centered horizontally, bottom-aligned */
+        /* ── Position bell in #hm-midsidebar ── */
         function placeBell(){
             var bell = document.getElementById('hm-bell-widget');
             if(!bell) return;
@@ -424,7 +437,6 @@ function hm_notifications_bell_widget() {
                 return;
             }
 
-            /* Fallback: sidebar or topbar */
             var sidebar = document.querySelector('.hm-sidebar');
             if(sidebar){
                 sidebar.style.position = 'relative';
@@ -437,7 +449,6 @@ function hm_notifications_bell_widget() {
                 return;
             }
 
-            /* Last resort: header */
             var header = document.querySelector('header, .elementor-location-header, [data-elementor-type="header"]');
             if(header){
                 header.style.position = 'relative';
@@ -452,9 +463,124 @@ function hm_notifications_bell_widget() {
             placeBell();
         }
 
-        /* Poll for unread count — lightweight endpoint */
+        /* ── Notification class labels & colours ── */
+        var classLabels = {
+            urgent:      'Urgent',
+            appointment: 'Appointment',
+            patient:     'Patient',
+            reminder:    'Reminder',
+            internal:    'Internal',
+            chat:        'Team Chat'
+        };
+
+        /* ── Toast popup system ── */
+        var toastContainer = document.getElementById('hm-notif-toast-container');
+        var shownToastIds  = {};   /* track IDs already shown this session */
+        var TOAST_DURATION = 5000; /* 5 seconds */
+
+        function showToast(notif) {
+            if (!toastContainer) return;
+            if (shownToastIds[notif.id]) return; /* don't repeat */
+            shownToastIds[notif.id] = true;
+
+            var cls       = notif['class'] || 'internal';
+            var label     = classLabels[cls] || 'Notification';
+            var subject   = notif.subject || '';
+            var message   = notif.message || '';
+            var entityUrl = buildEntityUrl(notif);
+
+            var toast = document.createElement('div');
+            toast.className = 'hm-notif-toast';
+            toast.setAttribute('data-class', cls);
+
+            toast.innerHTML =
+                '<button class="hm-notif-toast__close" title="Dismiss">&times;</button>' +
+                '<div class="hm-notif-toast__class">' + escHtml(label) + '</div>' +
+                '<div class="hm-notif-toast__subject">' + escHtml(subject) + '</div>' +
+                '<div class="hm-notif-toast__message">' + escHtml(message) + '</div>' +
+                '<div class="hm-notif-toast__progress"></div>';
+
+            /* Click → navigate to notification page or entity */
+            toast.style.cursor = 'pointer';
+            toast.addEventListener('click', function(e) {
+                if (e.target.classList.contains('hm-notif-toast__close')) return;
+                /* Mark as read */
+                if (notif.recipient_id && typeof jQuery !== 'undefined' && typeof HM !== 'undefined') {
+                    jQuery.post(HM.ajax_url, {
+                        action: 'hm_notifications_mark_read',
+                        nonce: HM.nonce,
+                        recipient_id: notif.recipient_id
+                    });
+                }
+                window.location.href = entityUrl || '/notifications/';
+            });
+
+            /* Close button */
+            toast.querySelector('.hm-notif-toast__close').addEventListener('click', function(e) {
+                e.stopPropagation();
+                dismissToast(toast);
+            });
+
+            toastContainer.appendChild(toast);
+
+            /* Slide in */
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    toast.classList.add('show');
+                });
+            });
+
+            /* Auto-dismiss after 5s */
+            var timer = setTimeout(function() { dismissToast(toast); }, TOAST_DURATION);
+            toast._timer = timer;
+
+            /* Pause on hover */
+            toast.addEventListener('mouseenter', function() {
+                clearTimeout(toast._timer);
+                var prog = toast.querySelector('.hm-notif-toast__progress');
+                if (prog) prog.style.animationPlayState = 'paused';
+            });
+            toast.addEventListener('mouseleave', function() {
+                toast._timer = setTimeout(function() { dismissToast(toast); }, 2000);
+                var prog = toast.querySelector('.hm-notif-toast__progress');
+                if (prog) prog.style.animationPlayState = 'running';
+            });
+        }
+
+        function dismissToast(el) {
+            if (!el || !el.parentNode) return;
+            clearTimeout(el._timer);
+            el.classList.remove('show');
+            el.classList.add('hiding');
+            setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 350);
+        }
+
+        function buildEntityUrl(n) {
+            if (!n.entity_type || !n.entity_id) return '/notifications/';
+            var map = {
+                patient:     '/patients/?id=',
+                appointment: '/calendar/?apt=',
+                order:       '/orders/?id=',
+                repair:      '/repairs/?id=',
+                invoice:     '/accounting/?inv='
+            };
+            var base = map[n.entity_type];
+            return base ? base + n.entity_id : '/notifications/';
+        }
+
+        function escHtml(s) {
+            var d = document.createElement('div');
+            d.textContent = s || '';
+            return d.innerHTML;
+        }
+
+        /* ── Poll: unread count + new notifications for toasts ── */
+        var lastPollTime = new Date().toISOString();
+
         function pollBell(){
             if(typeof jQuery === 'undefined' || typeof HM === 'undefined') return;
+
+            /* 1. Unread count for badge */
             jQuery.post(HM.ajax_url, {
                 action: 'hm_notifications_unread_count',
                 nonce:  HM.nonce
@@ -475,11 +601,25 @@ function hm_notifications_bell_widget() {
                     svg.setAttribute('stroke', '#94a3b8');
                 }
             });
+
+            /* 2. Poll for NEW notifications since last check → show toasts */
+            jQuery.post(HM.ajax_url, {
+                action: 'hm_notifications_poll',
+                nonce:  HM.nonce,
+                since:  lastPollTime
+            }, function(r){
+                if(!r.success || !r.data || !r.data.notifications) return;
+                lastPollTime = new Date().toISOString();
+
+                r.data.notifications.forEach(function(n) {
+                    showToast(n);
+                });
+            });
         }
 
-        /* Initial poll + interval */
+        /* Initial poll + interval (every 15s for responsiveness) */
         setTimeout(pollBell, 2000);
-        setInterval(pollBell, 30000);
+        setInterval(pollBell, 15000);
     })();
     </script>
     <?php
