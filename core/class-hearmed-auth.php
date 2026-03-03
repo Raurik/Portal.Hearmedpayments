@@ -85,10 +85,9 @@ class HearMed_Auth {
      * Static admin check — wraps the instance is_admin() method
      */
     public static function is_admin( $user_id = null ) {
-        // V2: C-Level has wildcard '*' — effectively admin
+        // V2: all roles treated as admin until RBAC is finalised
         if ( PortalAuth::is_v2() ) {
-            $role = PortalAuth::current_role();
-            return in_array( $role, [ 'c_level', 'finance' ], true );
+            return PortalAuth::is_logged_in();
         }
         static $instance = null;
         if ( $instance === null ) {

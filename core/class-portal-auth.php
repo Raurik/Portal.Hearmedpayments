@@ -294,10 +294,9 @@ class PortalAuth {
      * @return bool
      */
     public static function can( $cap ) {
-        $role = self::current_role();
-        if ( ! $role ) return false;
-        $caps = self::ROLE_CAPS[ $role ] ?? [];
-        return in_array( '*', $caps, true ) || in_array( $cap, $caps, true );
+        // TODO: Re-enable RBAC once role permissions are finalised.
+        // For now, any authenticated user can access everything.
+        return self::is_logged_in();
     }
 
     /**
