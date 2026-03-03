@@ -31,6 +31,30 @@ class HearMed_Roles {
     const SCHEME    = "scheme_other";
 
     /**
+     * Ensure all HearMed WP roles exist.
+     * Safe to call on every init — only adds roles that are missing.
+     */
+    public static function register_wp_roles(): void {
+        $roles = [
+            'hm_clevel'    => 'HearMed C-Level',
+            'hm_admin'     => 'HearMed Admin',
+            'hm_finance'   => 'HearMed Finance',
+            'hm_dispenser' => 'HearMed Dispenser',
+            'hm_reception' => 'HearMed Reception',
+            'hm_ca'        => 'HearMed Clinical Assistant',
+            'hm_scheme'    => 'HearMed Scheme/Other',
+        ];
+
+        foreach ( $roles as $slug => $label ) {
+            if ( ! get_role( $slug ) ) {
+                // All roles get read capability; sidebar visibility is controlled
+                // by the WP role slug, not by WP capabilities.
+                add_role( $slug, $label, [ 'read' => true ] );
+            }
+        }
+    }
+
+    /**
      * Check if current user has one of the given roles.
      * Usage: HearMed_Roles::can(["c_level", "finance"])
      */

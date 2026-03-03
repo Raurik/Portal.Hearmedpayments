@@ -166,6 +166,9 @@ class HearMed_Core {
         // Register shortcodes early
         add_action( 'init', [ $this->router, 'register_shortcodes' ], 5 );
         
+        // Ensure WP roles exist (idempotent, runs once per deploy)
+        add_action( 'init', [ 'HearMed_Roles', 'register_wp_roles' ], 5 );
+
         // System ready hook
         add_action( 'init', [ $this, 'system_ready' ], 10 );
 
