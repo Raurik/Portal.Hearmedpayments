@@ -2197,15 +2197,7 @@ function hm_ajax_save_ai_transcript() {
     $duration_secs  = intval( $_POST['duration_secs'] ?? 0 );
     $hash           = hash( 'sha256', $text );
 
-    /* ── 1. Save to patient_notes (legacy, keeps existing workflows) ── */
-    $note_id = $db->insert( 'hearmed_core.patient_notes', [
-        'patient_id' => $pid,
-        'note_type'  => 'AI Transcript',
-        'note_text'  => '[AI Transcription — ' . date( 'Y-m-d H:i' ) . "]\n" . $text,
-        'created_by' => $staff_id ?: null,
-    ]);
-
-    /* ── 2. Save to appointment_transcripts (new clinical pipeline) ── */
+    /* ── 1. Save to appointment_transcripts (clinical pipeline — case history tab) ── */
     /*  Populate BOTH original (staff_id, transcript_hash, duration_secs,
         word_count) AND alias (created_by, checksum_hash, duration_seconds)
         columns so the INSERT works regardless of which migration has run. */
@@ -2225,7 +2217,7 @@ function hm_ajax_save_ai_transcript() {
         'created_at'       => current_time( 'mysql' ),
     ]);
 
-    hm_patient_audit( 'SAVE_AI_TRANSCRIPT', 'patient_note', $note_id, [
+    hm_patient_audit( 'SAVE_AI_TRANSCRIPT', 'appointment_transcript', $transcript_id, [
         'patient_id'     => $pid,
         'transcript_id'  => $transcript_id,
         'appointment_id' => $appointment_id,
@@ -2233,14 +2225,13 @@ function hm_ajax_save_ai_transcript() {
         'word_count'     => $word_count,
     ]);
 
-    /* ── 3. Trigger AI extraction ── */
+    /* ── 2. Trigger AI extraction ── */
     $clinical_doc_id = null;
     if ( $transcript_id ) {
         $clinical_doc_id = hm_trigger_ai_extraction( $pid, $appointment_id ?: 0, $transcript_id, $text, $template_id ?: 0 );
     }
 
     wp_send_json_success( [
-        'id'              => $note_id,
         'transcript_id'   => $transcript_id,
         'clinical_doc_id' => $clinical_doc_id,
     ] );
