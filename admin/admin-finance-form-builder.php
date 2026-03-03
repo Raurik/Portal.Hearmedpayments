@@ -365,6 +365,37 @@ class HearMed_Admin_Finance_Form_Builder {
                     exchange_model: 'Phonak Virto P90-312 Custom ITE',
                     exchange_value: '€2,100.00',
                     balance_due: '€435.00'
+                },
+                exchange: {
+                    exchange_number: 'HMEXCH-00012',
+                    exchange_date: '28 Feb 2025',
+                    status: 'Completed',
+                    patient_name: 'Mary O\'Sullivan',
+                    patient_dob: '14/03/1952',
+                    patient_address: '12 Main Street, Tullamore, Co. Offaly',
+                    patient_phone: '087 123 4567',
+                    clinic_name: 'HearMed — Tullamore',
+                    clinic_phone: '057 932 1234',
+                    audiologist: 'Dr. Sarah Byrne',
+                    original_device: 'Phonak Audéo L90-R (Right)',
+                    original_serial: 'SN-44820193',
+                    original_side: 'Right',
+                    original_fitting_date: '15 Jan 2025',
+                    original_invoice: 'INV-2025-0042',
+                    original_amount: '€2,150.00',
+                    reason: 'Device not suitable. Patient experiencing persistent feedback and discomfort with RIC style. Exchanging for custom ITE.',
+                    returned_items: [
+                        {desc:'Phonak Audéo L90-R (Right)',serial:'SN-44820193',amount:'€2,150.00'}
+                    ],
+                    new_items: [
+                        {desc:'Phonak Virto P90-312 Custom ITE (Right)',qty:1,price:'€2,400.00'},
+                        {desc:'Custom Ear Mould (Right)',qty:1,price:'€60.00'}
+                    ],
+                    returned_total: '€2,150.00',
+                    new_subtotal: '€2,460.00',
+                    credit_applied: '−€2,150.00',
+                    balance_due: '€310.00',
+                    credit_note: 'CN-2025-0018'
                 }
             };
 
@@ -439,6 +470,12 @@ class HearMed_Admin_Finance_Form_Builder {
                 } else if (type === 'creditnote') {
                     html += (s.creditMeta !== false ? '<strong>'+esc(d.credit_number)+'</strong>'+esc(d.credit_date)+'<br>' : '');
                     html += '<div style="margin-top:4px;"><span class="p-badge p-badge-credit">'+esc(d.status)+'</span></div>';
+                } else if (type === 'exchange') {
+                    if (s.exchangeMeta !== false) {
+                        html += '<strong>'+esc(d.exchange_number)+'</strong>'+esc(d.exchange_date)+'<br>';
+                        html += '<div style="font-size:9px;color:#64748b;">Ref: '+esc(d.original_invoice)+'</div>';
+                        html += '<div style="margin-top:4px;"><span class="p-badge p-badge-approved">'+esc(d.status)+'</span></div>';
+                    }
                 }
                 html += '</div></div>';
 
@@ -477,6 +514,17 @@ class HearMed_Admin_Finance_Form_Builder {
                     html += '</div>';
                     if (s.originalInvoice !== false) html += '<div class="p-box"><div class="p-box-label">Original Invoice</div><strong>'+esc(d.original_invoice)+'</strong><div class="sub">'+esc(d.original_date)+'</div></div>';
                     html += '</div>';
+                } else if (type === 'exchange') {
+                    if (s.patient !== false) {
+                        html += '<div class="p-row">';
+                        html += '<div class="p-box"><div class="p-box-label">Patient</div><strong>'+esc(d.patient_name)+'</strong>';
+                        html += '<div class="sub">DOB: '+esc(d.patient_dob)+'</div>';
+                        if (s.patientAddress !== false) html += '<div class="sub">'+esc(d.patient_address)+'</div>';
+                        html += '</div>';
+                        html += '<div class="p-box"><div class="p-box-label">Clinic</div><strong>'+esc(d.clinic_name)+'</strong><div class="sub">'+esc(d.audiologist)+'</div>';
+                        html += '<div class="sub">'+esc(d.clinic_phone)+'</div></div>';
+                        html += '</div>';
+                    }
                 }
 
                 /* ── TYPE-SPECIFIC CONTENT ── */
@@ -601,6 +649,53 @@ class HearMed_Admin_Finance_Form_Builder {
                         html += '<div style="font-size:10px;">New device: '+esc(d.exchange_model)+' — '+esc(d.exchange_value)+'</div>';
                         html += '<div style="font-size:10px;font-weight:700;margin-top:4px;">Balance due: '+esc(d.balance_due)+'</div></div>';
                     }
+                } else if (type === 'exchange') {
+                    /* Original device */
+                    if (s.originalDevice !== false) {
+                        html += '<div class="p-section-title">Original Device</div>';
+                        html += '<table class="p-table"><thead><tr><th>Device</th><th>Serial</th><th>Side</th><th>Fitted</th><th class="money">Amount</th></tr></thead>';
+                        html += '<tbody><tr><td>'+esc(d.original_device)+'</td><td><code>'+esc(d.original_serial)+'</code></td><td>'+esc(d.original_side)+'</td><td>'+esc(d.original_fitting_date)+'</td><td class="money">'+esc(d.original_amount)+'</td></tr></tbody></table>';
+                    }
+
+                    /* Reason */
+                    if (s.exchangeReason !== false) {
+                        html += '<div class="p-credit-reason"><div class="p-credit-reason-label">Reason for Exchange</div><p>'+esc(d.reason)+'</p></div>';
+                    }
+
+                    /* Returned items (crossed-out negative) */
+                    if (s.returnedItems !== false) {
+                        html += '<div class="p-section-title">Returned Items</div>';
+                        html += '<table class="p-table"><thead><tr><th>Description</th><th>Serial</th><th class="money">Credit</th></tr></thead><tbody>';
+                        d.returned_items.forEach(function(it){
+                            html += '<tr style="color:#991b1b;text-decoration:line-through;"><td>'+esc(it.desc)+'</td><td><code>'+esc(it.serial)+'</code></td><td class="money">−'+esc(it.amount)+'</td></tr>';
+                        });
+                        html += '</tbody><tfoot><tr><td colspan="2" style="color:#991b1b;font-weight:700;">Returned Total</td><td class="money" style="color:#991b1b;font-weight:700;">−'+esc(d.returned_total)+'</td></tr></tfoot></table>';
+                    }
+
+                    /* New items */
+                    if (s.newItems !== false) {
+                        html += '<div class="p-section-title">New Items</div>';
+                        html += '<table class="p-table"><thead><tr><th>Description</th><th>Qty</th><th class="money">Price</th></tr></thead><tbody>';
+                        d.new_items.forEach(function(it){
+                            html += '<tr><td>'+esc(it.desc)+'</td><td>'+it.qty+'</td><td class="money">'+esc(it.price)+'</td></tr>';
+                        });
+                        html += '</tbody></table>';
+                    }
+
+                    /* Pricing summary */
+                    if (s.pricing !== false) {
+                        html += '<table class="p-table" style="margin-top:0;"><tfoot>';
+                        html += '<tr><td colspan="2">New Items Subtotal</td><td class="money">'+esc(d.new_subtotal)+'</td></tr>';
+                        html += '<tr><td colspan="2" style="color:#059669;">Credit Applied (from returned device)</td><td class="money" style="color:#059669;">'+esc(d.credit_applied)+'</td></tr>';
+                        html += '<tr class="total-row"><td colspan="2">Balance Due</td><td class="money" style="color:'+accent+';">'+esc(d.balance_due)+'</td></tr>';
+                        html += '</tfoot></table>';
+                    }
+
+                    /* Credit applied info */
+                    if (s.creditApplied !== false) {
+                        html += '<div class="p-exchange"><div class="p-approval-label">Credit Note</div>';
+                        html += '<div style="font-size:10px;">Credit note '+esc(d.credit_note)+' issued for returned device. Amount credited: '+esc(d.returned_total)+'</div></div>';
+                    }
                 }
 
                 /* ── FOOTER ── */
@@ -696,7 +791,7 @@ class HearMed_Admin_Finance_Form_Builder {
             });
 
             /* ── Initial render ── */
-            ['invoice','order','repair','creditnote'].forEach(function(t){ renderPreview(t); });
+            ['invoice','order','repair','creditnote','exchange'].forEach(function(t){ renderPreview(t); });
         })();
         </script>
         <?php

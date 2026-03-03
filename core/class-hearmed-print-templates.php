@@ -448,6 +448,14 @@ tfoot td { font-weight: 600; border-bottom: none; }
                     <div class="badge badge-credit">CREDIT</div>
                 <?php endif;
                 break;
+            case 'exchange':
+                if ($s['exchangeMeta'] ?? true): ?>
+                    <strong><?php echo esc_html($d->exchange_number ?? ''); ?></strong>
+                    <div>Date: <?php echo esc_html(!empty($d->exchange_date) ? date('d M Y', strtotime($d->exchange_date)) : date('d M Y')); ?></div>
+                    <div>Ref: <span style="color:var(--hm-accent);font-weight:600;"><?php echo esc_html($d->original_invoice_number ?? ''); ?></span></div>
+                    <div class="badge badge-approved"><?php echo esc_html(strtoupper($d->status ?? 'EXCHANGE')); ?></div>
+                <?php endif;
+                break;
         }
         return ob_get_clean();
     }
@@ -886,6 +894,130 @@ tfoot td { font-weight: 600; border-bottom: none; }
     }
     private static function section_creditnote_accentBar() { return ''; }
 
+    /* ════════════════════════════════════════════════
+       EXCHANGE SECTIONS
+       ════════════════════════════════════════════════ */
+
+    private static function section_exchange_patient(array $s, object $d): string {
+        if (!($s['patient'] ?? true)) return '';
+        ob_start(); ?>
+        <div class="hm-print-row">
+            <div class="hm-print-box">
+                <div class="hm-print-box-label">Patient</div>
+                <strong><?php echo esc_html(($d->p_first ?? '') . ' ' . ($d->p_last ?? '')); ?></strong>
+                <div class="sub">DOB: <?php echo esc_html($d->patient_dob ?? ''); ?></div>
+                <div class="sub">Patient #: <?php echo esc_html($d->patient_number ?? ''); ?></div>
+                <?php if (($s['patientAddress'] ?? true) && !empty($d->address_line1)):
+                    $addr = array_filter([$d->address_line1 ?? '', $d->address_line2 ?? '', $d->city ?? '', $d->county ?? '', $d->eircode ?? '']);
+                ?>
+                <div class="sub"><?php echo esc_html(implode(', ', $addr)); ?></div>
+                <?php endif; ?>
+            </div>
+            <div class="hm-print-box">
+                <div class="hm-print-box-label">Clinic</div>
+                <strong><?php echo esc_html($d->clinic_name ?? ''); ?></strong>
+                <div class="sub"><?php echo esc_html($d->dispenser_name ?? ''); ?></div>
+                <div class="sub"><?php echo esc_html($d->clinic_phone ?? ''); ?></div>
+            </div>
+        </div>
+        <?php return ob_get_clean();
+    }
+
+    private static function section_exchange_originalDevice(array $s, object $d): string {
+        if (!($s['originalDevice'] ?? true)) return '';
+        ob_start(); ?>
+        <div class="hm-print-section-title">Original Device</div>
+        <table>
+            <thead><tr><th>Device</th><th>Serial</th><th>Side</th><th>Fitted</th><th class="money">Amount</th></tr></thead>
+            <tbody>
+            <tr>
+                <td><?php echo esc_html($d->original_device_name ?? ''); ?></td>
+                <td><code><?php echo esc_html($d->original_serial ?? ''); ?></code></td>
+                <td><?php echo esc_html($d->original_side ?? ''); ?></td>
+                <td><?php echo esc_html(!empty($d->original_fitting_date) ? date('d M Y', strtotime($d->original_fitting_date)) : ''); ?></td>
+                <td class="money">€<?php echo number_format((float)($d->original_amount ?? 0), 2); ?></td>
+            </tr>
+            </tbody>
+        </table>
+        <?php return ob_get_clean();
+    }
+
+    private static function section_exchange_exchangeReason(array $s, object $d): string {
+        if (!($s['exchangeReason'] ?? true) || empty($d->reason)) return '';
+        ob_start(); ?>
+        <div class="hm-print-credit-reason">
+            <div class="hm-print-credit-reason-label">Reason for Exchange</div>
+            <p><?php echo esc_html($d->reason); ?></p>
+        </div>
+        <?php return ob_get_clean();
+    }
+
+    private static function section_exchange_returnedItems(array $s, object $d): string {
+        if (!($s['returnedItems'] ?? true)) return '';
+        $items = $d->returned_items ?? [];
+        ob_start(); ?>
+        <div class="hm-print-section-title">Returned Items</div>
+        <table>
+            <thead><tr><th>Description</th><th>Serial</th><th class="money">Credit</th></tr></thead>
+            <tbody>
+            <?php foreach ($items as $it): ?>
+            <tr style="color:#991b1b;text-decoration:line-through;">
+                <td><?php echo esc_html($it->description ?? $it->product_name ?? ''); ?></td>
+                <td><code><?php echo esc_html($it->serial ?? ''); ?></code></td>
+                <td class="money">−€<?php echo number_format((float)($it->amount ?? 0), 2); ?></td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+            <tfoot>
+                <tr><td colspan="2" style="color:#991b1b;font-weight:700;">Returned Total</td><td class="money" style="color:#991b1b;font-weight:700;">−€<?php echo number_format((float)($d->returned_total ?? 0), 2); ?></td></tr>
+            </tfoot>
+        </table>
+        <?php return ob_get_clean();
+    }
+
+    private static function section_exchange_newItems(array $s, object $d): string {
+        if (!($s['newItems'] ?? true)) return '';
+        $items = $d->new_items ?? [];
+        ob_start(); ?>
+        <div class="hm-print-section-title">New Items</div>
+        <table>
+            <thead><tr><th>Description</th><th>Qty</th><th class="money">Price</th></tr></thead>
+            <tbody>
+            <?php foreach ($items as $it): ?>
+            <tr>
+                <td><?php echo esc_html($it->description ?? $it->product_name ?? ''); ?></td>
+                <td><?php echo esc_html($it->quantity ?? 1); ?></td>
+                <td class="money">€<?php echo number_format((float)($it->unit_price ?? $it->line_total ?? 0), 2); ?></td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php return ob_get_clean();
+    }
+
+    private static function section_exchange_pricing(array $s, object $d): string {
+        if (!($s['pricing'] ?? true)) return '';
+        ob_start(); ?>
+        <table style="margin-top:0;">
+            <tfoot>
+                <tr><td colspan="2" class="money">New Items Subtotal</td><td class="money">€<?php echo number_format((float)($d->new_subtotal ?? 0), 2); ?></td></tr>
+                <tr><td colspan="2" class="money" style="color:#059669;">Credit Applied (from returned device)</td><td class="money" style="color:#059669;">−€<?php echo number_format((float)($d->credit_applied ?? 0), 2); ?></td></tr>
+                <tr class="total-row"><td colspan="2" class="money">Balance Due</td><td class="money">€<?php echo number_format((float)($d->balance_due ?? 0), 2); ?></td></tr>
+            </tfoot>
+        </table>
+        <?php return ob_get_clean();
+    }
+
+    private static function section_exchange_creditApplied(array $s, object $d): string {
+        if (!($s['creditApplied'] ?? true) || empty($d->credit_note_number)) return '';
+        ob_start(); ?>
+        <div class="hm-print-exchange">
+            <div style="font-size:9px;font-weight:600;color:var(--hm-accent);text-transform:uppercase;margin-bottom:2px;">Credit Note</div>
+            <div style="font-size:10px;">Credit note <strong><?php echo esc_html($d->credit_note_number); ?></strong> issued for returned device. Amount credited: €<?php echo number_format((float)($d->returned_total ?? $d->credit_applied ?? 0), 2); ?></div>
+        </div>
+        <?php return ob_get_clean();
+    }
+
     /* ──────────────────────────────────────────────
        HELPERS
        ────────────────────────────────────────────── */
@@ -905,6 +1037,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
             case 'order':      return 'Order — ' . ($d->order_number ?? '');
             case 'repair':     return 'Repair Docket — ' . ($d->repair_number ?? '');
             case 'creditnote': return 'Credit Note — ' . ($d->credit_note_number ?? '');
+            case 'exchange':   return 'Exchange Form — ' . ($d->exchange_number ?? '');
         }
         return 'HearMed Document';
     }
