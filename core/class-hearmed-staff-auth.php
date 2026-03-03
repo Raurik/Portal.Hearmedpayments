@@ -123,6 +123,20 @@ class HearMed_Staff_Auth {
         if ( $staff && ! empty( $staff->wp_user_id ) ) {
             $user = get_user_by( 'id', (int) $staff->wp_user_id );
             if ( $user ) {
+                // Sync display name from PG on every bridge call so
+                // Elementor's user-info widget always shows the right name.
+                $pg = HearMed_DB::get_row(
+                    "SELECT first_name, last_name FROM hearmed_reference.staff WHERE id = $1",
+                    [ $staff_id ]
+                );
+                if ( $pg ) {
+                    self::sync_wp_user_name(
+                        $user->ID,
+                        $pg->first_name ?? '',
+                        $pg->last_name ?? '',
+                        trim( ( $pg->first_name ?? '' ) . ' ' . ( $pg->last_name ?? '' ) ) ?: $user->display_name
+                    );
+                }
                 return (int) $user->ID;
             }
             // WP user was deleted — clear the stale reference so we
@@ -135,17 +149,25 @@ class HearMed_Staff_Auth {
             );
         }
 
+        // ── Look up the staff's real name from PG ─────────────────
+        $pg_staff = HearMed_DB::get_row(
+            "SELECT first_name, last_name FROM hearmed_reference.staff WHERE id = $1",
+            [ $staff_id ]
+        );
+        $first = $pg_staff->first_name ?? '';
+        $last  = $pg_staff->last_name ?? '';
+        $display = trim( $first . ' ' . $last ) ?: $username;
+
         // ── Try to find an existing WP user by email ─────────────────
-        // Another staff member, or a previous auto-created user whose
-        // ID wasn't stored, may already own this email in wp_users.
         $existing = get_user_by( 'email', $email );
         if ( $existing ) {
-            // Re-link and return
+            // Re-link and sync display name
             HearMed_DB::update(
                 'hearmed_reference.staff',
                 [ 'wp_user_id' => (int) $existing->ID, 'updated_at' => current_time( 'mysql' ) ],
                 [ 'id' => $staff_id ]
             );
+            self::sync_wp_user_name( $existing->ID, $first, $last, $display );
             error_log( '[HM Staff Auth] Re-linked staff ' . $staff_id . ' to existing WP user ' . $existing->ID . ' (email match: ' . $email . ')' );
             return (int) $existing->ID;
         }
@@ -171,14 +193,49 @@ class HearMed_Staff_Auth {
             $user->set_role( $role );
         }
 
+        // Set display name so Elementor's user-info widget shows the real name
+        self::sync_wp_user_name( $user_id, $first, $last, $display );
+
         HearMed_DB::update(
             'hearmed_reference.staff',
             [ 'wp_user_id' => (int) $user_id, 'updated_at' => current_time( 'mysql' ) ],
             [ 'id' => $staff_id ]
         );
 
-        error_log( '[HM Staff Auth] Created WP user ' . $user_id . ' (' . $candidate . ') for staff ' . $staff_id );
+        error_log( '[HM Staff Auth] Created WP user ' . $user_id . ' (' . $candidate . ', display: ' . $display . ') for staff ' . $staff_id );
         return (int) $user_id;
+    }
+
+    /**
+     * Sync the WP user's display_name, first_name, last_name from PG staff.
+     *
+     * Elementor's User Info widget reads wp_users.display_name, so this
+     * must match the portal staff record.  Only writes if values differ
+     * to avoid unnecessary DB writes on every page load.
+     */
+    private static function sync_wp_user_name( int $wp_user_id, string $first, string $last, string $display ): void {
+        $user = get_user_by( 'id', $wp_user_id );
+        if ( ! $user ) return;
+
+        $needs_update = false;
+        $data = [ 'ID' => $wp_user_id ];
+
+        if ( $display && $user->display_name !== $display ) {
+            $data['display_name'] = $display;
+            $needs_update = true;
+        }
+        if ( $first && $user->first_name !== $first ) {
+            $data['first_name'] = $first;
+            $needs_update = true;
+        }
+        if ( $last && $user->last_name !== $last ) {
+            $data['last_name'] = $last;
+            $needs_update = true;
+        }
+
+        if ( $needs_update ) {
+            wp_update_user( $data );
+        }
     }
 
     public static function set_two_factor( $staff_id, $enabled ) {
