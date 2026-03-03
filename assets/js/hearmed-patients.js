@@ -354,7 +354,7 @@ function initProfile(){
         {id:'overview',label:'Overview'},{id:'details',label:'Details'},{id:'appointments',label:'Appointments'},
         {id:'notes',label:'Notes'},{id:'documents',label:'Documents'},{id:'orders',label:'Orders'},
         {id:'invoices',label:'Invoices'},{id:'hearing-aids',label:'Hearing Aids'},{id:'repairs',label:'Repairs'},
-        {id:'returns',label:'Returns'},{id:'exchanges',label:'Exchanges'},{id:'forms',label:'Forms'},{id:'case-history',label:'Case History'},
+        {id:'returns',label:'Returns'},{id:'forms',label:'Forms'},{id:'case-history',label:'Case History'},
         {id:'activity',label:'Activity'}
     ];
 
@@ -435,7 +435,6 @@ function initProfile(){
             case 'appointments':loadAppointments($c);break;case 'notes':loadNotes($c);break;
             case 'documents':loadDocuments($c);break;case 'hearing-aids':loadHearingAids($c);break;
             case 'repairs':loadRepairs($c);break;case 'returns':loadReturns($c);break;
-            case 'exchanges':loadExchanges($c);break;
             case 'forms':loadForms($c);break;case 'case-history':loadCaseHistory($c);break;
             case 'activity':loadActivity($c);break;
             case 'orders':loadOrders($c);break;
@@ -833,7 +832,6 @@ function initProfile(){
             if(isAct){
                 card+='<div class="hm-ha-side-actions">';
                 card+='<button class="hm-link-btn hm-link-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_left||'')+'">Repair</button>';
-                card+='<button class="hm-link-btn hm-link-teal hm-exchange-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+' (Left)">Exchange</button>';
                 card+='<button class="hm-link-btn hm-link-red hm-return-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+' (Left)">Return</button>';
                 card+='<button class="hm-link-btn hm-link-muted hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+' (Left)">Inactive</button>';
                 card+='</div>';
@@ -848,7 +846,6 @@ function initProfile(){
             if(isAct){
                 card+='<div class="hm-ha-side-actions">';
                 card+='<button class="hm-link-btn hm-link-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_right||'')+'">Repair</button>';
-                card+='<button class="hm-link-btn hm-link-teal hm-exchange-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+' (Right)">Exchange</button>';
                 card+='<button class="hm-link-btn hm-link-red hm-return-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+' (Right)">Return</button>';
                 card+='<button class="hm-link-btn hm-link-muted hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+' (Right)">Inactive</button>';
                 card+='</div>';
@@ -861,7 +858,6 @@ function initProfile(){
             if(isAct && pr.serial_left && pr.serial_right){
                 card+='<div class="hm-ha-both-row">';
                 card+='<button class="hm-link-btn hm-link-teal hm-log-repair" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+'" data-sl="'+esc(pr.serial_left)+'" data-sr="'+esc(pr.serial_right)+'">Repair Both</button>';
-                card+='<button class="hm-link-btn hm-link-teal hm-exchange-both" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+' (Both)">Exchange Both</button>';
                 card+='<button class="hm-link-btn hm-link-red hm-return-both" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+' (Both)">Return Both</button>';
                 card+='<button class="hm-link-btn hm-link-muted hm-mark-inactive" data-id="'+pr._ID+'">Inactive Both</button>';
                 card+='</div>';
@@ -889,14 +885,6 @@ function initProfile(){
             var sr=$b.data('side')==='right'?$b.data('serial'):'';
             showLogRepairModal($b.data('id'),$b.data('name'),sl,sr,function(){toast('Repair logged');loadRepairs($('#hm-tab-content'));});
         });
-        $c.off('click','.hm-exchange-side').on('click','.hm-exchange-side',function(){
-            var $b=$(this);
-            showExchangeModal($b.data('id'),$b.data('name'),function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));},$b.data('side'));
-        });
-        $c.off('click','.hm-exchange-both').on('click','.hm-exchange-both',function(){
-            var $b=$(this);
-            showExchangeModal($b.data('id'),$b.data('name'),function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));},'both');
-        });
         $c.off('click','.hm-return-side').on('click','.hm-return-side',function(){
             var $b=$(this);
             showReturnModal($b.data('id'),$b.data('name'),$b.data('side'),function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));});
@@ -908,51 +896,6 @@ function initProfile(){
         $c.off('click','#hm-add-product-btn').on('click','#hm-add-product-btn',function(){showAddProductModal(function(){loadHearingAids($c);});});
     }
 
-    function showExchangePickerModal(cb){
-        if($('#hm-modal-overlay').length)return;
-        $.post(_hm.ajax,{action:'hm_get_patient_products',nonce:_hm.nonce,patient_id:pid},function(r){
-            var act=(r&&r.success?r.data:[]).filter(function(p){return p.status==='Active';});
-            if(!act.length){toast('No active devices to exchange','error');return;}
-            var h='<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md">'+
-                '<div class="hm-modal-hd"><span>Exchange — Select Device</span><button class="hm-close">&times;</button></div>'+
-                '<div class="hm-modal-body"><p style="font-size:13px;color:#64748b;margin-bottom:12px;">Choose which device to exchange:</p>';
-            act.forEach(function(d){
-                // Show each side as its own selectable option
-                if(d.serial_left){
-                    h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
-                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="left" data-name="'+esc(d.product_name)+' (Left)" style="width:18px;height:18px;accent-color:var(--hm-teal);">'+
-                        '<div><strong>'+esc(d.product_name)+' — LEFT</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · Serial: '+esc(d.serial_left)+'</div></div></label>';
-                }
-                if(d.serial_right){
-                    h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
-                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="right" data-name="'+esc(d.product_name)+' (Right)" style="width:18px;height:18px;accent-color:var(--hm-teal);">'+
-                        '<div><strong>'+esc(d.product_name)+' — RIGHT</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · Serial: '+esc(d.serial_right)+'</div></div></label>';
-                }
-                // Also offer both as an option
-                if(d.serial_left && d.serial_right){
-                    h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;background:#f0fdfa;">'+
-                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(d.product_name)+' (Both)" style="width:18px;height:18px;accent-color:var(--hm-teal);">'+
-                        '<div><strong>'+esc(d.product_name)+' — BOTH SIDES</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · L: '+esc(d.serial_left)+' · R: '+esc(d.serial_right)+'</div></div></label>';
-                }
-                // If only one serial, no need for "both" option — the single side IS the device
-                if(!d.serial_left && !d.serial_right){
-                    h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
-                        '<input type="radio" name="hm-exch-pick" class="hm-exchange-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(d.product_name)+'" style="width:18px;height:18px;accent-color:var(--hm-teal);">'+
-                        '<div><strong>'+esc(d.product_name)+'</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · No serial on file</div></div></label>';
-                }
-            });
-            h+='</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="exchange-next">Next →</button></div></div></div>';
-            $('body').append(h);
-            $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
-            $('#exchange-next').on('click',function(){
-                var $sel=$('.hm-exchange-radio:checked');
-                if(!$sel.length){toast('Select a device to exchange','error');return;}
-                var devId=$sel.val(), devName=$sel.data('name'), side=$sel.data('side');
-                closeModal();
-                showExchangeModal(devId,devName,function(){cb();},side);
-            });
-        });
-    }
     function showMarkInactiveModal(ppId,side,cb){
         if($('#hm-modal-overlay').length)return;
         var sideLabel=side?' ('+side.charAt(0).toUpperCase()+side.slice(1)+' side)':' (Both sides)';
@@ -1036,106 +979,8 @@ function initProfile(){
             } else { toast('Error generating docket','error'); }
         });
     }
-    function showExchangeModal(ppId,productName,cb,side){
-        if($('#hm-modal-overlay').length)return;
-        var sideLabel=side&&side!=='both'?side.charAt(0).toUpperCase()+side.slice(1)+' side':'Both sides';
-        var itemAmt=0,prsiAmt=0,patientAmt=0,hasOrder=false,orderNum='',orderTotal=0;
 
-        var shell='<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md" style="max-width:520px">'+
-            '<div class="hm-modal-hd"><span>Exchange Hearing Aid</span><button class="hm-close">&times;</button></div>'+
-            '<div class="hm-modal-body" id="exch-body" style="min-height:200px">'+
-                '<div style="text-align:center;padding:40px 0;color:#94a3b8"><div style="font-size:14px">Loading order details…</div></div>'+
-            '</div></div></div>';
-        $('body').append(shell);
-        $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
-
-        $.post(_hm.ajax,{action:'hm_get_exchange_item_amount',nonce:_hm.nonce,device_id:ppId,side:side||'both'},function(r){
-            if(r&&r.success){
-                itemAmt=parseFloat(r.data.item_amount)||0;
-                prsiAmt=parseFloat(r.data.prsi_amount)||0;
-                patientAmt=parseFloat(r.data.patient_amount)||0;
-                hasOrder=!!r.data.has_order;
-                orderNum=r.data.order_number||'';
-                orderTotal=parseFloat(r.data.order_total)||0;
-            }
-            showExchForm();
-        });
-
-        function showExchForm(){
-            var h='<div style="margin-bottom:16px">';
-
-            // Device banner
-            h+='<div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
-            h+='<div style="font-size:14px;font-weight:700;color:#0d9488">'+esc(productName)+'</div>';
-            h+='<div style="font-size:12px;color:#64748b;margin-top:2px">'+esc(sideLabel)+'</div>';
-            h+='</div>';
-
-            // Original order info
-            if(hasOrder&&itemAmt>0){
-                h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
-                h+='<div style="font-size:12px;color:#64748b;margin-bottom:4px">Original Order'+(orderNum?' — '+esc(orderNum):'')+'</div>';
-                h+='<div style="font-size:22px;font-weight:700;color:var(--hm-navy,#151B33)">€'+itemAmt.toFixed(2)+'</div>';
-                if(prsiAmt>0) h+='<div style="font-size:12px;color:#94a3b8;margin-top:4px">PRSI: €'+prsiAmt.toFixed(2)+' · Patient paid: €'+patientAmt.toFixed(2)+'</div>';
-                h+='</div>';
-            } else {
-                h+='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
-                h+='<div style="font-size:12px;color:#92400e;margin-bottom:8px">No linked order found — enter the original item price</div>';
-                h+='<input type="number" class="hm-inp" id="exch-manual-amt" step="0.01" min="0" placeholder="0.00" style="font-size:16px;font-weight:600">';
-                h+='</div>';
-            }
-
-            // Reason
-            h+='<div class="hm-form-group"><label class="hm-label">Reason for exchange *</label>';
-            h+='<select class="hm-dd" id="exch-reason"><option value="">— Select reason —</option>';
-            h+='<option value="Fit">Fit</option><option value="Sound">Sound</option>';
-            h+='<option value="Look">Look</option><option value="Faulty Aid">Faulty Aid</option>';
-            h+='<option value="Change of Technology">Change of Technology</option>';
-            h+='</select></div>';
-
-            // Notes
-            h+='<div class="hm-form-group"><label class="hm-label">Notes (optional)</label>';
-            h+='<textarea class="hm-textarea" id="exch-notes" rows="2" placeholder="Any additional notes…"></textarea></div>';
-
-            h+='</div>';
-            h+='<div class="hm-modal-ft" style="border-top:1px solid #e2e8f0;padding-top:16px;display:flex;gap:8px;justify-content:flex-end">';
-            h+='<button class="hm-btn hm-btn--secondary hm-close">Cancel</button>';
-            h+='<button class="hm-btn hm-btn--primary" id="exch-confirm">Confirm & Select New Device →</button>';
-            h+='</div>';
-            $('#exch-body').html(h);
-
-            $('#exch-confirm').on('click',function(){
-                var reason=$('#exch-reason').val();
-                if(!reason){toast('Select a reason for exchange','error');return;}
-                if(!hasOrder||itemAmt<=0){
-                    var manual=parseFloat($('#exch-manual-amt').val())||0;
-                    if(!manual){toast('Enter the original item amount','error');return;}
-                    itemAmt=manual;patientAmt=manual;
-                }
-                var notes=$('#exch-notes').val();
-                $(this).prop('disabled',true).text('Initiating…');
-
-                $.post(_hm.ajax,{action:'hm_initiate_exchange',nonce:_hm.nonce,
-                    patient_id:pid,device_id:ppId,reason:reason,
-                    credit_amount:itemAmt,notes:notes,side:side||'both'
-                },function(r){
-                    if(r.success){
-                        // Store exchange_id in sessionStorage as backup (survives URL redirects)
-                        try{sessionStorage.setItem('hm_exchange_id',String(r.data.exchange_id));}catch(e){}
-                        // Redirect to calendar exchange order page
-                        window.location='/calendar/?exchange_id='+r.data.exchange_id;
-                    } else {
-                        $('#exch-confirm').prop('disabled',false).text('Confirm & Select New Device →');
-                        toast(r.data||'Error initiating exchange','error');
-                    }
-                }).fail(function(){
-                    $('#exch-confirm').prop('disabled',false).text('Confirm & Select New Device →');
-                    toast('Network error — please try again','error');
-                });
-            });
-        }
-    }
-
-    /* ── RETURN PICKER (similar to exchange picker) ── */
+    /* ── RETURN PICKER ── */
     function showReturnPickerModal(cb){
         if($('#hm-modal-overlay').length)return;
         $.post(_hm.ajax,{action:'hm_get_patient_products',nonce:_hm.nonce,patient_id:pid},function(r){
@@ -1187,7 +1032,7 @@ function initProfile(){
                 '<p style="font-size:13px;color:#991b1b;margin:0;"><strong>Returning: '+esc(productName)+'</strong>'+esc(sideNote)+'</p>'+
                 '<p style="font-size:12px;color:#dc2626;margin:4px 0 0;">This will mark the device as "Returned", create a credit note, and add the refund to the pending queue. PRSI amounts are NOT refunded to the patient — they are tracked for department notification.</p>'+
             '</div>'+
-            '<div class="hm-form-group"><label class="hm-label">Reason for return *</label><select class="hm-dd" id="ret-reason"><option value="">— Select —</option><option>Patient dissatisfaction</option><option>No benefit</option><option>Uncomfortable fit</option><option>Financial reasons</option><option>Medical reasons</option><option>Repeated faults</option><option>Within trial period</option><option>Other</option></select></div>'+
+            '<div class="hm-form-group"><label class="hm-label">Reason for return *</label><select class="hm-dd" id="ret-reason"><option value="">— Select —</option><option>Patient dissatisfaction</option><option>No benefit</option><option>Uncomfortable fit</option><option>Financial reasons</option><option>Medical reasons</option><option>Repeated faults</option><option>Within trial period</option><option>Exchange</option><option>Other</option></select></div>'+
             '<div class="hm-form-group"><label class="hm-label">Refund amount (€)</label><input type="number" class="hm-inp" id="ret-amount" step="0.01" min="0" placeholder="Patient-paid amount (auto-calculated)"><p style="font-size:11px;color:#94a3b8;margin-top:4px;">Leave blank to auto-calculate from original invoice (excluding PRSI).</p></div>'+
             '<div class="hm-form-group"><label class="hm-label">Notes (optional)</label><textarea class="hm-textarea" id="ret-notes" rows="2" placeholder="Any additional details…"></textarea></div>'+
         '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn-danger" id="ret-save">Process Return</button></div></div></div>');
@@ -1277,37 +1122,6 @@ function initProfile(){
         $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--sm"><div class="hm-modal-hd"><span>Log Cheque Sent</span><button class="hm-close">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Date sent</label><input type="date" class="hm-inp" id="cheque-date" value="'+new Date().toISOString().split('T')[0]+'"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="cheque-save">Log</button></div></div></div>');
         $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#cheque-save').on('click',function(){$.post(_hm.ajax,{action:'hm_log_cheque_sent',nonce:_hm.nonce,_ID:cnId,cheque_date:$('#cheque-date').val()},function(r){closeModal();if(r.success){toast('Cheque logged');cb();}else toast('Error','error');});});
-    }
-
-    /* ── EXCHANGES ── */
-    function loadExchanges($c){
-        $.post(_hm.ajax,{action:'hm_get_patient_exchanges',nonce:_hm.nonce,patient_id:pid},function(r){
-            if(!r.success){$c.html('<div class="hm-empty">Error loading exchanges</div>');return;}
-            var ex=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Exchanges ('+ex.length+')</h3></div>';
-            if(!ex.length){
-                h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.returns+'</div><div class="hm-empty-text">No exchanges</div></div>';
-            }else{
-                h+='<table class="hm-table"><thead><tr><th>Exchange #</th><th>Date</th><th>Device</th><th>Type</th><th>Original Amt</th><th>Credit</th><th>Refund</th><th>Status</th><th>Created By</th></tr></thead><tbody>';
-                ex.forEach(function(x){
-                    var typeLabel={same_tech:'Same Tech',same_value:'Same Value',credit:'Credit',refund:'Refund'}[x.exchange_type]||x.exchange_type;
-                    var statusCls=x.status==='completed'?'hm-badge--green':x.status==='pending'?'hm-badge--amber':'hm-badge--red';
-                    var cn=x.credit_note_number?'<div style="font-size:11px;color:#94a3b8;">CN: '+esc(x.credit_note_number)+'</div>':'';
-                    h+='<tr>'+
-                        '<td><code>'+(x.exchange_number||'—')+'</code></td>'+
-                        '<td>'+fmtDate(x.created_at)+'</td>'+
-                        '<td>'+esc(x.device_name)+'</td>'+
-                        '<td>'+typeLabel+'</td>'+
-                        '<td>'+euro(x.original_amount)+'</td>'+
-                        '<td>'+euro(x.credit_amount)+cn+'</td>'+
-                        '<td>'+(x.refund_amount>0?euro(x.refund_amount):'<span style="color:#94a3b8;">—</span>')+'</td>'+
-                        '<td><span class="hm-badge '+statusCls+'">'+x.status.charAt(0).toUpperCase()+x.status.slice(1)+'</span></td>'+
-                        '<td>'+esc(x.created_by_name)+'</td>'+
-                    '</tr>';
-                });
-                h+='</tbody></table>';
-            }
-            $c.html(h+'</div>');
-        });
     }
 
     /* ── FORMS ── */
