@@ -616,10 +616,12 @@ class PortalAuth {
 
         self::set_session_cookie( $token );
 
-        // Bridge to WP session if legacy mode coexists
-        if ( ! self::is_v2() || defined('PORTAL_AUTH_BRIDGE_WP') ) {
-            self::bridge_wp_login( $staff_id );
-        }
+        // Always bridge to WP session.
+        // SiteGround's Nginx cache only bypasses caching when a
+        // wordpress_logged_in_* cookie is present. Without this bridge
+        // the first request after login is served from Nginx's cache
+        // (a stale 302 to /login/) creating an infinite redirect loop.
+        self::bridge_wp_login( $staff_id );
 
         return $token;
     }

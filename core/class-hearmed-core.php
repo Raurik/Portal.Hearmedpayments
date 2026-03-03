@@ -194,7 +194,7 @@ class HearMed_Core {
      * Only runs the check once (flag stored in settings).
      */
     public function ensure_portal_pages() {
-        $version = 'v4'; // bump to re-check when new pages are added
+        $version = 'v5'; // bump to re-check when new pages are added
         if ( HearMed_Settings::get( 'hm_pages_ensured_' . $version, '' ) ) {
             return;
         }
@@ -203,6 +203,50 @@ class HearMed_Core {
             'login' => [
                 'title'     => 'Login',
                 'shortcode' => '[hearmed_staff_login]',
+            ],
+            'calendar' => [
+                'title'     => 'Calendar',
+                'shortcode' => '[hearmed_calendar]',
+            ],
+            'patients' => [
+                'title'     => 'Patients',
+                'shortcode' => '[hearmed_patients]',
+            ],
+            'orders' => [
+                'title'     => 'Orders',
+                'shortcode' => '[hearmed_orders]',
+            ],
+            'order-status' => [
+                'title'     => 'Order Status',
+                'shortcode' => '[hearmed_orders]',
+            ],
+            'accounting' => [
+                'title'     => 'Accounting',
+                'shortcode' => '[hearmed_accounting]',
+            ],
+            'repairs' => [
+                'title'     => 'Repairs',
+                'shortcode' => '[hearmed_repairs]',
+            ],
+            'refunds' => [
+                'title'     => 'Refunds',
+                'shortcode' => '[hearmed_refunds]',
+            ],
+            'stock' => [
+                'title'     => 'Stock',
+                'shortcode' => '[hearmed_stock]',
+            ],
+            'reporting' => [
+                'title'     => 'Reporting',
+                'shortcode' => '[hearmed_reporting]',
+            ],
+            'notifications' => [
+                'title'     => 'Notifications',
+                'shortcode' => '[hearmed_notifications]',
+            ],
+            'kpi' => [
+                'title'     => 'KPI',
+                'shortcode' => '[hearmed_kpi]',
             ],
             'clinical-review' => [
                 'title'     => 'Clinical Review',
@@ -221,13 +265,27 @@ class HearMed_Core {
 
             if ( $existing ) {
                 $page = $existing[0];
+                $needs_update = false;
+                $update_data  = [ 'ID' => $page->ID ];
+
                 // If not published, restore it
                 if ( $page->post_status !== 'publish' ) {
-                    wp_update_post( [
-                        'ID'          => $page->ID,
-                        'post_status' => 'publish',
-                        'post_name'   => $slug,
-                    ] );
+                    $update_data['post_status'] = 'publish';
+                    $update_data['post_name']   = $slug;
+                    $needs_update = true;
+                }
+
+                // Ensure the shortcode is in post_content.
+                // Elementor stores its own content in _elementor_data and may
+                // leave post_content empty — but WP shortcode processing runs
+                // on post_content. We need it there as a fallback.
+                if ( strpos( $page->post_content, $info['shortcode'] ) === false ) {
+                    $update_data['post_content'] = $info['shortcode'];
+                    $needs_update = true;
+                }
+
+                if ( $needs_update ) {
+                    wp_update_post( $update_data );
                 }
                 continue;
             }

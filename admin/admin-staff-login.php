@@ -44,17 +44,18 @@ class HearMed_Staff_Login {
             return '<p style="padding:2rem;text-align:center;color:#888;">[HearMed Staff Login]</p>';
         }
 
-        // Already logged in → redirect to portal
+        // Already logged in → redirect to calendar (not home_url('/') which
+        // resolves to /login/ — the login page itself — causing a loop).
         if ( PortalAuth::is_v2() && PortalAuth::is_logged_in() ) {
-            wp_redirect( home_url( '/' ) );
+            wp_redirect( home_url( '/calendar/' ) );
             exit;
         }
         if ( ! PortalAuth::is_v2() && is_user_logged_in() ) {
-            wp_redirect( home_url( '/' ) );
+            wp_redirect( home_url( '/calendar/' ) );
             exit;
         }
 
-        $atts = shortcode_atts( [ 'redirect' => home_url( '/' ) ], $atts );
+        $atts = shortcode_atts( [ 'redirect' => home_url( '/calendar/' ) ], $atts );
 
         // Check for invite token in URL
         $invite_token = sanitize_text_field( $_GET['invite'] ?? '' );
