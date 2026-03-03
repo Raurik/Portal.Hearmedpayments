@@ -65,16 +65,9 @@ class HearMed_Router {
             add_action( 'template_redirect', [ $this, 'auth_redirect' ] );
             add_filter( 'template_include',  [ $this, 'login_template' ], 999 );
 
-            // Disable page-level caching (SG Optimizer, etc.) for portal pages.
-            // Without the WP login cookie, SiteGround serves stale cached HTML.
-            if ( ! defined( 'DONOTCACHEPAGE' ) ) {
-                define( 'DONOTCACHEPAGE', true );
-            }
-            add_action( 'send_headers', function() {
-                if ( ! is_admin() ) {
-                    nocache_headers();
-                }
-            } );
+            // Bridge: if portal-authenticated but NOT WP-authenticated, set the
+            // WP login cookie so SiteGround's Nginx cache is bypassed.
+            add_action( 'init', [ $this, 'bridge_wp_login' ], 1 );
         }
     }
 
@@ -89,6 +82,44 @@ class HearMed_Router {
             }
         }
         return $template;
+    }
+
+    /**
+     * Bridge portal auth → WP login cookie.
+     *
+     * SiteGround's Nginx cache skips caching when a wordpress_logged_in_*
+     * cookie is present.  Without this bridge the custom HMSESS cookie is
+     * invisible to the web-server cache layer, so authenticated users get
+     * served stale cached pages.
+     *
+     * Runs on 'init' priority 1 (before anything else).
+     */
+    public function bridge_wp_login() {
+        if ( defined( 'DOING_AJAX' ) || defined( 'DOING_CRON' ) || defined( 'REST_REQUEST' ) || defined( 'WP_CLI' ) ) return;
+
+        // Already WP-logged-in → nothing to do
+        if ( is_user_logged_in() ) return;
+
+        // Check portal session
+        if ( ! PortalAuth::is_logged_in() ) return;
+
+        $staff = PortalAuth::current_user();
+        if ( ! $staff ) return;
+
+        // Look up the linked WP user via PG
+        $wp_user_id = HearMed_DB::get_var(
+            "SELECT wp_user_id FROM hearmed_reference.staff WHERE id = $1 AND wp_user_id IS NOT NULL",
+            [ $staff->id ]
+        );
+        if ( ! $wp_user_id ) return;
+
+        $wp_user_id = (int) $wp_user_id;
+        $wp_user    = get_user_by( 'ID', $wp_user_id );
+        if ( ! $wp_user ) return;
+
+        // Set WP auth cookie (cache-busting only — PortalAuth is source of truth)
+        wp_set_auth_cookie( $wp_user_id, true );
+        wp_set_current_user( $wp_user_id );
     }
 
     /**
