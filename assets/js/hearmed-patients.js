@@ -1119,12 +1119,17 @@ function initProfile(){
                     credit_amount:itemAmt,notes:notes,side:side||'both'
                 },function(r){
                     if(r.success){
+                        // Store exchange_id in sessionStorage as backup (survives URL redirects)
+                        try{sessionStorage.setItem('hm_exchange_id',String(r.data.exchange_id));}catch(e){}
                         // Redirect to calendar exchange order page
                         window.location='/calendar/?exchange_id='+r.data.exchange_id;
                     } else {
-                        closeModal();
+                        $('#exch-confirm').prop('disabled',false).text('Confirm & Select New Device →');
                         toast(r.data||'Error initiating exchange','error');
                     }
+                }).fail(function(){
+                    $('#exch-confirm').prop('disabled',false).text('Confirm & Select New Device →');
+                    toast('Network error — please try again','error');
                 });
             });
         }

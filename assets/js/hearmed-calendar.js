@@ -163,16 +163,20 @@ var Cal={
         }
         this.mode=s.default_view||'week';
         this.cfg.totalSlots=Math.ceil((this.cfg.endH-this.cfg.startH)*60/this.cfg.slotMin);
+
+        // Check for exchange_id BEFORE rendering calendar — prevents flash
+        var _exchParam=new URLSearchParams(window.location.search).get('exchange_id');
+        var _exchSession=null;
+        try{_exchSession=sessionStorage.getItem('hm_exchange_id');if(_exchSession)sessionStorage.removeItem('hm_exchange_id');}catch(e){}
+        var _exchId=_exchParam||_exchSession;
+        if(_exchId){
+            this._loadExchangeAndOpen(parseInt(_exchId,10));
+            return;
+        }
+
         this.render();
         this.bind();
-
-        // Check for exchange_id URL param — if present, skip calendar and open exchange page
-        var _exchParam=new URLSearchParams(window.location.search).get('exchange_id');
-        if(_exchParam){
-            this._loadExchangeAndOpen(parseInt(_exchParam,10));
-        } else {
-            this.loadData();
-        }
+        this.loadData();
     },
 
     render:function(){
@@ -3008,27 +3012,22 @@ var Cal={
 
     _loadExchangeAndOpen:function(exchId){
         var self=this;
-        var $hmMain=$('.hm-main').first();
-        $hmMain.find('#hm-app').hide();
-        $hmMain.css({display:'flex',flexDirection:'column'});
-        $hmMain.append('<div id="hm-op-loading" style="display:flex;align-items:center;justify-content:center;min-height:400px"><div style="text-align:center;color:var(--hm-text-muted,#94a3b8);font-family:var(--hm-font)"><div style="font-size:16px;font-weight:600;margin-bottom:6px">Loading Exchange</div><div style="font-size:13px;opacity:.6">Please wait…</div></div></div>');
+        // Show loading in #hm-app directly (no .hm-main dependency)
+        self.$el.html('<div id="hm-op-loading" style="display:flex;align-items:center;justify-content:center;min-height:400px"><div style="text-align:center;color:var(--hm-text-muted,#94a3b8);font-family:var(--hm-font)"><div style="font-size:16px;font-weight:600;margin-bottom:6px">Loading Exchange</div><div style="font-size:13px;opacity:.6">Please wait…</div></div></div>');
 
         $.post(HM.ajax_url,{action:'hm_get_exchange_details',nonce:HM.nonce,exchange_id:exchId},function(r){
             if(!r||!r.success){
-                $('#hm-op-loading').remove();$hmMain.css({display:'',flexDirection:''});$hmMain.find('#hm-app').show();
-                self.toast(r&&r.data?r.data:'Failed to load exchange','error');
+                self.$el.html('<div style="padding:40px;text-align:center;font-family:var(--hm-font)"><div style="color:#ef4444;font-size:16px;font-weight:600;margin-bottom:8px">Failed to Load Exchange</div><div style="color:#64748b;font-size:13px;margin-bottom:16px">'+(r&&r.data?esc(String(r.data)):'Unknown error')+'</div><a href="/calendar/" style="color:#0BB4C4;font-weight:600;text-decoration:none">← Back to Calendar</a></div>');
                 return;
             }
             self._openExchangePage(r.data);
         }).fail(function(){
-            $('#hm-op-loading').remove();$hmMain.css({display:'',flexDirection:''});$hmMain.find('#hm-app').show();
-            self.toast('Network error loading exchange','error');
+            self.$el.html('<div style="padding:40px;text-align:center;font-family:var(--hm-font)"><div style="color:#ef4444;font-size:16px;font-weight:600;margin-bottom:8px">Network Error</div><div style="color:#64748b;font-size:13px;margin-bottom:16px">Could not load exchange details</div><a href="/calendar/" style="color:#0BB4C4;font-weight:600;text-decoration:none">← Back to Calendar</a></div>');
         });
     },
 
     _openExchangePage:function(exch){
         var self=this;
-        var $hmMain=$('.hm-main').first();
 
         // Build a pseudo-appointment for compatibility
         var exchId=exch.exchange_id;
@@ -3038,7 +3037,7 @@ var Cal={
         var creditAmount=parseFloat(exch.original_amount)||0;
 
         post('get_order_products',{}).then(function(pR){
-            if(!pR.success){$('#hm-op-loading').remove();$hmMain.css({display:'',flexDirection:''});$hmMain.find('#hm-app').show();self.toast('Failed to load products');return;}
+            if(!pR.success){self.$el.html('<div style="padding:40px;text-align:center;font-family:var(--hm-font)"><div style="color:#ef4444;font-size:16px;font-weight:600">Failed to load products</div><div style="margin-top:12px"><a href="/calendar/" style="color:#0BB4C4;font-weight:600;text-decoration:none">← Back to Calendar</a></div></div>');return;}
             var allProducts=pR.data.products||[];
             var allSvcs=pR.data.services||[];
             var allRanges=pR.data.ranges||[];
@@ -3345,7 +3344,7 @@ var Cal={
                 h+='<style>@keyframes hmOpIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}</style>';
                 h+='</div>'; // end #hm-op
 
-                $hmMain.append(h);
+                self.$el.html(h);
 
                 // ═══════ STATE ═══════
                 var orderItems=[];
@@ -3356,7 +3355,7 @@ var Cal={
                 var hasFromStock=false;
                 var _cleanupNs='.exback .excat .exbrowse .exrange .exmfr .exstyle .exprod .exadd .exrem .exdisc .exdiscmode .exprsi .exsubmit .expaybtn .expaycancel .expayconfirm .exaddmethod .exremmethod .expayrowamt .exstockbtn .exstockclose .exstocksearch .exstockpick';
 
-                function cleanupEvents(){$(document).off(_cleanupNs);$('#hm-op').remove();$hmMain.css({display:'',flexDirection:''});$hmMain.find('#hm-app').show();}
+                function cleanupEvents(){$(document).off(_cleanupNs);$('#hm-op').remove();window.location.href='/calendar/';}
 
                 // ═══════ HELPERS ═══════
                 function renderItems(){
@@ -3927,8 +3926,7 @@ var Cal={
 
             })(); // end buildExchange IIFE
         }).fail(function(){
-            $('#hm-op-loading').remove();$hmMain.css({display:'',flexDirection:''});$hmMain.find('#hm-app').show();
-            self.toast('Failed to load product data');
+            self.$el.html('<div style="padding:40px;text-align:center;font-family:var(--hm-font)"><div style="color:#ef4444;font-size:16px;font-weight:600">Failed to load product data</div><div style="margin-top:12px"><a href="/calendar/" style="color:#0BB4C4;font-weight:600;text-decoration:none">← Back to Calendar</a></div></div>');
         });
     },
 
