@@ -68,7 +68,7 @@ class HearMed_Staff_Login {
         <div class="hm-login-wrap" id="hm-login-app">
             <div class="hm-login-card">
                 <div class="hm-login-logo">
-                    <img src="<?php echo esc_url( HEARMED_URL . 'assets/img/hearmed-logo.png' ); ?>" alt="HearMed" style="max-width:200px;">
+                    <img src="<?php echo esc_url( HEARMED_URL . 'assets/img/Untitled%20(600%20x%20200%20px).png' ); ?>" alt="HearMed">
                 </div>
 
                 <!-- ═══ INVITE STEP ═══ -->
@@ -144,9 +144,11 @@ class HearMed_Staff_Login {
         </div>
 
         <style>
-            .hm-login-wrap { display:flex; justify-content:center; align-items:center; min-height:100vh; background:#f5f7fa; padding:20px; font-family:var(--hm-font-body, 'Inter', sans-serif); }
-            .hm-login-card { background:#fff; border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,0.08); padding:40px 36px; max-width:420px; width:100%; }
+            /* Fullscreen overlay — covers sidebar, header, everything */
+            .hm-login-wrap { position:fixed; top:0; left:0; right:0; bottom:0; z-index:999999; display:flex; justify-content:center; align-items:center; background:linear-gradient(135deg, #0a2540 0%, #0BB4C4 100%); padding:20px; font-family:var(--hm-font-body, 'Inter', sans-serif); }
+            .hm-login-card { background:#fff; border-radius:16px; box-shadow:0 8px 40px rgba(0,0,0,0.2); padding:40px 36px; max-width:420px; width:100%; }
             .hm-login-logo { text-align:center; margin-bottom:28px; }
+            .hm-login-logo img { max-width:240px; height:auto; }
             .hm-login-step { display:none; }
             .hm-login-step.active { display:block; }
             .hm-login-step h2 { font-size:22px; font-weight:700; color:#151B33; margin:0 0 6px; }
@@ -160,8 +162,9 @@ class HearMed_Staff_Login {
             .hm-login-card .hm-form-group input { width:100%; padding:10px 14px; border:1px solid #d1d5db; border-radius:8px; font-size:15px; box-sizing:border-box; transition:border-color .2s; }
             .hm-login-card .hm-form-group input:focus { outline:none; border-color:#0BB4C4; box-shadow:0 0 0 3px rgba(11,180,196,0.15); }
             .hm-btn--full { width:100%; padding:12px; font-size:15px; font-weight:600; border-radius:8px; cursor:pointer; border:none; transition:opacity .2s; }
+            .hm-btn--primary.hm-btn--full { background:#0BB4C4; color:#fff; }
             .hm-btn--full:disabled { opacity:.5; cursor:not-allowed; }
-            .hm-btn--full:hover:not(:disabled) { opacity:.9; }
+            .hm-btn--full:hover:not(:disabled) { opacity:.85; }
         </style>
 
         <script>
