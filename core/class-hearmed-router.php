@@ -87,7 +87,7 @@ class HearMed_Router {
      */
     public function block_login_canonical( $redirect_url, $requested_url ) {
         $path = trim( parse_url( $requested_url, PHP_URL_PATH ), '/' );
-        if ( $path === 'login' ) {
+        if ( basename( $path ) === 'login' ) {
             return false;
         }
         return $redirect_url;
@@ -102,7 +102,7 @@ class HearMed_Router {
         $is_login = is_page( 'login' );
         if ( ! $is_login ) {
             $uri = trim( strtok( $_SERVER['REQUEST_URI'] ?? '', '?' ), '/' );
-            $is_login = ( $uri === 'login' );
+            $is_login = ( basename( $uri ) === 'login' );
         }
         if ( $is_login ) {
             $custom = HEARMED_PATH . 'templates/login-page.php';
@@ -160,7 +160,7 @@ class HearMed_Router {
 
         // Don't redirect the login page itself (WP check + URI fallback to prevent loops)
         $uri = trim( strtok( $_SERVER['REQUEST_URI'] ?? '', '?' ), '/' );
-        if ( is_page( 'login' ) || $uri === 'login' || strpos( $uri, 'login' ) === 0 ) return;
+        if ( is_page( 'login' ) || basename( $uri ) === 'login' || strpos( $uri, 'login' ) === 0 ) return;
 
         // Don't redirect WordPress admin or REST API requests
         if ( strpos( $uri, 'wp-admin' ) === 0 || strpos( $uri, 'wp-json' ) === 0 ) return;
