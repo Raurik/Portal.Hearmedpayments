@@ -64,6 +64,17 @@ class HearMed_Router {
         if ( PortalAuth::is_v2() ) {
             add_action( 'template_redirect', [ $this, 'auth_redirect' ] );
             add_filter( 'template_include',  [ $this, 'login_template' ], 999 );
+
+            // Disable page-level caching (SG Optimizer, etc.) for portal pages.
+            // Without the WP login cookie, SiteGround serves stale cached HTML.
+            if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+                define( 'DONOTCACHEPAGE', true );
+            }
+            add_action( 'send_headers', function() {
+                if ( ! is_admin() ) {
+                    nocache_headers();
+                }
+            } );
         }
     }
 
