@@ -2561,14 +2561,29 @@ function hm_ajax_get_exchange_item_amount() {
 
     // No original order — user must enter amount manually
     if ( ! $device->order_id ) {
-        wp_send_json_success( [
-            'item_amount'    => 0,
-            'prsi_amount'    => 0,
-            'patient_amount' => 0,
-            'has_order'      => false,
-            'message'        => 'No original order found — enter amount manually',
-        ] );
-        return;
+        // Fallback: try to find order by matching product_id + patient_id in order_items
+        $fallback = $db->get_row(
+            "SELECT o.id
+             FROM hearmed_core.orders o
+             JOIN hearmed_core.order_items oi ON oi.order_id = o.id
+             WHERE o.patient_id = \$1 AND oi.item_id = \$2 AND oi.item_type = 'product'
+             ORDER BY o.id DESC LIMIT 1",
+            [ $device->patient_id, $device->product_id ]
+        );
+        if ( $fallback ) {
+            // Link device to order for future lookups
+            $db->update( 'hearmed_core.patient_devices', [ 'order_id' => $fallback->id ], [ 'id' => $device_id ] );
+            $device->order_id = $fallback->id;
+        } else {
+            wp_send_json_success( [
+                'item_amount'    => 0,
+                'prsi_amount'    => 0,
+                'patient_amount' => 0,
+                'has_order'      => false,
+                'message'        => 'No original order found — enter amount manually',
+            ] );
+            return;
+        }
     }
 
     // Get original order
@@ -2669,6 +2684,22 @@ function hm_ajax_create_exchange() {
 
     $device = $db->get_row( "SELECT * FROM hearmed_core.patient_devices WHERE id = \$1", [ $device_id ] );
     if ( ! $device ) wp_send_json_error( 'Device not found' );
+
+    // Fallback: if device has no order_id, try to find order by product match
+    if ( ! $device->order_id && $device->product_id ) {
+        $fallback = $db->get_row(
+            "SELECT o.id
+             FROM hearmed_core.orders o
+             JOIN hearmed_core.order_items oi ON oi.order_id = o.id
+             WHERE o.patient_id = \$1 AND oi.item_id = \$2 AND oi.item_type = 'product'
+             ORDER BY o.id DESC LIMIT 1",
+            [ $pid, $device->product_id ]
+        );
+        if ( $fallback ) {
+            $db->update( 'hearmed_core.patient_devices', [ 'order_id' => $fallback->id ], [ 'id' => $device_id ] );
+            $device->order_id = $fallback->id;
+        }
+    }
 
     // ── Auto-calculate per-item amount if device has an order ──
     $order = null;

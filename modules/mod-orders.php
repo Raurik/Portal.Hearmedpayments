@@ -1547,6 +1547,7 @@ class HearMed_Orders {
                 $db->insert('hearmed_core.patient_devices', [
                     'patient_id'          => $order->patient_id,
                     'product_id'          => $product_id,
+                    'order_id'            => $order_id,
                     'serial_number_left'  => $serial_left  ?: null,
                     'serial_number_right' => $serial_right ?: null,
                     'device_status'       => 'Active',
@@ -1613,6 +1614,7 @@ class HearMed_Orders {
                     $db->insert('hearmed_core.patient_devices', [
                         'patient_id'          => $order->patient_id,
                         'product_id'          => $pid,
+                        'order_id'            => $order_id,
                         'serial_number_left'  => $left  ?: null,
                         'serial_number_right' => $right ?: null,
                         'device_status'       => 'Active',

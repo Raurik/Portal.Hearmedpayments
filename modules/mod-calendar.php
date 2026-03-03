@@ -2420,11 +2420,13 @@ function hm_ajax_save_order_serials_from_payment() {
                 $db->update( 'hearmed_core.patient_devices', [
                     'serial_number_left'  => $left,
                     'serial_number_right' => $right,
+                    'order_id'            => $order_id,
                 ], [ 'id' => intval( $existing->id ) ] );
             } else {
                 $db->insert( 'hearmed_core.patient_devices', [
                     'patient_id'          => intval( $order->patient_id ),
                     'product_id'          => intval( $product_id ),
+                    'order_id'            => $order_id,
                     'serial_number_left'  => $left,
                     'serial_number_right' => $right,
                     'device_status'       => 'Active',
