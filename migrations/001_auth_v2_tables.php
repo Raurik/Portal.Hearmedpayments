@@ -61,13 +61,14 @@ class HearMed_Migration_AuthV2 {
             }
         }
 
-        // Fallback: read from wp-config HM constants
-        $host = defined('HM_PG_HOST') ? HM_PG_HOST : 'localhost';
-        $port = defined('HM_PG_PORT') ? HM_PG_PORT : '5432';
-        $db   = defined('HM_PG_DB')   ? HM_PG_DB   : 'hearmed';
-        $user = defined('HM_PG_USER') ? HM_PG_USER : 'hearmed';
-        $pass = defined('HM_PG_PASS') ? HM_PG_PASS : '';
-        $dsn  = "pgsql:host=$host;port=$port;dbname=$db";
+        // Fallback: read from wp-config HEARMED_PG constants
+        $host = defined('HEARMED_PG_HOST') ? HEARMED_PG_HOST : 'localhost';
+        $port = defined('HEARMED_PG_PORT') ? HEARMED_PG_PORT : '5432';
+        $db   = defined('HEARMED_PG_DB')   ? HEARMED_PG_DB   : 'hearmed';
+        $user = defined('HEARMED_PG_USER') ? HEARMED_PG_USER : 'hearmed';
+        $pass = defined('HEARMED_PG_PASS') ? HEARMED_PG_PASS : '';
+        $ssl  = defined('HEARMED_PG_SSLMODE') ? HEARMED_PG_SSLMODE : 'require';
+        $dsn  = "pgsql:host=$host;port=$port;dbname=$db;sslmode=$ssl";
         return new PDO( $dsn, $user, $pass, [ PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION ] );
     }
 
