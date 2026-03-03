@@ -988,8 +988,8 @@ function initProfile(){
             var act=(r&&r.success?r.data:[]).filter(function(p){return p.status==='Active';});
             if(!act.length){toast('No active devices to return','error');return;}
             var h='<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md">'+
-                '<div class="hm-modal-hd"><span>Return Hearing Aid</span><button class="hm-close">&times;</button></div>'+
-                '<div class="hm-modal-body"><p style="font-size:13px;color:#64748b;margin-bottom:12px;">Select device(s) to return. The patient will be refunded their paid amount <strong>only</strong> — PRSI amounts are tracked separately for department notification.</p>';
+                '<div class="hm-modal-hd"><span>Record Return</span><button class="hm-close">&times;</button></div>'+
+                '<div class="hm-modal-body"><p style="font-size:13px;color:#64748b;margin-bottom:12px;">Select the device to return. This will record the return — you can then create a credit note separately.</p>';
             act.forEach(function(d){
                 if(d.serial_left){
                     h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
@@ -1012,7 +1012,7 @@ function initProfile(){
                         '<div><strong>'+esc(d.product_name)+'</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · No serial on file</div></div></label>';
                 }
             });
-            h+='</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn-danger" id="return-next">Continue Return →</button></div></div></div>';
+            h+='</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn-danger" id="return-next">Continue →</button></div></div></div>';
             $('body').append(h);
             $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
             $('#return-next').on('click',function(){
@@ -1028,41 +1028,30 @@ function initProfile(){
     function showReturnModal(ppId,productName,side,cb){
         if($('#hm-modal-overlay').length)return;
         var sideNote=side&&side!=='both'?' ('+side.charAt(0).toUpperCase()+side.slice(1)+' side only)':'';
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Return Hearing Aid</span><button class="hm-close">&times;</button></div><div class="hm-modal-body">'+
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Record Return</span><button class="hm-close">&times;</button></div><div class="hm-modal-body">'+
             '<div style="background:#fef2f2;border:1px solid #fecdd3;border-radius:8px;padding:12px 16px;margin-bottom:16px;">'+
                 '<p style="font-size:13px;color:#991b1b;margin:0;"><strong>Returning: '+esc(productName)+'</strong>'+esc(sideNote)+'</p>'+
-                '<p style="font-size:12px;color:#dc2626;margin:4px 0 0;">This will mark the device as "Returned", create a credit note, and add the refund to the pending queue. PRSI amounts are NOT refunded to the patient — they are tracked for department notification.</p>'+
+                '<p style="font-size:12px;color:#dc2626;margin:4px 0 0;">This records the return. You can then create a credit note from the Returns tab to process the refund, save the PDF, and return the device to stock.</p>'+
             '</div>'+
             '<div class="hm-form-group"><label class="hm-label">Reason for return *</label><select class="hm-dd" id="ret-reason"><option value="">— Select —</option><option>Patient dissatisfaction</option><option>No benefit</option><option>Uncomfortable fit</option><option>Financial reasons</option><option>Medical reasons</option><option>Repeated faults</option><option>Within trial period</option><option>Exchange</option><option>Other</option></select></div>'+
-            '<div class="hm-form-group"><label class="hm-label">Refund amount (€)</label><input type="number" class="hm-inp" id="ret-amount" step="0.01" min="0" placeholder="Patient-paid amount (auto-calculated)"><p style="font-size:11px;color:#94a3b8;margin-top:4px;">Leave blank to auto-calculate from original invoice (excluding PRSI).</p></div>'+
             '<div class="hm-form-group"><label class="hm-label">Notes (optional)</label><textarea class="hm-textarea" id="ret-notes" rows="2" placeholder="Any additional details…"></textarea></div>'+
-        '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn-danger" id="ret-save">Process Return</button></div></div></div>');
+        '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn-danger" id="ret-save">Record Return</button></div></div></div>');
         $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#ret-save').on('click',function(){
             var reason=$('#ret-reason').val();if(!reason){toast('Select a reason for return','error');return;}
-            $(this).prop('disabled',true).text('Processing…');
+            $(this).prop('disabled',true).text('Saving…');
             var data={action:'hm_create_return',nonce:_hm.nonce,patient_id:pid,device_id:ppId,reason:reason,notes:$('#ret-notes').val(),side:side||'both'};
-            var amt=$('#ret-amount').val();if(amt)data.refund_amount=parseFloat(amt);
-            console.log('[HM] Creating return',data,'→',_hm.ajax);
             $.post(_hm.ajax,data,function(r){
-                console.log('[HM] Return response',r);
                 closeModal();
                 if(r.success){
-                    var msg='Return processed — Credit Note '+r.data.credit_note_number+'. Patient refund: €'+parseFloat(r.data.patient_refund||0).toFixed(2);
-                    if(parseFloat(r.data.prsi_amount||0)>0) msg+='. PRSI €'+parseFloat(r.data.prsi_amount).toFixed(2)+' added to PRSI notification queue.';
-                    alert(msg);
-                    toast(msg);
+                    toast('Return recorded — you can now create a credit note from the Returns tab.');
                     if(cb)cb();
                 }else{
-                    alert('Return failed: '+(r.data||'Unknown error'));
-                    toast(r.data||'Return failed — please try again','error');
+                    toast(r.data||'Return failed','error');
                 }
-            }).fail(function(xhr){
+            }).fail(function(){
                 closeModal();
-                var errMsg='Return failed';
-                try{var j=JSON.parse(xhr.responseText);if(j&&j.data)errMsg+=': '+j.data;}catch(e){}
-                toast(errMsg+'. Please try again or contact support.','error');
-                console.error('hm_create_return failed',xhr.status,xhr.responseText);
+                toast('Request failed — please try again','error');
             });
         });
     }
@@ -1109,27 +1098,80 @@ function initProfile(){
     /* ── RETURNS ── */
     function loadReturns($c){
         $.post(_hm.ajax,{action:'hm_get_patient_returns',nonce:_hm.nonce,patient_id:pid},function(r){
-            if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
-            var ret=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Returns / Credit Notes ('+ret.length+')</h3></div>';
-            if(!ret.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.returns+'</div><div class="hm-empty-text">No returns</div></div>';
+            if(!r.success){$c.html('<div class="hm-empty">Error loading returns</div>');return;}
+            var ret=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Returns / Credit Notes ('+ret.length+')</h3><button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-create-return-btn">+ Create Return</button></div>';
+            if(!ret.length) h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.returns+'</div><div class="hm-empty-text">No returns</div></div>';
             else{
-                h+='<table class="hm-table"><thead><tr><th>Date Returned</th><th>Hearing Aid</th><th>Side</th><th>Credit Note #</th><th>Patient Refund</th><th>PRSI</th><th>Cheque Status</th><th></th></tr></thead><tbody>';
+                h+='<table class="hm-table"><thead><tr><th>Date</th><th>Hearing Aid</th><th>Side</th><th>Reason</th><th>Status</th><th>Credit Note</th><th>Refund</th><th>Cheque</th><th></th></tr></thead><tbody>';
                 ret.forEach(function(x){
-                    var ch=x.cheque_sent?'<span class="hm-badge hm-badge--green">'+HM_ICONS.check+' Sent '+fmtDate(x.cheque_sent_date)+'</span>':'<span class="hm-badge hm-badge--red">'+HM_ICONS.x+' Cheque Outstanding</span>';
                     var sideLabel=(x.return_side||'both')==='both'?'Both':x.return_side.charAt(0).toUpperCase()+x.return_side.slice(1);
-                    var prsiCol=parseFloat(x.prsi_amount||0)>0?euro(x.prsi_amount):'<span style="color:#94a3b8;">—</span>';
-                    var pdfUrl=_hm.ajax+'?action=hm_print_credit_note&nonce='+_hm.nonce+'&credit_note_id='+x.credit_note_id;
-                    h+='<tr><td>'+fmtDate(x.return_date)+'</td><td>'+esc(x.product_name)+'</td><td>'+sideLabel+'</td><td><code>'+esc(x.credit_note_num)+'</code></td><td>'+euro(x.patient_refund_amount)+'</td><td>'+prsiCol+'</td><td>'+ch+'</td><td style="white-space:nowrap;">'+
-                        '<a href="'+pdfUrl+'" target="_blank" class="hm-btn hm-btn--secondary hm-btn--sm" style="margin-right:4px;" title="Download Credit Note PDF">PDF</a>'+
-                        (!x.cheque_sent?'<button class="hm-btn hm-btn--secondary hm-btn--sm hm-log-cheque" data-id="'+x._ID+'">Log Cheque</button>':'')+
-                    '</td></tr>';
+                    var statusBadge, cnCol, refundCol, chequeCol, actions='';
+
+                    if(x.has_credit_note){
+                        statusBadge='<span class="hm-badge hm-badge--sm hm-badge--green">Completed</span>';
+                        cnCol='<code>'+esc(x.credit_note_num)+'</code>';
+                        refundCol=euro(x.patient_refund_amount)+(parseFloat(x.prsi_amount||0)>0?'<br><span style="font-size:11px;color:#64748b;">PRSI: '+euro(x.prsi_amount)+'</span>':'');
+                        var ch=x.cheque_sent?'<span class="hm-badge hm-badge--sm hm-badge--green">Sent '+fmtDate(x.cheque_sent_date)+'</span>':'<span class="hm-badge hm-badge--sm hm-badge--red">Outstanding</span>';
+                        chequeCol=ch;
+                        var pdfUrl=_hm.ajax+'?action=hm_print_credit_note&nonce='+_hm.nonce+'&credit_note_id='+x.credit_note_id;
+                        actions='<a href="'+pdfUrl+'" target="_blank" class="hm-btn hm-btn--secondary hm-btn--sm" title="View Credit Note PDF" style="margin-right:4px;">PDF</a>';
+                        if(!x.cheque_sent) actions+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-log-cheque" data-id="'+x.credit_note_id+'">Log Cheque</button>';
+                    } else {
+                        statusBadge='<span class="hm-badge hm-badge--sm hm-badge--amber">Pending</span>';
+                        cnCol='<span style="color:#94a3b8;">—</span>';
+                        refundCol='<span style="color:#94a3b8;">—</span>';
+                        chequeCol='<span style="color:#94a3b8;">—</span>';
+                        actions='<button class="hm-btn hm-btn--primary hm-btn--sm hm-create-cn" data-return-id="'+x.return_id+'">Create Credit Note</button>';
+                    }
+
+                    h+='<tr><td>'+fmtDate(x.return_date)+'</td><td>'+esc(x.product_name)+'</td><td>'+sideLabel+'</td><td style="font-size:13px;">'+esc(x.reason)+'</td><td>'+statusBadge+'</td><td>'+cnCol+'</td><td>'+refundCol+'</td><td>'+chequeCol+'</td><td style="white-space:nowrap;">'+actions+'</td></tr>';
                 });
                 h+='</tbody></table>';
             }
             $c.html(h+'</div>');
         });
+        // Create Return button
+        $c.off('click','#hm-create-return-btn').on('click','#hm-create-return-btn',function(){
+            showReturnPickerModal(function(){loadReturns($c);});
+        });
+        // Create Credit Note from pending return
+        $c.off('click','.hm-create-cn').on('click','.hm-create-cn',function(){
+            var returnId=$(this).data('return-id');
+            showCreateCreditNoteModal(returnId,function(){loadReturns($c);});
+        });
+        // Log cheque
         $c.off('click','.hm-log-cheque').on('click','.hm-log-cheque',function(){var id=$(this).data('id');showLogChequeModal(id,function(){loadReturns($c);});});
     }
+
+    /* Create Credit Note from a pending return */
+    function showCreateCreditNoteModal(returnId,cb){
+        if($('#hm-modal-overlay').length)return;
+        $('body').append(
+            '<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Create Credit Note</span><button class="hm-close">&times;</button></div><div class="hm-modal-body">'+
+            '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-bottom:16px;">'+
+                '<p style="font-size:13px;color:#166534;margin:0;">This will create a credit note, save the PDF to patient documents, mark the device as returned, return it to stock, and create a cheque refund entry.</p>'+
+            '</div>'+
+            '<div class="hm-form-group"><label class="hm-label">Patient refund amount (€)</label><input type="number" class="hm-inp" id="cn-refund-amt" step="0.01" min="0" placeholder="Auto-calculated from original invoice"><p style="font-size:11px;color:#94a3b8;margin-top:4px;">Leave blank to auto-calculate from original order (excluding PRSI).</p></div>'+
+            '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="cn-save">Create Credit Note</button></div></div></div>'
+        );
+        $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
+        $('#cn-save').on('click',function(){
+            $(this).prop('disabled',true).text('Creating…');
+            var data={action:'hm_create_return_credit_note',nonce:_hm.nonce,return_id:returnId};
+            var amt=$('#cn-refund-amt').val();
+            if(amt) data.refund_amount=parseFloat(amt);
+            $.post(_hm.ajax,data,function(r){
+                closeModal();
+                if(r.success){
+                    toast('Credit note '+r.data.credit_note_number+' created. PDF saved to patient documents.');
+                    if(cb)cb();
+                } else {
+                    toast(r.data||'Failed to create credit note','error');
+                }
+            }).fail(function(){closeModal();toast('Request failed — please try again','error');});
+        });
+    }
+
     function showLogChequeModal(cnId,cb){
         if($('#hm-modal-overlay').length)return;
         $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--sm"><div class="hm-modal-hd"><span>Log Cheque Sent</span><button class="hm-close">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Date sent</label><input type="date" class="hm-inp" id="cheque-date" value="'+new Date().toISOString().split('T')[0]+'"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="cheque-save">Log</button></div></div></div>');

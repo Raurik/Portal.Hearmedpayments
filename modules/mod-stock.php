@@ -37,9 +37,65 @@ class HearMed_Stock {
 
     public static function render( $atts = [] ): string {
         if ( ! PortalAuth::is_logged_in() ) return '';
+        self::ensure_tables();
         ob_start();
         self::output();
         return ob_get_clean();
+    }
+
+    /**
+     * Auto-migration: ensure inventory_stock + stock_movements tables exist.
+     */
+    private static function ensure_tables() {
+        static $done = false;
+        if ( $done ) return;
+        $done = true;
+
+        $db = HearMed_DB::instance();
+
+        $db->query(
+            "CREATE TABLE IF NOT EXISTS hearmed_reference.inventory_stock (
+                id                      BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+                item_category           VARCHAR(30) NOT NULL DEFAULT 'hearing_aid',
+                clinic_id               BIGINT,
+                manufacturer_id         BIGINT,
+                model_name              VARCHAR(255),
+                style                   VARCHAR(100),
+                technology_level        VARCHAR(50),
+                serial_number           VARCHAR(100),
+                specification           TEXT,
+                quantity                INT NOT NULL DEFAULT 1,
+                status                  VARCHAR(30) NOT NULL DEFAULT 'Available',
+                reserved_for_patient_id BIGINT,
+                fitted_to_patient_id    BIGINT,
+                return_reason           TEXT,
+                created_at              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at              TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )"
+        );
+
+        // Ensure return_reason column exists (for older tables)
+        $has_col = $db->get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_reference' AND table_name = 'inventory_stock' AND column_name = 'return_reason'"
+        );
+        if ( ! $has_col ) {
+            $db->query( "ALTER TABLE hearmed_reference.inventory_stock ADD COLUMN return_reason TEXT" );
+        }
+
+        $db->query(
+            "CREATE TABLE IF NOT EXISTS hearmed_reference.stock_movements (
+                id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+                stock_id        BIGINT,
+                movement_type   VARCHAR(30),
+                from_clinic_id  BIGINT,
+                to_clinic_id    BIGINT,
+                quantity        INT DEFAULT 1,
+                notes           TEXT,
+                created_by      VARCHAR(255),
+                created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )"
+        );
     }
 
     private static function output() {
@@ -197,8 +253,9 @@ class HearMed_Stock {
                 var opts='<option value="">All clinics</option>';
                 var mOpts='<option value="">— Select —</option>';
                 clinicCache.forEach(function(c){
-                    opts+='<option value="'+c._ID+'">'+esc(c.name||c.clinic_name)+'</option>';
-                    mOpts+='<option value="'+c._ID+'">'+esc(c.name||c.clinic_name)+'</option>';
+                    var cid = c._ID || c.id;
+                    opts+='<option value="'+cid+'">'+esc(c.name||c.clinic_name)+'</option>';
+                    mOpts+='<option value="'+cid+'">'+esc(c.name||c.clinic_name)+'</option>';
                 });
                 $('#hm-stock-clinic').html(opts);
                 $('#transfer-clinic,#add-clinic').html(mOpts);
@@ -211,8 +268,9 @@ class HearMed_Stock {
                 var opts='<option value="">All manufacturers</option>';
                 var mOpts='<option value="">— Select —</option>';
                 mfrCache.forEach(function(m){
-                    opts+='<option value="'+m._ID+'">'+esc(m.name)+'</option>';
-                    mOpts+='<option value="'+m._ID+'">'+esc(m.name)+'</option>';
+                    var mid = m._ID || m.id;
+                    opts+='<option value="'+mid+'">'+esc(m.name)+'</option>';
+                    mOpts+='<option value="'+mid+'">'+esc(m.name)+'</option>';
                 });
                 $('#hm-stock-mfr').html(opts);
                 $('#add-manufacturer').html(mOpts);
@@ -456,6 +514,7 @@ class HearMed_Stock {
 
     public static function ajax_load_hearing_aids() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
+        self::ensure_tables();
         $db = HearMed_DB::instance();
 
         $where = [ "s.item_category = 'hearing_aid'" ];
@@ -520,6 +579,7 @@ class HearMed_Stock {
 
     public static function ajax_load_consumables() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
+        self::ensure_tables();
         $db = HearMed_DB::instance();
 
         $where = [ "s.item_category = 'consumable'" ];
@@ -576,6 +636,7 @@ class HearMed_Stock {
 
     public static function ajax_load_movements() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
+        self::ensure_tables();
         $db = HearMed_DB::instance();
 
         $rows = $db->get_results(
@@ -601,6 +662,7 @@ class HearMed_Stock {
 
     public static function ajax_transfer() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
+        self::ensure_tables();
 
         $stock_id  = intval( $_POST['stock_id'] ?? 0 );
         $to_clinic = intval( $_POST['to_clinic_id'] ?? 0 );
@@ -651,6 +713,7 @@ class HearMed_Stock {
 
     public static function ajax_add_stock() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
+        self::ensure_tables();
 
         $category   = sanitize_key( $_POST['item_category'] ?? 'hearing_aid' );
         $clinic_id  = intval( $_POST['clinic_id'] ?? 0 );
@@ -712,6 +775,7 @@ class HearMed_Stock {
 
     public static function ajax_adjust_quantity() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
+        self::ensure_tables();
 
         $stock_id = intval( $_POST['stock_id'] ?? 0 );
         $new_qty  = intval( $_POST['new_quantity'] ?? 0 );
@@ -755,6 +819,7 @@ class HearMed_Stock {
 
     public static function ajax_reserve() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
+        self::ensure_tables();
 
         $stock_id   = intval( $_POST['stock_id'] ?? 0 );
         $patient_id = intval( $_POST['patient_id'] ?? 0 );
