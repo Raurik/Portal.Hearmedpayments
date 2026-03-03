@@ -222,12 +222,28 @@ class HearMed_Staff_Login {
                         } else if (d.status === '2fa_setup') {
                             setupStaffId = d.staff_id;
                             // Get QR code
-                            const qr = await post('hm_auth_get_2fa_qr', { staff_id: d.staff_id });
-                            if (qr.success) {
-                                setupSecret = qr.data.secret;
+                            try {
+                                const qr = await post('hm_auth_get_2fa_qr', { staff_id: d.staff_id });
+                                console.log('QR response:', qr);
+                                if (qr.success && qr.data) {
+                                    setupSecret = qr.data.secret;
+                                    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(qr.data.qr_uri);
+                                    document.getElementById('hm-2fa-qr-container').innerHTML =
+                                        '<img src="' + qrUrl + '" alt="QR Code" style="max-width:200px;margin:10px auto;display:block;">' +
+                                        '<p style="margin-top:8px;font-size:12px;color:#666;">Can\'t scan? Enter this key manually:</p>' +
+                                        '<code style="display:block;text-align:center;padding:8px;background:#f5f5f5;border-radius:4px;font-size:14px;word-break:break-all;">' + qr.data.secret + '</code>';
+                                    if (document.getElementById('hm-2fa-manual-secret')) {
+                                        document.getElementById('hm-2fa-manual-secret').textContent = qr.data.secret;
+                                    }
+                                } else {
+                                    console.error('QR generation failed:', qr);
+                                    document.getElementById('hm-2fa-qr-container').innerHTML =
+                                        '<p style="color:red;">Could not generate QR code. Error: ' + (qr.data?.message || 'Unknown') + '</p>';
+                                }
+                            } catch(qrErr) {
+                                console.error('QR fetch error:', qrErr);
                                 document.getElementById('hm-2fa-qr-container').innerHTML =
-                                    '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(qr.data.qr_uri) + '" alt="QR Code">';
-                                document.getElementById('hm-2fa-manual-secret').textContent = qr.data.secret;
+                                    '<p style="color:red;">Network error loading QR code.</p>';
                             }
                             showStep('hm-login-step2a');
                             document.getElementById('hm-2fa-setup-code').focus();
