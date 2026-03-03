@@ -181,8 +181,13 @@ class HearMed_Enqueue {
             error_log( '[HearMed] Could not load calendar settings: ' . $e->getMessage() );
         }
         
-        // Localize script with global data — prefer PortalAuth when V2 is active
-        if ( PortalAuth::is_v2() && PortalAuth::is_logged_in() ) {
+        // Localize script with global data.
+        // ALWAYS prefer PortalAuth (HMSESS-based) identity.
+        // The V2 flag check is removed: if PortalAuth has a valid session
+        // (regardless of PORTAL_AUTH_V2 being defined), use it.  Falling
+        // back to wp_get_current_user() only when there is NO valid portal
+        // session prevents stale WP cookies from showing the wrong identity.
+        if ( PortalAuth::is_logged_in() ) {
             $staff = PortalAuth::current_user();
             $hm_data = [
                 'ajax_url'   => admin_url( 'admin-ajax.php' ),

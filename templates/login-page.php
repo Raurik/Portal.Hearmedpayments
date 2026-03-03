@@ -17,14 +17,61 @@ if ( ! defined( 'ABSPATH' ) ) {
 if ( ! defined( 'DONOTCACHEPAGE' ) ) define( 'DONOTCACHEPAGE', true );
 nocache_headers();
 
-// ── Already portal-authenticated → redirect away from login ──
-if ( PortalAuth::is_v2() && PortalAuth::is_logged_in() ) {
+// ── Force-logout: /login/?logout=1 ──
+// Allows users stuck with the wrong identity to flush everything
+// without needing the portal UI's logout button.
+if ( ! empty( $_GET['logout'] ) ) {
+    PortalAuth::logout();
+    wp_clear_auth_cookie();
+    wp_redirect( home_url( '/' ) );   // back to /login/ clean
+    exit;
+}
+
+// ── Already portal-authenticated → show identity confirmation ──
+// Do NOT silently redirect — the user may be stuck under the wrong
+// identity (e.g. test2) with a valid session cookie.  Give them the
+// choice to continue or log out and re-authenticate.
+if ( PortalAuth::is_logged_in() ) {
+    $staff = PortalAuth::current_user();
     $go = $_REQUEST['redirect_to'] ?? '';
     // If redirect_to is empty or points back at the login page, go to calendar
     if ( empty( $go ) || preg_match( '#/login/?(?:\\?|$)#', $go ) ) {
         $go = home_url( '/calendar/' );
     }
-    wp_redirect( esc_url( $go ) );
+    ?><!DOCTYPE html>
+    <html <?php language_attributes(); ?>>
+    <head>
+    <meta charset="<?php bloginfo( 'charset' ); ?>">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login — HearMed Portal</title>
+    <?php wp_head(); ?>
+    <style>
+        html,body{margin:0;padding:0;height:100%;overflow:hidden}
+        #wpadminbar,.admin-bar{display:none!important}
+        html.wp-toolbar{padding-top:0!important}
+        body{display:flex;justify-content:center;align-items:center;min-height:100vh;background:#FAFBFF;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+        .hm-login-card{background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.2);padding:40px 36px;max-width:420px;width:100%;margin:20px;text-align:center}
+        .hm-login-card h2{margin:0 0 8px;font-size:22px;color:#1a1a2e}
+        .hm-login-card p{color:#666;font-size:15px;margin:0 0 24px}
+        .hm-login-card .name{font-weight:600;color:#1a1a2e}
+        .hm-btn{display:inline-block;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;cursor:pointer;margin:6px}
+        .hm-btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none}
+        .hm-btn-outline{background:transparent;color:#764ba2;border:2px solid #764ba2}
+        .hm-btn:hover{opacity:0.85}
+    </style>
+    </head>
+    <body>
+    <div class="hm-login-card">
+        <h2>Welcome back</h2>
+        <p>You're logged in as <span class="name"><?php echo esc_html( $staff->display_name ); ?></span></p>
+        <a class="hm-btn hm-btn-primary" href="<?php echo esc_url( $go ); ?>">Continue to Portal</a>
+        <br>
+        <a class="hm-btn hm-btn-outline" href="<?php echo esc_url( home_url( '/?logout=1' ) ); ?>">Not you? Log out</a>
+    </div>
+    <?php wp_footer(); ?>
+    </body>
+    </html>
+    <?php
     exit;
 }
 

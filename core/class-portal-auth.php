@@ -150,17 +150,31 @@ class PortalAuth {
 
         error_log( '[HM Auth Resolve] is_v2=' . ( self::is_v2() ? 'Y' : 'N' ) . ' HMSESS=' . ( isset( $_COOKIE['HMSESS'] ) ? substr( $_COOKIE['HMSESS'], 0, 8 ) . '...' : 'NONE' ) . ' URI=' . ( $_SERVER['REQUEST_URI'] ?? '?' ) );
 
-        if ( ! self::is_v2() ) {
-            // Legacy mode: bridge from WP user to PG staff
-            return self::resolve_legacy();
-        }
-
+        // ── Always try the HMSESS cookie first ──────────────────────
+        // Even when PORTAL_AUTH_V2 is not defined, the login flow sets
+        // the HMSESS cookie.  If we skip it in legacy mode and fall
+        // straight to WP cookies, stale WP cookies (from a different
+        // user) override the correct portal session.
         $token = $_COOKIE[ self::COOKIE_SESSION ] ?? '';
-        if ( ! $token || strlen( $token ) < 32 ) {
-            error_log( '[HM Auth Resolve] No valid token. Length=' . strlen( $token ) );
-            return null;
+        if ( $token && strlen( $token ) >= 32 ) {
+            $staff = self::resolve_hmsess( $token );
+            if ( $staff ) return $staff;
         }
 
+        // No valid HMSESS session — fall back to WP auth bridge
+        return self::resolve_legacy();
+    }
+
+    /**
+     * Resolve staff identity from an HMSESS cookie token.
+     *
+     * Extracted from resolve() so it can be called unconditionally
+     * regardless of the PORTAL_AUTH_V2 flag.
+     *
+     * @param  string $token Raw cookie value
+     * @return object|null   Staff record or null
+     */
+    private static function resolve_hmsess( $token ) {
         $hash = hash( self::ALGO_HASH, $token );
         $conn = self::pg();
         if ( ! $conn ) {
@@ -625,6 +639,19 @@ class PortalAuth {
         $conn = self::pg();
         if ( ! $conn ) return false;
 
+        // ── Revoke any existing session in this browser ──────────────
+        // If the user is re-logging-in (or logging in as a different
+        // user), the old HMSESS cookie points to a session that must
+        // be revoked.  Without this, a 7-day session for "test2" would
+        // keep the browser authenticated even after the user enters
+        // their *own* credentials.
+        $existing_token = $_COOKIE[ self::COOKIE_SESSION ] ?? '';
+        if ( $existing_token && strlen( $existing_token ) >= 32 ) {
+            $existing_hash = hash( self::ALGO_HASH, $existing_token );
+            self::revoke_session( $existing_hash );
+            error_log( '[HM Auth] Revoked previous session (hash prefix=' . substr( $existing_hash, 0, 8 ) . ') before creating new session for staff_id=' . $staff_id );
+        }
+
         $token = bin2hex( random_bytes( 32 ) );
         $hash  = hash( self::ALGO_HASH, $token );
 
@@ -651,6 +678,13 @@ class PortalAuth {
         );
 
         self::set_session_cookie( $token );
+
+        // Reset resolved state so subsequent calls to current_user()
+        // in the same request pick up the NEW session, not a stale one.
+        self::$resolved      = false;
+        self::$current_staff = null;
+        self::$current_session = null;
+        self::$actor_staff   = null;
 
         // Always bridge to WP session.
         // SiteGround's Nginx cache only bypasses caching when a
@@ -1310,7 +1344,10 @@ class PortalAuth {
      */
     private static function bridge_wp_login( $staff_id ) {
         $staff = self::get_staff_by_id( $staff_id );
-        if ( ! $staff ) return;
+        if ( ! $staff ) {
+            error_log( '[HM Auth] bridge_wp_login: staff not found for id=' . $staff_id );
+            return;
+        }
 
         $wp_user_id = HearMed_Staff_Auth::ensure_wp_user_for_staff(
             $staff_id,
@@ -1328,6 +1365,9 @@ class PortalAuth {
 
             wp_set_current_user( $wp_user_id );
             wp_set_auth_cookie( $wp_user_id, true );
+            error_log( '[HM Auth] bridge_wp_login: set WP cookie for wp_user_id=' . $wp_user_id . ' (staff_id=' . $staff_id . ')' );
+        } else {
+            error_log( '[HM Auth] bridge_wp_login FAILED: ensure_wp_user_for_staff returned 0 for staff_id=' . $staff_id . ' email=' . ( $staff->email ?? '?' ) . ' — WP cookies NOT updated, stale cookies may persist' );
         }
     }
 

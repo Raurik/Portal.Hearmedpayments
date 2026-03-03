@@ -163,11 +163,27 @@ class HearMed_Router {
     public function bridge_wp_login() {
         if ( defined( 'DOING_AJAX' ) || defined( 'DOING_CRON' ) || defined( 'REST_REQUEST' ) || defined( 'WP_CLI' ) ) return;
 
-        // Check portal session
-        if ( ! PortalAuth::is_logged_in() ) return;
+        // ── Determine the portal-authenticated staff ─────────────────
+        // When V2 is active we use resolve() which reads the HMSESS cookie.
+        // When V2 is *not* active, resolve() falls back to WP auth
+        // (resolve_legacy), which creates a circular dependency: WP cookies
+        // say "test2" → bridge says "already correct" → user stays test2.
+        //
+        // Break the circle by reading the HMSESS cookie directly regardless
+        // of V2 flag. If no valid HMSESS session exists, fall back to the
+        // normal resolve() path.
+        $staff = null;
+        $hmsess = $_COOKIE[ PortalAuth::COOKIE_SESSION ] ?? '';
+        if ( $hmsess && strlen( $hmsess ) >= 32 ) {
+            // Force V2-style resolution: HMSESS → PG session → staff
+            // This is the authoritative source of truth.
+            $staff = PortalAuth::resolve();
+        }
 
-        $staff = PortalAuth::current_user();
-        if ( ! $staff ) return;
+        if ( ! $staff ) {
+            // No valid HMSESS session — nothing to bridge
+            return;
+        }
 
         // Look up the linked WP user via PG
         $wp_user_id = HearMed_DB::get_var(
@@ -185,16 +201,12 @@ class HearMed_Router {
         if ( ! $wp_user ) return;
 
         // Clear ALL existing WP auth cookies on EVERY path first.
-        // WordPress sets separate cookies on COOKIEPATH (/login/) and
-        // SITECOOKIEPATH (/). A stale cookie from a previous user on
-        // the "/" path takes precedence and makes WP think the wrong
-        // user is logged in, even though the portal session (HMSESS)
-        // correctly identifies the right user.
         wp_clear_auth_cookie();
 
         // Set fresh cookies for the correct WP user
         wp_set_current_user( $wp_user_id );
         wp_set_auth_cookie( $wp_user_id, true );
+        error_log( '[HM Router] bridge_wp_login: corrected WP cookie to wp_user_id=' . $wp_user_id . ' (staff_id=' . $staff->id . ', name=' . $staff->display_name . ')' );
     }
 
     /**

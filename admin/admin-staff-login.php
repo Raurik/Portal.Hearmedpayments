@@ -44,13 +44,15 @@ class HearMed_Staff_Login {
             return '<p style="padding:2rem;text-align:center;color:#888;">[HearMed Staff Login]</p>';
         }
 
-        // Already logged in → redirect to calendar (not home_url('/') which
-        // resolves to /login/ — the login page itself — causing a loop).
+        // Already logged in → the standalone login-page.php template
+        // handles this case with a "Logged in as X" screen.
+        // If this shortcode somehow runs anyway (e.g. on a non-login page),
+        // redirect to calendar.
         if ( PortalAuth::is_v2() && PortalAuth::is_logged_in() ) {
             wp_redirect( home_url( '/calendar/' ) );
             exit;
         }
-        if ( ! PortalAuth::is_v2() && is_user_logged_in() ) {
+        if ( ! PortalAuth::is_v2() && PortalAuth::is_logged_in() ) {
             wp_redirect( home_url( '/calendar/' ) );
             exit;
         }
