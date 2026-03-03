@@ -42,10 +42,10 @@ if ( $invite_token ) {
     html, body { margin:0; padding:0; height:100%; overflow:hidden; }
     #wpadminbar, .admin-bar { display:none !important; }
     html.wp-toolbar { padding-top:0 !important; }
-    body { display:flex; justify-content:center; align-items:center; min-height:100vh; background:linear-gradient(135deg, #0a2540 0%, #0BB4C4 100%); font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { display:flex; justify-content:center; align-items:center; min-height:100vh; background:#FAFBFF; font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
     .hm-login-card { background:#fff; border-radius:16px; box-shadow:0 8px 40px rgba(0,0,0,0.2); padding:40px 36px; max-width:420px; width:100%; margin:20px; }
-    .hm-login-logo { text-align:center; margin-bottom:28px; }
+    .hm-login-logo { text-align:center; margin-bottom:28px; display:flex; justify-content:center; }
     .hm-login-logo img { max-width:260px; height:auto; }
     .hm-login-step { display:none; }
     .hm-login-step.active { display:block; }
