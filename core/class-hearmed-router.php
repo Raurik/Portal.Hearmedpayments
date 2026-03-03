@@ -522,6 +522,10 @@ class HearMed_Router {
             transition: color 0.2s ease, background 0.2s ease;
             text-decoration: none;
             padding: 0;
+            position: absolute;
+            bottom: 12px;
+            right: 8px;
+            z-index: 10;
         }
         #hm-logout-btn:hover {
             color: #fff;
@@ -549,16 +553,17 @@ class HearMed_Router {
                 var btn = document.getElementById('hm-logout-btn');
                 if(!btn) return;
 
-                var target = document.getElementById('hm-midsidebar')
-                          || document.querySelector('.hm-sidebar');
-                if(target){
-                    target.style.position = 'relative';
-                    btn.style.position = 'absolute';
-                    btn.style.bottom   = '12px';
-                    btn.style.right    = '12px';
-                    btn.style.display  = 'inline-flex';
-                    target.appendChild(btn);
-                }
+                /* Use same container the bell uses */
+                var target = document.getElementById('hm-midsidebar');
+                if(!target) target = document.querySelector('.hm-sidebar');
+                if(!target) return;
+
+                target.style.position = 'relative';
+                /* CSS already has position/bottom/right, just show it */
+                btn.style.display = 'inline-flex';
+                target.appendChild(btn);
+
+                console.log('[HearMed] Logout button placed in', target.id || target.className);
             }
 
             /* ── Logout handler ── */
