@@ -442,8 +442,8 @@ class HearMed_Router {
     }
 
     /* ================================================================
-       USER BAR — "Logged in as ___" + logout icon
-       Injected via wp_footer, positioned into .hm-topbar by JS.
+       LOGOUT BUTTON — door icon in sidebar bottom-right
+       Injected via wp_footer, positioned into sidebar by JS.
        ================================================================ */
 
     public function render_user_bar() {
@@ -457,124 +457,65 @@ class HearMed_Router {
         }
 
         $name = esc_html( $staff->display_name );
-        $role = esc_html( ucfirst( str_replace( '_', ' ', $staff->role ?? '' ) ) );
         ?>
-        <!-- HearMed User Bar -->
+        <!-- HearMed Logout Button -->
         <style>
-        #hm-user-bar {
+        #hm-logout-btn {
             display: none; /* shown by JS once placed */
             align-items: center;
-            gap: 10px;
-            font-family: var(--hm-font, 'Source Sans 3', sans-serif);
-            font-size: 13px;
-            color: var(--hm-text-light, #64748b);
-            white-space: nowrap;
-            user-select: none;
-            padding: 4px 0;
-        }
-        #hm-user-bar .hm-ub-identity {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            line-height: 1.3;
-        }
-        #hm-user-bar .hm-ub-name {
-            font-weight: 600;
-            font-size: 13px;
-            color: var(--hm-navy, #151B33);
-        }
-        #hm-user-bar .hm-ub-role {
-            font-size: 11px;
-            color: var(--hm-text-muted, #94a3b8);
-            text-transform: capitalize;
-        }
-        #hm-user-bar .hm-ub-logout {
-            display: inline-flex;
-            align-items: center;
             justify-content: center;
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             border-radius: 6px;
-            border: 1px solid var(--hm-border, #e2e8f0);
-            background: var(--hm-bg, #fff);
-            color: var(--hm-text-muted, #94a3b8);
+            border: none;
+            background: transparent;
+            color: rgba(255,255,255,0.55);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: color 0.2s ease, background 0.2s ease;
             text-decoration: none;
+            padding: 0;
         }
-        #hm-user-bar .hm-ub-logout:hover {
-            background: var(--hm-red, #ef4444);
-            border-color: var(--hm-red, #ef4444);
+        #hm-logout-btn:hover {
             color: #fff;
+            background: rgba(255,255,255,0.12);
         }
-        #hm-user-bar .hm-ub-logout svg {
-            width: 16px;
-            height: 16px;
+        #hm-logout-btn svg {
+            width: 18px;
+            height: 18px;
         }
         </style>
 
-        <div id="hm-user-bar">
-            <div class="hm-ub-identity">
-                <span class="hm-ub-name"><?php echo $name; ?></span>
-                <?php if ( $role ) : ?>
-                    <span class="hm-ub-role"><?php echo $role; ?></span>
-                <?php endif; ?>
-            </div>
-            <a href="#" class="hm-ub-logout" title="Log out" id="hm-ub-logout-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                    <polyline points="16 17 21 12 16 7"/>
-                    <line x1="21" y1="12" x2="9" y2="12"/>
-                </svg>
-            </a>
-        </div>
+        <a href="#" title="Log out" id="hm-logout-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+        </a>
 
         <script>
         (function(){
-            /* ── Place user bar inside .hm-topbar ── */
-            function placeUserBar(){
-                var bar = document.getElementById('hm-user-bar');
-                if(!bar) return;
+            /* ── Place logout button in sidebar bottom-right ── */
+            function placeLogout(){
+                var btn = document.getElementById('hm-logout-btn');
+                if(!btn) return;
 
-                /* Try .hm-topbar first (Elementor container) */
-                var topbar = document.querySelector('.hm-topbar');
-                if(topbar){
-                    /* Find the inner wrapper (Elementor .e-con-inner) */
-                    var inner = topbar.querySelector('.e-con-inner') || topbar;
-                    inner.style.display  = 'flex';
-                    inner.style.alignItems = 'center';
-                    inner.style.position = 'relative';
-                    bar.style.marginLeft = 'auto';
-                    bar.style.display    = 'flex';
-                    inner.appendChild(bar);
-                    return;
-                }
-
-                /* Fallback: inject before .hm-patient-search-bar */
-                var searchBar = document.querySelector('.hm-patient-search-bar');
-                if(searchBar && searchBar.parentNode){
-                    bar.style.display = 'flex';
-                    bar.style.justifyContent = 'flex-end';
-                    bar.style.marginBottom = '6px';
-                    searchBar.parentNode.insertBefore(bar, searchBar);
-                    return;
-                }
-
-                /* Last resort: top of .hm-content */
-                var content = document.querySelector('.hm-content');
-                if(content){
-                    var inner2 = content.querySelector('.e-con-inner') || content;
-                    bar.style.display = 'flex';
-                    bar.style.justifyContent = 'flex-end';
-                    bar.style.padding = '8px 16px 0';
-                    inner2.insertBefore(bar, inner2.firstChild);
+                var target = document.getElementById('hm-midsidebar')
+                          || document.querySelector('.hm-sidebar');
+                if(target){
+                    target.style.position = 'relative';
+                    btn.style.position = 'absolute';
+                    btn.style.bottom   = '12px';
+                    btn.style.right    = '12px';
+                    btn.style.display  = 'inline-flex';
+                    target.appendChild(btn);
                 }
             }
 
             /* ── Logout handler ── */
             function setupLogout(){
-                var btn = document.getElementById('hm-ub-logout-btn');
+                var btn = document.getElementById('hm-logout-btn');
                 if(!btn) return;
                 btn.addEventListener('click', function(e){
                     e.preventDefault();
@@ -604,12 +545,12 @@ class HearMed_Router {
 
             if(document.readyState === 'loading'){
                 document.addEventListener('DOMContentLoaded', function(){
-                    placeUserBar();
+                    placeLogout();
                     setupLogout();
                     syncNameWidget();
                 });
             } else {
-                placeUserBar();
+                placeLogout();
                 setupLogout();
                 syncNameWidget();
             }
