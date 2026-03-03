@@ -175,7 +175,7 @@ class PortalAuth {
         if ( ! $session ) return null;
 
         // Staff must be active
-        if ( ! $session->is_active || $session->status === 'disabled' ) {
+        if ( ! self::pg_bool( $session->is_active ) || $session->status === 'disabled' ) {
             self::revoke_session( $hash );
             return null;
         }
@@ -189,7 +189,7 @@ class PortalAuth {
         self::$current_session = $session;
 
         // Handle impersonation
-        if ( $session->is_impersonation && $session->target_staff_id ) {
+        if ( self::pg_bool( $session->is_impersonation ) && $session->target_staff_id ) {
             $target = self::get_staff_by_id( (int) $session->target_staff_id );
             $actor  = self::get_staff_by_id( (int) $session->actor_staff_id );
             if ( $target && $actor ) {
@@ -375,7 +375,7 @@ class PortalAuth {
         $staff_id = (int) $auth->staff_id;
 
         // Check account status
-        if ( ! $auth->is_active || ($auth->status ?? 'active') === 'disabled' ) {
+        if ( ! self::pg_bool( $auth->is_active ) || ($auth->status ?? 'active') === 'disabled' ) {
             self::audit( 'LOGIN_FAIL', $staff_id, [ 'reason' => 'inactive' ] );
             return [ 'status' => 'error', 'message' => 'This account is inactive.' ];
         }
@@ -407,7 +407,7 @@ class PortalAuth {
         $device       = self::get_device( $staff_id, $device_token );
         $needs_2fa    = false;
 
-        if ( ! $auth->two_factor_enabled ) {
+        if ( ! self::pg_bool( $auth->two_factor_enabled ) ) {
             // Force 2FA setup on first login
             return [
                 'status'   => '2fa_setup',
@@ -1286,6 +1286,14 @@ class PortalAuth {
      */
     private static function pg() {
         return HearMed_DB::instance() ? HearMed_DB::get_connection() : null;
+    }
+
+    /**
+     * Convert Postgres boolean ('t'/'f'/true/false/null) to PHP bool.
+     */
+    private static function pg_bool( $val ) {
+        if ( $val === true || $val === 't' || $val === '1' || $val === 1 ) return true;
+        return false;
     }
 
     /**

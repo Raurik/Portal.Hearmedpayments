@@ -418,12 +418,19 @@ class HearMed_Staff_Login {
     }
 
     public function ajax_get_2fa_qr() {
-        $staff_id = (int) ( $_POST['staff_id'] ?? 0 );
-        if ( ! $staff_id ) {
-            wp_send_json_error( [ 'message' => 'Missing staff ID.' ] );
+        try {
+            $staff_id = (int) ( $_POST['staff_id'] ?? 0 );
+            error_log( '[HM Auth] QR request for staff_id: ' . $staff_id );
+            if ( ! $staff_id ) {
+                wp_send_json_error( [ 'message' => 'Missing staff ID.' ] );
+            }
+            $data = PortalAuth::generate_2fa_secret( $staff_id );
+            error_log( '[HM Auth] QR generated OK, secret length: ' . strlen( $data['secret'] ?? '' ) );
+            wp_send_json_success( $data );
+        } catch ( \Throwable $e ) {
+            error_log( '[HM Auth] QR error: ' . $e->getMessage() );
+            wp_send_json_error( [ 'message' => 'Server error: ' . $e->getMessage() ] );
         }
-        $data = PortalAuth::generate_2fa_secret( $staff_id );
-        wp_send_json_success( $data );
     }
 
     public function ajax_accept_invite() {
