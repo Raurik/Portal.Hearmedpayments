@@ -1038,29 +1038,220 @@ function initProfile(){
     function showExchangeModal(ppId,productName,cb,side){
         if($('#hm-modal-overlay').length)return;
         var sideNote=side&&side!=='both'?' ('+side.charAt(0).toUpperCase()+side.slice(1)+' side only)':'';
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Exchange Hearing Aid</span><button class="hm-close">&times;</button></div><div class="hm-modal-body">'+
-            '<p style="font-size:13px;color:#64748b;margin-bottom:16px;">This will mark <strong>'+esc(productName)+'</strong>'+esc(sideNote)+' as "Replaced", create a credit note, and apply the payment as a patient credit for the new device.</p>'+
-            '<div class="hm-form-group"><label class="hm-label">Exchange type *</label><select class="hm-dd" id="exch-type"><option value="same_value">Same value</option><option value="upgrade">Upgrade (patient pays balance)</option><option value="downgrade">Downgrade (refund difference)</option></select></div>'+
-            '<div class="hm-form-group"><label class="hm-label">Reason for exchange *</label><select class="hm-dd" id="exch-reason"><option value="">— Select —</option><option>Upgrade</option><option>Downgrade</option><option>Manufacturer recall</option><option>Repeated faults</option><option>Patient dissatisfaction</option><option>Style change</option><option>Other</option></select></div>'+
-            '<div class="hm-form-group"><label class="hm-label">Credit amount (€) *</label><input type="number" class="hm-inp" id="exch-amount" step="0.01" min="0" placeholder="0.00"><p style="font-size:11px;color:#94a3b8;margin-top:4px;">The original invoice amount. PRSI will be automatically separated.</p></div>'+
-            '<div class="hm-form-group"><label class="hm-label">Notes (optional)</label><textarea class="hm-textarea" id="exch-notes" rows="2"></textarea></div>'+
-        '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="exch-save">Process Exchange</button></div></div></div>');
+        var itemAmt=0,prsiAmt=0,patientAmt=0,hasOrder=false,orderNum='';
+
+        // Build modal shell with step container
+        var shell='<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md" style="max-width:520px">'+
+            '<div class="hm-modal-hd"><span>Exchange Hearing Aid</span><button class="hm-close">&times;</button></div>'+
+            '<div class="hm-modal-body" id="exch-body" style="min-height:200px">'+
+                '<div style="text-align:center;padding:40px 0;color:#94a3b8"><div style="font-size:14px">Loading item details…</div></div>'+
+            '</div></div></div>';
+        $('body').append(shell);
         $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
-        $('#exch-save').on('click',function(){
-            var reason=$('#exch-reason').val();if(!reason){toast('Select a reason','error');return;}
-            var amt=parseFloat($('#exch-amount').val())||0;
-            if(!amt){toast('Enter a credit amount','error');return;}
-            $(this).prop('disabled',true).text('Processing…');
-            $.post(_hm.ajax,{action:'hm_create_exchange',nonce:_hm.nonce,patient_id:pid,device_id:ppId,reason:reason,credit_amount:amt,exchange_type:$('#exch-type').val(),notes:$('#exch-notes').val(),side:side||'both'},function(r){
-                closeModal();
-                if(r.success){
-                    var msg='Exchange processed — Credit Note '+r.data.credit_note_number+'. Patient credit: €'+parseFloat(r.data.patient_credit||0).toFixed(2);
-                    if(parseFloat(r.data.prsi_amount||0)>0) msg+=' (PRSI: €'+parseFloat(r.data.prsi_amount).toFixed(2)+' tracked separately)';
-                    toast(msg);
-                    if(cb)cb();
-                }else toast(r.data||'Error','error');
-            });
+
+        // Fetch per-item amount from backend
+        $.post(_hm.ajax,{action:'hm_get_exchange_item_amount',nonce:_hm.nonce,device_id:ppId,side:side||'both'},function(r){
+            if(r&&r.success){
+                itemAmt=parseFloat(r.data.item_amount)||0;
+                prsiAmt=parseFloat(r.data.prsi_amount)||0;
+                patientAmt=parseFloat(r.data.patient_amount)||0;
+                hasOrder=!!r.data.has_order;
+                orderNum=r.data.order_number||'';
+            }
+            showStep1();
         });
+
+        function showStep1(){
+            var h='<div style="margin-bottom:16px">';
+            h+='<div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;padding:12px 16px;margin-bottom:16px">';
+            h+='<p style="font-size:13px;color:#0d9488;margin:0"><strong>Exchanging: '+esc(productName)+'</strong>'+esc(sideNote)+'</p>';
+            if(hasOrder&&orderNum)h+='<p style="font-size:12px;color:#64748b;margin:4px 0 0">Original order: '+esc(orderNum)+'</p>';
+            h+='</div>';
+
+            // Amount summary
+            if(hasOrder&&itemAmt>0){
+                h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
+                h+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;color:#64748b">Item amount</span><span style="font-size:14px;font-weight:700;color:var(--hm-navy,#151B33)">€'+itemAmt.toFixed(2)+'</span></div>';
+                if(prsiAmt>0) h+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;color:#64748b">PRSI (tracked separately)</span><span style="font-size:13px;color:#dc2626">−€'+prsiAmt.toFixed(2)+'</span></div>';
+                h+='<div style="border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px;display:flex;justify-content:space-between"><span style="font-size:13px;font-weight:600;color:#334155">Patient amount</span><span style="font-size:15px;font-weight:700;color:#059669">€'+patientAmt.toFixed(2)+'</span></div>';
+                h+='</div>';
+            } else {
+                h+='<div class="hm-form-group"><label class="hm-label">Item amount (€) *</label>';
+                h+='<input type="number" class="hm-inp" id="exch-manual-amt" step="0.01" min="0" placeholder="0.00">';
+                h+='<p style="font-size:11px;color:#94a3b8;margin-top:4px">No original order found — enter the item price manually.</p></div>';
+            }
+
+            h+='<div class="hm-form-group"><label class="hm-label">Reason for exchange *</label>';
+            h+='<select class="hm-dd" id="exch-reason"><option value="">— Select —</option>';
+            h+='<option>Upgrade</option><option>Downgrade</option><option>Manufacturer recall</option>';
+            h+='<option>Repeated faults</option><option>Patient dissatisfaction</option>';
+            h+='<option>Style change</option><option>Other</option></select></div>';
+
+            h+='<div class="hm-form-group"><label class="hm-label">Notes (optional)</label>';
+            h+='<textarea class="hm-textarea" id="exch-notes" rows="2"></textarea></div>';
+
+            h+='</div>';
+            h+='<div class="hm-modal-ft" style="border-top:1px solid #e2e8f0;padding-top:16px;display:flex;gap:8px;justify-content:flex-end">';
+            h+='<button class="hm-btn hm-btn--secondary hm-close">Cancel</button>';
+            h+='<button class="hm-btn hm-btn--primary" id="exch-step1-next">Next — Choose Action →</button>';
+            h+='</div>';
+            $('#exch-body').html(h);
+
+            $('#exch-step1-next').on('click',function(){
+                var reason=$('#exch-reason').val();
+                if(!reason){toast('Select a reason','error');return;}
+                if(!hasOrder||itemAmt<=0){
+                    var manual=parseFloat($('#exch-manual-amt').val())||0;
+                    if(!manual){toast('Enter the item amount','error');return;}
+                    itemAmt=manual;patientAmt=manual;
+                }
+                showStep2(reason,$('#exch-notes').val());
+            });
+        }
+
+        function showStep2(reason,notes){
+            var h='<div style="margin-bottom:16px">';
+            h+='<div style="font-size:13px;color:#64748b;margin-bottom:16px">'+esc(productName)+esc(sideNote)+' — <strong>€'+patientAmt.toFixed(2)+'</strong> patient amount</div>';
+
+            h+='<p style="font-size:14px;font-weight:600;color:var(--hm-navy,#151B33);margin-bottom:14px">How should this exchange be handled?</p>';
+
+            // Credit option
+            h+='<div id="exch-opt-credit" class="hm-exch-opt" style="border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .15s">';
+            h+='<div style="display:flex;align-items:center;gap:12px">';
+            h+='<div style="width:40px;height:40px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center">';
+            h+='<svg width="20" height="20" fill="none" stroke="#059669" stroke-width="2"><rect x="2" y="5" width="16" height="12" rx="2"/><path d="M2 9h16"/></svg></div>';
+            h+='<div><strong style="font-size:14px;color:var(--hm-navy,#151B33)">Credit to Patient Account</strong>';
+            h+='<div style="font-size:12px;color:#64748b;margin-top:2px">€'+patientAmt.toFixed(2)+' goes to patient credit. Use it when the new order arrives.</div>';
+            h+='</div></div></div>';
+
+            // Refund option
+            h+='<div id="exch-opt-refund" class="hm-exch-opt" style="border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .15s">';
+            h+='<div style="display:flex;align-items:center;gap:12px">';
+            h+='<div style="width:40px;height:40px;border-radius:10px;background:#fef2f2;display:flex;align-items:center;justify-content:center">';
+            h+='<svg width="20" height="20" fill="none" stroke="#dc2626" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>';
+            h+='<div><strong style="font-size:14px;color:var(--hm-navy,#151B33)">Refund to Patient</strong>';
+            h+='<div style="font-size:12px;color:#64748b;margin-top:2px">Refund some or all back to patient. Any remainder goes to patient credit.</div>';
+            h+='</div></div></div>';
+
+            h+='</div>';
+            h+='<div class="hm-modal-ft" style="border-top:1px solid #e2e8f0;padding-top:16px;display:flex;gap:8px;justify-content:flex-end">';
+            h+='<button class="hm-btn hm-btn--secondary" id="exch-step2-back">← Back</button>';
+            h+='</div>';
+            $('#exch-body').html(h);
+
+            // Hover effects
+            $('.hm-exch-opt').on('mouseenter',function(){$(this).css({borderColor:'var(--hm-teal,#0BB4C4)',background:'#f8fffe'});})
+                .on('mouseleave',function(){$(this).css({borderColor:'#e2e8f0',background:'#fff'});});
+
+            $('#exch-opt-credit').on('click',function(){ showStep3Credit(reason,notes); });
+            $('#exch-opt-refund').on('click',function(){ showStep3Refund(reason,notes); });
+            $('#exch-step2-back').on('click',function(){ showStep1(); });
+        }
+
+        function showStep3Credit(reason,notes){
+            var h='<div style="margin-bottom:16px">';
+            h+='<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
+            h+='<div style="font-size:14px;font-weight:700;color:#059669;margin-bottom:6px">Credit to Patient Account</div>';
+            h+='<div style="font-size:13px;color:#334155">The full patient amount will be added as a credit on this patient\'s account. When the new hearing aids arrive and an invoice is created, the credit can be applied to reduce the balance.</div>';
+            h+='</div>';
+
+            h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:12px">';
+            h+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;color:#64748b">Item amount</span><span style="font-size:14px;font-weight:600">€'+itemAmt.toFixed(2)+'</span></div>';
+            if(prsiAmt>0) h+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;color:#64748b">PRSI (not refundable)</span><span style="font-size:13px;color:#dc2626">−€'+prsiAmt.toFixed(2)+'</span></div>';
+            h+='<div style="border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px;display:flex;justify-content:space-between"><span style="font-size:13px;font-weight:700;color:#334155">Credit on account</span><span style="font-size:16px;font-weight:700;color:#059669">€'+patientAmt.toFixed(2)+'</span></div>';
+            h+='</div>';
+
+            h+='<div style="font-size:12px;color:#94a3b8;margin-bottom:12px">Reason: '+esc(reason)+'</div>';
+            h+='</div>';
+            h+='<div class="hm-modal-ft" style="border-top:1px solid #e2e8f0;padding-top:16px;display:flex;gap:8px;justify-content:flex-end">';
+            h+='<button class="hm-btn hm-btn--secondary" id="exch-step3-back">← Back</button>';
+            h+='<button class="hm-btn hm-btn--primary" id="exch-confirm" style="background:#059669">Confirm Exchange — Credit €'+patientAmt.toFixed(2)+'</button>';
+            h+='</div>';
+            $('#exch-body').html(h);
+
+            $('#exch-step3-back').on('click',function(){ showStep2(reason,notes); });
+            $('#exch-confirm').on('click',function(){
+                $(this).prop('disabled',true).text('Processing…');
+                $.post(_hm.ajax,{action:'hm_create_exchange',nonce:_hm.nonce,
+                    patient_id:pid,device_id:ppId,reason:reason,
+                    credit_amount:itemAmt,refund_type:'credit',
+                    refund_amount:0,notes:notes,side:side||'both'
+                },function(r){
+                    closeModal();
+                    if(r.success){
+                        var msg='Exchange processed — '+r.data.credit_note_number+'. €'+parseFloat(r.data.patient_credit||0).toFixed(2)+' credited to patient account.';
+                        if(parseFloat(r.data.prsi_amount||0)>0) msg+=' PRSI €'+parseFloat(r.data.prsi_amount).toFixed(2)+' tracked separately.';
+                        toast(msg);if(cb)cb();
+                    } else { toast(r.data||'Error','error'); }
+                });
+            });
+        }
+
+        function showStep3Refund(reason,notes){
+            var h='<div style="margin-bottom:16px">';
+            h+='<div style="background:#fef2f2;border:1px solid #fecdd3;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
+            h+='<div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">Refund to Patient</div>';
+            h+='<div style="font-size:13px;color:#334155">Enter the refund amount to give back to the patient. Any remaining balance will be stored as credit on the patient\'s account for future use.</div>';
+            h+='</div>';
+
+            h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:14px">';
+            h+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;color:#64748b">Item amount</span><span style="font-size:14px;font-weight:600">€'+itemAmt.toFixed(2)+'</span></div>';
+            if(prsiAmt>0) h+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;color:#64748b">PRSI (not refundable)</span><span style="font-size:13px;color:#dc2626">−€'+prsiAmt.toFixed(2)+'</span></div>';
+            h+='<div style="border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px;display:flex;justify-content:space-between"><span style="font-size:13px;font-weight:600;color:#334155">Available to refund/credit</span><span style="font-size:15px;font-weight:700;color:#334155">€'+patientAmt.toFixed(2)+'</span></div>';
+            h+='</div>';
+
+            h+='<div class="hm-form-group"><label class="hm-label">Refund amount (€) *</label>';
+            h+='<input type="number" class="hm-inp" id="exch-refund-amt" step="0.01" min="0" max="'+patientAmt.toFixed(2)+'" value="'+patientAmt.toFixed(2)+'" style="font-size:15px;font-weight:600">';
+            h+='<p style="font-size:11px;color:#94a3b8;margin-top:4px">Max: €'+patientAmt.toFixed(2)+'</p></div>';
+
+            h+='<div id="exch-refund-summary" style="background:#f8fafc;border-radius:8px;padding:12px 16px;margin-bottom:12px">';
+            h+=buildRefundSummary(patientAmt);
+            h+='</div>';
+
+            h+='</div>';
+            h+='<div class="hm-modal-ft" style="border-top:1px solid #e2e8f0;padding-top:16px;display:flex;gap:8px;justify-content:flex-end">';
+            h+='<button class="hm-btn hm-btn--secondary" id="exch-step3r-back">← Back</button>';
+            h+='<button class="hm-btn hm-btn--primary" id="exch-refund-confirm" style="background:#dc2626">Confirm Refund & Exchange</button>';
+            h+='</div>';
+            $('#exch-body').html(h);
+
+            // Live update summary as refund amount changes
+            $('#exch-refund-amt').on('input',function(){
+                var v=parseFloat($(this).val())||0;
+                if(v>patientAmt)v=patientAmt;
+                $('#exch-refund-summary').html(buildRefundSummary(v));
+            });
+
+            $('#exch-step3r-back').on('click',function(){ showStep2(reason,notes); });
+            $('#exch-refund-confirm').on('click',function(){
+                var refAmt=parseFloat($('#exch-refund-amt').val())||0;
+                if(refAmt<=0){toast('Enter a refund amount','error');return;}
+                if(refAmt>patientAmt){toast('Refund cannot exceed €'+patientAmt.toFixed(2),'error');return;}
+                $(this).prop('disabled',true).text('Processing…');
+                $.post(_hm.ajax,{action:'hm_create_exchange',nonce:_hm.nonce,
+                    patient_id:pid,device_id:ppId,reason:reason,
+                    credit_amount:itemAmt,refund_type:'refund',
+                    refund_amount:refAmt,notes:notes,side:side||'both'
+                },function(r){
+                    closeModal();
+                    if(r.success){
+                        var msg='Exchange processed — '+r.data.credit_note_number+'. Cash refund: €'+parseFloat(r.data.cash_refund||0).toFixed(2);
+                        if(parseFloat(r.data.patient_credit||0)>0) msg+='. €'+parseFloat(r.data.patient_credit).toFixed(2)+' credited to account.';
+                        if(parseFloat(r.data.prsi_amount||0)>0) msg+=' PRSI €'+parseFloat(r.data.prsi_amount).toFixed(2)+' tracked separately.';
+                        toast(msg);if(cb)cb();
+                    } else { toast(r.data||'Error','error'); }
+                });
+            });
+        }
+
+        function buildRefundSummary(refAmt){
+            var remainder=Math.max(0,patientAmt-refAmt);
+            var s='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;color:#64748b">Cash refund</span><span style="font-size:13px;font-weight:600;color:#dc2626">€'+refAmt.toFixed(2)+'</span></div>';
+            if(remainder>0.01){
+                s+='<div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:#64748b">Credit on account</span><span style="font-size:13px;font-weight:600;color:#059669">€'+remainder.toFixed(2)+'</span></div>';
+            }
+            return s;
+        }
     }
 
     /* ── RETURN PICKER (similar to exchange picker) ── */

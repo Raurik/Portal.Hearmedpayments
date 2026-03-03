@@ -135,6 +135,7 @@ add_action( 'wp_ajax_hm_update_repair_status', 'hm_ajax_update_repair_status' );
 
 // Exchange flow
 add_action( 'wp_ajax_hm_create_exchange',  'hm_ajax_create_exchange' );
+add_action( 'wp_ajax_hm_get_exchange_item_amount', 'hm_ajax_get_exchange_item_amount' );
 
 // Return flow (full return with PRSI tracking)
 add_action( 'wp_ajax_hm_create_return',  'hm_ajax_create_return' );
@@ -2540,8 +2541,112 @@ function hm_ajax_update_repair_status() {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  24. EXCHANGE FLOW
-//      Creates credit note + marks old devices inactive
+//  24-A. GET EXCHANGE ITEM AMOUNT
+//       Calculates per-item amount for the specific side being exchanged
+//       NOT the entire invoice — just the items matching the ear side
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_get_exchange_item_amount() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $device_id = intval( $_POST['device_id'] ?? 0 );
+    $side      = sanitize_text_field( $_POST['side'] ?? 'both' );
+
+    if ( ! $device_id ) wp_send_json_error( 'Device required' );
+
+    $db = HearMed_DB::instance();
+    hm_ensure_returns_tables();
+
+    $device = $db->get_row( "SELECT * FROM hearmed_core.patient_devices WHERE id = \$1", [ $device_id ] );
+    if ( ! $device ) wp_send_json_error( 'Device not found' );
+
+    // No original order — user must enter amount manually
+    if ( ! $device->order_id ) {
+        wp_send_json_success( [
+            'item_amount'    => 0,
+            'prsi_amount'    => 0,
+            'patient_amount' => 0,
+            'has_order'      => false,
+            'message'        => 'No original order found — enter amount manually',
+        ] );
+        return;
+    }
+
+    // Get original order
+    $order = $db->get_row( "SELECT * FROM hearmed_core.orders WHERE id = \$1", [ $device->order_id ] );
+    if ( ! $order ) {
+        wp_send_json_success( [
+            'item_amount'    => 0,
+            'prsi_amount'    => 0,
+            'patient_amount' => 0,
+            'has_order'      => false,
+            'message'        => 'Original order not found',
+        ] );
+        return;
+    }
+
+    // Get all order items
+    $items = $db->get_results(
+        "SELECT oi.ear_side, oi.line_total, oi.item_type, oi.item_description
+         FROM hearmed_core.order_items oi
+         WHERE oi.order_id = \$1
+         ORDER BY oi.line_number",
+        [ $device->order_id ]
+    );
+
+    // Calculate total for ALL items vs items matching the exchange side
+    $all_items_total  = 0;
+    $side_items_total = 0;
+
+    foreach ( $items ?: [] as $item ) {
+        $ear = strtolower( trim( $item->ear_side ?? '' ) );
+        $lt  = floatval( $item->line_total );
+        $all_items_total += $lt;
+
+        if ( $side === 'both' ) {
+            // Exchanging both — include everything
+            $side_items_total += $lt;
+        } elseif ( $ear === $side ) {
+            // Exact match
+            $side_items_total += $lt;
+        } elseif ( $ear === 'both' || $ear === '' ) {
+            // Shared items — split proportionally (half)
+            $side_items_total += $lt / 2;
+        }
+    }
+
+    // Apply proportional discount if order had a discount
+    $discount_total = floatval( $order->discount_total ?? 0 );
+    if ( $discount_total > 0 && $all_items_total > 0 ) {
+        $proportion      = $side_items_total / $all_items_total;
+        $side_discount   = round( $discount_total * $proportion, 2 );
+        $side_items_total = max( 0, $side_items_total - $side_discount );
+    }
+
+    // PRSI per side
+    $prsi_per_side = 0;
+    if ( $side === 'both' ) {
+        $prsi_per_side = floatval( $order->prsi_amount ?? 0 );
+    } else {
+        $prsi_field    = 'prsi_' . $side; // prsi_left or prsi_right
+        $prsi_per_side = ! empty( $order->$prsi_field ) ? 500 : 0;
+    }
+
+    $patient_amount = round( max( 0, $side_items_total - $prsi_per_side ), 2 );
+
+    wp_send_json_success( [
+        'item_amount'    => round( $side_items_total, 2 ),
+        'prsi_amount'    => $prsi_per_side,
+        'patient_amount' => $patient_amount,
+        'has_order'      => true,
+        'order_number'   => $order->order_number ?? '',
+        'order_total'    => floatval( $order->grand_total ?? 0 ),
+    ] );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  24-B. EXCHANGE FLOW
+//       Creates credit note + marks old devices inactive
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_create_exchange() {
@@ -2549,11 +2654,13 @@ function hm_ajax_create_exchange() {
     $pid           = intval( $_POST['patient_id'] ?? 0 );
     $device_id     = intval( $_POST['device_id'] ?? 0 );
     $reason        = sanitize_textarea_field( $_POST['reason'] ?? '' );
-    $credit_amount = floatval( $_POST['credit_amount'] ?? 0 );
     $side          = sanitize_text_field( $_POST['side'] ?? 'both' );
-    $refund_type   = sanitize_text_field( $_POST['refund_type'] ?? 'credit' );
+    $refund_type   = sanitize_text_field( $_POST['refund_type'] ?? 'credit' ); // credit | refund
+    $refund_amount = floatval( $_POST['refund_amount'] ?? 0 ); // only for refund path
+    $credit_amount = floatval( $_POST['credit_amount'] ?? 0 ); // total item amount (auto-calculated or manual)
 
     if ( ! $pid || ! $device_id ) wp_send_json_error( 'Patient and device required' );
+    if ( ! $reason ) wp_send_json_error( 'Reason is required' );
 
     $db       = HearMed_DB::instance();
     $staff_id = hm_patient_staff_id();
@@ -2563,7 +2670,7 @@ function hm_ajax_create_exchange() {
     $device = $db->get_row( "SELECT * FROM hearmed_core.patient_devices WHERE id = \$1", [ $device_id ] );
     if ( ! $device ) wp_send_json_error( 'Device not found' );
 
-    // Get original order/invoice for PRSI info
+    // ── Auto-calculate per-item amount if device has an order ──
     $order = null;
     $prsi_amount = 0;
     if ( $device->order_id ) {
@@ -2574,13 +2681,60 @@ function hm_ajax_create_exchange() {
              WHERE o.id = \$1",
             [ $device->order_id ]
         );
+
         if ( $order ) {
-            $prsi_amount = floatval( $order->prsi_amount ?? 0 );
+            // Calculate per-side PRSI
+            if ( $side === 'both' ) {
+                $prsi_amount = floatval( $order->prsi_amount ?? 0 );
+            } else {
+                $prsi_field  = 'prsi_' . $side;
+                $prsi_amount = ! empty( $order->$prsi_field ) ? 500 : 0;
+            }
+
+            // Auto-calculate from order items if credit_amount not provided
+            if ( $credit_amount <= 0 ) {
+                $items = $db->get_results(
+                    "SELECT oi.ear_side, oi.line_total
+                     FROM hearmed_core.order_items oi
+                     WHERE oi.order_id = \$1
+                     ORDER BY oi.line_number",
+                    [ $device->order_id ]
+                );
+
+                $all_total  = 0;
+                $side_total = 0;
+                foreach ( $items ?: [] as $it ) {
+                    $ear = strtolower( trim( $it->ear_side ?? '' ) );
+                    $lt  = floatval( $it->line_total );
+                    $all_total += $lt;
+                    if ( $side === 'both' ) {
+                        $side_total += $lt;
+                    } elseif ( $ear === $side ) {
+                        $side_total += $lt;
+                    } elseif ( $ear === 'both' || $ear === '' ) {
+                        $side_total += $lt / 2;
+                    }
+                }
+                // Apply proportional discount
+                $disc = floatval( $order->discount_total ?? 0 );
+                if ( $disc > 0 && $all_total > 0 ) {
+                    $side_total = max( 0, $side_total - round( $disc * ( $side_total / $all_total ), 2 ) );
+                }
+                $credit_amount = round( $side_total, 2 );
+            }
         }
     }
 
-    // Patient refund = credit amount minus PRSI (PRSI never goes back to patient)
+    // Patient credit = item amount minus PRSI (PRSI never goes back to patient)
     $patient_refund = max( 0, $credit_amount - $prsi_amount );
+
+    // For refund path: refund_amount is the cash refund, remainder goes to patient credit
+    $cash_refund     = 0;
+    $credit_to_acct  = $patient_refund;
+    if ( $refund_type === 'refund' ) {
+        $cash_refund    = min( $refund_amount, $patient_refund );
+        $credit_to_acct = max( 0, $patient_refund - $cash_refund );
+    }
 
     $db->begin_transaction();
 
@@ -2598,37 +2752,44 @@ function hm_ajax_create_exchange() {
         $cn_seq    = $db->get_var( "SELECT COALESCE(MAX(id), 0) + 1 FROM hearmed_core.credit_notes" );
         $cn_number = $cn_prefix . '-' . str_pad( $cn_seq, 4, '0', STR_PAD_LEFT );
 
-        // Create credit note with PRSI tracking
+        // Create credit note
         $cn_id = $db->insert( 'hearmed_core.credit_notes', [
-            'credit_note_number'  => $cn_number,
-            'patient_id'          => $pid,
-            'invoice_id'          => $order->inv_id ?? null,
-            'order_id'            => $device->order_id ?: null,
-            'device_id'           => $device_id,
-            'amount'              => $credit_amount,
-            'prsi_amount'         => $prsi_amount,
+            'credit_note_number'    => $cn_number,
+            'patient_id'            => $pid,
+            'invoice_id'            => $order->inv_id ?? null,
+            'order_id'              => $device->order_id ?: null,
+            'device_id'             => $device_id,
+            'amount'                => $credit_amount,
+            'prsi_amount'           => $prsi_amount,
             'patient_refund_amount' => $patient_refund,
-            'reason'              => 'Exchange: ' . $reason,
-            'credit_date'         => date( 'Y-m-d' ),
-            'refund_type'         => 'exchange',
-            'exchange_type'       => sanitize_text_field( $_POST['exchange_type'] ?? 'same_value' ),
-            'cheque_sent'         => false,
-            'prsi_notified'       => false,
-            'created_by'          => $staff_id ?: null,
+            'reason'                => 'Exchange: ' . $reason,
+            'credit_date'           => date( 'Y-m-d' ),
+            'refund_type'           => $refund_type,
+            'exchange_type'         => $refund_type === 'refund' ? 'refund' : 'credit',
+            'cheque_sent'           => false,
+            'prsi_notified'         => false,
+            'created_by'            => $staff_id ?: null,
         ]);
 
-        // Create patient credit (always for exchanges)
-        $credit_id = $db->insert( 'hearmed_core.patient_credits', [
-            'patient_id'         => $pid,
-            'credit_note_id'     => $cn_id,
-            'original_invoice_id'=> $order->inv_id ?? null,
-            'original_order_id'  => $device->order_id ?: null,
-            'amount'             => $patient_refund,
-            'used_amount'        => 0,
-            'status'             => 'active',
-            'notes'              => "Exchange credit from CN {$cn_number}. Total: €" . number_format($credit_amount, 2) . ", PRSI: €" . number_format($prsi_amount, 2) . ", Patient credit: €" . number_format($patient_refund, 2),
-            'created_by'         => $staff_id ?: null,
-        ]);
+        // Create patient credit (credit to account, not the cash refund part)
+        $credit_id = null;
+        if ( $credit_to_acct > 0 ) {
+            $credit_notes_text = $refund_type === 'refund'
+                ? "Exchange credit from CN {$cn_number}. Item: €" . number_format($credit_amount, 2) . ", PRSI: €" . number_format($prsi_amount, 2) . ", Cash refund: €" . number_format($cash_refund, 2) . ", Credit on account: €" . number_format($credit_to_acct, 2)
+                : "Exchange credit from CN {$cn_number}. Item: €" . number_format($credit_amount, 2) . ", PRSI: €" . number_format($prsi_amount, 2) . ", Patient credit: €" . number_format($credit_to_acct, 2);
+
+            $credit_id = $db->insert( 'hearmed_core.patient_credits', [
+                'patient_id'         => $pid,
+                'credit_note_id'     => $cn_id,
+                'original_invoice_id'=> $order->inv_id ?? null,
+                'original_order_id'  => $device->order_id ?: null,
+                'amount'             => $credit_to_acct,
+                'used_amount'        => 0,
+                'status'             => 'active',
+                'notes'              => $credit_notes_text,
+                'created_by'         => $staff_id ?: null,
+            ]);
+        }
 
         // Create exchange record
         $exchange_id = $db->insert( 'hearmed_core.exchanges', [
@@ -2638,9 +2799,10 @@ function hm_ajax_create_exchange() {
             'credit_note_id'      => $cn_id,
             'patient_credit_id'   => $credit_id,
             'device_id'           => $device_id,
-            'exchange_type'       => sanitize_text_field( $_POST['exchange_type'] ?? 'same_value' ),
+            'exchange_type'       => $refund_type,
             'original_amount'     => $credit_amount,
-            'credit_amount'       => $patient_refund,
+            'credit_amount'       => $credit_to_acct,
+            'refund_amount'       => $cash_refund,
             'prsi_amount'         => $prsi_amount,
             'reason'              => $reason,
             'status'              => 'pending',
@@ -2660,23 +2822,35 @@ function hm_ajax_create_exchange() {
         hm_return_device_to_stock( $device, $side, 'Exchange', $staff_id );
 
         // Timeline entry
+        $timeline_desc = "Exchange initiated. Credit note {$cn_number} for item amount \xe2\x82\xac" . number_format($credit_amount, 2);
+        if ( $prsi_amount > 0 ) $timeline_desc .= ". PRSI: \xe2\x82\xac" . number_format($prsi_amount, 2);
+        if ( $refund_type === 'refund' && $cash_refund > 0 ) {
+            $timeline_desc .= ". Cash refund: \xe2\x82\xac" . number_format($cash_refund, 2);
+        }
+        if ( $credit_to_acct > 0 ) {
+            $timeline_desc .= ". Credit on account: \xe2\x82\xac" . number_format($credit_to_acct, 2);
+        }
+        $timeline_desc .= ". Reason: {$reason}. Original device added back to stock.";
+
         $db->insert( 'hearmed_core.patient_timeline', [
             'patient_id'  => $pid,
             'event_type'  => 'exchange_created',
             'event_date'  => date('Y-m-d'),
             'staff_id'    => $staff_id ?: null,
-            'description' => "Exchange initiated. Credit note {$cn_number} for \xe2\x82\xac" . number_format($credit_amount, 2) . ". Patient credit: \xe2\x82\xac" . number_format($patient_refund, 2) . ($prsi_amount > 0 ? ". PRSI: \xe2\x82\xac" . number_format($prsi_amount, 2) : '') . ". Reason: {$reason}. Original device added back to stock.",
+            'description' => $timeline_desc,
         ]);
 
         $db->commit();
 
         hm_patient_audit( 'CREATE_EXCHANGE', 'exchange', $exchange_id, [
-            'patient_id'    => $pid,
-            'device_id'     => $device_id,
-            'credit_note'   => $cn_number,
-            'credit_amount' => $credit_amount,
-            'prsi_amount'   => $prsi_amount,
-            'patient_credit'=> $patient_refund,
+            'patient_id'     => $pid,
+            'device_id'      => $device_id,
+            'credit_note'    => $cn_number,
+            'item_amount'    => $credit_amount,
+            'prsi_amount'    => $prsi_amount,
+            'refund_type'    => $refund_type,
+            'cash_refund'    => $cash_refund,
+            'credit_on_acct' => $credit_to_acct,
         ]);
 
         wp_send_json_success( [
@@ -2684,8 +2858,11 @@ function hm_ajax_create_exchange() {
             'credit_note_number' => $cn_number,
             'exchange_id'        => $exchange_id,
             'patient_credit_id'  => $credit_id,
-            'patient_credit'     => $patient_refund,
+            'item_amount'        => $credit_amount,
+            'patient_credit'     => $credit_to_acct,
+            'cash_refund'        => $cash_refund,
             'prsi_amount'        => $prsi_amount,
+            'refund_type'        => $refund_type,
         ]);
     } catch ( \Exception $e ) {
         $db->rollback();
@@ -2921,14 +3098,31 @@ function hm_ajax_apply_credit_to_invoice() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $credit_id  = intval( $_POST['credit_id'] ?? 0 );
     $invoice_id = intval( $_POST['invoice_id'] ?? 0 );
+    $order_id   = intval( $_POST['order_id'] ?? 0 );
     $amount     = floatval( $_POST['amount'] ?? 0 );
 
-    if ( ! $credit_id || ! $invoice_id ) wp_send_json_error( 'Credit and invoice required' );
+    if ( ! $credit_id ) wp_send_json_error( 'Credit ID required' );
+    if ( ! $invoice_id && ! $order_id ) wp_send_json_error( 'Invoice or order required' );
     if ( $amount <= 0 ) wp_send_json_error( 'Amount must be positive' );
 
     hm_ensure_returns_tables();
     $db       = HearMed_DB::instance();
     $staff_id = hm_patient_staff_id();
+
+    // If only order_id provided, look up or create invoice
+    if ( ! $invoice_id && $order_id ) {
+        $order = $db->get_row( "SELECT invoice_id FROM hearmed_core.orders WHERE id = \$1", [ $order_id ] );
+        if ( $order && ! empty( $order->invoice_id ) ) {
+            $invoice_id = intval( $order->invoice_id );
+        } else {
+            // Create invoice from order
+            if ( class_exists( 'HearMed_Invoice' ) && method_exists( 'HearMed_Invoice', 'ensure_invoice_for_order' ) ) {
+                $inv_id = HearMed_Invoice::ensure_invoice_for_order( $order_id, $staff_id ?: null );
+                if ( $inv_id ) $invoice_id = intval( $inv_id );
+            }
+        }
+        if ( ! $invoice_id ) wp_send_json_error( 'Could not find or create invoice for this order' );
+    }
 
     $credit = $db->get_row( "SELECT * FROM hearmed_core.patient_credits WHERE id = \$1", [ $credit_id ] );
     if ( ! $credit ) wp_send_json_error( 'Credit not found' );
@@ -2971,6 +3165,16 @@ function hm_ajax_apply_credit_to_invoice() {
             'credit_applied'    => $credit_applied,
             'payment_status'    => $payment_status,
         ], [ 'id' => $invoice_id ] );
+
+        // Update order deposit too
+        if ( $order_id ) {
+            $ord = $db->get_row( "SELECT deposit_amount FROM hearmed_core.orders WHERE id = \$1", [ $order_id ] );
+            if ( $ord ) {
+                $db->update( 'hearmed_core.orders', [
+                    'deposit_amount' => floatval( $ord->deposit_amount ?? 0 ) + $apply,
+                ], [ 'id' => $order_id ] );
+            }
+        }
 
         $db->commit();
 

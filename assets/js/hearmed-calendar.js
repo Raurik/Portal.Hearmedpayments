@@ -2140,15 +2140,19 @@ var Cal={
                     var bal=parseFloat($c.attr('data-bal'))||0;
                     var ordTotal=parseFloat($c.attr('data-total'))||0;
                     var hasPrsiEx=$c.attr('data-prsi')==='1';
+                    var patientId=a.patient_id||$('#hm-op-pid').val()||0;
                     // Switch right panel to pay-existing mode
                     $('#hm-op-neworder').hide();
                     $('#hm-op-payex').show();
                     var d='<div style="font-size:16px;font-weight:700;color:var(--hm-navy,#151B33);margin-bottom:4px">'+esc(ordNum)+'</div>';
                     d+='<div style="font-size:13px;color:var(--hm-text-light,#64748b);margin-bottom:8px">Order Total: €'+ordTotal.toFixed(2)+'</div>';
                     if(ordTotal-bal>0.01)d+='<div style="font-size:13px;color:#059669;margin-bottom:4px">Already Paid: €'+(ordTotal-bal).toFixed(2)+'</div>';
-                    d+='<div style="font-size:18px;font-weight:700;color:#dc2626">Balance Due: €'+bal.toFixed(2)+'</div>';
+                    d+='<div id="hm-op-ex-bal-display" style="font-size:18px;font-weight:700;color:#dc2626">Balance Due: €'+bal.toFixed(2)+'</div>';
                     $('#hm-op-payex-detail').html(d);
-                    var pf='<div style="background:#fff;border-radius:10px;border:2px solid #059669;padding:16px">';
+
+                    // Build payment form with credit section placeholder
+                    var pf='<div id="hm-op-credit-section"></div>';
+                    pf+='<div style="background:#fff;border-radius:10px;border:2px solid #059669;padding:16px">';
                     pf+='<div style="font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Payment</div>';
                     pf+='<div style="'+LS+'"><label style="'+LB+'">Amount (€)</label>';
                     pf+='<input type="number" id="hm-op-ex-amt" step="0.01" min="0" value="'+bal.toFixed(2)+'" style="'+INP+';font-size:15px;font-weight:600"></div>';
@@ -2160,6 +2164,76 @@ var Cal={
                     pf+='<button id="hm-op-ex-confirm" data-oid="'+ordId+'" data-onum="'+esc(ordNum)+'" data-bal="'+bal.toFixed(2)+'" data-prsi="'+(hasPrsiEx?'1':'0')+'" style="width:100%;padding:12px;font-size:14px;font-weight:700;border-radius:8px;border:none;background:#059669;color:#fff;cursor:pointer;font-family:var(--hm-font-btn)">Confirm Payment</button>';
                     pf+='</div>';
                     $('#hm-op-payex-form').html(pf);
+
+                    // ── Fetch patient credits ──
+                    if(patientId){
+                        $.post(HM.ajax_url,{action:'hm_get_patient_credits',nonce:HM.nonce,patient_id:patientId},function(r){
+                            if(!r||!r.success)return;
+                            var credits=(r.data||[]).filter(function(c){
+                                return c.status==='active'&&(parseFloat(c.amount)-parseFloat(c.used_amount))>0.01;
+                            });
+                            if(!credits.length)return;
+
+                            var totalCredit=0;
+                            credits.forEach(function(c){totalCredit+=parseFloat(c.remaining||c.amount)-parseFloat(c.used_amount||0);});
+
+                            var cs='<div style="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:10px;padding:14px 16px;margin-bottom:14px">';
+                            cs+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+                            cs+='<div style="display:flex;align-items:center;gap:8px">';
+                            cs+='<svg width="18" height="18" fill="none" stroke="#059669" stroke-width="2"><rect x="2" y="5" width="14" height="10" rx="2"/><path d="M2 9h14"/></svg>';
+                            cs+='<span style="font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.5px">Patient Credit Available</span></div>';
+                            cs+='<span style="font-size:16px;font-weight:700;color:#059669">€'+totalCredit.toFixed(2)+'</span></div>';
+
+                            credits.forEach(function(c){
+                                var rem=parseFloat(c.remaining||0);
+                                if(rem<=0)rem=parseFloat(c.amount)-parseFloat(c.used_amount);
+                                cs+='<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid #dcfce7">';
+                                cs+='<div style="font-size:12px;color:#334155">'+(c.credit_note_number||'Credit')+'<span style="color:#94a3b8;margin-left:6px">€'+rem.toFixed(2)+' remaining</span></div>';
+                                cs+='<button class="hm-op-apply-credit" data-cid="'+c.id+'" data-rem="'+rem.toFixed(2)+'" style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:6px;border:1px solid #059669;background:#fff;color:#059669;cursor:pointer;font-family:var(--hm-font-btn)">Apply</button>';
+                                cs+='</div>';
+                            });
+                            cs+='</div>';
+                            $('#hm-op-credit-section').html(cs);
+
+                            // ── Apply credit click ──
+                            $(document).off('click.opapplycredit').on('click.opapplycredit','.hm-op-apply-credit',function(){
+                                var $btn=$(this);
+                                var creditId=parseInt($btn.data('cid'),10);
+                                var creditRem=parseFloat($btn.data('rem'))||0;
+                                var currentBal=parseFloat($('#hm-op-ex-confirm').attr('data-bal'))||0;
+                                var applyAmt=Math.min(creditRem,currentBal);
+                                if(applyAmt<=0){self.toast('No balance to apply credit to');return;}
+
+                                $btn.prop('disabled',true).text('Applying…');
+                                $.post(HM.ajax_url,{action:'hm_apply_credit_to_invoice',nonce:HM.nonce,
+                                    credit_id:creditId,order_id:ordId,amount:applyAmt
+                                },function(cr){
+                                    if(cr&&cr.success){
+                                        var newBal=parseFloat(cr.data.invoice_balance)||0;
+                                        // Update balance display
+                                        $('#hm-op-ex-bal-display').html('Balance Due: €'+newBal.toFixed(2));
+                                        $('#hm-op-ex-amt').val(newBal.toFixed(2));
+                                        $('#hm-op-ex-confirm').attr('data-bal',newBal.toFixed(2));
+                                        $btn.css({background:'#059669',color:'#fff',border:'none'}).text('Applied €'+applyAmt.toFixed(2)+' ✓');
+
+                                        // Update credit remaining display
+                                        var newCreditRem=parseFloat(cr.data.credit_remaining)||0;
+                                        $btn.closest('div').find('span:last').text('€'+newCreditRem.toFixed(2)+' remaining');
+
+                                        self.toast('€'+applyAmt.toFixed(2)+' credit applied to '+ordNum);
+                                        if(newBal<=0.01){
+                                            // Fully paid — auto-close
+                                            self.toast(ordNum+' fully paid via credit');
+                                            cleanupEvents();self.refresh();
+                                        }
+                                    } else {
+                                        $btn.prop('disabled',false).text('Apply');
+                                        self.toast(cr&&cr.data?cr.data:'Failed to apply credit','error');
+                                    }
+                                });
+                            });
+                        });
+                    }
                 });
 
                 // ── Hover on existing order cards ──
