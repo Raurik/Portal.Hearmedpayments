@@ -430,7 +430,7 @@ class HearMed_Router {
 
     /* ================================================================
        [hearmed_username] SHORTCODE
-       Returns the current staff member's display name (escaped).
+       Renders the full welcome widget with hover → Psalm animation.
        ================================================================ */
 
     public function shortcode_username( $atts = [] ) {
@@ -438,7 +438,55 @@ class HearMed_Router {
             return '';
         }
         $staff = PortalAuth::current_user();
-        return $staff ? esc_html( $staff->display_name ) : '';
+        if ( ! $staff ) {
+            return '';
+        }
+        $name = esc_html( $staff->display_name );
+
+        return '
+<style>
+.welcome-speed{
+  position:relative;
+  display:inline-block;
+  color:#fff;
+  font-size:14.5px;
+  font-weight:400;
+  overflow:visible;
+  cursor:default;
+}
+.welcome-speed span{
+  display:inline-block;
+  white-space:nowrap;
+  transition:transform 0.45s cubic-bezier(.25,.8,.25,1),
+              opacity 0.35s ease;
+}
+.welcome-text{
+  transform:translateX(0);
+  opacity:1;
+}
+.hover-text{
+  position:absolute;
+  left:0;
+  top:0;
+  transform:translateX(-40px);
+  opacity:0;
+}
+.welcome-speed:hover .welcome-text{
+  transform:translateX(120%);
+  opacity:0;
+}
+.welcome-speed:hover .hover-text{
+  transform:translateX(0);
+  opacity:1;
+}
+@media (prefers-reduced-motion:reduce){
+  .welcome-speed span{transition:none;}
+}
+</style>
+<div class="welcome-speed">
+  <span class="welcome-text">Welcome, <strong>' . $name . '</strong></span>
+  <span class="hover-text">Have a good day &mdash; <em>Psalms 90:17</em></span>
+</div>';
     }
 
     /* ================================================================
