@@ -63,7 +63,21 @@ class HearMed_Router {
         // When V2 auth is active, redirect unauthenticated visitors to /login/
         if ( PortalAuth::is_v2() ) {
             add_action( 'template_redirect', [ $this, 'auth_redirect' ] );
+            add_filter( 'template_include',  [ $this, 'login_template' ], 999 );
         }
+    }
+
+    /**
+     * Serve a standalone login template — bypasses Elementor / theme entirely.
+     */
+    public function login_template( $template ) {
+        if ( is_page( 'login' ) ) {
+            $custom = HEARMED_PATH . 'templates/login-page.php';
+            if ( file_exists( $custom ) ) {
+                return $custom;
+            }
+        }
+        return $template;
     }
 
     /**
