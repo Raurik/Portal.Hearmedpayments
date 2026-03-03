@@ -83,7 +83,7 @@ add_action( 'wp_ajax_hm_get_patient_appointments', 'hm_ajax_get_patient_appointm
 
 // Orders & Invoices (reads from orders/approvals modules)
 add_action( 'wp_ajax_hm_get_patient_orders',    'hm_ajax_get_patient_orders' );
-add_action( 'wp_ajax_hm_get_patient_invoices',  'hm_ajax_get_patient_invoices' );
+// hm_get_patient_invoices is registered by HearMed_Refunds — do NOT duplicate here
 add_action( 'wp_ajax_hm_download_invoice',      'hm_ajax_download_invoice' );
 add_action( 'wp_ajax_hm_download_order_pdf',    'hm_ajax_download_order_pdf' );
 

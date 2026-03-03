@@ -107,7 +107,7 @@ class HearMed_Core {
             HEARMED_PATH . 'admin/admin-global-settings.php',
             HEARMED_PATH . 'admin/admin-clinical-review.php',
             HEARMED_PATH . 'admin/admin-run-migration.php',
-            HEARMED_PATH . 'auth-debug.php', // TEMP — remove after debugging
+            // auth-debug.php REMOVED — exposed unauthenticated debug endpoints
         ];
         foreach ( $admin_shortcode_files as $file ) {
             if ( file_exists( $file ) ) {

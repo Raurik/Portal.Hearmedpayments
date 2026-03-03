@@ -146,10 +146,11 @@ class HearMed_Ajax {
         if ( empty( $_POST[ $nonce_field ] ) ) {
             wp_send_json_error( 'Missing nonce' ); exit;
         }
-        if ( ! wp_verify_nonce( $_POST[ $nonce_field ], 'hearmed_nonce' ) ) {
-            wp_send_json_error( 'Invalid nonce' ); exit;
+        // Accept either nonce name — 'hm_nonce' (global HM.nonce) or 'hearmed_nonce' (inline)
+        if ( wp_verify_nonce( $_POST[ $nonce_field ], 'hm_nonce' ) || wp_verify_nonce( $_POST[ $nonce_field ], 'hearmed_nonce' ) ) {
+            return true;
         }
-        return true;
+        wp_send_json_error( 'Invalid nonce' ); exit;
     }
 
     // -------------------------------------------------------------------------
@@ -195,7 +196,10 @@ class HearMed_Ajax {
     // Privacy notice acknowledgement
     // -------------------------------------------------------------------------
     public function acknowledge_privacy_notice() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        // Accept either nonce convention (hm_nonce from HM.nonce global, or hearmed_nonce from inline)
+        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hm_nonce' ) && ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hearmed_nonce' ) ) {
+            wp_send_json_error( 'Invalid nonce' ); return;
+        }
 
         if ( ! is_user_logged_in() ) {
             wp_send_json_error( 'Unauthorized' ); return;

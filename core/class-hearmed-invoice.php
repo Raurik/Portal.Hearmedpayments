@@ -56,7 +56,7 @@ class HearMed_Invoice {
     public static function init() {
         add_action( 'wp_ajax_hm_get_invoice',       [__CLASS__, 'ajax_get_invoice'] );
         add_action( 'wp_ajax_hm_print_invoice',     [__CLASS__, 'ajax_print_invoice'] );
-        add_action( 'wp_ajax_hm_create_credit_note',[__CLASS__, 'ajax_create_credit_note'] );
+        // hm_create_credit_note is handled by HearMed_Refunds — do NOT register here (duplicate)
         add_action( 'wp_ajax_hm_mark_cn_cheque',    [__CLASS__, 'ajax_mark_cheque_sent'] );
     }
 
@@ -841,9 +841,16 @@ class HearMed_Invoice {
         return $tpl;
     }
 
+    /**
+     * @deprecated Use HearMed_Refunds::ajax_create_credit_note() instead.
+     * Kept as internal helper — not registered as AJAX handler to avoid duplicates.
+     */
     public static function ajax_create_credit_note() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
-        if ( ! HearMed_Auth::can( 'edit_accounting' ) ) wp_send_json_error( 'Access denied.' );
+        // Accept either nonce convention
+        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hm_nonce' ) && ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hearmed_nonce' ) ) {
+            wp_send_json_error( 'Invalid nonce.' ); return;
+        }
+        if ( ! HearMed_Auth::can( 'create_credit_note' ) ) wp_send_json_error( 'Access denied.' );
 
         $invoice_id  = intval( $_POST['invoice_id'] ?? 0 );
         $reason      = sanitize_textarea_field( $_POST['reason'] ?? '' );
@@ -853,15 +860,18 @@ class HearMed_Invoice {
         if ( ! $invoice_id ) wp_send_json_error( 'No invoice specified.' );
         if ( ! $reason      ) wp_send_json_error( 'Please provide a reason.' );
 
-        $cn_id = self::create_credit_note( $invoice_id, $reason, $refund_type, $user->ID ?? null );
+        $cn_id = self::create_credit_note( $invoice_id, $reason, $refund_type, $user->id ?? null );
         if ( ! $cn_id ) wp_send_json_error( 'Failed to create credit note.' );
 
         wp_send_json_success( [ 'message' => 'Credit note created.', 'cn_id' => $cn_id ] );
     }
 
     public static function ajax_mark_cheque_sent() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
-        if ( ! HearMed_Auth::can( 'edit_accounting' ) ) wp_send_json_error( 'Access denied.' );
+        // Accept either nonce convention
+        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hm_nonce' ) && ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hearmed_nonce' ) ) {
+            wp_send_json_error( 'Invalid nonce.' ); return;
+        }
+        if ( ! HearMed_Auth::can( 'process_refund' ) ) wp_send_json_error( 'Access denied.' );
 
         $cn_id = intval( $_POST['cn_id'] ?? 0 );
         $num   = sanitize_text_field( $_POST['cheque_number'] ?? '' );

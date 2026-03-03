@@ -24,15 +24,19 @@ class HearMed_Auth {
         'hm_finance'    => [
             'view_accounting', 'edit_accounting', 'view_reports',
             'view_commissions', 'view_kpi', 'view_all_clinics',
+            'create_credit_note', 'process_refund', 'manage_settings',
+            'create_orders', 'manage_orders',
         ],
         'hm_dispenser'  => [
             'view_calendar', 'edit_calendar', 'view_patients', 'edit_patients',
             'view_orders', 'edit_orders', 'view_repairs', 'edit_repairs',
             'view_own_stats',
+            'create_orders', 'manage_orders',
+            'view_accounting', 'create_credit_note',
         ],
         'hm_reception'  => [
             'view_calendar', 'edit_calendar', 'view_patients',
-            'view_orders',
+            'view_orders', 'create_orders',
         ],
         'hm_ca'         => [ 'view_calendar', 'view_patients', 'view_orders' ],
         'hm_scheme'     => [ 'view_calendar', 'view_patients', 'view_orders' ],
