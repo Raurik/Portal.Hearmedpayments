@@ -53,37 +53,37 @@ class HearMed_Router {
     ];
     
     /**
-     * Register all shortcodes and hooks
+     * Register all shortcodes and hooks.
+     *
+     * These hooks are essential regardless of the PORTAL_AUTH_V2 flag:
+     * - auth_redirect: protects portal pages
+     * - login_template: serves standalone login page
+     * - disable_page_cache: prevents SiteGround from caching per-user pages
+     * - bridge_wp_login: keeps WP user in sync for wp_ajax_* dispatch
      */
     public function register_shortcodes() {
         foreach ( $this->shortcode_map as $shortcode => $config ) {
             add_shortcode( $shortcode, [ $this, 'render_shortcode' ] );
         }
 
-        // When V2 auth is active, redirect unauthenticated visitors to /login/
-        if ( PortalAuth::is_v2() ) {
-            add_action( 'template_redirect', [ $this, 'auth_redirect' ] );
-            add_filter( 'template_include',  [ $this, 'login_template' ], 999 );
+        add_action( 'template_redirect', [ $this, 'auth_redirect' ] );
+        add_filter( 'template_include',  [ $this, 'login_template' ], 999 );
 
-            // Tell SiteGround (and any reverse-proxy cache) NOT to cache portal
-            // pages. These pages render per-user content (identity, nonce, data)
-            // so a cached response leaks one user's session into another's view.
-            add_action( 'template_redirect', [ $this, 'disable_page_cache' ], 0 );
+        // Tell SiteGround (and any reverse-proxy cache) NOT to cache portal
+        // pages. These pages render per-user content (identity, nonce, data)
+        // so a cached response leaks one user's session into another's view.
+        add_action( 'template_redirect', [ $this, 'disable_page_cache' ], 0 );
 
-            // Prevent WordPress canonical redirect from sending /login to wp-login.php
-            // (WordPress core treats /login as a built-in alias for wp-login.php)
-            add_filter( 'redirect_canonical', [ $this, 'block_login_canonical' ], 10, 2 );
+        // Prevent WordPress canonical redirect from sending /login to wp-login.php
+        add_filter( 'redirect_canonical', [ $this, 'block_login_canonical' ], 10, 2 );
 
-            // Remove WordPress built-in /login → wp-login.php redirect.
-            // wp_redirect_admin_locations() fires at template_redirect:1000
-            // and sends /login to wp_login_url(), creating an infinite loop
-            // with disable-wp-login.php which redirects wp-login.php → /login.
-            remove_action( 'template_redirect', 'wp_redirect_admin_locations', 1000 );
+        // Remove WordPress built-in /login → wp-login.php redirect.
+        remove_action( 'template_redirect', 'wp_redirect_admin_locations', 1000 );
 
-            // Bridge: if portal-authenticated but NOT WP-authenticated, set the
-            // WP login cookie so SiteGround's Nginx cache is bypassed.
-            add_action( 'init', [ $this, 'bridge_wp_login' ], 1 );
-        }
+        // Bridge: if portal-authenticated but NOT WP-authenticated, set the
+        // WP login cookie so SiteGround's Nginx cache is bypassed and
+        // admin-ajax.php dispatches wp_ajax_* hooks correctly.
+        add_action( 'init', [ $this, 'bridge_wp_login' ], 1 );
     }
 
     /**
@@ -161,52 +161,44 @@ class HearMed_Router {
      * Runs on 'init' priority 1 (before anything else).
      */
     public function bridge_wp_login() {
-        if ( defined( 'DOING_AJAX' ) || defined( 'DOING_CRON' ) || defined( 'REST_REQUEST' ) || defined( 'WP_CLI' ) ) return;
+        // MUST run during AJAX too: admin-ajax.php dispatches wp_ajax_*
+        // hooks ONLY when is_user_logged_in() is true.  Without the
+        // bridge all 197+ wp_ajax_hm_* handlers silently fail when WP
+        // users are deleted or stale.
+        if ( defined( 'DOING_CRON' ) || defined( 'WP_CLI' ) ) return;
 
         // ── Determine the portal-authenticated staff ─────────────────
-        // When V2 is active we use resolve() which reads the HMSESS cookie.
-        // When V2 is *not* active, resolve() falls back to WP auth
-        // (resolve_legacy), which creates a circular dependency: WP cookies
-        // say "test2" → bridge says "already correct" → user stays test2.
-        //
-        // Break the circle by reading the HMSESS cookie directly regardless
-        // of V2 flag. If no valid HMSESS session exists, fall back to the
-        // normal resolve() path.
+        // Always read the HMSESS cookie — it is the single source of truth.
         $staff = null;
         $hmsess = $_COOKIE[ PortalAuth::COOKIE_SESSION ] ?? '';
         if ( $hmsess && strlen( $hmsess ) >= 32 ) {
-            // Force V2-style resolution: HMSESS → PG session → staff
-            // This is the authoritative source of truth.
             $staff = PortalAuth::resolve();
         }
 
-        if ( ! $staff ) {
-            // No valid HMSESS session — nothing to bridge
+        if ( ! $staff ) return;
+
+        // Ensure a WP user exists for this staff member.
+        // ensure_wp_user_for_staff() handles deleted users: detects
+        // stale wp_user_id, creates a fresh WP user, updates PG.
+        $wp_user_id = HearMed_Staff_Auth::ensure_wp_user_for_staff(
+            $staff->id,
+            $staff->email,
+            strtolower( str_replace( ' ', '.', trim( $staff->first_name . '.' . $staff->last_name ) ) ),
+            $staff->role
+        );
+
+        if ( ! $wp_user_id ) {
+            error_log( '[HM Router] bridge_wp_login FAILED: ensure_wp_user returned 0 for staff ' . $staff->id . ' (' . $staff->email . ')' );
             return;
         }
 
-        // Look up the linked WP user via PG
-        $wp_user_id = HearMed_DB::get_var(
-            "SELECT wp_user_id FROM hearmed_reference.staff WHERE id = $1 AND wp_user_id IS NOT NULL",
-            [ $staff->id ]
-        );
-        if ( ! $wp_user_id ) return;
-
-        $wp_user_id = (int) $wp_user_id;
-
-        // If already WP-logged-in as the CORRECT user, nothing to do.
+        // Already WP-logged-in as the correct user → nothing to do
         if ( is_user_logged_in() && get_current_user_id() === $wp_user_id ) return;
 
-        $wp_user = get_user_by( 'ID', $wp_user_id );
-        if ( ! $wp_user ) return;
-
-        // Clear ALL existing WP auth cookies on EVERY path first.
         wp_clear_auth_cookie();
-
-        // Set fresh cookies for the correct WP user
         wp_set_current_user( $wp_user_id );
         wp_set_auth_cookie( $wp_user_id, true );
-        error_log( '[HM Router] bridge_wp_login: corrected WP cookie to wp_user_id=' . $wp_user_id . ' (staff_id=' . $staff->id . ', name=' . $staff->display_name . ')' );
+        error_log( '[HM Router] bridge_wp_login: set WP user to wp_user_id=' . $wp_user_id . ' (staff_id=' . $staff->id . ')' );
     }
 
     /**
@@ -260,19 +252,16 @@ class HearMed_Router {
         $view = $config['view'];
         
         // Check authentication — PortalAuth is source of truth
-        $logged_in = PortalAuth::is_v2() ? PortalAuth::is_logged_in() : is_user_logged_in();
+        $logged_in = PortalAuth::is_logged_in();
         if ( ! $logged_in ) {
-            if ( PortalAuth::is_v2() ) {
-                $return_to = $_SERVER['REQUEST_URI'] ?? home_url( '/calendar/' );
-                wp_redirect( home_url( '/login/?redirect_to=' . urlencode( $return_to ) ) );
-                exit;
-            }
-            return '<div id="hm-app"><p>Please log in to access this page.</p></div>';
+            $return_to = $_SERVER['REQUEST_URI'] ?? home_url( '/calendar/' );
+            wp_redirect( home_url( '/login/?redirect_to=' . urlencode( $return_to ) ) );
+            exit;
         }
 
-        // RBAC capability check (V2 only)
+        // RBAC capability check
         $required_cap = $config['cap'] ?? null;
-        if ( PortalAuth::is_v2() && $required_cap && ! PortalAuth::can( $required_cap ) ) {
+        if ( $required_cap && ! PortalAuth::can( $required_cap ) ) {
             PortalAuth::audit( 'ACCESS_DENIED', PortalAuth::current_id(), [
                 'module' => $module, 'view' => $view, 'cap' => $required_cap
             ] );
@@ -354,16 +343,7 @@ class HearMed_Router {
      * @return string|false Privacy notice HTML or false if accepted
      */
     private function check_privacy_notice() {
-        // Use PortalAuth as source of truth for identity, not WP user.
-        if ( ! PortalAuth::is_v2() ) {
-            $user_id = PortalAuth::wp_user_id();
-            if ( ! $user_id ) return false;
-            $accepted = get_user_meta( $user_id, 'hm_privacy_notice_accepted', true );
-            return $accepted ? false : '<div id="hm-app"><p>Please accept the privacy notice to continue.</p></div>';
-        }
-
-        // V2 auth: check the portal staff record directly.
-        // The privacy notice flag lives in PG, not WP user meta.
+        // PortalAuth is the source of truth — check PG staff record
         $staff = PortalAuth::current_user();
         if ( ! $staff ) return false;
 

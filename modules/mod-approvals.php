@@ -526,12 +526,6 @@ function hm_ajax_deny_order() {
 if (!function_exists('hm_user_can_approve')) {
     function hm_user_can_approve() {
         if (!PortalAuth::is_logged_in()) return false;
-        $user = wp_get_current_user();
-        if (in_array('administrator', (array)$user->roles)) return true;
-        if (class_exists('HearMed_Auth')) {
-            $role = HearMed_Auth::current_role();
-            return $role === 'c_level';
-        }
         return PortalAuth::is_admin();
     }
 }

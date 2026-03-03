@@ -114,6 +114,7 @@ class HearMed_Staff_Auth {
             return 0;
         }
 
+        // ── Check if the staff record already has a linked WP user ───
         $staff = HearMed_DB::get_row(
             "SELECT wp_user_id FROM hearmed_reference.staff WHERE id = $1",
             [ $staff_id ]
@@ -124,8 +125,32 @@ class HearMed_Staff_Auth {
             if ( $user ) {
                 return (int) $user->ID;
             }
+            // WP user was deleted — clear the stale reference so we
+            // proceed to create a fresh one below.
+            error_log( '[HM Staff Auth] WP user ID ' . $staff->wp_user_id . ' not found (deleted?) — clearing stale reference for staff ' . $staff_id );
+            HearMed_DB::update(
+                'hearmed_reference.staff',
+                [ 'wp_user_id' => null, 'updated_at' => current_time( 'mysql' ) ],
+                [ 'id' => $staff_id ]
+            );
         }
 
+        // ── Try to find an existing WP user by email ─────────────────
+        // Another staff member, or a previous auto-created user whose
+        // ID wasn't stored, may already own this email in wp_users.
+        $existing = get_user_by( 'email', $email );
+        if ( $existing ) {
+            // Re-link and return
+            HearMed_DB::update(
+                'hearmed_reference.staff',
+                [ 'wp_user_id' => (int) $existing->ID, 'updated_at' => current_time( 'mysql' ) ],
+                [ 'id' => $staff_id ]
+            );
+            error_log( '[HM Staff Auth] Re-linked staff ' . $staff_id . ' to existing WP user ' . $existing->ID . ' (email match: ' . $email . ')' );
+            return (int) $existing->ID;
+        }
+
+        // ── Create a new WP user ─────────────────────────────────────
         $candidate = $username !== '' ? $username : sanitize_user( $email, true );
         if ( $candidate === '' ) {
             $candidate = 'staff_' . $staff_id;
@@ -136,6 +161,7 @@ class HearMed_Staff_Auth {
         $user_id = wp_create_user( $candidate, $password, $email );
 
         if ( is_wp_error( $user_id ) ) {
+            error_log( '[HM Staff Auth] wp_create_user FAILED for staff ' . $staff_id . ' (' . $email . '): ' . $user_id->get_error_message() );
             return 0;
         }
 
@@ -151,6 +177,7 @@ class HearMed_Staff_Auth {
             [ 'id' => $staff_id ]
         );
 
+        error_log( '[HM Staff Auth] Created WP user ' . $user_id . ' (' . $candidate . ') for staff ' . $staff_id );
         return (int) $user_id;
     }
 

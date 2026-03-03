@@ -140,8 +140,8 @@ function hm_notif_staff_id() {
     static $sid = null;
     if ( $sid !== null ) return $sid;
 
-    // Auth V2: PortalAuth::current_id() returns staff.id directly from PG session
-    if ( class_exists( 'PortalAuth' ) && PortalAuth::is_v2() ) {
+    // PortalAuth is always authoritative — no V2 flag check needed
+    if ( class_exists( 'PortalAuth' ) ) {
         $portal_id = PortalAuth::current_id();
         if ( $portal_id ) {
             $sid = (int) $portal_id;
@@ -149,17 +149,8 @@ function hm_notif_staff_id() {
         }
     }
 
-    // Fallback: WP user → staff lookup
-    $uid = PortalAuth::staff_id();
-    if ( ! $uid ) { $sid = 0; return 0; }
-
-    $db  = HearMed_DB::instance();
-    $row = $db->get_row(
-        "SELECT id FROM hearmed_reference.staff WHERE id = \$1 AND is_active = true LIMIT 1",
-        [ $uid ]
-    );
-    $sid = $row ? (int) $row->id : 0;
-    return $sid;
+    $sid = 0;
+    return 0;
 }
 
 

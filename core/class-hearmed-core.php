@@ -173,8 +173,40 @@ class HearMed_Core {
         // System ready hook
         add_action( 'init', [ $this, 'system_ready' ], 10 );
 
+        // ── Mirror all wp_ajax_hm_* actions to wp_ajax_nopriv_hm_* ───
+        // All 197+ AJAX handlers are registered on wp_ajax_ only. If the
+        // WP user bridge fails (e.g. because WP users were deleted),
+        // WordPress treats the request as unauthenticated and only fires
+        // wp_ajax_nopriv_ hooks.  This late hook ensures every hm_*
+        // action has a nopriv counterpart so AJAX never silently fails.
+        // Each handler already checks PortalAuth internally.
+        add_action( 'init', [ $this, 'mirror_ajax_nopriv' ], 99 );
+
         // One-time repair: fix corrupted Elementor page settings (serialized string instead of array)
         add_action( 'admin_init', [ $this, 'repair_elementor_page_settings' ], 1 );
+    }
+
+    /**
+     * Auto-mirror every wp_ajax_hm_* hook to wp_ajax_nopriv_hm_*.
+     *
+     * WordPress only fires wp_ajax_* when is_user_logged_in() is true.
+     * If the WP user bridge fails (deleted users, email conflicts, etc),
+     * all AJAX calls silently return 0/-1.  By mirroring every hm_*
+     * action to its nopriv equivalent, the handler still runs and
+     * checks PortalAuth (not WP auth) for authorization.
+     */
+    public function mirror_ajax_nopriv() {
+        global $wp_filter;
+        foreach ( $wp_filter as $tag => $hook ) {
+            if ( strpos( $tag, 'wp_ajax_hm_' ) !== 0 ) continue;
+            $nopriv_tag = 'wp_ajax_nopriv_' . substr( $tag, strlen( 'wp_ajax_' ) );
+            if ( isset( $wp_filter[ $nopriv_tag ] ) ) continue; // already registered
+            foreach ( $hook->callbacks as $priority => $callbacks ) {
+                foreach ( $callbacks as $cb ) {
+                    add_action( $nopriv_tag, $cb['function'], $priority, $cb['accepted_args'] );
+                }
+            }
+        }
     }
     
     /**

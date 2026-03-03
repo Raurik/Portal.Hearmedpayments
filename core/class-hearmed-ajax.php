@@ -66,11 +66,12 @@ class HearMed_Ajax {
     // -------------------------------------------------------------------------
     // Helper: register a single action (used by modules that self-register)
     // -------------------------------------------------------------------------
-    public static function register( $action, $callback, $nopriv = false ) {
+    public static function register( $action, $callback, $nopriv = true ) {
         add_action( 'wp_ajax_hm_' . $action, $callback );
-        if ( $nopriv ) {
-            add_action( 'wp_ajax_nopriv_hm_' . $action, $callback );
-        }
+        // Always register nopriv — portal auth (HMSESS) may be valid even
+        // when WP auth is not (e.g. WP users deleted).  Each handler
+        // checks PortalAuth internally.
+        add_action( 'wp_ajax_nopriv_hm_' . $action, $callback );
     }
 
     // -------------------------------------------------------------------------

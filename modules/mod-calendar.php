@@ -1091,8 +1091,7 @@ function hm_ajax_update_appointment() {
     $t   = HearMed_Portal::table( 'appointments' );
     $id  = intval( $_POST['appointment_id'] );
 
-    $user = wp_get_current_user();
-    $is_admin_role = ! empty( array_intersect( [ 'administrator', 'hm_clevel', 'hm_admin', 'hm_finance' ], (array) ( $user->roles ?? [] ) ) );
+    $is_admin_role = PortalAuth::is_admin();
 
     $existing = HearMed_DB::get_row(
         "SELECT appointment_status, outcome FROM hearmed_core.appointments WHERE id = $1",
@@ -1415,10 +1414,8 @@ function hm_ajax_delete_appointment() {
 function hm_ajax_purge_appointment() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
 
-    // Strict role check — only admin, c-level, finance, hm_admin
-    $user  = wp_get_current_user();
-    $allowed = array_intersect( [ 'administrator', 'hm_clevel', 'hm_admin', 'hm_finance' ], (array) $user->roles );
-    if ( empty( $allowed ) ) {
+    // Strict role check — only admin, c-level, finance
+    if ( ! PortalAuth::is_admin() ) {
         wp_send_json_error( 'Permission denied — admin role required' );
         return;
     }
@@ -2925,8 +2922,7 @@ function hm_ajax_save_exclusion() {
         if ( $id ) {
             HearMed_DB::update( $t, $d, [ 'id' => $id ] );
         } else {
-            $user = wp_get_current_user();
-            $d['created_by'] = $user->ID;
+            $d['created_by'] = PortalAuth::staff_id();
             $d['created_at'] = current_time( 'mysql' );
             $id = HearMed_DB::insert( $t, $d );
         }

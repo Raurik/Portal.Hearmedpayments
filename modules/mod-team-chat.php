@@ -60,18 +60,9 @@ class HearMed_TeamChat {
             return '<div class="hm-notice hm-notice--error"><div class="hm-notice-body"><span class="hm-notice-icon">×</span> Please log in to access Team Chat.</div></div>';
         }
 
-        $user    = wp_get_current_user();
-        $user_id = $user->ID;
-
-        // Get display name from PostgreSQL staff table
-        $staff = HearMed_DB::get_row(
-            "SELECT first_name, last_name FROM hearmed_reference.staff
-              WHERE wp_user_id = $1 AND is_active = true LIMIT 1",
-            [ $user_id ]
-        );
-        $display_name = $staff
-            ? trim( $staff->first_name . ' ' . $staff->last_name )
-            : $user->display_name; // fallback to WP if no staff record
+        $portal_user  = PortalAuth::current_user();
+        $user_id      = $portal_user ? $portal_user->id : 0;
+        $display_name = $portal_user ? $portal_user->display_name : 'Unknown';
 
         $pusher_key     = HearMed_Settings::get( 'hm_pusher_app_key', '' );
         $pusher_cluster = HearMed_Settings::get( 'hm_pusher_cluster', 'eu' );

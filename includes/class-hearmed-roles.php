@@ -59,9 +59,12 @@ class HearMed_Roles {
      * Usage: HearMed_Roles::can(["c_level", "finance"])
      */
     public static function can(array $roles): bool {
-        $user = wp_get_current_user();
-        if (!$user || !$user->ID) return false;
-        return !empty(array_intersect($roles, $user->roles));
+        // Use PortalAuth as source of truth
+        if ( ! PortalAuth::is_logged_in() ) return false;
+        $portal_role = PortalAuth::current_role();
+        if ( ! $portal_role ) return false;
+        // Map PortalAuth role constants to the role labels used here
+        return in_array( $portal_role, $roles, true );
     }
 
     /** Admin-level access (C-Level, Admin, Finance) */

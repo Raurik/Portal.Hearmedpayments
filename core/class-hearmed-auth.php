@@ -51,9 +51,8 @@ class HearMed_Auth {
      * Delegates to PortalAuth when V2 is active.
      */
     public static function is_logged_in() {
-        if ( PortalAuth::is_v2() ) {
-            return PortalAuth::is_logged_in();
-        }
+        // PortalAuth is always authoritative — V2 flag no longer needed
+        if ( PortalAuth::is_logged_in() ) return true;
         return is_user_logged_in();
     }
 
@@ -63,9 +62,9 @@ class HearMed_Auth {
      * Legacy: returns WP_User or null.
      */
     public static function current_user() {
-        if ( PortalAuth::is_v2() ) {
-            return PortalAuth::current_user();
-        }
+        // PortalAuth is always authoritative
+        $staff = PortalAuth::current_user();
+        if ( $staff ) return $staff;
         $user = wp_get_current_user();
         return ( $user && $user->ID ) ? $user : null;
     }
@@ -74,8 +73,8 @@ class HearMed_Auth {
      * Static capability check — wraps the instance can() method
      */
     public static function can( $capability, $user_id = null ) {
-        // V2: delegate to PortalAuth (PG-based roles)
-        if ( PortalAuth::is_v2() ) {
+        // PortalAuth is always authoritative
+        if ( PortalAuth::is_logged_in() ) {
             return PortalAuth::can( $capability );
         }
         static $instance = null;
@@ -89,9 +88,9 @@ class HearMed_Auth {
      * Static admin check — wraps the instance is_admin() method
      */
     public static function is_admin( $user_id = null ) {
-        // V2: all roles treated as admin until RBAC is finalised
-        if ( PortalAuth::is_v2() ) {
-            return PortalAuth::is_logged_in();
+        // PortalAuth is always authoritative
+        if ( PortalAuth::is_logged_in() ) {
+            return PortalAuth::is_admin();
         }
         static $instance = null;
         if ( $instance === null ) {
@@ -304,7 +303,8 @@ class HearMed_Auth {
      * @return string|null
      */
     public static function current_role() {
-        if ( PortalAuth::is_v2() ) {
+        // PortalAuth is always authoritative
+        if ( PortalAuth::is_logged_in() ) {
             return PortalAuth::current_role();
         }
 
@@ -332,6 +332,13 @@ class HearMed_Auth {
      * @return int|null  Clinic ID, or null when user should see all clinics.
      */
     public static function current_clinic() {
+        // PortalAuth is always authoritative
+        if ( PortalAuth::is_logged_in() ) {
+            if ( PortalAuth::is_admin() ) return null; // admin sees all
+            $clinics = PortalAuth::get_user_clinics();
+            return ! empty( $clinics ) ? $clinics[0] : null;
+        }
+
         $user = wp_get_current_user();
 
         if ( ! $user || ! $user->ID ) {
