@@ -65,6 +65,11 @@ class HearMed_Router {
             add_action( 'template_redirect', [ $this, 'auth_redirect' ] );
             add_filter( 'template_include',  [ $this, 'login_template' ], 999 );
 
+            // Tell SiteGround (and any reverse-proxy cache) NOT to cache portal
+            // pages. These pages render per-user content (identity, nonce, data)
+            // so a cached response leaks one user's session into another's view.
+            add_action( 'template_redirect', [ $this, 'disable_page_cache' ], 0 );
+
             // Prevent WordPress canonical redirect from sending /login to wp-login.php
             // (WordPress core treats /login as a built-in alias for wp-login.php)
             add_filter( 'redirect_canonical', [ $this, 'block_login_canonical' ], 10, 2 );
@@ -97,6 +102,32 @@ class HearMed_Router {
             return false;
         }
         return $redirect_url;
+    }
+
+    /**
+     * Prevent SiteGround / Nginx / any reverse-proxy from caching portal pages.
+     *
+     * Portal pages contain per-user content (nonce, identity, data). If cached,
+     * one user's session is served to another user — causing wrong identity,
+     * stale nonces, and data leaks.
+     *
+     * Runs at template_redirect:0 (before auth_redirect) so headers are sent
+     * regardless of whether the user is authenticated.
+     */
+    public function disable_page_cache() {
+        if ( defined( 'DOING_AJAX' ) || defined( 'DOING_CRON' ) || defined( 'WP_CLI' ) ) return;
+
+        // Only for front-end portal pages, not wp-admin
+        $uri = trim( strtok( $_SERVER['REQUEST_URI'] ?? '', '?' ), '/' );
+        if ( strpos( $uri, 'wp-admin' ) === 0 || strpos( $uri, 'wp-json' ) === 0 ) return;
+
+        // Tell SiteGround not to cache
+        if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+            define( 'DONOTCACHEPAGE', true );
+        }
+
+        // Send HTTP headers that prevent caching
+        nocache_headers();
     }
 
     /**

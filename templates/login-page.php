@@ -13,6 +13,10 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+// ── Prevent caching of the login page ──
+if ( ! defined( 'DONOTCACHEPAGE' ) ) define( 'DONOTCACHEPAGE', true );
+nocache_headers();
+
 // ── Already portal-authenticated → redirect away from login ──
 if ( PortalAuth::is_v2() && PortalAuth::is_logged_in() ) {
     $go = $_REQUEST['redirect_to'] ?? '';
