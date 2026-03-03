@@ -4,6 +4,7 @@
  */
 (function($){
 'use strict';
+console.log('[HM-Patients] v4.0.7 loaded');
 
 function getHM(){if(typeof HMP!=='undefined')return HMP;if(typeof HM!=='undefined')return HM;return{ajax:window.location.origin+'/wp-admin/admin-ajax.php',nonce:''};}
 var _hm=getHM(),PG='/patients/';
@@ -1049,9 +1050,11 @@ function initProfile(){
                 if(r.success){
                     var msg='Return processed — Credit Note '+r.data.credit_note_number+'. Patient refund: €'+parseFloat(r.data.patient_refund||0).toFixed(2);
                     if(parseFloat(r.data.prsi_amount||0)>0) msg+='. PRSI €'+parseFloat(r.data.prsi_amount).toFixed(2)+' added to PRSI notification queue.';
+                    alert(msg);
                     toast(msg);
                     if(cb)cb();
                 }else{
+                    alert('Return failed: '+(r.data||'Unknown error'));
                     toast(r.data||'Return failed — please try again','error');
                 }
             }).fail(function(xhr){
