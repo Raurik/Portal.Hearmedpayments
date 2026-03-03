@@ -213,7 +213,30 @@ class HearMed_TeamChat {
         if ( ! PortalAuth::is_logged_in() ) {
             wp_send_json_error( [ 'message' => 'Not logged in' ], 401 );
         }
-        return get_current_user_id();
+        $uid = get_current_user_id();
+        if ( ! $uid ) {
+            wp_send_json_error( [ 'message' => 'Session error — please log out and back in.' ], 401 );
+        }
+        return $uid;
+    }
+
+    /**
+     * Get proper display name from PG staff table for a WP user ID.
+     */
+    private static function staff_display_name( int $wp_user_id ): string {
+        $row = HearMed_DB::get_row(
+            "SELECT first_name, last_name FROM hearmed_reference.staff
+              WHERE wp_user_id = \$1 AND is_active = true LIMIT 1",
+            [ $wp_user_id ]
+        );
+        if ( $row ) {
+            $name = trim( ( $row->first_name ?? '' ) . ' ' . ( $row->last_name ?? '' ) );
+            if ( $name ) return $name;
+        }
+        // Fallback to WordPress display_name
+        $wp_user = get_userdata( $wp_user_id );
+        if ( $wp_user && $wp_user->display_name ) return $wp_user->display_name;
+        return 'Unknown';
     }
 
     /**
@@ -436,17 +459,19 @@ class HearMed_TeamChat {
         }
 
         // Update channel updated_at
-        HearMed_DB::update( 'chat_channels', [ 'updated_at' => 'now()' ], [ 'id' => $channel_id ] );
+        HearMed_DB::query(
+            "UPDATE hearmed_communication.chat_channels SET updated_at = NOW() WHERE id = $1",
+            [ $channel_id ]
+        );
 
-        $user = wp_get_current_user();
         $payload = [
             'id'          => $msg_id,
             'channel_id'  => $channel_id,
             'sender_id'   => $user_id,
-            'sender_name' => $user->display_name,
+            'sender_name' => self::staff_display_name( $user_id ),
             'message'     => $message,
             'created_at'  => current_time( 'c' ),
-            'is_mine'     => true,
+            'is_mine'     => false,
         ];
 
         // Trigger Pusher event
@@ -480,9 +505,9 @@ class HearMed_TeamChat {
             wp_send_json_error( 'Access denied', 403 );
         }
 
-        HearMed_DB::update( 'chat_messages',
-            [ 'is_deleted' => true, 'deleted_at' => 'now()' ],
-            [ 'id' => $msg_id ]
+        HearMed_DB::query(
+            "UPDATE hearmed_communication.chat_messages SET is_deleted = true, deleted_at = NOW() WHERE id = $1",
+            [ $msg_id ]
         );
 
         $creds = self::get_pusher_creds();
@@ -588,7 +613,6 @@ class HearMed_TeamChat {
         }
 
         $creds = self::get_pusher_creds();
-        $user  = wp_get_current_user();
 
         // Generate Pusher auth signature
         $string_to_sign = $socket_id . ':' . $channel;
@@ -597,7 +621,7 @@ class HearMed_TeamChat {
             $user_data      = json_encode( [
                 'user_id' => (string) $user_id,
                 'user_info' => [
-                    'name'    => $user->display_name,
+                    'name'    => self::staff_display_name( $user_id ),
                     'user_id' => $user_id,
                 ],
             ] );
@@ -707,12 +731,20 @@ class HearMed_TeamChat {
 
         $url = "https://api-{$creds['cluster']}.pusher.com{$path}?{$params}&auth_signature={$signature}";
 
-        wp_remote_post( $url, [
+        $response = wp_remote_post( $url, [
             'body'    => $body,
             'headers' => [ 'Content-Type' => 'application/json' ],
             'timeout' => 5,
-            'blocking' => false, // Fire and forget — don't slow down the response
         ] );
+
+        if ( is_wp_error( $response ) ) {
+            error_log( '[HearMed Chat] Pusher trigger error: ' . $response->get_error_message() );
+        } else {
+            $code = wp_remote_retrieve_response_code( $response );
+            if ( $code !== 200 ) {
+                error_log( '[HearMed Chat] Pusher trigger HTTP ' . $code . ': ' . wp_remote_retrieve_body( $response ) );
+            }
+        }
     }
 }
 
