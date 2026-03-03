@@ -348,7 +348,9 @@ class HearMed_Staff_Login {
             wp_send_json_error( [ 'message' => 'Please provide both fields.' ] );
         }
 
+        error_log( '[HM Auth] Login attempt for: ' . $identifier );
         $result = PortalAuth::login( $identifier, $password );
+        error_log( '[HM Auth] Login result: ' . json_encode( $result ) );
 
         if ( $result['status'] === 'success' ) {
             wp_send_json_success( $result );
