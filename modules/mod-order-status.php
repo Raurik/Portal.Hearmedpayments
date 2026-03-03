@@ -26,15 +26,6 @@ add_shortcode( 'hearmed_order_status', 'hm_render_order_status_page' );
 function hm_render_order_status_page() {
     if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
-    // Delegate to orders module create form when hm_action=create
-    $hm_action = sanitize_key( $_GET['hm_action'] ?? '' );
-    if ( $hm_action === 'create' || $hm_action === 'view' ) {
-        require_once HEARMED_PATH . 'modules/mod-orders.php';
-        ob_start();
-        hm_orders_render();
-        return ob_get_clean();
-    }
-
     $db = HearMed_DB::instance();
 
     // Summary counts

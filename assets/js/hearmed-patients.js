@@ -1476,8 +1476,9 @@ function initProfile(){
         $.post(_hm.ajax,{action:'hm_get_patient_orders',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.warning+'</div><div class="hm-empty-text">'+(r.data||'Error loading orders')+'</div></div>');return;}
             var d=r.data;
-            var ordUrl=(_hm.orders_url||'/order-status/').replace(/\/$/,'');
-            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Orders ('+d.length+')</h3><a href="'+ordUrl+'?hm_action=create&patient_id='+pid+'" class="hm-btn hm-btn--primary hm-btn--sm">+ Create Order</a></div>';
+            var ordUrl=((_hm.calendar_url||'/calendar/').replace(/\/$/,''));
+            var pName=(patient&&patient.name)||(patient&&(patient.first_name+' '+patient.last_name))||'';
+            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Orders ('+d.length+')</h3><a href="'+ordUrl+'?hm_order=new&patient_id='+pid+'&patient_name='+encodeURIComponent(pName)+'" class="hm-btn hm-btn--primary hm-btn--sm">+ Create Order</a></div>';
             if(!d.length){h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.order+'</div><div class="hm-empty-text">No orders for this patient</div></div>';}
             else{
                 var sc={Fitted:'hm-badge--green',Pending:'hm-badge--amber',Cancelled:'hm-badge--red',Refunded:'hm-badge--grey'};
@@ -1745,7 +1746,7 @@ function initProfile(){
                 '<p style="font-size:13px;color:#64748b;margin-bottom:20px;">Would you like to create an order for this device?</p>'+
                 '<div style="display:flex;gap:10px;justify-content:center;">'+
                     '<button class="hm-btn hm-btn--secondary hm-close" style="min-width:100px;">Not Now</button>'+
-                    '<a href="'+((_hm.orders_url||'/order-status/').replace(/\/$/,''))+'?hm_action=create&patient_id='+pid+'&product_id='+(prodId||'')+'" class="hm-btn hm-btn--primary" style="min-width:140px;text-decoration:none;">Create Order →</a>'+
+                    '<a href="'+((_hm.calendar_url||'/calendar/').replace(/\/$/,''))+'?hm_order=new&patient_id='+pid+'&patient_name='+encodeURIComponent((patient&&patient.name)||'')+'&product_id='+(prodId||'')+'" class="hm-btn hm-btn--primary" style="min-width:140px;text-decoration:none;">Create Order \u2192</a>'+
                 '</div>'+
             '</div></div></div>'
         );

@@ -167,6 +167,32 @@ var Cal={
         this.render();
         this.bind();
         this.loadData();
+
+        // Direct order page from URL params (e.g. from patient file Create Order link)
+        var urlP=new URLSearchParams(window.location.search);
+        if(urlP.get('hm_order')==='new'&&urlP.get('patient_id')){
+            var self=this;
+            var directPid=urlP.get('patient_id');
+            var directName=decodeURIComponent(urlP.get('patient_name')||'Patient');
+            var directProdId=urlP.get('product_id')||'';
+            // Remove params from URL to prevent re-trigger on back
+            var cleanUrl=window.location.pathname;
+            window.history.replaceState(null,'',cleanUrl);
+            // Open order page with synthetic appointment data
+            setTimeout(function(){
+                self._openOrderPage({
+                    patient_id:directPid,
+                    patient_name:directName,
+                    service_name:'',
+                    service_colour:'#0BB4C4',
+                    _ID:0
+                },{
+                    name:'New Order',
+                    color:'#0BB4C4',
+                    triggers_order:true
+                });
+            },600);
+        }
     },
 
     render:function(){

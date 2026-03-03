@@ -198,6 +198,7 @@ class HearMed_Enqueue {
                 'home_url'   => home_url(),
                 'plugin_url' => HEARMED_URL,
                 'orders_url' => HearMed_Utils::page_url( 'orders' ),
+                'calendar_url' => HearMed_Utils::page_url( 'calendar' ),
                 'settings'   => $settings,
                 'csrf_token' => PortalAuth::csrf_token(),
                 'is_impersonating' => PortalAuth::is_impersonating(),
@@ -224,6 +225,7 @@ class HearMed_Enqueue {
                 'home_url'   => home_url(),
                 'plugin_url' => HEARMED_URL,
                 'orders_url' => HearMed_Utils::page_url( 'orders' ),
+                'calendar_url' => HearMed_Utils::page_url( 'calendar' ),
                 'settings'   => $settings,
             ];
         }
@@ -555,7 +557,7 @@ class HearMed_Enqueue {
         $full_path = HEARMED_PATH . $file;
         // Use filemtime + a hard bump suffix to defeat CDN/server caches
         $v = file_exists( $full_path ) ? filemtime( $full_path ) : HEARMED_VERSION;
-        return $v . '.5';
+        return $v . '.6';
     }
     
     /**
