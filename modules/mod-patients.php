@@ -846,7 +846,7 @@ function hm_ajax_get_patient_notes() {
                        COALESCE(s.first_name || ' ' || s.last_name, 'System') AS created_by_name
                 FROM hearmed_core.patient_notes n
                 LEFT JOIN hearmed_reference.staff s ON s.id = n.created_by
-                WHERE n.patient_id = \$1";
+                WHERE n.patient_id = \$1 AND n.note_type != 'AI Transcript'";
     } else {
         $sql = "SELECT n.id, n.note_type, n.note_text, n.created_by, n.created_at,
                        COALESCE(n.is_pinned, false) AS is_pinned,
@@ -855,7 +855,7 @@ function hm_ajax_get_patient_notes() {
                        COALESCE(s.first_name || ' ' || s.last_name, 'System') AS created_by_name
                 FROM hearmed_core.patient_notes n
                 LEFT JOIN hearmed_reference.staff s ON s.id = n.created_by
-                WHERE n.patient_id = \$1";
+                WHERE n.patient_id = \$1 AND n.note_type != 'AI Transcript'";
     }
     $params = [ $pid ];
 
