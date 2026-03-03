@@ -194,7 +194,7 @@ class HearMed_Core {
      * Only runs the check once (flag stored in settings).
      */
     public function ensure_portal_pages() {
-        $version = 'v3'; // bump to re-check when new pages are added
+        $version = 'v4'; // bump to re-check when new pages are added
         if ( HearMed_Settings::get( 'hm_pages_ensured_' . $version, '' ) ) {
             return;
         }
@@ -211,8 +211,26 @@ class HearMed_Core {
         ];
 
         foreach ( $pages as $slug => $info ) {
-            $existing = get_page_by_path( $slug );
-            if ( $existing ) continue;
+            // Check for existing page (any status — including trash/draft)
+            $existing = get_posts( [
+                'name'        => $slug,
+                'post_type'   => 'page',
+                'post_status' => [ 'publish', 'draft', 'trash', 'private', 'pending' ],
+                'numberposts' => 1,
+            ] );
+
+            if ( $existing ) {
+                $page = $existing[0];
+                // If not published, restore it
+                if ( $page->post_status !== 'publish' ) {
+                    wp_update_post( [
+                        'ID'          => $page->ID,
+                        'post_status' => 'publish',
+                        'post_name'   => $slug,
+                    ] );
+                }
+                continue;
+            }
 
             wp_insert_post( [
                 'post_title'   => $info['title'],

@@ -692,9 +692,17 @@ class HearMed_Refunds {
         $db   = HearMed_DB::instance();
         $user = HearMed_Auth::current_user();
 
-        // Generate credit note number
-        $count  = (int) $db->get_var( "SELECT COUNT(*) FROM hearmed_core.credit_notes" );
-        $cn_num = 'HMCN-' . date('Y') . '-' . str_pad( $count + 1, 4, '0', STR_PAD_LEFT );
+        // Generate credit note number — use MAX of trailing digits to avoid duplicates
+        $cn_prefix = HearMed_Settings::get( 'hm_credit_note_prefix', 'HMCN' );
+        $cn_year   = date('Y');
+        $cn_like   = $cn_prefix . '-' . $cn_year . '-%';
+        $next_seq  = (int) $db->get_var(
+            "SELECT COALESCE(MAX(CAST(SUBSTRING(credit_note_number FROM '[0-9]+$') AS INTEGER)), 0) + 1
+             FROM hearmed_core.credit_notes
+             WHERE credit_note_number LIKE \$1",
+            [ $cn_like ]
+        );
+        $cn_num = $cn_prefix . '-' . $cn_year . '-' . str_pad( $next_seq, 4, '0', STR_PAD_LEFT );
 
         $cn_id = $db->insert( 'hearmed_core.credit_notes', [
             'credit_note_number' => $cn_num,
@@ -720,16 +728,7 @@ class HearMed_Refunds {
             'created_by'  => $user->id ?? null,
         ] );
 
-        // Log on original invoice if linked
-        if ( $invoice_id ) {
-            $db->insert( 'hearmed_core.patient_timeline', [
-                'patient_id'  => $patient_id,
-                'event_type'  => 'credit_note_raised',
-                'event_date'  => date('Y-m-d'),
-                'staff_id'    => $user->id ?? null,
-                'description' => "Credit note {$cn_num} raised for €" . number_format($amount,2) . " — {$reason}",
-            ] );
-        }
+        // (Timeline and patient credit entries are created below, after stock handling)
 
         // For exchanges: create a draft order and return its ID
         $exchange_order_id = null;
@@ -764,6 +763,30 @@ class HearMed_Refunds {
                 ], [ 'id' => $cn_id ] );
             }
         }
+
+        // ── Create patient credit so balance appears on patient file ──────
+        if ( $amount > 0 ) {
+            $db->insert( 'hearmed_core.patient_credits', [
+                'patient_id'          => $patient_id,
+                'credit_note_id'      => $cn_id,
+                'original_invoice_id' => $invoice_id,
+                'original_order_id'   => null,
+                'amount'              => $amount,
+                'used_amount'         => 0,
+                'status'              => 'active',
+                'notes'               => ucfirst( $type ) . " credit — {$cn_num}. {$reason}",
+                'created_by'          => $user->id ?? null,
+            ] );
+        }
+
+        // ── Timeline entry (always, not just for invoice-linked) ──────────
+        $db->insert( 'hearmed_core.patient_timeline', [
+            'patient_id'  => $patient_id,
+            'event_type'  => 'credit_note_raised',
+            'event_date'  => date('Y-m-d'),
+            'staff_id'    => $user->id ?? null,
+            'description' => "Credit note {$cn_num} raised for \xe2\x82\xac" . number_format($amount,2) . " ({$type}) — {$reason}",
+        ] );
 
         // ── Auto-save credit note to patient documents ────────────────────
         HearMed_Utils::auto_save_document(

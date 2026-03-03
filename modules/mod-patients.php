@@ -2638,10 +2638,17 @@ function hm_ajax_create_return() {
             $db->update( 'hearmed_core.patient_devices', $upd, [ 'id' => $device_id ] );
         }
 
-        // 2. Generate credit note — aligned with existing HMCN-YYYY-NNNN format
+        // 2. Generate credit note — use MAX of trailing digits to avoid duplicates
         $cn_prefix = HearMed_Settings::get( 'hm_credit_note_prefix', 'HMCN' );
-        $cn_count  = (int) $db->get_var( "SELECT COUNT(*) FROM hearmed_core.credit_notes" );
-        $cn_number = $cn_prefix . '-' . date('Y') . '-' . str_pad( $cn_count + 1, 4, '0', STR_PAD_LEFT );
+        $cn_year   = date('Y');
+        $cn_like   = $cn_prefix . '-' . $cn_year . '-%';
+        $next_seq  = (int) $db->get_var(
+            "SELECT COALESCE(MAX(CAST(SUBSTRING(credit_note_number FROM '[0-9]+\$') AS INTEGER)), 0) + 1
+             FROM hearmed_core.credit_notes
+             WHERE credit_note_number LIKE \$1",
+            [ $cn_like ]
+        );
+        $cn_number = $cn_prefix . '-' . $cn_year . '-' . str_pad( $next_seq, 4, '0', STR_PAD_LEFT );
 
         $inv_id  = $order ? ( $order->inv_id ?? null ) : null;
         $ord_id  = ! empty( $device->order_id ) ? $device->order_id : null;

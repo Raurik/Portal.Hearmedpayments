@@ -69,6 +69,12 @@ class HearMed_Router {
             // (WordPress core treats /login as a built-in alias for wp-login.php)
             add_filter( 'redirect_canonical', [ $this, 'block_login_canonical' ], 10, 2 );
 
+            // Remove WordPress built-in /login → wp-login.php redirect.
+            // wp_redirect_admin_locations() fires at template_redirect:1000
+            // and sends /login to wp_login_url(), creating an infinite loop
+            // with disable-wp-login.php which redirects wp-login.php → /login.
+            remove_action( 'template_redirect', 'wp_redirect_admin_locations', 1000 );
+
             // Bridge: if portal-authenticated but NOT WP-authenticated, set the
             // WP login cookie so SiteGround's Nginx cache is bypassed.
             add_action( 'init', [ $this, 'bridge_wp_login' ], 1 );
