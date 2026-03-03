@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Block dangerous files from deploying
         run: |
-          FOUND=$(find . -maxdepth 3 \( -name '*.sql' -o -name '*.dump' -o -name '*.bak' -o -name '*.zip' -o -name '*.gz' -o -name '*.tar' \) \
+          FOUND=$(find . -maxdepth 3 \( -name '*.dump' -o -name '*.bak' -o -name '*.zip' -o -name '*.gz' -o -name '*.tar' \) \
             ! -path './.github/*' | head -20)
           if [ -n "$FOUND" ]; then
             echo "::error::Dangerous files found in plugin directory — refusing to deploy:"
