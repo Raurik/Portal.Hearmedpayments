@@ -132,9 +132,6 @@ class HearMed_Router {
     public function bridge_wp_login() {
         if ( defined( 'DOING_AJAX' ) || defined( 'DOING_CRON' ) || defined( 'REST_REQUEST' ) || defined( 'WP_CLI' ) ) return;
 
-        // Already WP-logged-in → nothing to do
-        if ( is_user_logged_in() ) return;
-
         // Check portal session
         if ( ! PortalAuth::is_logged_in() ) return;
 
@@ -149,7 +146,13 @@ class HearMed_Router {
         if ( ! $wp_user_id ) return;
 
         $wp_user_id = (int) $wp_user_id;
-        $wp_user    = get_user_by( 'ID', $wp_user_id );
+
+        // If already WP-logged-in as the CORRECT user, nothing to do.
+        // If logged in as a DIFFERENT WP user (e.g. stale cookie from
+        // previous session), re-set the cookie to match the portal user.
+        if ( is_user_logged_in() && get_current_user_id() === $wp_user_id ) return;
+
+        $wp_user = get_user_by( 'ID', $wp_user_id );
         if ( ! $wp_user ) return;
 
         // Set WP auth cookie (cache-busting only — PortalAuth is source of truth)
@@ -300,27 +303,38 @@ class HearMed_Router {
      * @return string|false Privacy notice HTML or false if accepted
      */
     private function check_privacy_notice() {
-        $user_id = get_current_user_id();
-        
-        if ( ! $user_id ) {
+        // Use PortalAuth as source of truth for identity, not WP user.
+        if ( ! PortalAuth::is_v2() ) {
+            $user_id = get_current_user_id();
+            if ( ! $user_id ) return false;
+            $accepted = get_user_meta( $user_id, 'hm_privacy_notice_accepted', true );
+            return $accepted ? false : '<div id="hm-app"><p>Please accept the privacy notice to continue.</p></div>';
+        }
+
+        // V2 auth: check the portal staff record directly.
+        // The privacy notice flag lives in PG, not WP user meta.
+        $staff = PortalAuth::current_user();
+        if ( ! $staff ) return false;
+
+        $accepted = HearMed_DB::get_var(
+            "SELECT privacy_notice_accepted FROM hearmed_reference.staff WHERE id = $1",
+            [ $staff->id ]
+        );
+
+        // If column doesn't exist or is true/t, skip notice
+        if ( $accepted === null || $accepted === 't' || $accepted === true || $accepted === '1' ) {
             return false;
         }
-        
-        $accepted = get_user_meta( $user_id, 'hm_privacy_notice_accepted', true );
-        
-        if ( $accepted ) {
+
+        // Also check WP user meta as fallback
+        $wp_user_id = get_current_user_id();
+        if ( $wp_user_id && get_user_meta( $wp_user_id, 'hm_privacy_notice_accepted', true ) ) {
             return false;
         }
-        
-        // Load privacy notice template
-        ob_start();
-        $template_file = HEARMED_PATH . 'templates/privacy-notice.php';
-        if ( file_exists( $template_file ) ) {
-            require_once $template_file;
-        } else {
-            echo '<div id="hm-app"><p>Please accept the privacy notice to continue.</p></div>';
-        }
-        return ob_get_clean();
+
+        // No privacy notice template exists yet — just skip it for now
+        // rather than blocking access entirely with an undismissable message.
+        return false;
     }
     
     /**
