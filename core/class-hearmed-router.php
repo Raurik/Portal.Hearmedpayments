@@ -576,14 +576,25 @@ class HearMed_Router {
                 });
             }
 
+            /* ── Populate Elementor #hm-name / .hm-name with staff name ── */
+            function syncNameWidget(){
+                var name = <?php echo wp_json_encode( $name ); ?>;
+                var el = document.getElementById('hm-name');
+                if(el) el.textContent = name;
+                var els = document.querySelectorAll('.hm-name');
+                for(var i=0;i<els.length;i++) els[i].textContent = name;
+            }
+
             if(document.readyState === 'loading'){
                 document.addEventListener('DOMContentLoaded', function(){
                     placeUserBar();
                     setupLogout();
+                    syncNameWidget();
                 });
             } else {
                 placeUserBar();
                 setupLogout();
+                syncNameWidget();
             }
         })();
         </script>
