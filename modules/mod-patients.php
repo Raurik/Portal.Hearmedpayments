@@ -787,8 +787,38 @@ function hm_ajax_update_patient() {
 //  6. NOTES — CRUD
 // ═══════════════════════════════════════════════════════════════════════════
 
+/**
+ * Auto-migrate: ensure note_category and is_alert columns exist.
+ */
+function hm_ensure_notes_columns() {
+    static $done = false;
+    if ( $done ) return;
+    $done = true;
+
+    $db = HearMed_DB::instance();
+    $cols = [
+        'note_category' => "VARCHAR(20) NOT NULL DEFAULT 'general'",
+        'is_alert'      => 'BOOLEAN NOT NULL DEFAULT false',
+    ];
+    foreach ( $cols as $col => $type ) {
+        $exists = $db->get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'patient_notes' AND column_name = \$1",
+            [ $col ]
+        );
+        if ( ! $exists ) {
+            $db->query( "ALTER TABLE hearmed_core.patient_notes ADD COLUMN {$col} {$type}" );
+            // Back-fill existing Clinical notes on first add of note_category
+            if ( $col === 'note_category' ) {
+                $db->query( "UPDATE hearmed_core.patient_notes SET note_category = 'clinical' WHERE LOWER(note_type) = 'clinical'" );
+            }
+        }
+    }
+}
+
 function hm_ajax_get_patient_notes() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
+    hm_ensure_notes_columns();
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
