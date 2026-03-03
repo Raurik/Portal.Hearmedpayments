@@ -70,6 +70,10 @@ class HearMed_Auth {
      * Static capability check — wraps the instance can() method
      */
     public static function can( $capability, $user_id = null ) {
+        // V2: delegate to PortalAuth (PG-based roles)
+        if ( PortalAuth::is_v2() ) {
+            return PortalAuth::can( $capability );
+        }
         static $instance = null;
         if ( $instance === null ) {
             $instance = new self();
@@ -81,6 +85,11 @@ class HearMed_Auth {
      * Static admin check — wraps the instance is_admin() method
      */
     public static function is_admin( $user_id = null ) {
+        // V2: C-Level has wildcard '*' — effectively admin
+        if ( PortalAuth::is_v2() ) {
+            $role = PortalAuth::current_role();
+            return in_array( $role, [ 'c_level', 'finance' ], true );
+        }
         static $instance = null;
         if ( $instance === null ) {
             $instance = new self();
