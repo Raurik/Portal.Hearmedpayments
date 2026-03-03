@@ -887,11 +887,11 @@ function initProfile(){
         });
         $c.off('click','.hm-return-side').on('click','.hm-return-side',function(){
             var $b=$(this);
-            showReturnModal($b.data('id'),$b.data('name'),$b.data('side'),function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));});
+            showReturnModal($b.data('id'),$b.data('name'),$b.data('side'),function(){loadHearingAids($c);});
         });
         $c.off('click','.hm-return-both').on('click','.hm-return-both',function(){
             var $b=$(this);
-            showReturnModal($b.data('id'),$b.data('name'),'both',function(){loadHearingAids($c);loadReturns($('#hm-tab-content'));});
+            showReturnModal($b.data('id'),$b.data('name'),'both',function(){loadHearingAids($c);});
         });
         $c.off('click','#hm-add-product-btn').on('click','#hm-add-product-btn',function(){showAddProductModal(function(){loadHearingAids($c);});});
     }
@@ -1049,7 +1049,15 @@ function initProfile(){
                     if(parseFloat(r.data.prsi_amount||0)>0) msg+='. PRSI €'+parseFloat(r.data.prsi_amount).toFixed(2)+' added to PRSI notification queue.';
                     toast(msg);
                     if(cb)cb();
-                }else toast(r.data||'Error','error');
+                }else{
+                    toast(r.data||'Return failed — please try again','error');
+                }
+            }).fail(function(xhr){
+                closeModal();
+                var errMsg='Return failed';
+                try{var j=JSON.parse(xhr.responseText);if(j&&j.data)errMsg+=': '+j.data;}catch(e){}
+                toast(errMsg+'. Please try again or contact support.','error');
+                console.error('hm_create_return failed',xhr.status,xhr.responseText);
             });
         });
     }
@@ -1466,7 +1474,7 @@ function initProfile(){
         $.post(_hm.ajax,{action:'hm_get_patient_orders',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.warning+'</div><div class="hm-empty-text">'+(r.data||'Error loading orders')+'</div></div>');return;}
             var d=r.data;
-            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Orders ('+d.length+')</h3><a href="/orders/?patient_id='+pid+'" class="hm-btn hm-btn--primary hm-btn--sm">+ Create Order</a></div>';
+            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Orders ('+d.length+')</h3><a href="/orders/?hm_action=create&patient_id='+pid+'" class="hm-btn hm-btn--primary hm-btn--sm">+ Create Order</a></div>';
             if(!d.length){h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.order+'</div><div class="hm-empty-text">No orders for this patient</div></div>';}
             else{
                 var sc={Fitted:'hm-badge--green',Pending:'hm-badge--amber',Cancelled:'hm-badge--red',Refunded:'hm-badge--grey'};
