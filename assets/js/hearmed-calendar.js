@@ -1917,7 +1917,7 @@ var Cal={
                 h+='</div>'; // end left panel
 
                 // ═════ RIGHT PANEL ═════
-                h+='<div id="hm-op-right" style="flex:0 0 42%;max-width:42%;overflow-y:auto;padding:24px;background:var(--hm-bg-alt,#f8fafc)">';
+                h+='<div id="hm-op-right" style="flex:0 0 42%;max-width:42%;display:flex;flex-direction:column;padding:28px 32px;background:#fff;border-left:1px solid var(--hm-border,#e2e8f0)">';
 
                 // ── Pay existing order view (hidden by default) ──
                 h+='<div id="hm-op-payex" style="display:none">';
@@ -1928,61 +1928,84 @@ var Cal={
                 h+='<div id="hm-op-payex-form"></div>';
                 h+='</div>';
 
-                // ── New order summary (default view) ──
-                h+='<div id="hm-op-neworder">';
+                // ── New order summary (default view) ── INVOICE STYLE
+                h+='<div id="hm-op-neworder" style="display:flex;flex-direction:column;height:100%">';
 
-                // Cart
-                h+='<div style="font-size:12px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px">';
-                h+='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg> Order Summary</div>';
-                h+='<div id="hm-op-items" style="background:#fff;border-radius:10px;border:1px solid var(--hm-border,#e2e8f0);padding:16px;margin-bottom:16px;min-height:60px">';
-                h+='<div style="color:var(--hm-text-muted,#94a3b8);font-size:13px;text-align:center;padding:12px 0">No items added yet</div></div>';
-
-                // Pricing card
-                h+='<div style="background:#fff;border-radius:10px;border:1px solid var(--hm-border,#e2e8f0);padding:16px;margin-bottom:16px">';
-                var PR='display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px';
-                h+='<div style="'+PR+';color:var(--hm-text-light,#64748b)"><span>Subtotal</span><span id="hm-op-sub">€0.00</span></div>';
-                h+='<div style="'+PR+';color:var(--hm-text-light,#64748b)"><span>VAT</span><span id="hm-op-vat">€0.00</span></div>';
-
-                // Discount
-                h+='<div style="margin:10px 0 6px;padding-top:8px;border-top:1px solid var(--hm-border-light,#f1f5f9)">';
-                h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
-                h+='<span style="font-size:12px;font-weight:600;color:var(--hm-text,#334155)">Discount</span>';
-                h+='<div style="display:inline-flex;border:1.5px solid var(--hm-border,#e2e8f0);border-radius:6px;overflow:hidden">';
-                h+='<button type="button" class="hm-op-disc-mode" data-mode="pct" style="padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:var(--hm-navy,#151B33);color:#fff">%</button>';
-                h+='<button type="button" class="hm-op-disc-mode" data-mode="eur" style="padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:#fff;color:var(--hm-text,#334155)">€</button>';
+                // Invoice header
+                h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">';
+                h+='<div>';
+                h+='<div style="font-size:22px;font-weight:700;font-family:var(--hm-font-title,Cormorant Garamond,serif);color:var(--hm-navy,#151B33);letter-spacing:1px">INVOICE</div>';
+                h+='<div style="font-size:11px;color:var(--hm-text-muted,#94a3b8);margin-top:2px">Draft &bull; '+(new Date().toLocaleDateString('en-IE',{day:'numeric',month:'short',year:'numeric'}))+'</div>';
+                h+='</div>';
+                h+='<div style="text-align:right">';
+                h+='<div style="font-size:12px;font-weight:600;color:var(--hm-navy,#151B33)">'+esc(a.patient_name||'Patient')+'</div>';
+                h+='<div style="font-size:11px;color:var(--hm-text-light,#64748b)">'+esc(outcome||'')+'</div>';
                 h+='</div></div>';
-                h+='<div style="display:flex;gap:8px;align-items:center">';
-                h+='<input type="range" id="hm-op-disc-slider" min="0" max="100" value="0" step="1" style="flex:1;accent-color:#f59e0b">';
-                h+='<input type="number" id="hm-op-disc" value="0" min="0" max="100" step="1" style="width:70px;font-size:13px;padding:5px 8px;border-radius:6px;border:1.5px solid var(--hm-border,#e2e8f0);text-align:center">';
-                h+='<span id="hm-op-disc-unit" style="font-size:12px;font-weight:600;color:var(--hm-text-light,#64748b);min-width:14px">%</span>';
-                h+='</div></div>';
-                h+='<div id="hm-op-disc-row" style="display:none;'+PR+';color:#dc2626"><span>Discount</span><span id="hm-op-disc-amt">−€0.00</span></div>';
 
-                // PRSI
-                h+='<div id="hm-op-prsi-wrap" style="margin:10px 0 6px;padding:10px 12px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px">';
-                h+='<div style="font-size:11px;font-weight:700;color:#0e7490;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">PRSI Grant</div>';
-                h+='<div style="display:flex;gap:16px;flex-wrap:wrap">';
-                h+='<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--hm-text,#334155)"><input type="checkbox" id="hm-op-prsi-l" style="accent-color:#0e7490"> Left ear — €500</label>';
-                h+='<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--hm-text,#334155)"><input type="checkbox" id="hm-op-prsi-r" style="accent-color:#0e7490"> Right ear — €500</label>';
-                h+='</div></div>';
-                h+='<div id="hm-op-prsi-row" style="display:none;'+PR+';color:#059669"><span>PRSI Deduction</span><span id="hm-op-prsi-amt">−€0.00</span></div>';
+                // Line items table
+                h+='<div style="flex:1;overflow-y:auto;margin-bottom:16px">';
+                h+='<table style="width:100%;border-collapse:collapse;font-family:var(--hm-font)">';
+                h+='<thead><tr style="border-bottom:2px solid var(--hm-navy,#151B33)">';
+                h+='<th style="text-align:left;padding:6px 0;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px">Item</th>';
+                h+='<th style="text-align:center;padding:6px 8px;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:40px">Qty</th>';
+                h+='<th style="text-align:right;padding:6px 8px;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:80px">Price</th>';
+                h+='<th style="text-align:right;padding:6px 0;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:80px">Total</th>';
+                h+='<th style="width:28px"></th>';
+                h+='</tr></thead>';
+                h+='<tbody id="hm-op-items"><tr><td colspan="5" style="text-align:center;padding:24px 0;color:var(--hm-text-muted,#94a3b8);font-size:13px;font-style:italic">No items added yet</td></tr></tbody>';
+                h+='</table></div>';
 
-                // Total
-                h+='<div style="display:flex;justify-content:space-between;font-size:18px;font-weight:700;color:var(--hm-navy,#151B33);border-top:2px solid var(--hm-border,#e2e8f0);padding-top:10px;margin-top:8px">';
-                h+='<span>Patient Pays</span><span id="hm-op-total">€0.00</span></div>';
-                h+='</div>'; // end pricing
+                // ─── Totals block ───
+                h+='<div style="border-top:1px solid var(--hm-border,#e2e8f0);padding-top:12px">';
+                var TR='display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:3px 0';
+
+                // Subtotal & VAT
+                h+='<div style="'+TR+';color:var(--hm-text-light,#64748b)"><span>Subtotal (excl. VAT)</span><span id="hm-op-sub" style="font-variant-numeric:tabular-nums">€0.00</span></div>';
+                h+='<div style="'+TR+';color:var(--hm-text-light,#64748b)"><span>VAT</span><span id="hm-op-vat" style="font-variant-numeric:tabular-nums">€0.00</span></div>';
+
+                // Discount row
+                h+='<div style="'+TR+';margin-top:6px;padding-top:8px;border-top:1px dashed var(--hm-border-light,#e2e8f0)">';
+                h+='<div style="display:flex;align-items:center;gap:6px">';
+                h+='<span style="font-size:13px;color:var(--hm-text,#334155)">Discount</span>';
+                h+='<div style="display:inline-flex;border:1px solid var(--hm-border,#e2e8f0);border-radius:4px;overflow:hidden">';
+                h+='<button type="button" class="hm-op-disc-mode" data-mode="pct" style="padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:var(--hm-navy,#151B33);color:#fff">%</button>';
+                h+='<button type="button" class="hm-op-disc-mode" data-mode="eur" style="padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:#fff;color:var(--hm-text,#334155)">€</button>';
+                h+='</div>';
+                h+='<input type="number" id="hm-op-disc" value="0" min="0" max="100" step="1" style="width:60px;font-size:12px;padding:3px 6px;border-radius:4px;border:1px solid var(--hm-border,#e2e8f0);text-align:right;font-variant-numeric:tabular-nums;font-family:var(--hm-font)">';
+                h+='<span id="hm-op-disc-unit" style="font-size:11px;font-weight:600;color:var(--hm-text-light,#64748b)">%</span>';
+                h+='</div>';
+                h+='<span id="hm-op-disc-amt" style="font-size:13px;color:#dc2626;font-variant-numeric:tabular-nums">−€0.00</span></div>';
+                h+='<div id="hm-op-disc-row" style="display:none"></div>';
+
+                // PRSI deductions
+                h+='<div id="hm-op-prsi-wrap" style="margin-top:6px;padding-top:8px;border-top:1px dashed var(--hm-border-light,#e2e8f0)">';
+                h+='<div style="'+TR+'">';
+                h+='<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--hm-text,#334155)">';
+                h+='<input type="checkbox" id="hm-op-prsi-l" style="accent-color:#0e7490;width:14px;height:14px"> PRSI Grant — Left ear</label>';
+                h+='<span style="font-size:13px;color:#059669;font-variant-numeric:tabular-nums">−€500.00</span></div>';
+                h+='<div style="'+TR+'">';
+                h+='<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--hm-text,#334155)">';
+                h+='<input type="checkbox" id="hm-op-prsi-r" style="accent-color:#0e7490;width:14px;height:14px"> PRSI Grant — Right ear</label>';
+                h+='<span style="font-size:13px;color:#059669;font-variant-numeric:tabular-nums">−€500.00</span></div>';
+                h+='<div id="hm-op-prsi-row" style="display:none"></div>';
+                h+='</div>';
+
+                // Grand total
+                h+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding-top:10px;border-top:2px solid var(--hm-navy,#151B33)">';
+                h+='<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--hm-navy,#151B33)">Total Due</span>';
+                h+='<span id="hm-op-total" style="font-size:22px;font-weight:700;color:var(--hm-navy,#151B33);font-variant-numeric:tabular-nums">€0.00</span></div>';
+                h+='</div>'; // end totals block
 
                 // Notes
-                h+='<div style="'+LS+'"><label style="'+LB+'">Order Notes</label>';
-                h+='<textarea id="hm-op-notes" rows="2" placeholder="Dome size, speaker requirements..." style="'+INP+';resize:vertical"></textarea></div>';
+                h+='<div style="margin-top:14px"><textarea id="hm-op-notes" rows="2" placeholder="Order notes..." style="'+INP+';resize:vertical;font-size:12px;background:var(--hm-bg-alt,#f8fafc);border:1px solid var(--hm-border,#e2e8f0)"></textarea></div>';
 
                 // Error
-                h+='<div id="hm-op-err" style="color:#ef4444;font-size:12px;margin-bottom:8px"></div>';
+                h+='<div id="hm-op-err" style="color:#ef4444;font-size:12px;margin-top:6px"></div>';
 
                 // Action buttons
-                h+='<div id="hm-op-actions" style="display:flex;gap:10px;margin-bottom:16px">';
-                h+='<button id="hm-op-submit" style="flex:1;padding:12px;font-size:14px;font-weight:700;border-radius:8px;border:none;background:var(--hm-teal,#0BB4C4);color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">Submit Order</button>';
-                h+='<button id="hm-op-pay-btn" style="flex:1;padding:12px;font-size:14px;font-weight:700;border-radius:8px;border:2px solid #059669;background:#fff;color:#059669;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">Take Payment</button>';
+                h+='<div id="hm-op-actions" style="display:flex;gap:10px;margin-top:14px">';
+                h+='<button id="hm-op-submit" style="flex:1;padding:12px;font-size:13px;font-weight:700;border-radius:6px;border:1px solid var(--hm-border,#e2e8f0);background:#fff;color:var(--hm-navy,#151B33);cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">Submit Order</button>';
+                h+='<button id="hm-op-pay-btn" style="flex:1;padding:12px;font-size:13px;font-weight:700;border-radius:6px;border:none;background:#059669;color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">Take Payment</button>';
                 h+='</div>';
 
                 // ── Payment section (hidden until Take Payment clicked) ──
@@ -2028,7 +2051,7 @@ var Cal={
                 var discountMode='pct';
                 var browseMode='range';
                 var selectedRangeId=null;
-                var _cleanupNs='.opback .opexcard .opexhover .opcancelex .opexconfirm .opcat .opbrowse .oprange .opmfr .opstyle .opprod .opadd .oprem .opdisc .opslider .opdiscmode .opprsi .opsubmit .oppaybtn .oppaycancel .oppayconfirm .opaddmethod .opremmethod .oppayexback';
+                var _cleanupNs='.opback .opexcard .opexhover .opcancelex .opexconfirm .opcat .opbrowse .oprange .opmfr .opstyle .opprod .opadd .oprem .opdisc .opdiscmode .opprsi .opsubmit .oppaybtn .oppaycancel .oppayconfirm .opaddmethod .opremmethod .oppayexback';
 
                 function cleanupEvents(){$(document).off(_cleanupNs);$('#hm-op').remove();$hmMain.css({display:'',flexDirection:''});$hmMain.find('#hm-app').show();}
 
@@ -2040,22 +2063,23 @@ var Cal={
                 }
 
                 function renderItems(){
-                    if(!orderItems.length){$('#hm-op-items').html('<div style="color:var(--hm-text-muted,#94a3b8);font-size:13px;text-align:center;padding:12px 0">No items added yet</div>');return;}
+                    if(!orderItems.length){$('#hm-op-items').html('<tr><td colspan="5" style="text-align:center;padding:24px 0;color:var(--hm-text-muted,#94a3b8);font-size:13px;font-style:italic">No items added yet</td></tr>');return;}
                     var t='';
                     orderItems.forEach(function(it,idx){
                         var details=[];
+                        if(it.ear)details.push(it.ear);
                         if(it.speaker_size)details.push('Speaker: '+it.speaker_size+(it.speaker_type?' '+it.speaker_type:''));
                         if(it.dome_size)details.push('Dome: '+it.dome_size+(it.dome_type?' '+it.dome_type:''));
-                        t+='<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:10px 0;'+(idx>0?'border-top:1px solid var(--hm-border-light,#f1f5f9)':'')+'">';
-                        t+='<div style="flex:1;min-width:0">';
+                        t+='<tr style="border-bottom:1px solid var(--hm-border-light,#f1f5f9)">';
+                        t+='<td style="padding:10px 0;vertical-align:top">';
                         t+='<div style="font-size:13px;font-weight:600;color:var(--hm-navy,#151B33)">'+esc(it.name)+'</div>';
                         if(details.length)t+='<div style="font-size:11px;color:var(--hm-text-light,#64748b);margin-top:2px">'+esc(details.join(' · '))+'</div>';
-                        t+='<div style="font-size:11px;color:var(--hm-text-muted,#94a3b8);margin-top:2px">'+(it.ear?it.ear+' · ':'')+it.qty+'× €'+it.unit_price.toFixed(2)+'</div>';
-                        t+='</div>';
-                        t+='<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px">';
-                        t+='<span style="font-size:14px;font-weight:700;color:var(--hm-navy,#151B33)">€'+(it.unit_price*it.qty).toFixed(2)+'</span>';
-                        t+='<button class="hm-op-rem" data-idx="'+idx+'" style="border:none;background:#fee2e2;color:#b91c1c;width:24px;height:24px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .15s">×</button>';
-                        t+='</div></div>';
+                        t+='</td>';
+                        t+='<td style="text-align:center;padding:10px 8px;font-size:13px;color:var(--hm-text,#334155);vertical-align:top;font-variant-numeric:tabular-nums">'+it.qty+'</td>';
+                        t+='<td style="text-align:right;padding:10px 8px;font-size:13px;color:var(--hm-text,#334155);vertical-align:top;font-variant-numeric:tabular-nums">€'+it.unit_price.toFixed(2)+'</td>';
+                        t+='<td style="text-align:right;padding:10px 0;font-size:13px;font-weight:600;color:var(--hm-navy,#151B33);vertical-align:top;font-variant-numeric:tabular-nums">€'+(it.unit_price*it.qty).toFixed(2)+'</td>';
+                        t+='<td style="padding:10px 0 10px 6px;vertical-align:top"><button class="hm-op-rem" data-idx="'+idx+'" style="border:none;background:none;color:#b91c1c;width:22px;height:22px;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.5;transition:opacity .15s" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.5">×</button></td>';
+                        t+='</tr>';
                     });
                     $('#hm-op-items').html(t);
                 }
@@ -2345,16 +2369,15 @@ var Cal={
                 // ── PRSI changes ──
                 $(document).off('change.opprsi').on('change.opprsi','#hm-op-prsi-l,#hm-op-prsi-r',updateTotals);
 
-                // ── Discount input / slider ──
-                $(document).off('input.opdisc').on('input.opdisc','#hm-op-disc',function(){$('#hm-op-disc-slider').val($(this).val());updateTotals();});
-                $(document).off('input.opslider').on('input.opslider','#hm-op-disc-slider',function(){$('#hm-op-disc').val($(this).val());updateTotals();});
+                // ── Discount input ──
+                $(document).off('input.opdisc').on('input.opdisc','#hm-op-disc',function(){updateTotals();});
                 $(document).off('click.opdiscmode').on('click.opdiscmode','.hm-op-disc-mode',function(){
                     var mode=$(this).data('mode');discountMode=mode;
                     $('.hm-op-disc-mode').css({background:'#fff',color:'var(--hm-text,#334155)'});
                     $(this).css({background:'var(--hm-navy,#151B33)',color:'#fff'});
-                    if(mode==='pct'){$('#hm-op-disc-unit').text('%');$('#hm-op-disc-slider').attr({max:100,step:1});$('#hm-op-disc').attr({max:100,step:1});}
-                    else{var sub=0;orderItems.forEach(function(it){sub+=it.unit_price*it.qty;});$('#hm-op-disc-unit').text('€');$('#hm-op-disc-slider').attr({max:Math.ceil(sub)||10000,step:10});$('#hm-op-disc').attr({max:Math.ceil(sub)||10000,step:10});}
-                    $('#hm-op-disc').val(0);$('#hm-op-disc-slider').val(0);updateTotals();
+                    if(mode==='pct'){$('#hm-op-disc-unit').text('%');$('#hm-op-disc').attr({max:100,step:1});}
+                    else{var sub=0;orderItems.forEach(function(it){sub+=it.unit_price*it.qty;});$('#hm-op-disc-unit').text('€');$('#hm-op-disc').attr({max:Math.ceil(sub)||10000,step:10});}
+                    $('#hm-op-disc').val(0);updateTotals();
                 });
 
                 // ── Submit Order ──
