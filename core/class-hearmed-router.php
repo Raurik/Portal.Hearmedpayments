@@ -66,6 +66,10 @@ class HearMed_Router {
             add_shortcode( $shortcode, [ $this, 'render_shortcode' ] );
         }
 
+        // [hearmed_username] — returns the logged-in staff member's display name.
+        // Used inside Elementor HTML widgets (e.g. "Welcome, [hearmed_username]").
+        add_shortcode( 'hearmed_username', [ $this, 'shortcode_username' ] );
+
         add_action( 'template_redirect', [ $this, 'auth_redirect' ] );
         add_filter( 'template_include',  [ $this, 'login_template' ], 999 );
 
@@ -422,6 +426,19 @@ class HearMed_Router {
                 true
             );
         }
+    }
+
+    /* ================================================================
+       [hearmed_username] SHORTCODE
+       Returns the current staff member's display name (escaped).
+       ================================================================ */
+
+    public function shortcode_username( $atts = [] ) {
+        if ( ! PortalAuth::is_logged_in() ) {
+            return '';
+        }
+        $staff = PortalAuth::current_user();
+        return $staff ? esc_html( $staff->display_name ) : '';
     }
 
     /* ================================================================
