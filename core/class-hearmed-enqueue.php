@@ -534,6 +534,17 @@ class HearMed_Enqueue {
                     true
                 );
             }
+
+            // Patients page needs the calendar JS for inline order creation
+            if ( $module === 'patients' ) {
+                wp_enqueue_script(
+                    'hearmed-calendar',
+                    HEARMED_URL . 'assets/js/hearmed-calendar.js',
+                    [ 'hearmed-core' ],
+                    $this->get_file_version( 'assets/js/hearmed-calendar.js' ),
+                    true
+                );
+            }
             
             wp_enqueue_script(
                 "hearmed-{$module}",
@@ -557,7 +568,7 @@ class HearMed_Enqueue {
         $full_path = HEARMED_PATH . $file;
         // Use filemtime + a hard bump suffix to defeat CDN/server caches
         $v = file_exists( $full_path ) ? filemtime( $full_path ) : HEARMED_VERSION;
-        return $v . '.6';
+        return $v . '.7';
     }
     
     /**

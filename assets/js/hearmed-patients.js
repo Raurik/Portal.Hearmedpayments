@@ -4,7 +4,7 @@
  */
 (function($){
 'use strict';
-console.log('[HM-Patients] v4.0.7 loaded');
+console.log('[HM-Patients] v5.0.0 loaded — inline orders + return debug');
 
 function getHM(){if(typeof HMP!=='undefined')return HMP;if(typeof HM!=='undefined')return HM;return{ajax:window.location.origin+'/wp-admin/admin-ajax.php',nonce:''};}
 var _hm=getHM(),PG='/patients/';
@@ -1479,9 +1479,8 @@ function initProfile(){
         $.post(_hm.ajax,{action:'hm_get_patient_orders',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.warning+'</div><div class="hm-empty-text">'+(r.data||'Error loading orders')+'</div></div>');return;}
             var d=r.data;
-            var ordUrl=((_hm.calendar_url||'/calendar/').replace(/\/$/,''));
             var pName=(patient&&patient.name)||(patient&&(patient.first_name+' '+patient.last_name))||'';
-            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Orders ('+d.length+')</h3><a href="'+ordUrl+'?hm_order=new&patient_id='+pid+'&patient_name='+encodeURIComponent(pName)+'" class="hm-btn hm-btn--primary hm-btn--sm">+ Create Order</a></div>';
+            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Orders ('+d.length+')</h3><button type="button" class="hm-btn hm-btn--primary hm-btn--sm hm-inline-order-btn">+ Create Order</button></div>';
             if(!d.length){h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.order+'</div><div class="hm-empty-text">No orders for this patient</div></div>';}
             else{
                 var sc={Fitted:'hm-badge--green',Pending:'hm-badge--amber',Cancelled:'hm-badge--red',Refunded:'hm-badge--grey'};
@@ -1510,6 +1509,29 @@ function initProfile(){
             });
         });
     }
+
+    /* ── INLINE ORDER PAGE (trigger from patient file) ── */
+    $(document).off('click.hm-inline-order').on('click.hm-inline-order','.hm-inline-order-btn',function(e){
+        e.preventDefault();
+        closeModal(); // close any open modal (e.g. the order-prompt after add-HA)
+        var pName=(patient&&patient.name)||(patient&&(patient.first_name+' '+patient.last_name))||'';
+        if(typeof window.HM_openOrderPage==='function'){
+            HM_openOrderPage({
+                patient_id:pid,
+                patient_name:pName,
+                appointment_id:0,
+                backLabel:'Patient',
+                outcome:{name:'',color:'#3B82F6'},
+                onDone:function(){
+                    // Reload orders tab after returning from order page
+                    var $tab=$('#hm-tab-orders');
+                    if($tab.length)loadOrders($tab);
+                }
+            });
+        } else {
+            toast('Order page not available — please refresh the page','error');
+        }
+    });
 
     /* ── INVOICES ── */
     function loadInvoices($c){
@@ -1749,7 +1771,7 @@ function initProfile(){
                 '<p style="font-size:13px;color:#64748b;margin-bottom:20px;">Would you like to create an order for this device?</p>'+
                 '<div style="display:flex;gap:10px;justify-content:center;">'+
                     '<button class="hm-btn hm-btn--secondary hm-close" style="min-width:100px;">Not Now</button>'+
-                    '<a href="'+((_hm.calendar_url||'/calendar/').replace(/\/$/,''))+'?hm_order=new&patient_id='+pid+'&patient_name='+encodeURIComponent((patient&&patient.name)||'')+'&product_id='+(prodId||'')+'" class="hm-btn hm-btn--primary" style="min-width:140px;text-decoration:none;">Create Order \u2192</a>'+
+                    '<button type="button" class="hm-btn hm-btn--primary hm-inline-order-btn" style="min-width:140px;">Create Order \u2192</button>'+
                 '</div>'+
             '</div></div></div>'
         );

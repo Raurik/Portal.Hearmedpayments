@@ -167,32 +167,6 @@ var Cal={
         this.render();
         this.bind();
         this.loadData();
-
-        // Direct order page from URL params (e.g. from patient file Create Order link)
-        var urlP=new URLSearchParams(window.location.search);
-        if(urlP.get('hm_order')==='new'&&urlP.get('patient_id')){
-            var self=this;
-            var directPid=urlP.get('patient_id');
-            var directName=decodeURIComponent(urlP.get('patient_name')||'Patient');
-            var directProdId=urlP.get('product_id')||'';
-            // Remove params from URL to prevent re-trigger on back
-            var cleanUrl=window.location.pathname;
-            window.history.replaceState(null,'',cleanUrl);
-            // Open order page with synthetic appointment data
-            setTimeout(function(){
-                self._openOrderPage({
-                    patient_id:directPid,
-                    patient_name:directName,
-                    service_name:'',
-                    service_colour:'#0BB4C4',
-                    _ID:0
-                },{
-                    name:'New Order',
-                    color:'#0BB4C4',
-                    triggers_order:true
-                });
-            },600);
-        }
     },
 
     render:function(){
@@ -1790,6 +1764,7 @@ var Cal={
     // ── Full-Screen Order Page ──
     _openOrderPage:function(a,outcome){
         var self=this;
+        var _backLabel=(window._hmOrderOpts&&window._hmOrderOpts.backLabel)||'Calendar';
         // Hide calendar, show loading inside .hm-main
         var $hmMain=$('.hm-main').first();
         $hmMain.find('#hm-app').hide();
@@ -1828,7 +1803,7 @@ var Cal={
                 // ── Top bar ──
                 h+='<div style="background:var(--hm-teal,#0BB4C4);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:50px;flex-shrink:0">';
                 h+='<button id="hm-op-back" style="background:none;border:1px solid rgba(255,255,255,.2);color:#fff;font-size:13px;font-weight:600;cursor:pointer;padding:6px 14px;border-radius:6px;font-family:var(--hm-font-btn);display:flex;align-items:center;gap:6px;transition:all .15s">';
-                h+='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8H1M8 15L1 8l7-7"/></svg> Calendar</button>';
+                h+='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8H1M8 15L1 8l7-7"/></svg> '+esc(_backLabel)+'</button>';
                 h+='<div style="text-align:center"><div style="font-family:var(--hm-font-title,\'Cormorant Garamond\',serif);font-size:20px;font-weight:700;letter-spacing:-.3px">New Order</div>';
                 h+='<div style="font-size:11px;opacity:.7;margin-top:1px">'+esc(a.patient_name||'Patient')+' — '+esc(outcome.name||'')+'</div></div>';
                 h+='<div style="min-width:90px;text-align:right"><span style="font-size:11px;opacity:.5">'+esc(a.service_name||'')+'</span></div></div>';
@@ -3776,6 +3751,32 @@ var Holidays={
             .then(function(r){if(r.success){$('.hm-modal-bg').remove();self.load();}else alert('Error');});
         });
     }
+};
+
+// ═══ EXPOSE ORDER PAGE GLOBALLY ═══
+window.HM_openOrderPage=function(opts){
+    window._hmOrderOpts=opts;
+    var ctx={
+        toast:function(msg){
+            var $t=$('<div class="hm-toast">'+esc(msg)+'</div>');
+            $('body').append($t);
+            setTimeout(function(){$t.addClass('show');},10);
+            setTimeout(function(){$t.removeClass('show');setTimeout(function(){$t.remove();},300);},3000);
+        },
+        refresh:function(){
+            window._hmOrderOpts=null;
+            if(typeof opts.onDone==='function')opts.onDone();
+        }
+    };
+    Cal._openOrderPage.call(ctx,{
+        patient_id:opts.patient_id,
+        patient_name:opts.patient_name||'',
+        _ID:opts.appointment_id||0,
+        service_colour:opts.service_colour||'',
+        service_name:opts.service_name||'',
+        clinic_id:opts.clinic_id||'',
+        dispenser_id:opts.dispenser_id||0
+    },opts.outcome||{name:'',color:'#3B82F6'});
 };
 
 // ═══ BOOT ═══
