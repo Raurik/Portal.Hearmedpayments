@@ -1810,7 +1810,7 @@ var Cal={
                 h+='<div style="display:flex;flex:1;overflow:hidden;min-height:0">';
 
                 // ═════ LEFT PANEL ═════
-                h+='<div id="hm-op-left" style="flex:0 0 58%;max-width:58%;overflow-y:auto;padding:24px 28px;background:#fff;border-right:1px solid var(--hm-border,#e2e8f0)">';
+                h+='<div id="hm-op-left" style="flex:0 0 40%;max-width:40%;overflow-y:auto;padding:24px 28px;background:#fff;border-right:1px solid var(--hm-border,#e2e8f0)">';
 
                 // Existing orders
                 if(existOrders.length){
@@ -1917,7 +1917,7 @@ var Cal={
                 h+='</div>'; // end left panel
 
                 // ═════ RIGHT PANEL ═════
-                h+='<div id="hm-op-right" style="flex:0 0 42%;max-width:42%;display:flex;flex-direction:column;padding:28px 32px;background:#fff;border-left:1px solid var(--hm-border,#e2e8f0)">';
+                h+='<div id="hm-op-right" style="flex:0 0 60%;max-width:60%;display:flex;flex-direction:column;padding:28px 32px;background:#fff;border-left:1px solid var(--hm-border,#e2e8f0)">';
 
                 // ── Pay existing order view (hidden by default) ──
                 h+='<div id="hm-op-payex" style="display:none">';
