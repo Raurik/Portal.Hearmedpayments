@@ -73,9 +73,16 @@ class HearMed_Router {
 
     /**
      * Serve a standalone login template — bypasses Elementor / theme entirely.
+     * Uses both is_page() and URI fallback so login works even if the WP page
+     * was trashed or doesn't exist.
      */
     public function login_template( $template ) {
-        if ( is_page( 'login' ) ) {
+        $is_login = is_page( 'login' );
+        if ( ! $is_login ) {
+            $uri = trim( strtok( $_SERVER['REQUEST_URI'] ?? '', '?' ), '/' );
+            $is_login = ( $uri === 'login' );
+        }
+        if ( $is_login ) {
             $custom = HEARMED_PATH . 'templates/login-page.php';
             if ( file_exists( $custom ) ) {
                 return $custom;
