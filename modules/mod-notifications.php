@@ -407,48 +407,42 @@ function hm_notifications_bell_widget() {
 
     <script>
     (function(){
-        /* Position bell centered below "Quick Till Check" link in .hm-topbar */
+        /* Position bell in #hm-midsidebar — centered horizontally, bottom-aligned */
         function placeBell(){
             var bell = document.getElementById('hm-bell-widget');
             if(!bell) return;
 
-            var placed = false;
-            var topbar = document.querySelector('.hm-topbar');
-            if(topbar){
-                var links = topbar.querySelectorAll('a');
-                for(var i = 0; i < links.length; i++){
-                    if(links[i].textContent.trim().toLowerCase().indexOf('quick till') !== -1){
-                        /* Use the Elementor widget container as the anchor */
-                        var container = links[i].closest('.elementor-widget') || links[i].parentElement;
-                        container.style.position = 'relative';
-                        /* Absolutely position bell below, centered */
-                        bell.style.position = 'absolute';
-                        bell.style.top      = 'calc(100% + 14px)';
-                        bell.style.left     = '50%';
-                        bell.style.transform = 'translateX(-50%)';
-                        container.appendChild(bell);
-                        bell.style.display = '';
-                        placed = true;
-                        break;
-                    }
-                }
-                /* Fallback: append to topbar */
-                if(!placed){
-                    topbar.style.position = 'relative';
-                    topbar.appendChild(bell);
-                    bell.style.display = '';
-                    placed = true;
-                }
+            var mid = document.getElementById('hm-midsidebar');
+            if(mid){
+                mid.style.position = 'relative';
+                bell.style.position = 'absolute';
+                bell.style.bottom   = '12px';
+                bell.style.left     = '50%';
+                bell.style.transform = 'translateX(-50%)';
+                bell.style.display  = '';
+                mid.appendChild(bell);
+                return;
             }
 
-            /* Last resort: attach to header */
-            if(!placed){
-                var header = document.querySelector('header, .elementor-location-header, [data-elementor-type="header"]');
-                if(header){
-                    header.style.position = 'relative';
-                    header.appendChild(bell);
-                    bell.style.display = '';
-                }
+            /* Fallback: sidebar or topbar */
+            var sidebar = document.querySelector('.hm-sidebar');
+            if(sidebar){
+                sidebar.style.position = 'relative';
+                bell.style.position = 'absolute';
+                bell.style.bottom   = '16px';
+                bell.style.left     = '50%';
+                bell.style.transform = 'translateX(-50%)';
+                bell.style.display  = '';
+                sidebar.appendChild(bell);
+                return;
+            }
+
+            /* Last resort: header */
+            var header = document.querySelector('header, .elementor-location-header, [data-elementor-type="header"]');
+            if(header){
+                header.style.position = 'relative';
+                header.appendChild(bell);
+                bell.style.display = '';
             }
         }
 
