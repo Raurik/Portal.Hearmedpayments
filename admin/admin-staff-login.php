@@ -30,6 +30,11 @@ class HearMed_Staff_Login {
      * RENDER  
      * ───────────────────────────────────────────────────────────────── */
     public function render( $atts = [] ) {
+        // Don't redirect during REST API / AJAX / Cron — allows Gutenberg to save the page
+        if ( defined( 'REST_REQUEST' ) || defined( 'DOING_AJAX' ) || defined( 'DOING_CRON' ) || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+            return '<p style="padding:2rem;text-align:center;color:#888;">[HearMed Staff Login]</p>';
+        }
+
         // Already logged in → redirect to portal
         if ( PortalAuth::is_v2() && PortalAuth::is_logged_in() ) {
             wp_redirect( home_url( '/' ) );
