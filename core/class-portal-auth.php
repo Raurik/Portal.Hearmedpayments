@@ -148,17 +148,25 @@ class PortalAuth {
         if ( self::$resolved ) return self::$current_staff;
         self::$resolved = true;
 
+        error_log( '[HM Auth Resolve] is_v2=' . ( self::is_v2() ? 'Y' : 'N' ) . ' HMSESS=' . ( isset( $_COOKIE['HMSESS'] ) ? substr( $_COOKIE['HMSESS'], 0, 8 ) . '...' : 'NONE' ) . ' URI=' . ( $_SERVER['REQUEST_URI'] ?? '?' ) );
+
         if ( ! self::is_v2() ) {
             // Legacy mode: bridge from WP user to PG staff
             return self::resolve_legacy();
         }
 
         $token = $_COOKIE[ self::COOKIE_SESSION ] ?? '';
-        if ( ! $token || strlen( $token ) < 32 ) return null;
+        if ( ! $token || strlen( $token ) < 32 ) {
+            error_log( '[HM Auth Resolve] No valid token. Length=' . strlen( $token ) );
+            return null;
+        }
 
         $hash = hash( self::ALGO_HASH, $token );
         $conn = self::pg();
-        if ( ! $conn ) return null;
+        if ( ! $conn ) {
+            error_log( '[HM Auth Resolve] PG connection failed' );
+            return null;
+        }
 
         $result = pg_query_params( $conn,
             "SELECT ss.*, s.id AS staff_id, s.first_name, s.last_name, s.email, s.role,
@@ -172,7 +180,10 @@ class PortalAuth {
         );
 
         $session = $result ? pg_fetch_object( $result ) : null;
-        if ( ! $session ) return null;
+        if ( ! $session ) {
+            error_log( '[HM Auth Resolve] No session found for hash prefix=' . substr( $hash, 0, 8 ) );
+            return null;
+        }
 
         // Staff must be active
         if ( ! self::pg_bool( $session->is_active ) || $session->status === 'disabled' ) {
