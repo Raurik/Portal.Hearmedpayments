@@ -1737,24 +1737,21 @@ var Cal={
                 self.refresh();
                 self.toast('Outcome saved: '+o.name);
 
-                // Determine order flow based on outcome flags
-                var hasOrderFlow=false;
+                // Determine flows needed
+                var needsOrder=(o.triggers_order||o.triggers_invoice)&&a.patient_id;
+                var needsFollowUp=fuSvcId&&a.patient_id;
 
-                if(o.triggers_order && a.patient_id){
-                    // Triggers Order → opens new order creation form
-                    self._openOutcomeOrderModal(a,o);
-                    hasOrderFlow=true;
-                } else if(o.triggers_invoice && a.patient_id){
-                    // Triggers Invoice → order picker (existing orders or create new)
-                    self._openOrderSelectModal(a,o);
-                    hasOrderFlow=true;
-                }
-
-                // Chain: if follow-up required → open follow-up booking
-                if(fuSvcId && a.patient_id){
+                if(needsFollowUp&&needsOrder){
+                    // Follow-up first, then open order page
                     setTimeout(function(){
-                        self._openFollowUpBooking(a,fuSvcId);
-                    }, hasOrderFlow ? 500 : 100);
+                        self._openFollowUpBooking(a,fuSvcId,function(){
+                            self._openOrderPage(a,o);
+                        });
+                    },100);
+                } else if(needsFollowUp){
+                    setTimeout(function(){self._openFollowUpBooking(a,fuSvcId);},100);
+                } else if(needsOrder){
+                    self._openOrderPage(a,o);
                 }
             }).fail(function(){
                 $btn.prop('disabled',false).text('Save Outcome');
@@ -1763,964 +1760,749 @@ var Cal={
         });
     },
 
-    // ── Outcome → New Order Modal ──
-    _openOutcomeOrderModal:function(a,outcome){
+    // ── Full-Screen Order Page ──
+    _openOrderPage:function(a,outcome){
         var self=this;
+        // Loading overlay
+        $('body').append('<div id="hm-op-loading" style="position:fixed;inset:0;z-index:99999;background:var(--hm-navy,#151B33);display:flex;align-items:center;justify-content:center"><div style="text-align:center;color:#fff;font-family:var(--hm-font)"><div style="font-size:18px;font-weight:600;margin-bottom:6px">Loading Order Page</div><div style="font-size:13px;opacity:.6">'+esc(a.patient_name||'')+'</div></div></div>');
 
-        // Load all products from DB for cascading dropdowns
-        post('get_order_products',{}).then(function(r){
-            if(!r.success){self.toast('Failed to load products');return;}
-            var allProducts=r.data.products||[];
-            var allServices=r.data.services||[];
-            var allRanges=r.data.ranges||[];
+        post('get_order_products',{}).then(function(pR){
+            if(!pR.success){$('#hm-op-loading').remove();self.toast('Failed to load products');return;}
+            var allProducts=pR.data.products||[];
+            var allSvcs=pR.data.services||[];
+            var allRanges=pR.data.ranges||[];
 
-            // Category map: item_type → display label
+            // Derived data
             var catMap={product:'Hearing Aid',service:'Service',accessory:'Accessory',consumable:'Consumable',bundled:'Bundled Item'};
-            // Get distinct categories from products
             var categories={};
-            allProducts.forEach(function(p){
-                var cat=p.item_type||'product';
-                if(!categories[cat])categories[cat]=catMap[cat]||cat;
-            });
-            if(allServices.length)categories['service']='Service';
+            allProducts.forEach(function(p){var c=p.item_type||'product';if(!categories[c])categories[c]=catMap[c]||c;});
+            if(allSvcs.length)categories['service']='Service';
 
-            // ── Build Modal HTML ──
-            var h='<div class="hm-modal-bg hm-modal-bg--top open" style="z-index:100000">';
-            h+='<div class="hm-modal" style="max-width:640px;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">';
-
-            // Header
-            h+='<div class="hm-modal-hd" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center">';
-            h+='<div><h3 style="margin:0;font-size:16px">New Order</h3>';
-            h+='<div style="font-size:12px;color:var(--hm-font-sub);margin-top:2px">'+esc(a.patient_name||'')+' — '+esc(outcome.name)+'</div></div>';
-            h+='<button class="hm-close hm-oo-close">×</button></div>';
-
-            // Body
-            h+='<div style="padding:20px;max-height:70vh;overflow-y:auto;background:#fff">';
-
-            // Hidden fields
-            h+='<input type="hidden" id="hm-oo-pid" value="'+a.patient_id+'">';
-            h+='<input type="hidden" id="hm-oo-aid" value="'+a._ID+'">';
-
-            // Step 1: Product Type
-            h+='<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Product Type</label>';
-            h+='<select id="hm-oo-cat" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%"><option value="">— Select Category —</option>';
-            Object.keys(categories).forEach(function(k){
-                h+='<option value="'+k+'">'+esc(categories[k])+'</option>';
-            });
-            h+='</select></div>';
-
-            // Browse mode toggle — only shown when category = Hearing Aid
-            h+='<div id="hm-oo-browse-toggle" style="display:none;margin-bottom:12px">';
-            h+='<div style="display:flex;gap:0">';
-            h+='<button type="button" class="hm-oo-browse-mode" data-mode="range" style="flex:1;padding:6px 0;font-size:var(--hm-font-size-xs);font-weight:600;cursor:pointer;border:1px solid var(--hm-navy);border-right:none;border-radius:var(--hm-radius-sm) 0 0 var(--hm-radius-sm);background:var(--hm-navy);color:#fff;font-family:var(--hm-font-btn)">HearMed Range</button>';
-            h+='<button type="button" class="hm-oo-browse-mode" data-mode="product" style="flex:1;padding:6px 0;font-size:var(--hm-font-size-xs);font-weight:600;cursor:pointer;border:1px solid var(--hm-navy);border-radius:0 var(--hm-radius-sm) var(--hm-radius-sm) 0;background:#fff;color:var(--hm-navy);font-family:var(--hm-font-btn)">Browse by Manufacturer</button>';
-            h+='</div></div>';
-
-            // Range dropdown (shown when browseMode = 'range')
-            h+='<div id="hm-oo-range-wrap" style="display:none;margin-bottom:12px">';
-            h+='<label style="font-size:var(--hm-font-size-xs);font-weight:600;color:var(--hm-text-light);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px">HearMed Range</label>';
-            h+='<select id="hm-oo-range" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
-            h+='<option value="">— Select Range —</option>';
-            h+='</select></div>';
-
-            // Step 2: Manufacturer (hearing aids only)
-            h+='<div id="hm-oo-mfr-wrap" style="display:none;margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Manufacturer</label>';
-            h+='<select id="hm-oo-mfr" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%"><option value="">— Select Manufacturer —</option></select></div>';
-
-            // Step 3: Style (hearing aids only)
-            h+='<div id="hm-oo-style-wrap" style="display:none;margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Style</label>';
-            h+='<select id="hm-oo-style" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%"><option value="">— Select Style —</option></select></div>';
-
-            // Step 4: Product Name
-            h+='<div id="hm-oo-prod-wrap" style="display:none;margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Product Name</label>';
-            h+='<select id="hm-oo-prod" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%"><option value="">— Select Product —</option></select></div>';
-
-            // Step 5: Tech Level (auto-shown for hearing aids)
-            h+='<div id="hm-oo-tech-wrap" style="display:none;margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Tech Level</label>';
-            h+='<div id="hm-oo-tech" style="font-size:13px;font-weight:600;color:#0f172a;padding:8px 10px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0">—</div></div>';
-
-            // Ear Side
-            h+='<div id="hm-oo-ear-wrap" style="display:none;margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Ear</label>';
-            h+='<select id="hm-oo-ear" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
-            h+='<option value="">— Select —</option><option value="Left">Left</option><option value="Right">Right</option><option value="Binaural">Binaural (both)</option>';
-            h+='</select></div>';
-
-            // Charger option (hearing aids only)
-            h+='<div id="hm-oo-charger-wrap" style="display:none;margin-bottom:14px;padding:12px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px">';
-            h+='<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:#92400e;font-weight:600"><input type="checkbox" id="hm-oo-charger"> Include Charger</label></div>';
-
-            // Speaker (hearing aids only) — options from bundled products
             var speakerProds=allProducts.filter(function(p){return p.item_type==='bundled'&&p.bundled_category==='Speaker';});
             var spkSizes={},spkPowers={};
-            speakerProds.forEach(function(p){
-                if(p.speaker_length!==null&&p.speaker_length!=='')spkSizes[p.speaker_length]=1;
-                if(p.speaker_power)spkPowers[p.speaker_power]=1;
-            });
-            h+='<div id="hm-oo-speaker-wrap" style="display:none;margin-bottom:14px">';
-            h+='<div style="display:flex;gap:10px">';
-            h+='<div style="flex:1"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Speaker Size</label>';
-            h+='<select id="hm-oo-speaker-size" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
-            h+='<option value="">—</option>';
-            Object.keys(spkSizes).sort(function(a,b){return Number(a)-Number(b);}).forEach(function(v){h+='<option value="'+v+'">'+v+'</option>';});
-            h+='</select></div>';
-            h+='<div style="flex:1"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Speaker Type</label>';
-            h+='<select id="hm-oo-speaker-type" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
-            h+='<option value="">—</option>';
-            Object.keys(spkPowers).sort().forEach(function(v){h+='<option value="'+esc(v)+'">'+esc(v)+'</option>';});
-            h+='</select></div>';
-            h+='</div></div>';
-
-            // Dome (hearing aids only) — options from bundled products
+            speakerProds.forEach(function(p){if(p.speaker_length!==null&&p.speaker_length!=='')spkSizes[p.speaker_length]=1;if(p.speaker_power)spkPowers[p.speaker_power]=1;});
             var domeProds=allProducts.filter(function(p){return p.item_type==='bundled'&&p.bundled_category==='Dome';});
             var dmSizes={},dmTypes={};
-            domeProds.forEach(function(p){
-                if(p.dome_size)dmSizes[p.dome_size]=1;
-                if(p.dome_type)dmTypes[p.dome_type]=1;
-            });
-            h+='<div id="hm-oo-dome-wrap" style="display:none;margin-bottom:14px">';
-            h+='<div style="display:flex;gap:10px">';
-            h+='<div style="flex:1"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Dome Size</label>';
-            h+='<select id="hm-oo-dome-size" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
-            h+='<option value="">—</option>';
-            Object.keys(dmSizes).sort().forEach(function(v){h+='<option value="'+esc(v)+'">'+esc(v)+'</option>';});
-            h+='</select></div>';
-            h+='<div style="flex:1"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Dome Type</label>';
-            h+='<select id="hm-oo-dome-type" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
-            h+='<option value="">—</option>';
-            Object.keys(dmTypes).sort().forEach(function(v){h+='<option value="'+esc(v)+'">'+esc(v)+'</option>';});
-            h+='</select></div>';
-            h+='</div></div>';
+            domeProds.forEach(function(p){if(p.dome_size)dmSizes[p.dome_size]=1;if(p.dome_type)dmTypes[p.dome_type]=1;});
 
-            // Add Item button
-            h+='<div id="hm-oo-add-wrap" style="display:none;margin-bottom:16px;text-align:right">';
-            h+='<button type="button" id="hm-oo-add-item" class="hm-btn hm-btn--secondary" style="font-size:12px;padding:6px 14px;border-radius:6px">+ Add to Order</button></div>';
+            function build(existOrders){
+                $('#hm-op-loading').remove();
+                var svcCol=a.service_colour||outcome.color||'#3B82F6';
+                var LS='margin-bottom:14px';
+                var LB='font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px';
+                var INP='font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;background:#fff;transition:border-color .15s;box-sizing:border-box';
 
-            // Items Table
-            h+='<div id="hm-oo-items" style="margin-bottom:14px"></div>';
+                // ═══════ BUILD HTML ═══════
+                var h='<div id="hm-op" style="position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;font-family:var(--hm-font,\'Source Sans 3\',sans-serif);color:var(--hm-text,#334155);-webkit-font-smoothing:antialiased;animation:hmOpIn .25s ease">';
 
-            // Discount — toggle % / €
-            h+='<div id="hm-oo-disc-wrap" style="margin-bottom:14px">';
-            h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
-            h+='<label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px">Discount</label>';
-            h+='<div style="display:inline-flex;border:1.5px solid #e2e8f0;border-radius:6px;overflow:hidden">';
-            h+='<button type="button" class="hm-oo-disc-mode" data-mode="pct" style="padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:#0f172a;color:#fff">%</button>';
-            h+='<button type="button" class="hm-oo-disc-mode" data-mode="eur" style="padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:#fff;color:#334155">€</button>';
-            h+='</div></div>';
-            h+='<div style="display:flex;gap:10px;align-items:center">';
-            h+='<input type="range" id="hm-oo-disc-slider" min="0" max="100" value="0" step="1" style="flex:1;accent-color:#f59e0b">';
-            h+='<input type="number" id="hm-oo-disc" class="hm-inp" value="0" min="0" max="100" step="1" style="width:80px;font-size:13px;padding:6px 8px;border-radius:6px;border:1.5px solid #e2e8f0;text-align:center">';
-            h+='<span id="hm-oo-disc-unit" style="font-size:13px;font-weight:600;color:#64748b;min-width:14px">%</span>';
-            h+='</div></div>';
+                // ── Top bar ──
+                h+='<div style="background:var(--hm-navy,#151B33);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.15)">';
+                h+='<button id="hm-op-back" style="background:none;border:1px solid rgba(255,255,255,.2);color:#fff;font-size:13px;font-weight:600;cursor:pointer;padding:6px 14px;border-radius:6px;font-family:var(--hm-font-btn);display:flex;align-items:center;gap:6px;transition:all .15s">';
+                h+='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8H1M8 15L1 8l7-7"/></svg> Calendar</button>';
+                h+='<div style="text-align:center"><div style="font-family:var(--hm-font-title,\'Cormorant Garamond\',serif);font-size:20px;font-weight:700;letter-spacing:-.3px">New Order</div>';
+                h+='<div style="font-size:11px;opacity:.7;margin-top:1px">'+esc(a.patient_name||'Patient')+' — '+esc(outcome.name||'')+'</div></div>';
+                h+='<div style="min-width:90px;text-align:right"><span style="font-size:11px;opacity:.5">'+esc(a.service_name||'')+'</span></div></div>';
 
-            // PRSI Grant
-            h+='<div id="hm-oo-prsi-wrap" style="margin-bottom:14px">';
-            h+='<div style="padding:12px 14px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px">';
-            h+='<label style="font-size:11px;font-weight:700;color:#0e7490;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:8px">PRSI Grant</label>';
-            h+='<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">';
-            h+='<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:#334155"><input type="checkbox" id="hm-oo-prsi-l"> Left ear — €500</label>';
-            h+='<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:#334155"><input type="checkbox" id="hm-oo-prsi-r"> Right ear — €500</label>';
-            h+='</div></div></div>';
+                // ── Split panels ──
+                h+='<div style="display:flex;flex:1;overflow:hidden">';
 
-            // Totals
-            h+='<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:14px">';
-            h+='<div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b;margin-bottom:4px"><span>Subtotal</span><span id="hm-oo-sub">€0.00</span></div>';
-            h+='<div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b;margin-bottom:4px"><span>VAT</span><span id="hm-oo-vat">€0.00</span></div>';
-            h+='<div id="hm-oo-disc-row" style="display:none;justify-content:space-between;font-size:13px;color:#dc2626;margin-bottom:4px"><span>Discount</span><span id="hm-oo-disc-amt">−€0.00</span></div>';
-            h+='<div id="hm-oo-prsi-row" style="display:none;justify-content:space-between;font-size:13px;color:#059669;margin-bottom:4px"><span>PRSI Deduction</span><span id="hm-oo-prsi-amt">−€0.00</span></div>';
-            h+='<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:#0f172a;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px"><span>Patient Pays</span><span id="hm-oo-total">€0.00</span></div>';
-            h+='</div>';
+                // ═════ LEFT PANEL ═════
+                h+='<div id="hm-op-left" style="flex:0 0 58%;max-width:58%;overflow-y:auto;padding:24px 28px;background:#fff;border-right:1px solid var(--hm-border,#e2e8f0)">';
 
-            // Notes
-            h+='<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Order Notes</label>';
-            h+='<textarea id="hm-oo-notes" class="hm-inp" rows="2" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%;resize:vertical" placeholder="Dome size, speaker requirements..."></textarea></div>';
-
-            h+='</div>'; // end body
-
-            // Footer
-            h+='<div style="padding:12px 20px;border-top:1px solid #e2e8f0;background:#fff;display:flex;justify-content:space-between;align-items:center">';
-            h+='<span id="hm-oo-err" style="color:#ef4444;font-size:12px"></span>';
-            h+='<div style="display:flex;gap:8px">';
-            h+='<button class="hm-btn hm-oo-close" style="font-size:13px">Cancel</button>';
-            h+='<button class="hm-btn" id="hm-oo-pay" style="font-size:13px;background:#059669;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">Take Payment</button>';
-            h+='<button class="hm-btn hm-btn--primary hm-oo-save" style="font-size:13px;padding:8px 16px">Submit Order</button>';
-            h+='</div></div>';
-
-            h+='</div></div>';
-
-            $('body').append(h);
-
-            // ── State ──
-            var orderItems=[];
-            var selectedProduct=null;
-            var discountMode='pct';
-            var browseMode='range';
-            var selectedRangeId=null;
-
-            // ── Quickpay state: hide Submit Order for service-only orders ──
-            function updateQuickpayState(){
-                var allServices=orderItems.length>0&&orderItems.every(function(it){return it.type==='service';});
-                if(allServices){
-                    $('.hm-oo-save').hide();
-                    $('#hm-oo-pay').text('Create Invoice & Pay').css({'flex':'1','font-size':'14px'});
-                    $('#hm-oo-prsi-wrap').hide();
-                } else {
-                    $('.hm-oo-save').show();
-                    $('#hm-oo-pay').text('Take Payment').css({'flex':'','font-size':'13px'});
-                    $('#hm-oo-prsi-wrap').show();
-                }
-            }
-
-            // ── Cascading Logic ──
-
-            // Category change
-            $(document).off('change.oocat').on('change.oocat','#hm-oo-cat',function(){
-                var cat=$(this).val();
-                // Reset downstream
-                $('#hm-oo-mfr-wrap,#hm-oo-style-wrap,#hm-oo-prod-wrap,#hm-oo-tech-wrap,#hm-oo-ear-wrap,#hm-oo-add-wrap,#hm-oo-charger-wrap,#hm-oo-speaker-wrap,#hm-oo-dome-wrap').hide();
-                $('#hm-oo-mfr,#hm-oo-style,#hm-oo-prod').val('');
-                $('#hm-oo-charger').prop('checked',false);
-                $('#hm-oo-speaker-size,#hm-oo-speaker-type,#hm-oo-dome-size,#hm-oo-dome-type').val('');
-                selectedProduct=null;
-                selectedRangeId=null;
-
-                if(!cat){
-                    $('#hm-oo-browse-toggle').hide();
-                    $('#hm-oo-range-wrap').hide();
-                    return;
-                }
-
-                if(cat==='product'){
-                    // Show browse mode toggle for hearing aids
-                    $('#hm-oo-browse-toggle').show();
-                    if(browseMode==='range'){
-                        $('#hm-oo-range-wrap').show();
-                        _populateRangeDropdown();
-                    } else {
-                        $('#hm-oo-range-wrap').hide();
-                    }
-                    // Populate manufacturer dropdown (respecting range filter)
-                    _populateManufacturerDropdown();
-                    $('#hm-oo-mfr-wrap').show();
-                } else {
-                    // Hide browse toggle for non-hearing-aid categories
-                    $('#hm-oo-browse-toggle').hide();
-                    $('#hm-oo-range-wrap').hide();
-                    selectedRangeId=null;
-
-                    if(cat==='service'){
-                    // Service: show product name dropdown directly with services
-                    var opts='<option value="">— Select Service —</option>';
-                    allServices.forEach(function(s){
-                        opts+='<option value="svc-'+s.id+'" data-name="'+esc(s.service_name)+'" data-price="'+(s.default_price||0)+'" data-vat="13.5">'+esc(s.service_name)+' — €'+(parseFloat(s.default_price)||0).toFixed(2)+'</option>';
+                // Existing orders
+                if(existOrders.length){
+                    h+='<div style="margin-bottom:24px"><div style="font-size:12px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px">';
+                    h+='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7h8M8 11h6M8 15h4"/></svg> Active Orders for '+esc(a.patient_name||'Patient')+'</div>';
+                    existOrders.forEach(function(ord){
+                        var bal=parseFloat(ord.balance_due)||0;
+                        h+='<div class="hm-op-ex-card" data-oid="'+ord.id+'" data-onum="'+esc(ord.order_number)+'" data-total="'+ord.grand_total+'" data-bal="'+bal.toFixed(2)+'" ';
+                        h+='style="border:1.5px solid var(--hm-border,#e2e8f0);border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all .15s;background:#fff;display:flex;align-items:center;gap:12px">';
+                        h+='<div style="flex:1;min-width:0">';
+                        h+='<div style="font-size:14px;font-weight:700;color:var(--hm-navy,#151B33)">'+esc(ord.order_number)+'</div>';
+                        h+='<div style="font-size:11px;color:var(--hm-text-light,#64748b);margin-top:2px">'+esc(ord.order_date)+' — <span style="font-weight:600;color:#0369a1">'+esc(ord.status)+'</span></div>';
+                        if(ord.items_summary)h+='<div style="font-size:12px;color:var(--hm-text,#334155);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px">'+esc(ord.items_summary)+'</div>';
+                        h+='</div>';
+                        h+='<div style="text-align:right;flex-shrink:0">';
+                        h+='<div style="font-size:15px;font-weight:700;color:var(--hm-navy,#151B33)">€'+parseFloat(ord.grand_total).toFixed(2)+'</div>';
+                        if(parseFloat(ord.deposit)>0)h+='<div style="font-size:11px;color:#059669;margin-top:2px">Paid: €'+parseFloat(ord.deposit).toFixed(2)+'</div>';
+                        h+='<div style="font-size:11px;color:#dc2626;margin-top:1px">Due: €'+bal.toFixed(2)+'</div>';
+                        h+='</div>';
+                        h+='<svg width="18" height="18" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M7 3l6 6-6 6"/></svg>';
+                        h+='</div>';
                     });
-                    $('#hm-oo-prod').html(opts);
-                    $('#hm-oo-prod-wrap').show();
-                } else {
-                    // Accessory / Consumable / Bundled: show product name dropdown
-                    var filtered=allProducts.filter(function(p){return p.item_type===cat;});
+                    h+='<div style="border-bottom:1px solid var(--hm-border,#e2e8f0);margin:16px 0 20px"></div></div>';
+                }
+
+                // Product selection
+                h+='<div><div style="font-size:12px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px">';
+                h+='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> Add Products</div>';
+                h+='<input type="hidden" id="hm-op-pid" value="'+a.patient_id+'">';
+                h+='<input type="hidden" id="hm-op-aid" value="'+a._ID+'">';
+
+                // Category
+                h+='<div style="'+LS+'"><label style="'+LB+'">Product Type</label>';
+                h+='<select id="hm-op-cat" style="'+INP+'"><option value="">— Select Category —</option>';
+                Object.keys(categories).forEach(function(k){h+='<option value="'+k+'">'+esc(categories[k])+'</option>';});
+                h+='</select></div>';
+
+                // Browse mode toggle
+                h+='<div id="hm-op-browse-toggle" style="display:none;'+LS+'">';
+                h+='<div style="display:flex;gap:0;border-radius:8px;overflow:hidden;border:1.5px solid var(--hm-navy,#151B33)">';
+                h+='<button type="button" class="hm-op-browse-btn" data-mode="range" style="flex:1;padding:8px 0;font-size:12px;font-weight:700;cursor:pointer;border:none;background:var(--hm-navy,#151B33);color:#fff;font-family:var(--hm-font-btn);transition:all .15s">HearMed Range</button>';
+                h+='<button type="button" class="hm-op-browse-btn" data-mode="product" style="flex:1;padding:8px 0;font-size:12px;font-weight:700;cursor:pointer;border:none;background:#fff;color:var(--hm-navy,#151B33);font-family:var(--hm-font-btn);transition:all .15s">Browse by Manufacturer</button>';
+                h+='</div></div>';
+
+                // Range
+                h+='<div id="hm-op-range-wrap" style="display:none;'+LS+'"><label style="'+LB+'">HearMed Range</label>';
+                h+='<select id="hm-op-range" style="'+INP+'"><option value="">— Select Range —</option></select></div>';
+
+                // Manufacturer
+                h+='<div id="hm-op-mfr-wrap" style="display:none;'+LS+'"><label style="'+LB+'">Manufacturer</label>';
+                h+='<select id="hm-op-mfr" style="'+INP+'"><option value="">— Select Manufacturer —</option></select></div>';
+
+                // Style
+                h+='<div id="hm-op-style-wrap" style="display:none;'+LS+'"><label style="'+LB+'">Style</label>';
+                h+='<select id="hm-op-style" style="'+INP+'"><option value="">— Select Style —</option></select></div>';
+
+                // Product
+                h+='<div id="hm-op-prod-wrap" style="display:none;'+LS+'"><label style="'+LB+'">Product</label>';
+                h+='<select id="hm-op-prod" style="'+INP+'"><option value="">— Select Product —</option></select></div>';
+
+                // Tech level (read-only)
+                h+='<div id="hm-op-tech-wrap" style="display:none;'+LS+'"><label style="'+LB+'">Tech Level</label>';
+                h+='<div id="hm-op-tech" style="font-size:13px;font-weight:600;color:#0f172a;padding:9px 12px;background:var(--hm-bg-alt,#f8fafc);border-radius:8px;border:1px solid var(--hm-border,#e2e8f0)">—</div></div>';
+
+                // Ear
+                h+='<div id="hm-op-ear-wrap" style="display:none;'+LS+'"><label style="'+LB+'">Ear</label>';
+                h+='<select id="hm-op-ear" style="'+INP+'">';
+                h+='<option value="">— Select —</option><option value="Left">Left</option><option value="Right">Right</option><option value="Binaural">Binaural (both)</option>';
+                h+='</select></div>';
+
+                // Charger
+                h+='<div id="hm-op-charger-wrap" style="display:none;'+LS+';padding:12px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px">';
+                h+='<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:#92400e;font-weight:600"><input type="checkbox" id="hm-op-charger" style="accent-color:#f59e0b"> Include Charger</label></div>';
+
+                // Speaker
+                h+='<div id="hm-op-speaker-wrap" style="display:none;'+LS+'">';
+                h+='<div style="display:flex;gap:10px">';
+                h+='<div style="flex:1"><label style="'+LB+'">Speaker Size</label>';
+                h+='<select id="hm-op-speaker-size" style="'+INP+'"><option value="">—</option>';
+                Object.keys(spkSizes).sort(function(x,y){return Number(x)-Number(y);}).forEach(function(v){h+='<option value="'+v+'">'+v+'</option>';});
+                h+='</select></div>';
+                h+='<div style="flex:1"><label style="'+LB+'">Speaker Type</label>';
+                h+='<select id="hm-op-speaker-type" style="'+INP+'"><option value="">—</option>';
+                Object.keys(spkPowers).sort().forEach(function(v){h+='<option value="'+esc(v)+'">'+esc(v)+'</option>';});
+                h+='</select></div></div></div>';
+
+                // Dome
+                h+='<div id="hm-op-dome-wrap" style="display:none;'+LS+'">';
+                h+='<div style="display:flex;gap:10px">';
+                h+='<div style="flex:1"><label style="'+LB+'">Dome Size</label>';
+                h+='<select id="hm-op-dome-size" style="'+INP+'"><option value="">—</option>';
+                Object.keys(dmSizes).sort().forEach(function(v){h+='<option value="'+esc(v)+'">'+esc(v)+'</option>';});
+                h+='</select></div>';
+                h+='<div style="flex:1"><label style="'+LB+'">Dome Type</label>';
+                h+='<select id="hm-op-dome-type" style="'+INP+'"><option value="">—</option>';
+                Object.keys(dmTypes).sort().forEach(function(v){h+='<option value="'+esc(v)+'">'+esc(v)+'</option>';});
+                h+='</select></div></div></div>';
+
+                // Add to order button
+                h+='<div id="hm-op-add-wrap" style="display:none;'+LS+';text-align:right">';
+                h+='<button type="button" id="hm-op-add-item" style="font-size:13px;font-weight:600;padding:8px 20px;border-radius:8px;border:none;background:var(--hm-teal,#0BB4C4);color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">+ Add to Order</button></div>';
+
+                h+='</div>'; // end product selection
+                h+='</div>'; // end left panel
+
+                // ═════ RIGHT PANEL ═════
+                h+='<div id="hm-op-right" style="flex:0 0 42%;max-width:42%;overflow-y:auto;padding:24px;background:var(--hm-bg-alt,#f8fafc)">';
+
+                // ── Pay existing order view (hidden by default) ──
+                h+='<div id="hm-op-payex" style="display:none">';
+                h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">';
+                h+='<button id="hm-op-payex-back" style="background:none;border:1px solid var(--hm-border,#e2e8f0);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px;color:var(--hm-text-light,#64748b);font-family:var(--hm-font)">← Back</button>';
+                h+='<span style="font-size:12px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.5px">Pay Existing Order</span></div>';
+                h+='<div id="hm-op-payex-detail" style="background:#fff;border-radius:10px;border:1px solid var(--hm-border,#e2e8f0);padding:16px;margin-bottom:16px"></div>';
+                h+='<div id="hm-op-payex-form"></div>';
+                h+='</div>';
+
+                // ── New order summary (default view) ──
+                h+='<div id="hm-op-neworder">';
+
+                // Cart
+                h+='<div style="font-size:12px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px">';
+                h+='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg> Order Summary</div>';
+                h+='<div id="hm-op-items" style="background:#fff;border-radius:10px;border:1px solid var(--hm-border,#e2e8f0);padding:16px;margin-bottom:16px;min-height:60px">';
+                h+='<div style="color:var(--hm-text-muted,#94a3b8);font-size:13px;text-align:center;padding:12px 0">No items added yet</div></div>';
+
+                // Pricing card
+                h+='<div style="background:#fff;border-radius:10px;border:1px solid var(--hm-border,#e2e8f0);padding:16px;margin-bottom:16px">';
+                var PR='display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px';
+                h+='<div style="'+PR+';color:var(--hm-text-light,#64748b)"><span>Subtotal</span><span id="hm-op-sub">€0.00</span></div>';
+                h+='<div style="'+PR+';color:var(--hm-text-light,#64748b)"><span>VAT</span><span id="hm-op-vat">€0.00</span></div>';
+
+                // Discount
+                h+='<div style="margin:10px 0 6px;padding-top:8px;border-top:1px solid var(--hm-border-light,#f1f5f9)">';
+                h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+                h+='<span style="font-size:12px;font-weight:600;color:var(--hm-text,#334155)">Discount</span>';
+                h+='<div style="display:inline-flex;border:1.5px solid var(--hm-border,#e2e8f0);border-radius:6px;overflow:hidden">';
+                h+='<button type="button" class="hm-op-disc-mode" data-mode="pct" style="padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:var(--hm-navy,#151B33);color:#fff">%</button>';
+                h+='<button type="button" class="hm-op-disc-mode" data-mode="eur" style="padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:#fff;color:var(--hm-text,#334155)">€</button>';
+                h+='</div></div>';
+                h+='<div style="display:flex;gap:8px;align-items:center">';
+                h+='<input type="range" id="hm-op-disc-slider" min="0" max="100" value="0" step="1" style="flex:1;accent-color:#f59e0b">';
+                h+='<input type="number" id="hm-op-disc" value="0" min="0" max="100" step="1" style="width:70px;font-size:13px;padding:5px 8px;border-radius:6px;border:1.5px solid var(--hm-border,#e2e8f0);text-align:center">';
+                h+='<span id="hm-op-disc-unit" style="font-size:12px;font-weight:600;color:var(--hm-text-light,#64748b);min-width:14px">%</span>';
+                h+='</div></div>';
+                h+='<div id="hm-op-disc-row" style="display:none;'+PR+';color:#dc2626"><span>Discount</span><span id="hm-op-disc-amt">−€0.00</span></div>';
+
+                // PRSI
+                h+='<div id="hm-op-prsi-wrap" style="margin:10px 0 6px;padding:10px 12px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px">';
+                h+='<div style="font-size:11px;font-weight:700;color:#0e7490;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">PRSI Grant</div>';
+                h+='<div style="display:flex;gap:16px;flex-wrap:wrap">';
+                h+='<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--hm-text,#334155)"><input type="checkbox" id="hm-op-prsi-l" style="accent-color:#0e7490"> Left ear — €500</label>';
+                h+='<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--hm-text,#334155)"><input type="checkbox" id="hm-op-prsi-r" style="accent-color:#0e7490"> Right ear — €500</label>';
+                h+='</div></div>';
+                h+='<div id="hm-op-prsi-row" style="display:none;'+PR+';color:#059669"><span>PRSI Deduction</span><span id="hm-op-prsi-amt">−€0.00</span></div>';
+
+                // Total
+                h+='<div style="display:flex;justify-content:space-between;font-size:18px;font-weight:700;color:var(--hm-navy,#151B33);border-top:2px solid var(--hm-border,#e2e8f0);padding-top:10px;margin-top:8px">';
+                h+='<span>Patient Pays</span><span id="hm-op-total">€0.00</span></div>';
+                h+='</div>'; // end pricing
+
+                // Notes
+                h+='<div style="'+LS+'"><label style="'+LB+'">Order Notes</label>';
+                h+='<textarea id="hm-op-notes" rows="2" placeholder="Dome size, speaker requirements..." style="'+INP+';resize:vertical"></textarea></div>';
+
+                // Error
+                h+='<div id="hm-op-err" style="color:#ef4444;font-size:12px;margin-bottom:8px"></div>';
+
+                // Action buttons
+                h+='<div id="hm-op-actions" style="display:flex;gap:10px;margin-bottom:16px">';
+                h+='<button id="hm-op-submit" style="flex:1;padding:12px;font-size:14px;font-weight:700;border-radius:8px;border:none;background:var(--hm-teal,#0BB4C4);color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">Submit Order</button>';
+                h+='<button id="hm-op-pay-btn" style="flex:1;padding:12px;font-size:14px;font-weight:700;border-radius:8px;border:2px solid #059669;background:#fff;color:#059669;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">Take Payment</button>';
+                h+='</div>';
+
+                // ── Payment section (hidden until Take Payment clicked) ──
+                h+='<div id="hm-op-paysec" style="display:none;background:#fff;border-radius:10px;border:2px solid #059669;padding:16px;margin-bottom:16px">';
+                h+='<div style="font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;display:flex;align-items:center;gap:8px">';
+                h+='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Payment</div>';
+                h+='<div style="text-align:center;margin-bottom:12px"><div style="font-size:11px;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.3px">Total Due</div>';
+                h+='<div id="hm-op-pay-due" style="font-size:24px;font-weight:700;color:#059669">€0.00</div></div>';
+
+                h+='<div style="'+LS+'"><label style="'+LB+'">Amount (€)</label>';
+                h+='<input type="number" id="hm-op-pay-amt" step="0.01" min="0" style="'+INP+';font-size:15px;font-weight:600"></div>';
+
+                h+='<div style="'+LS+'"><label style="'+LB+'">Payment Method</label>';
+                h+='<select id="hm-op-pay-method" style="'+INP+'">';
+                h+='<option value="">— Select —</option><option value="Card">Card</option><option value="Cash">Cash</option>';
+                h+='<option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option>';
+                h+='</select></div>';
+
+                h+='<div id="hm-op-pay-primary-wrap" style="display:none;'+LS+'"><label style="'+LB+'">Primary Method Amount (€)</label>';
+                h+='<input type="number" id="hm-op-pay-amt-1" step="0.01" min="0" style="'+INP+'"></div>';
+
+                h+='<div id="hm-op-pay-extras" style="margin-bottom:8px"></div>';
+                h+='<button type="button" id="hm-op-pay-add-method" style="width:100%;margin-bottom:12px;padding:8px;font-size:12px;border:1px dashed #94a3b8;background:var(--hm-bg-alt,#f8fafc);border-radius:6px;cursor:pointer;color:var(--hm-text-light,#64748b);font-family:var(--hm-font);transition:all .15s">+ Add Payment Method</button>';
+
+                h+='<div id="hm-op-pay-err" style="color:#ef4444;font-size:12px;margin-bottom:8px"></div>';
+
+                h+='<div style="display:flex;gap:8px">';
+                h+='<button id="hm-op-pay-cancel" style="flex:0 0 auto;padding:10px 16px;font-size:13px;font-weight:600;border-radius:8px;border:1px solid var(--hm-border,#e2e8f0);background:#fff;color:var(--hm-text,#334155);cursor:pointer;font-family:var(--hm-font-btn)">Cancel</button>';
+                h+='<button id="hm-op-pay-confirm" style="flex:1;padding:10px;font-size:14px;font-weight:700;border-radius:8px;border:none;background:#059669;color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">Confirm Payment</button>';
+                h+='</div></div>'; // end payment section
+
+                h+='</div>'; // end #hm-op-neworder
+                h+='</div>'; // end right panel
+                h+='</div>'; // end split
+                h+='<style>@keyframes hmOpIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}</style>';
+                h+='</div>'; // end #hm-op
+
+                $('body').append(h);
+
+                // ═══════ STATE ═══════
+                var orderItems=[];
+                var selectedProduct=null;
+                var discountMode='pct';
+                var browseMode='range';
+                var selectedRangeId=null;
+                var _cleanupNs='.opback .opexcard .opexhover .opcancelex .opexconfirm .opcat .opbrowse .oprange .opmfr .opstyle .opprod .opadd .oprem .opdisc .opslider .opdiscmode .opprsi .opsubmit .oppaybtn .oppaycancel .oppayconfirm .opaddmethod .opremmethod .oppayexback';
+
+                function cleanupEvents(){$(document).off(_cleanupNs);$('#hm-op').remove();}
+
+                // ═══════ HELPERS ═══════
+                function updateQuickpayState(){
+                    var allSvc=orderItems.length>0&&orderItems.every(function(it){return it.type==='service';});
+                    if(allSvc){$('#hm-op-submit').hide();$('#hm-op-pay-btn').text('Create Invoice & Pay').css('flex','1');$('#hm-op-prsi-wrap').hide();}
+                    else{$('#hm-op-submit').show();$('#hm-op-pay-btn').text('Take Payment').css('flex','1');$('#hm-op-prsi-wrap').show();}
+                }
+
+                function renderItems(){
+                    if(!orderItems.length){$('#hm-op-items').html('<div style="color:var(--hm-text-muted,#94a3b8);font-size:13px;text-align:center;padding:12px 0">No items added yet</div>');return;}
+                    var t='';
+                    orderItems.forEach(function(it,idx){
+                        var details=[];
+                        if(it.speaker_size)details.push('Speaker: '+it.speaker_size+(it.speaker_type?' '+it.speaker_type:''));
+                        if(it.dome_size)details.push('Dome: '+it.dome_size+(it.dome_type?' '+it.dome_type:''));
+                        t+='<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:10px 0;'+(idx>0?'border-top:1px solid var(--hm-border-light,#f1f5f9)':'')+'">';
+                        t+='<div style="flex:1;min-width:0">';
+                        t+='<div style="font-size:13px;font-weight:600;color:var(--hm-navy,#151B33)">'+esc(it.name)+'</div>';
+                        if(details.length)t+='<div style="font-size:11px;color:var(--hm-text-light,#64748b);margin-top:2px">'+esc(details.join(' · '))+'</div>';
+                        t+='<div style="font-size:11px;color:var(--hm-text-muted,#94a3b8);margin-top:2px">'+(it.ear?it.ear+' · ':'')+it.qty+'× €'+it.unit_price.toFixed(2)+'</div>';
+                        t+='</div>';
+                        t+='<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px">';
+                        t+='<span style="font-size:14px;font-weight:700;color:var(--hm-navy,#151B33)">€'+(it.unit_price*it.qty).toFixed(2)+'</span>';
+                        t+='<button class="hm-op-rem" data-idx="'+idx+'" style="border:none;background:#fee2e2;color:#b91c1c;width:24px;height:24px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .15s">×</button>';
+                        t+='</div></div>';
+                    });
+                    $('#hm-op-items').html(t);
+                }
+
+                function updateTotals(){
+                    var net=0,vat=0,grossSum=0;
+                    orderItems.forEach(function(it){var g=it.unit_price*it.qty;grossSum+=g;vat+=it.vat_amount;net+=g-it.vat_amount;});
+                    var discVal=parseFloat($('#hm-op-disc').val())||0;
+                    var disc=0;
+                    if(discountMode==='pct'){disc=discVal>0?Math.round(grossSum*(Math.min(discVal,100)/100)*100)/100:0;}
+                    else{disc=Math.min(discVal,grossSum);}
+                    var prsi=($('#hm-op-prsi-l').is(':checked')?500:0)+($('#hm-op-prsi-r').is(':checked')?500:0);
+                    var total=Math.max(0,grossSum-disc-prsi);
+                    $('#hm-op-sub').text('€'+net.toFixed(2));
+                    $('#hm-op-vat').text('€'+vat.toFixed(2));
+                    $('#hm-op-disc-amt').text('−€'+disc.toFixed(2));
+                    if(disc>0){$('#hm-op-disc-row').css('display','flex');}else{$('#hm-op-disc-row').hide();}
+                    if(prsi>0){$('#hm-op-prsi-row').css('display','flex');}else{$('#hm-op-prsi-row').hide();}
+                    $('#hm-op-prsi-amt').text('−€'+prsi.toFixed(2));
+                    $('#hm-op-total').text('€'+total.toFixed(2));
+                    $('#hm-op-pay-due').text('€'+total.toFixed(2));
+                    $('#hm-op-pay-amt').val(total.toFixed(2));
+                }
+
+                function _populateRangeDropdown(){
+                    var sel=$('#hm-op-range');sel.find('option:not(:first)').remove();
+                    allRanges.forEach(function(r){
+                        if(r.is_active==='f'||r.is_active===false||r.is_active===0)return;
+                        var pt=parseFloat(r.price_total||0),pe=parseFloat(r.price_ex_prsi||0);
+                        sel.append('<option value="'+r.id+'">'+esc(r.range_name)+' — €'+pt.toLocaleString(undefined,{minimumFractionDigits:0})+' (€'+pe.toLocaleString(undefined,{minimumFractionDigits:0})+' after PRSI)</option>');
+                    });
+                }
+
+                function _populateManufacturerDropdown(){
+                    var sel=$('#hm-op-mfr');sel.find('option:not(:first)').remove();
+                    var valid={};
+                    allProducts.filter(function(p){return p.item_type==='product';}).forEach(function(p){
+                        if(selectedRangeId&&parseInt(p.hearmed_range_id)!==selectedRangeId)return;
+                        if(p.manufacturer_id&&p.manufacturer_name)valid[p.manufacturer_id]=p.manufacturer_name;
+                    });
+                    Object.keys(valid).sort(function(x,y){return valid[x].localeCompare(valid[y]);}).forEach(function(id){
+                        sel.append('<option value="'+id+'">'+esc(valid[id])+'</option>');
+                    });
+                }
+
+                // ═══════ EVENT HANDLERS ═══════
+
+                // ── Back button ──
+                $(document).off('click.opback').on('click.opback','#hm-op-back',function(){cleanupEvents();});
+
+                // ── Existing order card click ──
+                $(document).off('click.opexcard').on('click.opexcard','.hm-op-ex-card',function(){
+                    var $c=$(this);
+                    var ordId=parseInt($c.attr('data-oid'),10);
+                    var ordNum=$c.data('onum');
+                    var bal=parseFloat($c.attr('data-bal'))||0;
+                    var ordTotal=parseFloat($c.attr('data-total'))||0;
+                    // Switch right panel to pay-existing mode
+                    $('#hm-op-neworder').hide();
+                    $('#hm-op-payex').show();
+                    var d='<div style="font-size:16px;font-weight:700;color:var(--hm-navy,#151B33);margin-bottom:4px">'+esc(ordNum)+'</div>';
+                    d+='<div style="font-size:13px;color:var(--hm-text-light,#64748b);margin-bottom:8px">Order Total: €'+ordTotal.toFixed(2)+'</div>';
+                    if(ordTotal-bal>0.01)d+='<div style="font-size:13px;color:#059669;margin-bottom:4px">Already Paid: €'+(ordTotal-bal).toFixed(2)+'</div>';
+                    d+='<div style="font-size:18px;font-weight:700;color:#dc2626">Balance Due: €'+bal.toFixed(2)+'</div>';
+                    $('#hm-op-payex-detail').html(d);
+                    var pf='<div style="background:#fff;border-radius:10px;border:2px solid #059669;padding:16px">';
+                    pf+='<div style="font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Payment</div>';
+                    pf+='<div style="'+LS+'"><label style="'+LB+'">Amount (€)</label>';
+                    pf+='<input type="number" id="hm-op-ex-amt" step="0.01" min="0" value="'+bal.toFixed(2)+'" style="'+INP+';font-size:15px;font-weight:600"></div>';
+                    pf+='<div style="'+LS+'"><label style="'+LB+'">Payment Method</label>';
+                    pf+='<select id="hm-op-ex-method" style="'+INP+'">';
+                    pf+='<option value="">— Select —</option><option value="Card">Card</option><option value="Cash">Cash</option>';
+                    pf+='<option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option></select></div>';
+                    pf+='<div id="hm-op-ex-err" style="color:#ef4444;font-size:12px;margin-bottom:8px"></div>';
+                    pf+='<button id="hm-op-ex-confirm" data-oid="'+ordId+'" data-onum="'+esc(ordNum)+'" data-bal="'+bal.toFixed(2)+'" style="width:100%;padding:12px;font-size:14px;font-weight:700;border-radius:8px;border:none;background:#059669;color:#fff;cursor:pointer;font-family:var(--hm-font-btn)">Confirm Payment</button>';
+                    pf+='</div>';
+                    $('#hm-op-payex-form').html(pf);
+                });
+
+                // ── Hover on existing order cards ──
+                $(document).off('mouseenter.opexhover mouseleave.opexhover').on('mouseenter.opexhover','.hm-op-ex-card',function(){
+                    $(this).css({borderColor:'var(--hm-teal,#0BB4C4)',background:'#f0fdfa'});
+                }).on('mouseleave.opexhover','.hm-op-ex-card',function(){
+                    $(this).css({borderColor:'var(--hm-border,#e2e8f0)',background:'#fff'});
+                });
+
+                // ── Back from pay-existing ──
+                $(document).off('click.oppayexback').on('click.oppayexback','#hm-op-payex-back',function(){
+                    $('#hm-op-payex').hide();$('#hm-op-neworder').show();
+                });
+
+                // ── Pay existing confirm ──
+                $(document).off('click.opexconfirm').on('click.opexconfirm','#hm-op-ex-confirm',function(){
+                    var $btn=$(this);
+                    var ordId=parseInt($btn.attr('data-oid'),10);
+                    var ordNum=$btn.attr('data-onum');
+                    var maxBal=parseFloat($btn.attr('data-bal'))||0;
+                    var amt=parseFloat($('#hm-op-ex-amt').val())||0;
+                    var method=$('#hm-op-ex-method').val();
+                    if(!amt||amt<=0){$('#hm-op-ex-err').text('Enter a valid amount.');return;}
+                    if(amt>maxBal){$('#hm-op-ex-err').text('Amount cannot exceed €'+maxBal.toFixed(2));return;}
+                    if(!method){$('#hm-op-ex-err').text('Select a payment method.');return;}
+                    $btn.prop('disabled',true).text('Processing...');
+                    post('record_order_payment',{
+                        order_id:ordId,order_number:ordNum,amount:amt,payment_method:method,split_payments_json:'[]'
+                    }).then(function(r){
+                        if(r.success){cleanupEvents();self.toast('Payment of €'+amt.toFixed(2)+' recorded on '+ordNum);self.refresh();}
+                        else{
+                            $btn.prop('disabled',false).text('Confirm Payment');
+                            if(r.data&&r.data.code==='serials_required'){
+                                var items=(r.data&&Array.isArray(r.data.serial_items))?r.data.serial_items:[];
+                                if(!items.length){$('#hm-op-ex-err').text('Serial numbers required.');return;}
+                                var recDef=(r.data.received_date)?String(r.data.received_date):new Date().toISOString().slice(0,10);
+                                var recDate=window.prompt('Enter received date (YYYY-MM-DD)',recDef);
+                                if(!recDate)return;
+                                var entries=[];
+                                for(var i=0;i<items.length;i++){
+                                    var it=items[i]||{};var lbl=String(it.item_description||('Product #'+String(it.product_id||'')));
+                                    var ear=String(it.ear_side||'Unknown').toLowerCase();
+                                    if(ear==='left'||ear==='binaural'||ear==='unknown'){var sl=window.prompt('Serial (Left) for '+lbl,'');if(sl===null)return;sl=String(sl||'').trim();if(sl)entries.push({product_id:parseInt(it.product_id,10)||0,ear:'left',serial:sl});}
+                                    if(ear==='right'||ear==='binaural'){var sr=window.prompt('Serial (Right) for '+lbl,'');if(sr===null)return;sr=String(sr||'').trim();if(sr)entries.push({product_id:parseInt(it.product_id,10)||0,ear:'right',serial:sr});}
+                                    if(ear==='unknown'&&entries.length===0){var su=window.prompt('Serial for '+lbl+' (saved as Left)','');if(su===null)return;su=String(su||'').trim();if(su)entries.push({product_id:parseInt(it.product_id,10)||0,ear:'left',serial:su});}
+                                }
+                                if(!entries.length){$('#hm-op-ex-err').text('No serials entered.');return;}
+                                post('save_order_serials_from_payment',{order_id:ordId,received_date:recDate,serials_json:JSON.stringify(entries)}).then(function(sv){
+                                    if(sv.success){$('#hm-op-ex-err').css('color','#059669').text('Serials saved. Click Confirm Payment again.');}
+                                    else{$('#hm-op-ex-err').css('color','#ef4444').text(sv.data&&sv.data.message?sv.data.message:'Failed');}
+                                }).fail(function(){$('#hm-op-ex-err').css('color','#ef4444').text('Network error saving serials.');});
+                                return;
+                            }
+                            $('#hm-op-ex-err').text(r.data&&r.data.message?r.data.message:'Failed');
+                        }
+                    }).fail(function(){$btn.prop('disabled',false).text('Confirm Payment');$('#hm-op-ex-err').text('Network error');});
+                });
+
+                // ── Category change ──
+                $(document).off('change.opcat').on('change.opcat','#hm-op-cat',function(){
+                    var cat=$(this).val();
+                    $('#hm-op-mfr-wrap,#hm-op-style-wrap,#hm-op-prod-wrap,#hm-op-tech-wrap,#hm-op-ear-wrap,#hm-op-add-wrap,#hm-op-charger-wrap,#hm-op-speaker-wrap,#hm-op-dome-wrap').hide();
+                    $('#hm-op-mfr,#hm-op-style,#hm-op-prod').val('');
+                    $('#hm-op-charger').prop('checked',false);
+                    $('#hm-op-speaker-size,#hm-op-speaker-type,#hm-op-dome-size,#hm-op-dome-type').val('');
+                    selectedProduct=null;selectedRangeId=null;
+                    if(!cat){$('#hm-op-browse-toggle,#hm-op-range-wrap').hide();return;}
+                    if(cat==='product'){
+                        $('#hm-op-browse-toggle').show();
+                        if(browseMode==='range'){$('#hm-op-range-wrap').show();_populateRangeDropdown();}
+                        else{$('#hm-op-range-wrap').hide();}
+                        _populateManufacturerDropdown();$('#hm-op-mfr-wrap').show();
+                    } else {
+                        $('#hm-op-browse-toggle,#hm-op-range-wrap').hide();selectedRangeId=null;
+                        if(cat==='service'){
+                            var opts='<option value="">— Select Service —</option>';
+                            allSvcs.forEach(function(s){
+                                opts+='<option value="svc-'+s.id+'" data-name="'+esc(s.service_name)+'" data-price="'+(s.default_price||0)+'" data-vat="13.5">'+esc(s.service_name)+' — €'+(parseFloat(s.default_price)||0).toFixed(2)+'</option>';
+                            });
+                            $('#hm-op-prod').html(opts);$('#hm-op-prod-wrap').show();
+                        } else {
+                            var filtered=allProducts.filter(function(p){return p.item_type===cat;});
+                            var opts2='<option value="">— Select Product —</option>';
+                            filtered.forEach(function(p){
+                                var nm=(p.manufacturer_name?p.manufacturer_name+' ':'')+(p.product_name||'');
+                                opts2+='<option value="'+p.id+'" data-name="'+esc(nm)+'" data-price="'+(p.retail_price||0)+'" data-vat="'+(p.vat_category==='Consumables'?23:0)+'">'+esc(nm)+' — €'+(parseFloat(p.retail_price)||0).toFixed(2)+'</option>';
+                            });
+                            $('#hm-op-prod').html(opts2);$('#hm-op-prod-wrap').show();
+                        }
+                    }
+                });
+
+                // ── Browse mode toggle ──
+                $(document).off('click.opbrowse').on('click.opbrowse','.hm-op-browse-btn',function(){
+                    browseMode=$(this).data('mode');selectedRangeId=null;
+                    $('.hm-op-browse-btn').css({background:'#fff',color:'var(--hm-navy,#151B33)'});
+                    $(this).css({background:'var(--hm-navy,#151B33)',color:'#fff'});
+                    if(browseMode==='range'){$('#hm-op-range-wrap').show();_populateRangeDropdown();}
+                    else{$('#hm-op-range-wrap').hide();$('#hm-op-range').val('');}
+                    _populateManufacturerDropdown();
+                    $('#hm-op-style-wrap,#hm-op-prod-wrap,#hm-op-tech-wrap,#hm-op-ear-wrap,#hm-op-add-wrap').hide();
+                    $('#hm-op-style,#hm-op-prod').val('');selectedProduct=null;
+                });
+
+                // ── Range change ──
+                $(document).off('change.oprange').on('change.oprange','#hm-op-range',function(){
+                    selectedRangeId=$(this).val()?parseInt($(this).val()):null;
+                    _populateManufacturerDropdown();
+                    $('#hm-op-style-wrap,#hm-op-prod-wrap,#hm-op-tech-wrap,#hm-op-ear-wrap,#hm-op-add-wrap').hide();
+                    $('#hm-op-style,#hm-op-prod').val('');selectedProduct=null;
+                });
+
+                // ── Manufacturer change ──
+                $(document).off('change.opmfr').on('change.opmfr','#hm-op-mfr',function(){
+                    var mfr=$(this).val();
+                    $('#hm-op-style-wrap,#hm-op-prod-wrap,#hm-op-tech-wrap,#hm-op-ear-wrap,#hm-op-add-wrap').hide();
+                    $('#hm-op-style,#hm-op-prod').val('');selectedProduct=null;
+                    if(!mfr)return;
+                    var styles={};
+                    allProducts.filter(function(p){
+                        if(p.item_type!=='product')return false;
+                        if(String(p.manufacturer_id)!==String(mfr))return false;
+                        if(selectedRangeId&&parseInt(p.hearmed_range_id)!==selectedRangeId)return false;
+                        return true;
+                    }).forEach(function(p){if(p.style)styles[p.style]=1;});
+                    var opts='<option value="">— Select Style —</option>';
+                    Object.keys(styles).sort().forEach(function(s){opts+='<option value="'+esc(s)+'">'+esc(s)+'</option>';});
+                    $('#hm-op-style').html(opts);$('#hm-op-style-wrap').show();
+                });
+
+                // ── Style change ──
+                $(document).off('change.opstyle').on('change.opstyle','#hm-op-style',function(){
+                    var style=$(this).val(),mfr=$('#hm-op-mfr').val();
+                    $('#hm-op-prod-wrap,#hm-op-tech-wrap,#hm-op-ear-wrap,#hm-op-add-wrap').hide();
+                    $('#hm-op-prod').val('');selectedProduct=null;
+                    if(!style)return;
+                    var filtered=allProducts.filter(function(p){
+                        if(p.item_type!=='product')return false;
+                        if(String(p.manufacturer_id)!==String(mfr))return false;
+                        if(p.style!==style)return false;
+                        if(selectedRangeId&&parseInt(p.hearmed_range_id)!==selectedRangeId)return false;
+                        return true;
+                    });
                     var opts='<option value="">— Select Product —</option>';
                     filtered.forEach(function(p){
-                        var nm=(p.manufacturer_name?p.manufacturer_name+' ':'')+(p.product_name||'');
-                        opts+='<option value="'+p.id+'" data-name="'+esc(nm)+'" data-price="'+(p.retail_price||0)+'" data-vat="'+(p.vat_category==='Consumables'?23:0)+'">'+esc(nm)+' — €'+(parseFloat(p.retail_price)||0).toFixed(2)+'</option>';
+                        var nm=(p.manufacturer_name?p.manufacturer_name+' ':'')+(p.product_name||'')+' '+(p.style||'')+' ('+(p.tech_level||'—')+')';
+                        opts+='<option value="'+p.id+'" data-name="'+esc(nm)+'" data-price="'+(p.retail_price||0)+'" data-tech="'+esc(p.tech_level||'')+'" data-vat="0">'+esc(nm)+' — €'+(parseFloat(p.retail_price)||0).toFixed(2)+'</option>';
                     });
-                    $('#hm-oo-prod').html(opts);
-                    $('#hm-oo-prod-wrap').show();
-                }
-                }
-            });
-
-            // ── Browse mode toggle ──
-            $(document).off('click.oobrowse').on('click.oobrowse','.hm-oo-browse-mode',function(){
-                browseMode=$(this).data('mode');
-                selectedRangeId=null;
-                $('.hm-oo-browse-mode').css({background:'#fff',color:'var(--hm-navy)'});
-                $(this).css({background:'var(--hm-navy)',color:'#fff'});
-                if(browseMode==='range'){
-                    $('#hm-oo-range-wrap').show();
-                    _populateRangeDropdown();
-                } else {
-                    $('#hm-oo-range-wrap').hide();
-                    $('#hm-oo-range').val('');
-                }
-                // Reset downstream
-                _populateManufacturerDropdown();
-                $('#hm-oo-style-wrap,#hm-oo-prod-wrap,#hm-oo-tech-wrap,#hm-oo-ear-wrap,#hm-oo-add-wrap').hide();
-                $('#hm-oo-style,#hm-oo-prod').val('');
-                selectedProduct=null;
-            });
-
-            // ── Range selection ──
-            $(document).off('change.oorange').on('change.oorange','#hm-oo-range',function(){
-                selectedRangeId=$(this).val()?parseInt($(this).val()):null;
-                _populateManufacturerDropdown();
-                $('#hm-oo-style-wrap,#hm-oo-prod-wrap,#hm-oo-tech-wrap,#hm-oo-ear-wrap,#hm-oo-add-wrap').hide();
-                $('#hm-oo-style,#hm-oo-prod').val('');
-                selectedProduct=null;
-            });
-
-            function _populateRangeDropdown(){
-                var sel=$('#hm-oo-range');
-                sel.find('option:not(:first)').remove();
-                allRanges.forEach(function(r){
-                    if(r.is_active==='f'||r.is_active===false||r.is_active===0)return;
-                    var priceTotal=parseFloat(r.price_total||0);
-                    var priceExPrsi=parseFloat(r.price_ex_prsi||0);
-                    sel.append('<option value="'+r.id+'">'+esc(r.range_name)+' — €'+priceTotal.toLocaleString(undefined,{minimumFractionDigits:0})+' (€'+priceExPrsi.toLocaleString(undefined,{minimumFractionDigits:0})+' after PRSI)</option>');
+                    $('#hm-op-prod').html(opts);$('#hm-op-prod-wrap').show();
                 });
-            }
 
-            function _populateManufacturerDropdown(){
-                var sel=$('#hm-oo-mfr');
-                sel.find('option:not(:first)').remove();
-                var validMfrIds={};
-                allProducts.filter(function(p){return p.item_type==='product';}).forEach(function(p){
-                    if(selectedRangeId&&parseInt(p.hearmed_range_id)!==selectedRangeId)return;
-                    if(p.manufacturer_id&&p.manufacturer_name)validMfrIds[p.manufacturer_id]=p.manufacturer_name;
+                // ── Product select ──
+                $(document).off('change.opprod').on('change.opprod','#hm-op-prod',function(){
+                    var val=$(this).val();
+                    if(!val){$('#hm-op-tech-wrap,#hm-op-ear-wrap,#hm-op-add-wrap').hide();selectedProduct=null;return;}
+                    var opt=$(this).find('option:selected');
+                    var cat=$('#hm-op-cat').val();
+                    selectedProduct={id:val,type:val.toString().indexOf('svc-')===0?'service':(cat||'product'),
+                        name:opt.data('name')||opt.text(),unit_price:parseFloat(opt.data('price'))||0,
+                        vat_rate:parseFloat(opt.data('vat'))||0,tech_level:opt.data('tech')||'',ear:''};
+                    if(cat==='product'&&selectedProduct.tech_level){$('#hm-op-tech').text(selectedProduct.tech_level);$('#hm-op-tech-wrap').show();}
+                    else{$('#hm-op-tech-wrap').hide();}
+                    if(cat==='product'){$('#hm-op-ear-wrap,#hm-op-charger-wrap,#hm-op-speaker-wrap,#hm-op-dome-wrap').show();}
+                    else{$('#hm-op-ear-wrap,#hm-op-charger-wrap,#hm-op-speaker-wrap,#hm-op-dome-wrap').hide();}
+                    $('#hm-op-add-wrap').show();
                 });
-                var sorted=Object.keys(validMfrIds).sort(function(a,b){return validMfrIds[a].localeCompare(validMfrIds[b]);});
-                sorted.forEach(function(id){
-                    sel.append('<option value="'+id+'">'+esc(validMfrIds[id])+'</option>');
-                });
-            }
 
-            // Manufacturer change (hearing aids)
-            $(document).off('change.oomfr').on('change.oomfr','#hm-oo-mfr',function(){
-                var mfr=$(this).val();
-                $('#hm-oo-style-wrap,#hm-oo-prod-wrap,#hm-oo-tech-wrap,#hm-oo-ear-wrap,#hm-oo-add-wrap').hide();
-                $('#hm-oo-style,#hm-oo-prod').val('');
-                selectedProduct=null;
-                if(!mfr)return;
-
-                // Get distinct styles for this manufacturer (filtered by range if active)
-                var styles={};
-                allProducts.filter(function(p){
-                    if(p.item_type!=='product')return false;
-                    if(String(p.manufacturer_id)!==String(mfr))return false;
-                    if(selectedRangeId&&parseInt(p.hearmed_range_id)!==selectedRangeId)return false;
-                    return true;
-                }).forEach(function(p){
-                    if(p.style)styles[p.style]=1;
-                });
-                var opts='<option value="">— Select Style —</option>';
-                Object.keys(styles).sort().forEach(function(s){
-                    opts+='<option value="'+esc(s)+'">'+esc(s)+'</option>';
-                });
-                $('#hm-oo-style').html(opts);
-                $('#hm-oo-style-wrap').show();
-            });
-
-            // Style change (hearing aids)
-            $(document).off('change.oostyle').on('change.oostyle','#hm-oo-style',function(){
-                var style=$(this).val();
-                var mfr=$('#hm-oo-mfr').val();
-                $('#hm-oo-prod-wrap,#hm-oo-tech-wrap,#hm-oo-ear-wrap,#hm-oo-add-wrap').hide();
-                $('#hm-oo-prod').val('');
-                selectedProduct=null;
-                if(!style)return;
-
-                // Get products matching this manufacturer + style (filtered by range if active)
-                var filtered=allProducts.filter(function(p){
-                    if(p.item_type!=='product')return false;
-                    if(String(p.manufacturer_id)!==String(mfr))return false;
-                    if(p.style!==style)return false;
-                    if(selectedRangeId&&parseInt(p.hearmed_range_id)!==selectedRangeId)return false;
-                    return true;
-                });
-                var opts='<option value="">— Select Product —</option>';
-                filtered.forEach(function(p){
-                    var nm=(p.manufacturer_name?p.manufacturer_name+' ':'')+(p.product_name||'')+' '+(p.style||'')+' ('+(p.tech_level||'—')+')';
-                    opts+='<option value="'+p.id+'" data-name="'+esc(nm)+'" data-price="'+(p.retail_price||0)+'" data-tech="'+esc(p.tech_level||'')+'" data-vat="0">'+esc(nm)+' — €'+(parseFloat(p.retail_price)||0).toFixed(2)+'</option>';
-                });
-                $('#hm-oo-prod').html(opts);
-                $('#hm-oo-prod-wrap').show();
-            });
-
-            // Product selection
-            $(document).off('change.ooprod').on('change.ooprod','#hm-oo-prod',function(){
-                var val=$(this).val();
-                if(!val){
-                    $('#hm-oo-tech-wrap,#hm-oo-ear-wrap,#hm-oo-add-wrap').hide();
+                // ── Add to order ──
+                $(document).off('click.opadd').on('click.opadd','#hm-op-add-item',function(){
+                    if(!selectedProduct){$('#hm-op-err').text('Select a product first.');return;}
+                    var cat=$('#hm-op-cat').val();
+                    var ear=$('#hm-op-ear').val()||'';
+                    if(cat==='product'&&!ear){$('#hm-op-err').text('Please select which ear.');return;}
+                    $('#hm-op-err').text('');
+                    var item=$.extend({},selectedProduct);
+                    item.ear=ear;item.qty=cat==='product'&&ear==='Binaural'?2:1;
+                    if(cat==='product'){
+                        item.speaker_size=$('#hm-op-speaker-size').val()||'';
+                        item.speaker_type=$('#hm-op-speaker-type').val()||'';
+                        item.dome_size=$('#hm-op-dome-size').val()||'';
+                        item.dome_type=$('#hm-op-dome-type').val()||'';
+                    }
+                    var gross=item.unit_price*item.qty;
+                    item.vat_amount=item.vat_rate>0?parseFloat((gross-(gross/(1+item.vat_rate/100))).toFixed(2)):0;
+                    item.line_total=parseFloat(gross.toFixed(2));
+                    item._uid=Date.now()+Math.random();
+                    orderItems.push(item);
+                    if(cat==='product'&&$('#hm-op-charger').is(':checked')){
+                        var cp=allProducts.filter(function(p){return p.item_type==='accessory'&&/charger/i.test(p.product_name);})[0];
+                        var ci={id:cp?cp.id:'charger',type:'accessory',
+                            name:cp?((cp.manufacturer_name?cp.manufacturer_name+' ':'')+cp.product_name):'Charger',
+                            unit_price:cp?parseFloat(cp.retail_price)||0:0,vat_rate:0,tech_level:'',
+                            ear:ear==='Binaural'?'Both':ear,qty:1,_uid:Date.now()+Math.random()};
+                        var cg=ci.unit_price*ci.qty;
+                        ci.vat_amount=ci.vat_rate>0?parseFloat((cg-(cg/(1+ci.vat_rate/100))).toFixed(2)):0;
+                        ci.line_total=parseFloat(cg.toFixed(2));
+                        orderItems.push(ci);
+                    }
+                    renderItems();updateTotals();updateQuickpayState();
                     selectedProduct=null;
-                    return;
-                }
-                var opt=$(this).find('option:selected');
-                var cat=$('#hm-oo-cat').val();
-                selectedProduct={
-                    id:val,
-                    type:val.toString().indexOf('svc-')===0?'service':(cat||'product'),
-                    name:opt.data('name')||opt.text(),
-                    unit_price:parseFloat(opt.data('price'))||0,
-                    vat_rate:parseFloat(opt.data('vat'))||0,
-                    tech_level:opt.data('tech')||'',
-                    ear:''
-                };
-
-                // Show tech level for hearing aids
-                if(cat==='product'&&selectedProduct.tech_level){
-                    $('#hm-oo-tech').text(selectedProduct.tech_level);
-                    $('#hm-oo-tech-wrap').show();
-                } else {
-                    $('#hm-oo-tech-wrap').hide();
-                }
-
-                // Show ear selector + bundled options for hearing aids
-                if(cat==='product'){
-                    $('#hm-oo-ear-wrap,#hm-oo-charger-wrap,#hm-oo-speaker-wrap,#hm-oo-dome-wrap').show();
-                } else {
-                    $('#hm-oo-ear-wrap,#hm-oo-charger-wrap,#hm-oo-speaker-wrap,#hm-oo-dome-wrap').hide();
-                }
-
-                $('#hm-oo-add-wrap').show();
-            });
-
-            // Add item button
-            $(document).off('click.ooadditem').on('click.ooadditem','#hm-oo-add-item',function(){
-                if(!selectedProduct){$('#hm-oo-err').text('Select a product first.');return;}
-                var cat=$('#hm-oo-cat').val();
-                var ear=$('#hm-oo-ear').val()||'';
-                if(cat==='product'&&!ear){$('#hm-oo-err').text('Please select which ear.');return;}
-                $('#hm-oo-err').text('');
-
-                var item=$.extend({},selectedProduct);
-                item.ear=ear;
-                item.qty=cat==='product'&&ear==='Binaural'?2:1;
-
-                // Capture bundled options for hearing aids
-                if(cat==='product'){
-                    item.speaker_size=$('#hm-oo-speaker-size').val()||'';
-                    item.speaker_type=$('#hm-oo-speaker-type').val()||'';
-                    item.dome_size=$('#hm-oo-dome-size').val()||'';
-                    item.dome_type=$('#hm-oo-dome-type').val()||'';
-                }
-
-                // Prices are VAT-inclusive — extract VAT from gross
-                var gross=item.unit_price*item.qty;
-                item.vat_amount=item.vat_rate>0?parseFloat((gross-(gross/(1+item.vat_rate/100))).toFixed(2)):0;
-                item.line_total=parseFloat(gross.toFixed(2));
-                item._uid=Date.now()+Math.random();
-                orderItems.push(item);
-
-                // Auto-add charger if checked
-                if(cat==='product'&&$('#hm-oo-charger').is(':checked')){
-                    var chargerProd=allProducts.filter(function(p){return p.item_type==='accessory'&&/charger/i.test(p.product_name);})[0];
-                    var chargerItem={
-                        id:chargerProd?chargerProd.id:'charger',
-                        type:'accessory',
-                        name:chargerProd?((chargerProd.manufacturer_name?chargerProd.manufacturer_name+' ':'')+chargerProd.product_name):'Charger',
-                        unit_price:chargerProd?parseFloat(chargerProd.retail_price)||0:0,
-                        vat_rate:0,
-                        tech_level:'',
-                        ear:ear==='Binaural'?'Both':ear,
-                        qty:1,
-                        _uid:Date.now()+Math.random()
-                    };
-                    var cGross=chargerItem.unit_price*chargerItem.qty;
-                    chargerItem.vat_amount=chargerItem.vat_rate>0?parseFloat((cGross-(cGross/(1+chargerItem.vat_rate/100))).toFixed(2)):0;
-                    chargerItem.line_total=parseFloat(cGross.toFixed(2));
-                    orderItems.push(chargerItem);
-                }
-
-                renderItems();
-                updateTotals();
-                updateQuickpayState();
-
-                // Reset selectors for next item
-                selectedProduct=null;
-                $('#hm-oo-cat').val('').trigger('change.oocat');
-            });
-
-            function renderItems(){
-                if(!orderItems.length){
-                    $('#hm-oo-items').html('<div style="color:#94a3b8;font-size:12px;padding:12px 0;text-align:center">No items added yet.</div>');
-                    return;
-                }
-
-                var th='<table style="width:100%;font-size:12px;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden"><thead><tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0">';
-                th+='<th style="text-align:left;padding:6px 8px;font-weight:600;color:#334155">Item</th>';
-                th+='<th style="text-align:center;padding:6px 8px;font-weight:600;color:#334155">Ear</th>';
-                th+='<th style="text-align:center;padding:6px 8px;font-weight:600;color:#334155">Qty</th>';
-                th+='<th style="text-align:right;padding:6px 8px;font-weight:600;color:#334155">Price</th>';
-                th+='<th style="width:36px"></th></tr></thead><tbody>';
-                orderItems.forEach(function(it,idx){
-                    var details=[];
-                    if(it.speaker_size)details.push('Speaker: '+it.speaker_size+(it.speaker_type?' '+it.speaker_type:''));
-                    if(it.dome_size)details.push('Dome: '+it.dome_size+(it.dome_type?' '+it.dome_type:''));
-                    th+='<tr style="border-bottom:1px solid #f1f5f9">';
-                    th+='<td style="padding:6px 8px;color:#0f172a">'+esc(it.name);
-                    if(details.length)th+='<div style="font-size:10px;color:#64748b;margin-top:2px">'+esc(details.join(' | '))+'</div>';
-                    th+='</td>';
-                    th+='<td style="padding:6px 8px;text-align:center;color:#64748b">'+(it.ear||'—')+'</td>';
-                    th+='<td style="padding:6px 8px;text-align:center;color:#64748b">'+it.qty+'</td>';
-                    th+='<td style="padding:6px 8px;text-align:right;font-weight:600;color:#0f172a">€'+(it.unit_price*it.qty).toFixed(2)+'</td>';
-                    th+='<td style="padding:6px 8px"><button class="hm-oo-rem" data-idx="'+idx+'" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:14px;font-weight:700">×</button></td>';
-                    th+='</tr>';
+                    $('#hm-op-cat').val('').trigger('change.opcat');
                 });
-                th+='</tbody></table>';
-                $('#hm-oo-items').html(th);
-            }
 
-            function updateTotals(){
-                var net=0,vat=0,grossSum=0;
-                orderItems.forEach(function(it){var g=it.unit_price*it.qty;grossSum+=g;vat+=it.vat_amount;net+=g-it.vat_amount;});
-                var discVal=parseFloat($('#hm-oo-disc').val())||0;
-                var disc=0;
-                if(discountMode==='pct'){
-                    disc=discVal>0?Math.round(grossSum*(Math.min(discVal,100)/100)*100)/100:0;
-                } else {
-                    disc=Math.min(discVal,grossSum);
-                }
-                var prsi=($('#hm-oo-prsi-l').is(':checked')?500:0)+($('#hm-oo-prsi-r').is(':checked')?500:0);
-                var total=Math.max(0,grossSum-disc-prsi);
-                $('#hm-oo-sub').text('€'+net.toFixed(2));
-                $('#hm-oo-vat').text('€'+vat.toFixed(2));
-                $('#hm-oo-disc-amt').text('−€'+disc.toFixed(2));
-                if(disc>0){$('#hm-oo-disc-row').css('display','flex');}else{$('#hm-oo-disc-row').hide();}
-                if(prsi>0){$('#hm-oo-prsi-row').css('display','flex');}else{$('#hm-oo-prsi-row').hide();}
-                $('#hm-oo-prsi-amt').text('−€'+prsi.toFixed(2));
-                $('#hm-oo-total').text('€'+total.toFixed(2));
-            }
+                // ── Remove item ──
+                $(document).off('click.oprem').on('click.oprem','.hm-op-rem',function(){
+                    orderItems.splice(parseInt($(this).data('idx')),1);
+                    renderItems();updateTotals();updateQuickpayState();
+                });
 
-            // Remove item
-            $(document).off('click.oorem').on('click.oorem','.hm-oo-rem',function(){
-                orderItems.splice(parseInt($(this).data('idx')),1);
-                renderItems();updateTotals();updateQuickpayState();
-            });
+                // ── PRSI changes ──
+                $(document).off('change.opprsi').on('change.opprsi','#hm-op-prsi-l,#hm-op-prsi-r',updateTotals);
 
-            // PRSI / Discount change → update totals
-            $(document).off('change.ooprsi').on('change.ooprsi','#hm-oo-prsi-l,#hm-oo-prsi-r',updateTotals);
-            $(document).off('input.oodisc').on('input.oodisc','#hm-oo-disc',function(){$('#hm-oo-disc-slider').val($(this).val());updateTotals();});
-            $(document).off('input.ooslider').on('input.ooslider','#hm-oo-disc-slider',function(){$('#hm-oo-disc').val($(this).val());updateTotals();});
-            $(document).off('click.oodiscmode').on('click.oodiscmode','.hm-oo-disc-mode',function(){
-                var mode=$(this).data('mode');
-                discountMode=mode;
-                $('.hm-oo-disc-mode').css({background:'#fff',color:'#334155'});
-                $(this).css({background:'#0f172a',color:'#fff'});
-                if(mode==='pct'){
-                    $('#hm-oo-disc-unit').text('%');
-                    $('#hm-oo-disc-slider').attr({max:100,step:1});
-                    $('#hm-oo-disc').attr({max:100,step:1});
-                } else {
-                    var sub=0;orderItems.forEach(function(it){sub+=it.unit_price*it.qty;});
-                    $('#hm-oo-disc-unit').text('€');
-                    $('#hm-oo-disc-slider').attr({max:Math.ceil(sub)||10000,step:10});
-                    $('#hm-oo-disc').attr({max:Math.ceil(sub)||10000,step:10});
-                }
-                $('#hm-oo-disc').val(0);$('#hm-oo-disc-slider').val(0);
-                updateTotals();
-            });
+                // ── Discount input / slider ──
+                $(document).off('input.opdisc').on('input.opdisc','#hm-op-disc',function(){$('#hm-op-disc-slider').val($(this).val());updateTotals();});
+                $(document).off('input.opslider').on('input.opslider','#hm-op-disc-slider',function(){$('#hm-op-disc').val($(this).val());updateTotals();});
+                $(document).off('click.opdiscmode').on('click.opdiscmode','.hm-op-disc-mode',function(){
+                    var mode=$(this).data('mode');discountMode=mode;
+                    $('.hm-op-disc-mode').css({background:'#fff',color:'var(--hm-text,#334155)'});
+                    $(this).css({background:'var(--hm-navy,#151B33)',color:'#fff'});
+                    if(mode==='pct'){$('#hm-op-disc-unit').text('%');$('#hm-op-disc-slider').attr({max:100,step:1});$('#hm-op-disc').attr({max:100,step:1});}
+                    else{var sub=0;orderItems.forEach(function(it){sub+=it.unit_price*it.qty;});$('#hm-op-disc-unit').text('€');$('#hm-op-disc-slider').attr({max:Math.ceil(sub)||10000,step:10});$('#hm-op-disc').attr({max:Math.ceil(sub)||10000,step:10});}
+                    $('#hm-op-disc').val(0);$('#hm-op-disc-slider').val(0);updateTotals();
+                });
 
-            // Close
-            $(document).off('click.ooclose').on('click.ooclose','.hm-oo-close',function(e){
-                e.stopPropagation();$('.hm-modal-bg--top').remove();
-                $(document).off('.oocat .oomfr .oostyle .ooprod .ooadditem .oorem .ooclose .oosave .oopay .ooprsi .oodisc .ooslider .oodiscmode');
-            });
-            // Click-away disabled — use Cancel or × to close
+                // ── Submit Order ──
+                $(document).off('click.opsubmit').on('click.opsubmit','#hm-op-submit',function(){
+                    if(!orderItems.length){$('#hm-op-err').text('Please add at least one item.');return;}
+                    var $btn=$(this);$btn.prop('disabled',true).text('Submitting...');
+                    var discVal=parseFloat($('#hm-op-disc').val())||0;
+                    post('create_outcome_order',{
+                        patient_id:$('#hm-op-pid').val(),appointment_id:$('#hm-op-aid').val(),
+                        items_json:JSON.stringify(orderItems),notes:$('#hm-op-notes').val()||'',
+                        prsi_left:$('#hm-op-prsi-l').is(':checked')?1:0,prsi_right:$('#hm-op-prsi-r').is(':checked')?1:0,
+                        discount_pct:discountMode==='pct'?discVal:0,discount_euro:discountMode==='eur'?discVal:0,payment_method:''
+                    }).then(function(r){
+                        if(r.success){cleanupEvents();self.toast('Order '+r.data.order_number+' submitted for approval');self.refresh();}
+                        else{$btn.prop('disabled',false).text('Submit Order');$('#hm-op-err').text(r.data&&r.data.message?r.data.message:'Failed to create order');}
+                    }).fail(function(){$btn.prop('disabled',false).text('Submit Order');$('#hm-op-err').text('Network error');});
+                });
 
-            // ── Submit Order ──
-            $(document).off('click.oosave').on('click.oosave','.hm-oo-save',function(){
-                if(!orderItems.length){$('#hm-oo-err').text('Please add at least one item.');return;}
-                var $btn=$(this);$btn.prop('disabled',true).text('Submitting...');
-                var discVal=parseFloat($('#hm-oo-disc').val())||0;
-                post('create_outcome_order',{
-                    patient_id:$('#hm-oo-pid').val(),
-                    appointment_id:$('#hm-oo-aid').val(),
-                    items_json:JSON.stringify(orderItems),
-                    notes:$('#hm-oo-notes').val()||'',
-                    prsi_left:$('#hm-oo-prsi-l').is(':checked')?1:0,
-                    prsi_right:$('#hm-oo-prsi-r').is(':checked')?1:0,
-                    discount_pct:discountMode==='pct'?discVal:0,
-                    discount_euro:discountMode==='eur'?discVal:0,
-                    payment_method:''
-                }).then(function(r){
-                    if(r.success){
-                        $('.hm-modal-bg--top').remove();
-                        $(document).off('.oocat .oomfr .oostyle .ooprod .ooadditem .oorem .ooclose .oosave .oopay .oobg .ooprsi .oodisc .ooslider .oodiscmode');
-                        self.toast('Order '+r.data.order_number+' submitted for approval');
-                        self.refresh();
-                    } else {
-                        $btn.prop('disabled',false).text('Submit Order');
-                        $('#hm-oo-err').text(r.data&&r.data.message?r.data.message:'Failed to create order');
+                // ── Take Payment → show payment section ──
+                $(document).off('click.oppaybtn').on('click.oppaybtn','#hm-op-pay-btn',function(){
+                    if(!orderItems.length){$('#hm-op-err').text('Please add at least one item.');return;}
+                    $('#hm-op-err').text('');
+                    var total=$('#hm-op-total').text().replace('€','');
+                    $('#hm-op-pay-due').text('€'+total);
+                    $('#hm-op-pay-amt').val(total);
+                    $('#hm-op-paysec').slideDown(200);
+                    $('#hm-op-actions').hide();
+                    setTimeout(function(){$('#hm-op-paysec')[0].scrollIntoView({behavior:'smooth',block:'center'});},250);
+                });
+
+                // ── Cancel payment ──
+                $(document).off('click.oppaycancel').on('click.oppaycancel','#hm-op-pay-cancel',function(){
+                    $('#hm-op-paysec').slideUp(200);$('#hm-op-actions').show();
+                });
+
+                // ── Add split method ──
+                $(document).off('click.opaddmethod').on('click.opaddmethod','#hm-op-pay-add-method',function(){
+                    var row='<div class="hm-op-pay-extra-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+                    row+='<select class="hm-op-pay-extra-method" style="'+INP+';flex:1"><option value="">Method</option><option value="Card">Card</option><option value="Cash">Cash</option><option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option></select>';
+                    row+='<input type="number" class="hm-op-pay-extra-amt" step="0.01" min="0" placeholder="Amount" style="'+INP+';width:120px">';
+                    row+='<button type="button" class="hm-op-pay-rem-method" style="border:0;background:#fee2e2;color:#b91c1c;border-radius:6px;padding:7px 9px;cursor:pointer;flex-shrink:0">✕</button>';
+                    row+='</div>';
+                    $('#hm-op-pay-extras').append(row);
+                    $('#hm-op-pay-primary-wrap').show();
+                    if(!$('#hm-op-pay-amt-1').val())$('#hm-op-pay-amt-1').val($('#hm-op-pay-amt').val());
+                    var total=parseFloat($('#hm-op-pay-amt').val())||0;
+                    var alloc=parseFloat($('#hm-op-pay-amt-1').val())||0;
+                    $('#hm-op-pay-extras .hm-op-pay-extra-row').each(function(i){
+                        if(i<$('#hm-op-pay-extras .hm-op-pay-extra-row').length-1)alloc+=parseFloat($(this).find('.hm-op-pay-extra-amt').val())||0;
+                    });
+                    var rem=Math.round((total-alloc)*100)/100;
+                    if(rem>0)$('#hm-op-pay-extras .hm-op-pay-extra-row').last().find('.hm-op-pay-extra-amt').val(rem.toFixed(2));
+                });
+
+                // ── Remove split method ──
+                $(document).off('click.opremmethod').on('click.opremmethod','.hm-op-pay-rem-method',function(){
+                    $(this).closest('.hm-op-pay-extra-row').remove();
+                    if(!$('#hm-op-pay-extras .hm-op-pay-extra-row').length){$('#hm-op-pay-primary-wrap').hide();$('#hm-op-pay-amt-1').val('');}
+                });
+
+                // ── Confirm Payment ──
+                $(document).off('click.oppayconfirm').on('click.oppayconfirm','#hm-op-pay-confirm',function(){
+                    if(!orderItems.length){$('#hm-op-pay-err').text('Add items first.');return;}
+                    var amt=parseFloat($('#hm-op-pay-amt').val())||0;
+                    var method=$('#hm-op-pay-method').val();
+                    var hasExtra=$('#hm-op-pay-extras .hm-op-pay-extra-row').length>0;
+                    var splitPayload=[];
+                    if(!amt||amt<=0){$('#hm-op-pay-err').text('Enter a valid amount.');return;}
+                    if(!method){$('#hm-op-pay-err').text('Select a payment method.');return;}
+                    if(hasExtra){
+                        var pa=parseFloat($('#hm-op-pay-amt-1').val())||0;
+                        if(!pa||pa<=0){$('#hm-op-pay-err').text('Enter primary method amount.');return;}
+                        splitPayload.push({method:method,amount:pa});
+                        $('#hm-op-pay-extras .hm-op-pay-extra-row').each(function(){
+                            var m=$(this).find('.hm-op-pay-extra-method').val();
+                            var ea=parseFloat($(this).find('.hm-op-pay-extra-amt').val())||0;
+                            if(m&&ea>0)splitPayload.push({method:m,amount:ea});
+                        });
+                        var sm=0;splitPayload.forEach(function(x){sm+=parseFloat(x.amount)||0;});
+                        if(Math.abs(sm-amt)>0.01){$('#hm-op-pay-err').text('Split amounts must equal total.');return;}
                     }
-                }).fail(function(){
-                    $btn.prop('disabled',false).text('Submit Order');
-                    $('#hm-oo-err').text('Network error');
+                    var $btn=$(this);$btn.prop('disabled',true).text('Processing...');
+                    var discVal=parseFloat($('#hm-op-disc').val())||0;
+                    // Step 1: Create order
+                    post('create_outcome_order',{
+                        patient_id:$('#hm-op-pid').val(),appointment_id:$('#hm-op-aid').val(),
+                        items_json:JSON.stringify(orderItems),notes:$('#hm-op-notes').val()||'',
+                        prsi_left:$('#hm-op-prsi-l').is(':checked')?1:0,prsi_right:$('#hm-op-prsi-r').is(':checked')?1:0,
+                        discount_pct:discountMode==='pct'?discVal:0,discount_euro:discountMode==='eur'?discVal:0,payment_method:''
+                    }).then(function(r){
+                        if(!r.success){$btn.prop('disabled',false).text('Confirm Payment');$('#hm-op-pay-err').text(r.data&&r.data.message?r.data.message:'Failed to create order');return;}
+                        var newOrderId=r.data.order_id;
+                        var newOrderNum=r.data.order_number;
+                        // Step 2: Record payment
+                        post('record_order_payment',{
+                            order_id:newOrderId,order_number:newOrderNum,amount:amt,payment_method:method,
+                            split_payments_json:JSON.stringify(splitPayload)
+                        }).then(function(pr){
+                            if(pr.success){cleanupEvents();self.toast('Payment of €'+amt.toFixed(2)+' recorded on '+newOrderNum);self.refresh();}
+                            else{
+                                $btn.prop('disabled',false).text('Confirm Payment');
+                                if(pr.data&&pr.data.code==='serials_required'){
+                                    var items=(pr.data&&Array.isArray(pr.data.serial_items))?pr.data.serial_items:[];
+                                    if(!items.length){$('#hm-op-pay-err').text('Serial numbers required.');return;}
+                                    var recDef=(pr.data.received_date)?String(pr.data.received_date):new Date().toISOString().slice(0,10);
+                                    var recDate=window.prompt('Enter received date (YYYY-MM-DD)',recDef);
+                                    if(!recDate)return;
+                                    var entries=[];
+                                    for(var i=0;i<items.length;i++){
+                                        var it=items[i]||{};var lbl=String(it.item_description||('Product #'+String(it.product_id||'')));
+                                        var ear=String(it.ear_side||'Unknown').toLowerCase();
+                                        if(ear==='left'||ear==='binaural'||ear==='unknown'){var sl=window.prompt('Serial (Left) for '+lbl,'');if(sl===null)return;sl=String(sl||'').trim();if(sl)entries.push({product_id:parseInt(it.product_id,10)||0,ear:'left',serial:sl});}
+                                        if(ear==='right'||ear==='binaural'){var sr=window.prompt('Serial (Right) for '+lbl,'');if(sr===null)return;sr=String(sr||'').trim();if(sr)entries.push({product_id:parseInt(it.product_id,10)||0,ear:'right',serial:sr});}
+                                        if(ear==='unknown'&&entries.length===0){var su=window.prompt('Serial for '+lbl+' (saved as Left)','');if(su===null)return;su=String(su||'').trim();if(su)entries.push({product_id:parseInt(it.product_id,10)||0,ear:'left',serial:su});}
+                                    }
+                                    if(!entries.length){$('#hm-op-pay-err').text('No serials entered.');return;}
+                                    post('save_order_serials_from_payment',{order_id:newOrderId,received_date:recDate,serials_json:JSON.stringify(entries)}).then(function(sv){
+                                        if(sv.success){$('#hm-op-pay-err').css('color','#059669').text('Serials saved. Click Confirm Payment again.');}
+                                        else{$('#hm-op-pay-err').css('color','#ef4444').text(sv.data&&sv.data.message?sv.data.message:'Failed');}
+                                    }).fail(function(){$('#hm-op-pay-err').css('color','#ef4444').text('Network error saving serials.');});
+                                    return;
+                                }
+                                var msg=(pr.data&&pr.data.message)?pr.data.message:'Failed';
+                                if(pr.data&&pr.data.debug){
+                                    var d=pr.data.debug;
+                                    var recent=Array.isArray(d.recent_orders)?d.recent_orders.map(function(o){return(o.order_number||'')+' (#'+(o.id||'')+')';}).join(', '):'';
+                                    msg+=' [debug id='+String(d.received_order_id||0)+', number='+String(d.received_order_number||'')+', lookup='+String(d.used_lookup||'')+(recent?(', recent='+recent):'')+']';
+                                }
+                                $('#hm-op-pay-err').css('color','#ef4444').text(msg);
+                            }
+                        }).fail(function(){$btn.prop('disabled',false).text('Confirm Payment');$('#hm-op-pay-err').text('Network error');});
+                    }).fail(function(){$btn.prop('disabled',false).text('Confirm Payment');$('#hm-op-pay-err').text('Network error');});
                 });
-            });
 
-            // ── Take Payment → creates order then shows payment modal ──
-            $(document).off('click.oopay').on('click.oopay','#hm-oo-pay',function(){
-                if(!orderItems.length){$('#hm-oo-err').text('Please add at least one item.');return;}
-                var $btn=$(this);
-                var isQuickpay=orderItems.every(function(it){return it.type==='service';});
-                $btn.prop('disabled',true).text(isQuickpay?'Creating Invoice...':'Processing...');
-                var discVal=parseFloat($('#hm-oo-disc').val())||0;
-                post('create_outcome_order',{
-                    patient_id:$('#hm-oo-pid').val(),
-                    appointment_id:$('#hm-oo-aid').val(),
-                    items_json:JSON.stringify(orderItems),
-                    notes:$('#hm-oo-notes').val()||'',
-                    prsi_left:$('#hm-oo-prsi-l').is(':checked')?1:0,
-                    prsi_right:$('#hm-oo-prsi-r').is(':checked')?1:0,
-                    discount_pct:discountMode==='pct'?discVal:0,
-                    discount_euro:discountMode==='eur'?discVal:0,
-                    payment_method:''
-                }).then(function(r){
-                    if(r.success){
-                        // Close order modal
-                        $('.hm-modal-bg--top').remove();
-                        $(document).off('.oocat .oomfr .oostyle .ooprod .ooadditem .oorem .ooclose .oosave .oopay .oobg .ooprsi .oodisc .ooslider .oodiscmode');
+            } // end build()
 
-                        // Open payment modal
-                        self._openPaymentModal(r.data.order_id,r.data.order_number,r.data.grand_total,a.patient_name||'');
-                    } else {
-                        $btn.prop('disabled',false).text('Take Payment');
-                        $('#hm-oo-err').text(r.data&&r.data.message?r.data.message:'Failed');
-                    }
-                }).fail(function(){
-                    $btn.prop('disabled',false).text('Take Payment');
-                    $('#hm-oo-err').text('Network error');
-                });
+            // Fetch existing orders then build
+            post('get_patient_pipeline_orders',{patient_id:a.patient_id,appointment_id:(a._ID||a.id||0)}).then(function(oR){
+                var pl=oR.data||[];
+                build(oR.success?(Array.isArray(pl)?pl:(pl.orders||[])):[]);
+            }).fail(function(){
+                build([]);
             });
 
         }).fail(function(){
+            $('#hm-op-loading').remove();
             self.toast('Failed to load product data');
         });
     },
-
-    // ── Payment Modal ──
-    _openPaymentModal:function(orderId,orderNumber,grandTotal,patientName){
-        var self=this;
-        var h='<div class="hm-modal-bg hm-modal-bg--top open" style="z-index:100001">';
-        h+='<div class="hm-modal" style="max-width:420px;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">';
-
-        h+='<div class="hm-modal-hd" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center">';
-        h+='<div><h3 style="margin:0;font-size:16px">Take Payment</h3>';
-        h+='<div style="font-size:12px;color:var(--hm-font-sub);margin-top:2px">'+esc(patientName)+' — '+esc(orderNumber)+'</div></div>';
-        h+='<button class="hm-close hm-pay-close">×</button></div>';
-
-        h+='<div style="padding:20px;background:#fff">';
-        h+='<div style="text-align:center;margin-bottom:16px"><div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.3px">Total Due</div>';
-        h+='<div style="font-size:28px;font-weight:700;color:#059669">€'+parseFloat(grandTotal).toFixed(2)+'</div></div>';
-
-        h+='<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Amount (€)</label>';
-        h+='<input type="number" id="hm-pay-amt" class="hm-inp" step="0.01" min="0" value="'+parseFloat(grandTotal).toFixed(2)+'" style="font-size:15px;padding:10px 12px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%;font-weight:600"></div>';
-
-        h+='<div style="margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Payment Method</label>';
-        h+='<select id="hm-pay-method" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
-        h+='<option value="">— Select —</option><option value="Card">Card</option><option value="Cash">Cash</option>';
-        h+='<option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option>';
-        h+='</select></div>';
-
-        h+='<div id="hm-pay-primary-amt-wrap" style="display:none;margin-bottom:12px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Primary Method Amount (€)</label>';
-        h+='<input type="number" id="hm-pay-amt-1" class="hm-inp" step="0.01" min="0" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%"></div>';
-
-        h+='<div id="hm-pay-extra-methods" style="margin-bottom:8px"></div>';
-        h+='<button type="button" id="hm-pay-add-method" class="hm-btn" style="width:100%;margin:0 0 12px;font-size:12px;padding:8px;border:1px dashed #94a3b8;background:#f8fafc">+ Add Payment Method</button>';
-
-        h+='<div id="hm-pay-err" style="color:#ef4444;font-size:12px;margin-bottom:8px"></div>';
-
-        h+='<button id="hm-pay-confirm" class="hm-btn hm-btn--primary" style="width:100%;padding:10px;font-size:14px;font-weight:600;border-radius:6px">Confirm Payment</button>';
-        h+='</div></div></div>';
-
-        $('body').append(h);
-
-        var orderMax=parseFloat(grandTotal)||0;
-
-        // Compute how much is already allocated to primary + existing extras
-        var getAllocated=function(){
-            var sum=parseFloat($('#hm-pay-amt-1').val())||0;
-            $('#hm-pay-extra-methods .hm-pay-extra-row').each(function(){
-                sum+=parseFloat($(this).find('.hm-pay-extra-amount').val())||0;
-            });
-            return Math.round(sum*100)/100;
-        };
-
-        // Cap the main Amount field at order total
-        $(document).off('change.paycap input.paycap').on('change.paycap input.paycap','#hm-pay-amt',function(){
-            var v=parseFloat($(this).val())||0;
-            if(v>orderMax){$(this).val(orderMax.toFixed(2));}
-            if(v<0){$(this).val('0.00');}
-        });
-
-        // When primary amount changes, auto-adjust last extra row remainder
-        $(document).off('change.payrecalc input.payrecalc').on('change.payrecalc input.payrecalc','#hm-pay-amt-1',function(){
-            var total=parseFloat($('#hm-pay-amt').val())||0;
-            var primary=parseFloat($(this).val())||0;
-            if(primary>total){$(this).val(total.toFixed(2));primary=total;}
-            if(primary<0){$(this).val('0.00');primary=0;}
-            var extras=$('#hm-pay-extra-methods .hm-pay-extra-row');
-            if(extras.length===1){
-                var remainder=Math.round((total-primary)*100)/100;
-                extras.last().find('.hm-pay-extra-amount').val(remainder>0?remainder.toFixed(2):'');
-            }
-        });
-
-        var addExtraMethodRow=function(){
-            var idx=$('#hm-pay-extra-methods .hm-pay-extra-row').length;
-            var row='';
-            row+='<div class="hm-pay-extra-row" data-idx="'+idx+'" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
-            row+='<select class="hm-inp hm-pay-extra-method" style="flex:1;font-size:12px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0">';
-            row+='<option value="">Method</option><option value="Card">Card</option><option value="Cash">Cash</option><option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option>';
-            row+='</select>';
-            row+='<input type="number" class="hm-inp hm-pay-extra-amount" step="0.01" min="0" placeholder="Amount" style="width:120px;font-size:12px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0">';
-            row+='<button type="button" class="hm-pay-extra-remove" style="border:0;background:#fee2e2;color:#b91c1c;border-radius:6px;padding:7px 9px;cursor:pointer">✕</button>';
-            row+='</div>';
-            $('#hm-pay-extra-methods').append(row);
-            $('#hm-pay-primary-amt-wrap').show();
-            if(!$('#hm-pay-amt-1').val()) $('#hm-pay-amt-1').val($('#hm-pay-amt').val());
-
-            // Auto-fill: remainder = total - already allocated
-            var total=parseFloat($('#hm-pay-amt').val())||0;
-            var allocated=getAllocated();
-            var remainder=Math.round((total-allocated)*100)/100;
-            if(remainder>0){
-                $('#hm-pay-extra-methods .hm-pay-extra-row').last().find('.hm-pay-extra-amount').val(remainder.toFixed(2));
-            }
-        };
-
-        var promptSerialsAndSave=function(data){
-            var items=(data&&Array.isArray(data.serial_items))?data.serial_items:[];
-            if(!items.length){
-                $('#hm-pay-err').text((data&&data.message)?data.message:'Serial numbers are required before payment.');
-                return;
-            }
-            var recDefault=(data&&data.received_date)?String(data.received_date):new Date().toISOString().slice(0,10);
-            var receivedDate=window.prompt('Enter received date (YYYY-MM-DD)', recDefault);
-            if(!receivedDate) return;
-
-            var entries=[];
-            for(var i=0;i<items.length;i++){
-                var it=items[i]||{};
-                var label=String(it.item_description||('Product #'+String(it.product_id||'')));
-                var ear=String(it.ear_side||'Unknown').toLowerCase();
-                if(ear==='left'||ear==='binaural'||ear==='unknown'){
-                    var sl=window.prompt('Serial number (Left) for '+label, '');
-                    if(sl===null) return;
-                    sl=String(sl||'').trim();
-                    if(sl){ entries.push({product_id:parseInt(it.product_id,10)||0,ear:'left',serial:sl}); }
-                }
-                if(ear==='right'||ear==='binaural'){
-                    var sr=window.prompt('Serial number (Right) for '+label, '');
-                    if(sr===null) return;
-                    sr=String(sr||'').trim();
-                    if(sr){ entries.push({product_id:parseInt(it.product_id,10)||0,ear:'right',serial:sr}); }
-                }
-                if(ear==='unknown' && entries.length===0){
-                    var su=window.prompt('Serial number for '+label+' (will save as Left)', '');
-                    if(su===null) return;
-                    su=String(su||'').trim();
-                    if(su){ entries.push({product_id:parseInt(it.product_id,10)||0,ear:'left',serial:su}); }
-                }
-            }
-            if(!entries.length){
-                $('#hm-pay-err').text('No serial numbers entered.');
-                return;
-            }
-            post('save_order_serials_from_payment',{
-                order_id:orderId,
-                received_date:receivedDate,
-                serials_json:JSON.stringify(entries)
-            }).then(function(sv){
-                if(sv.success){
-                    $('#hm-pay-err').css('color','#059669').text('Serials saved. Click Confirm Payment again.');
-                } else {
-                    $('#hm-pay-err').css('color','#ef4444').text(sv.data&&sv.data.message?sv.data.message:'Failed to save serials');
-                }
-            }).fail(function(){
-                $('#hm-pay-err').css('color','#ef4444').text('Network error while saving serials.');
-            });
-        };
-
-        $(document).off('click.payaddmethod').on('click.payaddmethod','#hm-pay-add-method',function(){
-            addExtraMethodRow();
-        });
-
-        $(document).off('click.payremovemethod').on('click.payremovemethod','.hm-pay-extra-remove',function(){
-            $(this).closest('.hm-pay-extra-row').remove();
-            if(!$('#hm-pay-extra-methods .hm-pay-extra-row').length){
-                $('#hm-pay-primary-amt-wrap').hide();
-                $('#hm-pay-amt-1').val('');
-            }
-        });
-
-        $(document).off('click.payclose').on('click.payclose','.hm-pay-close',function(e){
-            e.stopPropagation();$('.hm-modal-bg--top').remove();
-            $(document).off('.payclose .payconfirm .payaddmethod .payremovemethod');
-            self.toast('Order '+orderNumber+' submitted for approval (no payment taken)');
-        });
-
-        $(document).off('click.payconfirm').on('click.payconfirm','#hm-pay-confirm',function(){
-            var amt=parseFloat($('#hm-pay-amt').val())||0;
-            var method=$('#hm-pay-method').val();
-            var hasExtra=$('#hm-pay-extra-methods .hm-pay-extra-row').length>0;
-            var splitPayload=[];
-            if(!amt||amt<=0){$('#hm-pay-err').text('Enter a valid amount.');return;}
-            if(amt>orderMax){$('#hm-pay-err').text('Amount cannot exceed order total of €'+orderMax.toFixed(2)+'.');return;}
-            if(!method){$('#hm-pay-err').text('Select a payment method.');return;}
-
-            if(hasExtra){
-                var primaryAmt=parseFloat($('#hm-pay-amt-1').val())||0;
-                if(!primaryAmt||primaryAmt<=0){$('#hm-pay-err').text('Enter primary method amount.');return;}
-                splitPayload.push({method:method,amount:primaryAmt});
-                $('#hm-pay-extra-methods .hm-pay-extra-row').each(function(){
-                    var m=$(this).find('.hm-pay-extra-method').val();
-                    var a=parseFloat($(this).find('.hm-pay-extra-amount').val())||0;
-                    if(m&&a>0){splitPayload.push({method:m,amount:a});}
-                });
-                var sm=0; splitPayload.forEach(function(x){ sm+=parseFloat(x.amount)||0; });
-                if(Math.abs(sm-amt)>0.01){$('#hm-pay-err').text('Split amounts must equal total amount.');return;}
-            }
-
-            var $btn=$(this);$btn.prop('disabled',true).text('Processing...');
-            post('record_order_payment',{
-                order_id:orderId,
-                order_number:orderNumber,
-                amount:amt,
-                payment_method:method,
-                split_payments_json: JSON.stringify(splitPayload)
-            }).then(function(r){
-                if(r.success){
-                    $('.hm-modal-bg--top').remove();
-                    $(document).off('.payclose .payconfirm .payaddmethod .payremovemethod');
-                    self.toast('Payment of €'+amt.toFixed(2)+' recorded on '+orderNumber);
-                } else {
-                    $btn.prop('disabled',false).text('Confirm Payment');
-                    if(r.data&&r.data.code==='serials_required'){
-                        promptSerialsAndSave(r.data);
-                        return;
-                    }
-                    var msg=(r.data&&r.data.message)?r.data.message:'Failed';
-                    if(r.data&&r.data.debug){
-                        var d=r.data.debug;
-                        var recent=Array.isArray(d.recent_orders)?d.recent_orders.map(function(o){return (o.order_number||'')+' (#'+(o.id||'')+')';}).join(', '):'';
-                        msg += ' [debug id='+String(d.received_order_id||0)+', number='+String(d.received_order_number||'')+', lookup='+String(d.used_lookup||'')+(recent?(', recent='+recent):'')+']';
-                    }
-                    $('#hm-pay-err').css('color','#ef4444');
-                    $('#hm-pay-err').text(msg);
-                }
-            }).fail(function(){
-                $btn.prop('disabled',false).text('Confirm Payment');
-                $('#hm-pay-err').text('Network error');
-            });
-        });
-    },
-
-    // ── Order Select Modal (Income-Bearing appointments) ──
-    _openOrderSelectModal:function(a,outcome){
-        var self=this;
-
-        // Fetch patient's existing orders in pipeline
-        post('get_patient_pipeline_orders',{patient_id:a.patient_id,appointment_id:(a._ID||a.id||0)}).then(function(r){
-            if(!r.success){self.toast('Failed to load orders');return;}
-            var payload=r.data||[];
-            var orders=Array.isArray(payload)?payload:(payload.orders||[]);
-            var debug=(!Array.isArray(payload)&&payload&&payload.debug)?payload.debug:null;
-
-            var h='<div class="hm-modal-bg hm-modal-bg--top open" style="z-index:100000">';
-            h+='<div class="hm-modal" style="max-width:560px;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">';
-
-            // Header
-            h+='<div class="hm-modal-hd" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center">';
-            h+='<div><h3 style="margin:0;font-size:16px">Select or Create Order</h3>';
-            h+='<div style="font-size:12px;color:var(--hm-font-sub);margin-top:2px">'+esc(a.patient_name||'')+' — '+esc(outcome.name)+'</div></div>';
-            h+='<button class="hm-close hm-osel-close">×</button></div>';
-
-            // Body
-            h+='<div style="padding:20px;max-height:70vh;overflow-y:auto;background:#fff">';
-
-            if(orders.length){
-                h+='<div style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Existing Active Orders</div>';
-                orders.forEach(function(ord){
-                    var bal=parseFloat(ord.balance_due)||0;
-                    h+='<div class="hm-osel-order" data-oid="'+ord.id+'" data-onum="'+esc(ord.order_number)+'" data-total="'+ord.grand_total+'" data-bal="'+bal+'" ';
-                    h+='style="border:1.5px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .15s;background:#fff">';
-                    h+='<div style="display:flex;justify-content:space-between;align-items:flex-start">';
-                    h+='<div>';
-                    h+='<div style="font-size:14px;font-weight:700;color:#0f172a">'+esc(ord.order_number)+'</div>';
-                    h+='<div style="font-size:11px;color:#64748b;margin-top:2px">'+esc(ord.order_date)+' — <span style="font-weight:600;color:#0369a1">'+esc(ord.status)+'</span></div>';
-                    h+='<div style="font-size:12px;color:#475569;margin-top:4px;max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(ord.items_summary)+'</div>';
-                    h+='</div>';
-                    h+='<div style="text-align:right;flex-shrink:0">';
-                    h+='<div style="font-size:14px;font-weight:700;color:#0f172a">€'+parseFloat(ord.grand_total).toFixed(2)+'</div>';
-                    if(parseFloat(ord.deposit)>0){
-                        h+='<div style="font-size:11px;color:#059669;margin-top:2px">Paid: €'+parseFloat(ord.deposit).toFixed(2)+'</div>';
-                    }
-                    h+='<div style="font-size:11px;color:#dc2626;margin-top:1px">Due: €'+bal.toFixed(2)+'</div>';
-                    h+='</div></div></div>';
-                });
-                h+='<div style="border-top:1px solid #e2e8f0;margin:16px 0 12px"></div>';
-            } else {
-                h+='<div style="text-align:center;padding:20px 0;color:#94a3b8;font-size:13px">No active existing orders found for this patient.</div>';
-                if(debug){
-                    h+='<div style="margin-top:10px;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;color:#475569;font-size:11px;line-height:1.5">';
-                    h+='<div style="font-weight:700;color:#334155;margin-bottom:4px">Debug</div>';
-                    h+='<div>patient_id: '+esc(String(debug.input_patient_id||''))+'</div>';
-                    h+='<div>appointment_id: '+esc(String(debug.input_appointment_id||''))+'</div>';
-                    h+='<div>appointment.order_id: '+esc(String(debug.appointment_order_id||''))+'</div>';
-                    h+='<div>candidate_patient_ids: '+esc((debug.candidate_patient_ids||[]).join(', ')||'—')+'</div>';
-                    h+='<div>linked_order_ids: '+esc((debug.linked_order_ids||[]).join(', ')||'—')+'</div>';
-                    h+='<div>matched_order_ids: '+esc((debug.matched_order_ids||[]).join(', ')||'—')+'</div>';
-                    h+='</div>';
-                }
-            }
-
-            // Create New button
-            h+='<button id="hm-osel-new" class="hm-btn hm-btn--primary" style="width:100%;padding:10px;font-size:13px;font-weight:600;border-radius:6px">+ Create New Order</button>';
-
-            h+='</div>'; // end body
-
-            // Footer
-            h+='<div style="padding:12px 20px;border-top:1px solid #e2e8f0;background:#fff;text-align:right">';
-            h+='<button class="hm-btn hm-osel-close" style="font-size:13px">Cancel</button>';
-            h+='</div>';
-
-            h+='</div></div>';
-            $('body').append(h);
-
-            // Hover effect on order cards
-            $(document).off('mouseenter.osel mouseleave.osel').on('mouseenter.osel','.hm-osel-order',function(){
-                $(this).css({'border-color':'#3b82f6','background':'#eff6ff'});
-            }).on('mouseleave.osel','.hm-osel-order',function(){
-                $(this).css({'border-color':'#e2e8f0','background':'#fff'});
-            });
-
-            // Select existing order → open payment modal
-            $(document).off('click.oselorder').on('click.oselorder','.hm-osel-order',function(){
-                var $card=$(this);
-                var ordId=parseInt($card.attr('data-oid'),10)||0;
-                var ordNum=$card.data('onum');
-                var bal=parseFloat($card.data('bal'))||0;
-
-                // Close this modal
-                $('.hm-modal-bg--top').remove();
-                $(document).off('.oselorder .oselnew .oselclose .osel');
-
-                // Open payment modal for this existing order
-                self._openPaymentModal(ordId,ordNum,bal,a.patient_name||'');
-            });
-
-            // Create new order
-            $(document).off('click.oselnew').on('click.oselnew','#hm-osel-new',function(){
-                // Close this modal
-                $('.hm-modal-bg--top').remove();
-                $(document).off('.oselorder .oselnew .oselclose .osel');
-
-                // Open the full order creation modal
-                self._openOutcomeOrderModal(a,outcome);
-            });
-
-            // Close
-            $(document).off('click.oselclose').on('click.oselclose','.hm-osel-close',function(e){
-                e.stopPropagation();$('.hm-modal-bg--top').remove();
-                $(document).off('.oselorder .oselnew .oselclose .osel');
-            });
-        }).fail(function(){
-            self.toast('Failed to load patient orders');
-        });
-    },
-
     // ── Outcome → Follow-up Booking ──
-    _openFollowUpBooking:function(a,serviceId){
+    _openFollowUpBooking:function(a,serviceId,onComplete){
         var self=this;
         // This re-uses the new appointment modal but pre-fills and locks the service
         var ready=$.Deferred();
@@ -2781,6 +2563,7 @@ var Cal={
             // Close
             $(document).off('click.fuclose').on('click.fuclose','.hm-fu-close',function(e){
                 e.stopPropagation();$('.hm-modal-bg--top').remove();$(document).off('.fuclose .fusave');
+                if(typeof onComplete==='function')onComplete();
             });
 
             // Save follow-up
@@ -2809,6 +2592,7 @@ var Cal={
                             $('.hm-modal-bg--top').remove();$(document).off('.fuclose .fusave');
                             self.refresh();
                             self.toast('Follow-up appointment booked');
+                            if(typeof onComplete==='function')onComplete();
                             return;
                         }
                         $btn.prop('disabled',false).text('Book Follow-up');
