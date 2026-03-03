@@ -84,6 +84,9 @@ class HearMed_Router {
         // WP login cookie so SiteGround's Nginx cache is bypassed and
         // admin-ajax.php dispatches wp_ajax_* hooks correctly.
         add_action( 'init', [ $this, 'bridge_wp_login' ], 1 );
+
+        // User bar: "Logged in as ___" + logout icon in the topbar
+        add_action( 'wp_footer', [ $this, 'render_user_bar' ], 98 );
     }
 
     /**
@@ -419,5 +422,171 @@ class HearMed_Router {
                 true
             );
         }
+    }
+
+    /* ================================================================
+       USER BAR — "Logged in as ___" + logout icon
+       Injected via wp_footer, positioned into .hm-topbar by JS.
+       ================================================================ */
+
+    public function render_user_bar() {
+        if ( ! PortalAuth::is_logged_in() ) {
+            return;
+        }
+
+        $staff = PortalAuth::current_user();
+        if ( ! $staff ) {
+            return;
+        }
+
+        $name = esc_html( $staff->display_name );
+        $role = esc_html( ucfirst( str_replace( '_', ' ', $staff->role ?? '' ) ) );
+        ?>
+        <!-- HearMed User Bar -->
+        <style>
+        #hm-user-bar {
+            display: none; /* shown by JS once placed */
+            align-items: center;
+            gap: 10px;
+            font-family: var(--hm-font, 'Source Sans 3', sans-serif);
+            font-size: 13px;
+            color: var(--hm-text-light, #64748b);
+            white-space: nowrap;
+            user-select: none;
+            padding: 4px 0;
+        }
+        #hm-user-bar .hm-ub-identity {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            line-height: 1.3;
+        }
+        #hm-user-bar .hm-ub-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--hm-navy, #151B33);
+        }
+        #hm-user-bar .hm-ub-role {
+            font-size: 11px;
+            color: var(--hm-text-muted, #94a3b8);
+            text-transform: capitalize;
+        }
+        #hm-user-bar .hm-ub-logout {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid var(--hm-border, #e2e8f0);
+            background: var(--hm-bg, #fff);
+            color: var(--hm-text-muted, #94a3b8);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+        #hm-user-bar .hm-ub-logout:hover {
+            background: var(--hm-red, #ef4444);
+            border-color: var(--hm-red, #ef4444);
+            color: #fff;
+        }
+        #hm-user-bar .hm-ub-logout svg {
+            width: 16px;
+            height: 16px;
+        }
+        </style>
+
+        <div id="hm-user-bar">
+            <div class="hm-ub-identity">
+                <span class="hm-ub-name"><?php echo $name; ?></span>
+                <?php if ( $role ) : ?>
+                    <span class="hm-ub-role"><?php echo $role; ?></span>
+                <?php endif; ?>
+            </div>
+            <a href="#" class="hm-ub-logout" title="Log out" id="hm-ub-logout-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+            </a>
+        </div>
+
+        <script>
+        (function(){
+            /* ── Place user bar inside .hm-topbar ── */
+            function placeUserBar(){
+                var bar = document.getElementById('hm-user-bar');
+                if(!bar) return;
+
+                /* Try .hm-topbar first (Elementor container) */
+                var topbar = document.querySelector('.hm-topbar');
+                if(topbar){
+                    /* Find the inner wrapper (Elementor .e-con-inner) */
+                    var inner = topbar.querySelector('.e-con-inner') || topbar;
+                    inner.style.display  = 'flex';
+                    inner.style.alignItems = 'center';
+                    inner.style.position = 'relative';
+                    bar.style.marginLeft = 'auto';
+                    bar.style.display    = 'flex';
+                    inner.appendChild(bar);
+                    return;
+                }
+
+                /* Fallback: inject before .hm-patient-search-bar */
+                var searchBar = document.querySelector('.hm-patient-search-bar');
+                if(searchBar && searchBar.parentNode){
+                    bar.style.display = 'flex';
+                    bar.style.justifyContent = 'flex-end';
+                    bar.style.marginBottom = '6px';
+                    searchBar.parentNode.insertBefore(bar, searchBar);
+                    return;
+                }
+
+                /* Last resort: top of .hm-content */
+                var content = document.querySelector('.hm-content');
+                if(content){
+                    var inner2 = content.querySelector('.e-con-inner') || content;
+                    bar.style.display = 'flex';
+                    bar.style.justifyContent = 'flex-end';
+                    bar.style.padding = '8px 16px 0';
+                    inner2.insertBefore(bar, inner2.firstChild);
+                }
+            }
+
+            /* ── Logout handler ── */
+            function setupLogout(){
+                var btn = document.getElementById('hm-ub-logout-btn');
+                if(!btn) return;
+                btn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    var url = (typeof HM !== 'undefined' && HM.logout_url)
+                        ? HM.logout_url
+                        : '/login/?logout=1';
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('GET', url, true);
+                    xhr.withCredentials = true;
+                    xhr.onreadystatechange = function(){
+                        if(xhr.readyState === 4){
+                            window.location.href = '/login/';
+                        }
+                    };
+                    xhr.send();
+                });
+            }
+
+            if(document.readyState === 'loading'){
+                document.addEventListener('DOMContentLoaded', function(){
+                    placeUserBar();
+                    setupLogout();
+                });
+            } else {
+                placeUserBar();
+                setupLogout();
+            }
+        })();
+        </script>
+        <?php
     }
 }
