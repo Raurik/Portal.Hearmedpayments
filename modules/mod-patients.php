@@ -2559,9 +2559,10 @@ function hm_ajax_get_exchange_item_amount() {
     $device = $db->get_row( "SELECT * FROM hearmed_core.patient_devices WHERE id = \$1", [ $device_id ] );
     if ( ! $device ) wp_send_json_error( 'Device not found' );
 
-    // No original order — user must enter amount manually
-    if ( ! $device->order_id ) {
-        // Fallback: try to find order by matching product_id + patient_id in order_items
+    // ── Find the order: direct link or fallback by product match ──
+    $order_id_resolved = $device->order_id ?: null;
+
+    if ( ! $order_id_resolved && $device->product_id ) {
         $fallback = $db->get_row(
             "SELECT o.id
              FROM hearmed_core.orders o
@@ -2571,70 +2572,114 @@ function hm_ajax_get_exchange_item_amount() {
             [ $device->patient_id, $device->product_id ]
         );
         if ( $fallback ) {
-            // Link device to order for future lookups
             $db->update( 'hearmed_core.patient_devices', [ 'order_id' => $fallback->id ], [ 'id' => $device_id ] );
-            $device->order_id = $fallback->id;
-        } else {
-            wp_send_json_success( [
-                'item_amount'    => 0,
-                'prsi_amount'    => 0,
-                'patient_amount' => 0,
-                'has_order'      => false,
-                'message'        => 'No original order found — enter amount manually',
-            ] );
-            return;
+            $order_id_resolved = $fallback->id;
         }
     }
 
-    // Get original order
-    $order = $db->get_row( "SELECT * FROM hearmed_core.orders WHERE id = \$1", [ $device->order_id ] );
+    // Broader fallback: search by patient + product name match
+    if ( ! $order_id_resolved && $device->product_id ) {
+        $prod = $db->get_row( "SELECT product_name FROM hearmed_reference.products WHERE id = \$1", [ $device->product_id ] );
+        if ( $prod ) {
+            $fallback2 = $db->get_row(
+                "SELECT o.id
+                 FROM hearmed_core.orders o
+                 JOIN hearmed_core.order_items oi ON oi.order_id = o.id
+                 WHERE o.patient_id = \$1
+                   AND LOWER(oi.item_description) LIKE LOWER(\$2)
+                 ORDER BY o.id DESC LIMIT 1",
+                [ $device->patient_id, '%' . $prod->product_name . '%' ]
+            );
+            if ( $fallback2 ) {
+                $db->update( 'hearmed_core.patient_devices', [ 'order_id' => $fallback2->id ], [ 'id' => $device_id ] );
+                $order_id_resolved = $fallback2->id;
+            }
+        }
+    }
+
+    if ( ! $order_id_resolved ) {
+        wp_send_json_success( [
+            'item_amount'    => 0,
+            'prsi_amount'    => 0,
+            'patient_amount' => 0,
+            'has_order'      => false,
+            'message'        => 'No original order found',
+        ] );
+        return;
+    }
+
+    // Get order
+    $order = $db->get_row(
+        "SELECT o.*, inv.id AS inv_id
+         FROM hearmed_core.orders o
+         LEFT JOIN hearmed_core.invoices inv ON inv.id = o.invoice_id
+         WHERE o.id = \$1",
+        [ $order_id_resolved ]
+    );
     if ( ! $order ) {
         wp_send_json_success( [
             'item_amount'    => 0,
             'prsi_amount'    => 0,
             'patient_amount' => 0,
             'has_order'      => false,
-            'message'        => 'Original order not found',
+            'message'        => 'Order record not found',
         ] );
         return;
     }
 
-    // Get all order items
+    // ── Calculate per-item amount ──
+    // Try detailed match first, fallback to grand_total / sides
     $items = $db->get_results(
-        "SELECT oi.ear_side, oi.line_total, oi.item_type, oi.item_description
+        "SELECT oi.ear_side, oi.line_total, oi.item_type, oi.item_description, oi.quantity
          FROM hearmed_core.order_items oi
          WHERE oi.order_id = \$1
          ORDER BY oi.line_number",
-        [ $device->order_id ]
+        [ $order_id_resolved ]
     );
 
-    // Calculate total for ALL items vs items matching the exchange side
     $all_items_total  = 0;
     $side_items_total = 0;
+    $ha_count         = 0; // count of hearing aid sides in the order
 
     foreach ( $items ?: [] as $item ) {
         $ear = strtolower( trim( $item->ear_side ?? '' ) );
         $lt  = floatval( $item->line_total );
         $all_items_total += $lt;
 
+        // Count HA sides
+        if ( strtolower( $item->item_type ?? '' ) === 'product' ) {
+            if ( in_array( $ear, [ 'left', 'right' ] ) ) {
+                $ha_count++;
+            } elseif ( in_array( $ear, [ 'both', 'binaural', '' ] ) ) {
+                $ha_count += intval( $item->quantity ?? 1 ) > 1 ? 2 : 2;
+            }
+        }
+
         if ( $side === 'both' ) {
-            // Exchanging both — include everything
             $side_items_total += $lt;
         } elseif ( $ear === $side ) {
-            // Exact match
             $side_items_total += $lt;
-        } elseif ( $ear === 'both' || $ear === '' ) {
-            // Shared items — split proportionally (half)
+        } elseif ( in_array( $ear, [ 'both', 'binaural', '' ] ) ) {
             $side_items_total += $lt / 2;
         }
     }
 
-    // Apply proportional discount if order had a discount
+    // Apply proportional discount
     $discount_total = floatval( $order->discount_total ?? 0 );
     if ( $discount_total > 0 && $all_items_total > 0 ) {
         $proportion      = $side_items_total / $all_items_total;
-        $side_discount   = round( $discount_total * $proportion, 2 );
-        $side_items_total = max( 0, $side_items_total - $side_discount );
+        $side_items_total = max( 0, $side_items_total - round( $discount_total * $proportion, 2 ) );
+    }
+
+    // ── FALLBACK: if per-item calc returned 0, use order grand_total ──
+    if ( $side_items_total < 0.01 ) {
+        $grand = floatval( $order->grand_total ?? 0 );
+        if ( $ha_count < 1 ) $ha_count = ( $side === 'both' ? 1 : 2 );
+        if ( $side === 'both' ) {
+            $side_items_total = $grand;
+        } else {
+            $side_items_total = round( $grand / max( $ha_count, 1 ), 2 );
+        }
     }
 
     // PRSI per side
@@ -2642,7 +2687,7 @@ function hm_ajax_get_exchange_item_amount() {
     if ( $side === 'both' ) {
         $prsi_per_side = floatval( $order->prsi_amount ?? 0 );
     } else {
-        $prsi_field    = 'prsi_' . $side; // prsi_left or prsi_right
+        $prsi_field    = 'prsi_' . $side;
         $prsi_per_side = ! empty( $order->$prsi_field ) ? 500 : 0;
     }
 
@@ -2670,9 +2715,10 @@ function hm_ajax_create_exchange() {
     $device_id     = intval( $_POST['device_id'] ?? 0 );
     $reason        = sanitize_textarea_field( $_POST['reason'] ?? '' );
     $side          = sanitize_text_field( $_POST['side'] ?? 'both' );
-    $refund_type   = sanitize_text_field( $_POST['refund_type'] ?? 'credit' ); // credit | refund
-    $refund_amount = floatval( $_POST['refund_amount'] ?? 0 ); // only for refund path
-    $credit_amount = floatval( $_POST['credit_amount'] ?? 0 ); // total item amount (auto-calculated or manual)
+    $refund_type   = sanitize_text_field( $_POST['refund_type'] ?? 'credit' ); // credit | refund | same_tech
+    $refund_amount = floatval( $_POST['refund_amount'] ?? 0 );
+    $credit_amount = floatval( $_POST['credit_amount'] ?? 0 );
+    $notes         = sanitize_textarea_field( $_POST['notes'] ?? '' );
 
     if ( ! $pid || ! $device_id ) wp_send_json_error( 'Patient and device required' );
     if ( ! $reason ) wp_send_json_error( 'Reason is required' );
@@ -2685,23 +2731,33 @@ function hm_ajax_create_exchange() {
     $device = $db->get_row( "SELECT * FROM hearmed_core.patient_devices WHERE id = \$1", [ $device_id ] );
     if ( ! $device ) wp_send_json_error( 'Device not found' );
 
-    // Fallback: if device has no order_id, try to find order by product match
+    // Fallback order lookup (same logic as get_exchange_item_amount)
     if ( ! $device->order_id && $device->product_id ) {
         $fallback = $db->get_row(
-            "SELECT o.id
-             FROM hearmed_core.orders o
+            "SELECT o.id FROM hearmed_core.orders o
              JOIN hearmed_core.order_items oi ON oi.order_id = o.id
              WHERE o.patient_id = \$1 AND oi.item_id = \$2 AND oi.item_type = 'product'
              ORDER BY o.id DESC LIMIT 1",
             [ $pid, $device->product_id ]
         );
+        if ( ! $fallback ) {
+            $prod = $db->get_row( "SELECT product_name FROM hearmed_reference.products WHERE id = \$1", [ $device->product_id ] );
+            if ( $prod ) {
+                $fallback = $db->get_row(
+                    "SELECT o.id FROM hearmed_core.orders o
+                     JOIN hearmed_core.order_items oi ON oi.order_id = o.id
+                     WHERE o.patient_id = \$1 AND LOWER(oi.item_description) LIKE LOWER(\$2)
+                     ORDER BY o.id DESC LIMIT 1",
+                    [ $pid, '%' . $prod->product_name . '%' ]
+                );
+            }
+        }
         if ( $fallback ) {
             $db->update( 'hearmed_core.patient_devices', [ 'order_id' => $fallback->id ], [ 'id' => $device_id ] );
             $device->order_id = $fallback->id;
         }
     }
 
-    // ── Auto-calculate per-item amount if device has an order ──
     $order = null;
     $prsi_amount = 0;
     if ( $device->order_id ) {
@@ -2714,49 +2770,71 @@ function hm_ajax_create_exchange() {
         );
 
         if ( $order ) {
-            // Calculate per-side PRSI
             if ( $side === 'both' ) {
                 $prsi_amount = floatval( $order->prsi_amount ?? 0 );
             } else {
                 $prsi_field  = 'prsi_' . $side;
                 $prsi_amount = ! empty( $order->$prsi_field ) ? 500 : 0;
             }
-
-            // Auto-calculate from order items if credit_amount not provided
-            if ( $credit_amount <= 0 ) {
-                $items = $db->get_results(
-                    "SELECT oi.ear_side, oi.line_total
-                     FROM hearmed_core.order_items oi
-                     WHERE oi.order_id = \$1
-                     ORDER BY oi.line_number",
-                    [ $device->order_id ]
-                );
-
-                $all_total  = 0;
-                $side_total = 0;
-                foreach ( $items ?: [] as $it ) {
-                    $ear = strtolower( trim( $it->ear_side ?? '' ) );
-                    $lt  = floatval( $it->line_total );
-                    $all_total += $lt;
-                    if ( $side === 'both' ) {
-                        $side_total += $lt;
-                    } elseif ( $ear === $side ) {
-                        $side_total += $lt;
-                    } elseif ( $ear === 'both' || $ear === '' ) {
-                        $side_total += $lt / 2;
-                    }
-                }
-                // Apply proportional discount
-                $disc = floatval( $order->discount_total ?? 0 );
-                if ( $disc > 0 && $all_total > 0 ) {
-                    $side_total = max( 0, $side_total - round( $disc * ( $side_total / $all_total ), 2 ) );
-                }
-                $credit_amount = round( $side_total, 2 );
-            }
         }
     }
 
-    // Patient credit = item amount minus PRSI (PRSI never goes back to patient)
+    // ── SAME TECH EXCHANGE — no money, just swap device ──
+    if ( $refund_type === 'same_tech' ) {
+        $db->begin_transaction();
+        try {
+            $db->update( 'hearmed_core.patient_devices', [
+                'device_status'  => 'Replaced',
+                'inactive_reason'=> 'Exchange (same tech): ' . $reason,
+                'inactive_date'  => date( 'Y-m-d' ),
+                'updated_at'     => date( 'c' ),
+            ], [ 'id' => $device_id ] );
+
+            $exchange_id = $db->insert( 'hearmed_core.exchanges', [
+                'patient_id'          => $pid,
+                'original_order_id'   => $device->order_id ?: null,
+                'original_invoice_id' => $order->inv_id ?? null,
+                'device_id'           => $device_id,
+                'exchange_type'       => 'same_tech',
+                'original_amount'     => $credit_amount,
+                'credit_amount'       => 0,
+                'refund_amount'       => 0,
+                'prsi_amount'         => 0,
+                'reason'              => $reason,
+                'status'              => 'completed',
+                'created_by'          => $staff_id ?: null,
+            ]);
+
+            hm_return_device_to_stock( $device, $side, 'Exchange (same tech)', $staff_id );
+
+            $db->insert( 'hearmed_core.patient_timeline', [
+                'patient_id'  => $pid,
+                'event_type'  => 'exchange_created',
+                'event_date'  => date('Y-m-d'),
+                'staff_id'    => $staff_id ?: null,
+                'description' => "Same-tech exchange. Old device returned to stock. Reason: {$reason}." . ( $notes ? " Notes: {$notes}" : '' ),
+            ]);
+
+            $db->commit();
+
+            hm_patient_audit( 'CREATE_EXCHANGE', 'exchange', $exchange_id, [
+                'patient_id' => $pid, 'device_id' => $device_id, 'type' => 'same_tech'
+            ]);
+
+            wp_send_json_success( [
+                'exchange_id'        => $exchange_id,
+                'refund_type'        => 'same_tech',
+                'patient_credit'     => 0,
+                'cash_refund'        => 0,
+            ]);
+        } catch ( \Exception $e ) {
+            $db->rollback();
+            wp_send_json_error( 'Exchange failed: ' . $e->getMessage() );
+        }
+        return;
+    }
+
+    // ── CREDIT / REFUND paths ──
     $patient_refund = max( 0, $credit_amount - $prsi_amount );
 
     // For refund path: refund_amount is the cash refund, remainder goes to patient credit
@@ -2862,6 +2940,7 @@ function hm_ajax_create_exchange() {
             $timeline_desc .= ". Credit on account: \xe2\x82\xac" . number_format($credit_to_acct, 2);
         }
         $timeline_desc .= ". Reason: {$reason}. Original device added back to stock.";
+        if ( $notes ) $timeline_desc .= " Notes: {$notes}";
 
         $db->insert( 'hearmed_core.patient_timeline', [
             'patient_id'  => $pid,
