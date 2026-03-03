@@ -3386,17 +3386,16 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null ) 
     }
 
     foreach ( $serials_to_add as $entry ) {
-        $stock_id = $db->insert( 'hearmed_core.inventory_stock', [
+        $stock_id = $db->insert( 'hearmed_reference.inventory_stock', [
+            'item_category'    => 'hearing_aid',
             'manufacturer_id'  => $manufacturer_id,
             'model_name'       => $model_name,
-            'style'            => $style,
-            'technology_level' => $tech_level,
-            'serial_number'    => $entry['serial'],
+            'style'            => $style ?: null,
+            'technology_level' => $tech_level ?: null,
+            'serial_number'    => $entry['serial'] ?: null,
             'clinic_id'        => $clinic_id,
             'quantity'         => 1,
             'status'           => 'Returned',
-            'fitted_to_patient_id' => null,
-            'created_at'       => $today,
         ]);
 
         // Log stock movement
@@ -3406,7 +3405,7 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null ) 
                 $sn_row = $db->get_row( "SELECT first_name, last_name FROM hearmed_reference.staff WHERE id = \$1", [ $staff_id ] );
                 $staff_name = $sn_row ? trim( $sn_row->first_name . ' ' . $sn_row->last_name ) : '';
             }
-            $db->insert( 'hearmed_core.stock_movements', [
+            $db->insert( 'hearmed_reference.stock_movements', [
                 'stock_id'       => $stock_id,
                 'movement_type'  => strtolower( $reason ),
                 'to_clinic_id'   => $clinic_id,
