@@ -512,18 +512,18 @@ class HearMed_Router {
             display: none; /* shown by JS once placed */
             align-items: center;
             justify-content: center;
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             border-radius: 6px;
             border: none;
             background: transparent;
-            color: rgba(255,255,255,0.55);
+            color: rgba(255,255,255,0.7);
             cursor: pointer;
             transition: color 0.2s ease, background 0.2s ease;
             text-decoration: none;
             padding: 0;
             position: absolute;
-            bottom: 12px;
+            bottom: 6px;
             right: 8px;
             z-index: 10;
         }
@@ -532,14 +532,14 @@ class HearMed_Router {
             background: rgba(255,255,255,0.12);
         }
         #hm-logout-btn svg {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
         }
         </style>
 
         <a href="#" title="Log out" id="hm-logout-btn">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                 <polyline points="16 17 21 12 16 7"/>
                 <line x1="21" y1="12" x2="9" y2="12"/>
