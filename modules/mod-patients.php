@@ -1643,6 +1643,16 @@ function hm_ajax_get_patient_returns() {
     $out = [];
 
     if ( $has_returns ) {
+        // Check if patient_devices has order_id column (may not exist on older installs)
+        $dev_has_order_id = $db->get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'patient_devices' AND column_name = 'order_id'"
+        );
+
+        // Build query depending on whether d.order_id is available
+        $d_order_col    = $dev_has_order_id ? 'd.order_id AS device_order_id,' : 'NULL::bigint AS device_order_id,';
+        $order_join_col = $dev_has_order_id ? 'COALESCE(ret.order_id, d.order_id)' : 'ret.order_id';
+
         // Query from returns table — includes pending (no credit note) and completed
         $rows = $db->get_results(
             "SELECT ret.id AS return_id, ret.return_date, ret.reason, ret.side, ret.notes,
@@ -1654,7 +1664,7 @@ function hm_ajax_get_patient_returns() {
                     cn.credit_date, cn.cheque_sent, cn.cheque_sent_date,
                     cn.prsi_amount, cn.patient_refund_amount,
                     d.product_id AS device_product_id,
-                    d.order_id AS device_order_id,
+                    {$d_order_col}
                     COALESCE(pd.product_name,
                         (SELECT string_agg(pr.product_name, ', ')
                          FROM hearmed_core.order_items oi
@@ -1668,7 +1678,7 @@ function hm_ajax_get_patient_returns() {
              LEFT JOIN hearmed_core.credit_notes cn ON cn.id = ret.credit_note_id
              LEFT JOIN hearmed_core.patient_devices d ON d.id = ret.device_id
              LEFT JOIN hearmed_reference.products pd ON pd.id = d.product_id
-             LEFT JOIN hearmed_core.orders o ON o.id = COALESCE(ret.order_id, d.order_id)
+             LEFT JOIN hearmed_core.orders o ON o.id = {$order_join_col}
              WHERE ret.patient_id = \$1
              ORDER BY ret.return_date DESC",
             [ $pid ]
@@ -2651,7 +2661,7 @@ function hm_ajax_create_return() {
     if ( ! $device ) { @ob_end_clean(); wp_send_json_error( 'Device not found' ); }
 
     // Resolve order_id — direct link first, then fallback via order_items
-    $resolved_order_id = $device->order_id ?? null;
+    $resolved_order_id = property_exists( $device, 'order_id' ) ? $device->order_id : null;
     if ( ! $resolved_order_id && ! empty( $device->product_id ) ) {
         $resolved_order_id = $db->get_var(
             "SELECT o.id FROM hearmed_core.orders o
@@ -2762,7 +2772,7 @@ function hm_ajax_create_return_credit_note() {
     $patient_paid    = 0;
     $order           = null;
     $inv_id          = null;
-    $ord_id          = $ret->order_id ?: ( $device->order_id ?? null );
+    $ord_id          = $ret->order_id ?: ( property_exists( $device, 'order_id' ) ? $device->order_id : null );
     $per_ear         = floatval( HearMed_Settings::get( 'hm_prsi_amount_per_ear', '500' ) );
 
     // Fallback: find order via order_items if no direct link
@@ -3178,10 +3188,11 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null ) 
 
     // Determine clinic from original order — uses hearmed_reference.clinics.id directly
     $clinic_id = null;
-    if ( ! empty( $device->order_id ) ) {
+    $dev_order_id = property_exists( $device, 'order_id' ) ? $device->order_id : null;
+    if ( ! empty( $dev_order_id ) ) {
         $clinic_id = $db->get_var(
             "SELECT clinic_id FROM hearmed_core.orders WHERE id = \$1",
-            [ $device->order_id ]
+            [ $dev_order_id ]
         );
     }
 
