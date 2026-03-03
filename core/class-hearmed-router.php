@@ -553,13 +553,11 @@ class HearMed_Router {
                 var btn = document.getElementById('hm-logout-btn');
                 if(!btn) return;
 
-                /* Use same container the bell uses */
-                var target = document.getElementById('hm-midsidebar');
+                var target = document.getElementById('hm-bottomsidebar');
                 if(!target) target = document.querySelector('.hm-sidebar');
                 if(!target) return;
 
                 target.style.position = 'relative';
-                /* CSS already has position/bottom/right, just show it */
                 btn.style.display = 'inline-flex';
                 target.appendChild(btn);
 
