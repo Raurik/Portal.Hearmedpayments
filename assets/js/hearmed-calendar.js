@@ -2636,31 +2636,12 @@ var Cal={
                             split_payments_json:sendSplitJson
                         }).then(function(pr){
                             if(pr.success){
-                                // PRSI check before finishing
-                                _checkPrsiForm(newOrderId,newOrderNum,a.dispenser_id||0,a.patient_name||'',function(){
-                                    cleanupEvents();self.toast('Payment of €'+totalDue.toFixed(2)+' recorded on '+newOrderNum);self.refresh();
-                                });
+                                cleanupEvents();self.toast('Payment of €'+totalDue.toFixed(2)+' recorded on '+newOrderNum);self.refresh();
                             }
                             else{
                                 $btn.prop('disabled',false).text('Confirm Payment');
                                 if(pr.data&&pr.data.code==='serials_required'){
-                                    var serialItems=(pr.data&&Array.isArray(pr.data.serial_items))?pr.data.serial_items:[];
-                                    if(!serialItems.length){$('#hm-op-pay-err').text('Serial numbers required but no items returned.');return;}
-                                    _showSerialModal(serialItems,newOrderId,function(){
-                                        // Serials saved — retry payment
-                                        $btn.prop('disabled',true).text('Processing...');
-                                        post('record_order_payment',{
-                                            order_id:newOrderId,order_number:newOrderNum,amount:totalDue,payment_method:firstMethod,
-                                            split_payments_json:sendSplitJson
-                                        }).then(function(pr2){
-                                            if(pr2.success){
-                                                _checkPrsiForm(newOrderId,newOrderNum,a.dispenser_id||0,a.patient_name||'',function(){
-                                                    cleanupEvents();self.toast('Payment of €'+totalDue.toFixed(2)+' recorded on '+newOrderNum);self.refresh();
-                                                });
-                                            }
-                                            else{$btn.prop('disabled',false).text('Confirm Payment');$('#hm-op-pay-err').css('color','#ef4444').text(pr2.data&&pr2.data.message?pr2.data.message:'Payment failed after serials.');}
-                                        }).fail(function(){$btn.prop('disabled',false).text('Confirm Payment');$('#hm-op-pay-err').text('Network error');});
-                                    });
+                                    $('#hm-op-pay-err').css('color','#ef4444').text(pr.data&&pr.data.message?pr.data.message:'Serial numbers required. Please complete the Awaiting Fitting process first.');
                                     return;
                                 }
                                 var msg=(pr.data&&pr.data.message)?pr.data.message:'Failed';
