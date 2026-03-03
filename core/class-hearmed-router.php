@@ -148,16 +148,22 @@ class HearMed_Router {
         $wp_user_id = (int) $wp_user_id;
 
         // If already WP-logged-in as the CORRECT user, nothing to do.
-        // If logged in as a DIFFERENT WP user (e.g. stale cookie from
-        // previous session), re-set the cookie to match the portal user.
         if ( is_user_logged_in() && get_current_user_id() === $wp_user_id ) return;
 
         $wp_user = get_user_by( 'ID', $wp_user_id );
         if ( ! $wp_user ) return;
 
-        // Set WP auth cookie (cache-busting only — PortalAuth is source of truth)
-        wp_set_auth_cookie( $wp_user_id, true );
+        // Clear ALL existing WP auth cookies on EVERY path first.
+        // WordPress sets separate cookies on COOKIEPATH (/login/) and
+        // SITECOOKIEPATH (/). A stale cookie from a previous user on
+        // the "/" path takes precedence and makes WP think the wrong
+        // user is logged in, even though the portal session (HMSESS)
+        // correctly identifies the right user.
+        wp_clear_auth_cookie();
+
+        // Set fresh cookies for the correct WP user
         wp_set_current_user( $wp_user_id );
+        wp_set_auth_cookie( $wp_user_id, true );
     }
 
     /**

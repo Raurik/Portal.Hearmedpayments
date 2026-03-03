@@ -1284,6 +1284,12 @@ class PortalAuth {
         );
 
         if ( $wp_user_id ) {
+            // Clear ALL existing WP auth cookies first.
+            // WordPress sets cookies on COOKIEPATH (/login/) and SITECOOKIEPATH (/).
+            // A stale cookie on "/" from a previous user takes precedence over
+            // a fresh cookie on "/login/" — causing the wrong user to appear.
+            wp_clear_auth_cookie();
+
             wp_set_current_user( $wp_user_id );
             wp_set_auth_cookie( $wp_user_id, true );
         }
