@@ -41,7 +41,7 @@ class HearMed_Utils {
 
         // Map module slug → shortcode tag(s) to search for
         $shortcode_map = [
-            'orders'     => 'hearmed_orders',
+            'orders'     => 'hearmed_order_status',
             'accounting' => 'hearmed_accounting',
             'patients'   => 'hearmed_patients',
             'calendar'   => 'hearmed_calendar',
