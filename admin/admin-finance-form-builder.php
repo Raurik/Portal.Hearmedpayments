@@ -21,8 +21,8 @@ class HearMed_Admin_Finance_Form_Builder {
         if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
         if (!HearMed_Auth::can('manage_settings')) return '<p>Permission denied.</p>';
 
-        // Load current settings for all 4 types
-        $types = ['invoice', 'order', 'repair', 'creditnote'];
+        // Load current settings for all 5 types
+        $types = ['invoice', 'order', 'repair', 'creditnote', 'exchange'];
         $all_settings = [];
         foreach ($types as $t) {
             $all_settings[$t] = HearMed_Print_Templates::get_settings($t);
@@ -34,7 +34,7 @@ class HearMed_Admin_Finance_Form_Builder {
         <div id="hm-app" class="hm-ffb">
             <div class="hm-page-header">
                 <h2 class="hm-page-title">Finance Form Builder</h2>
-                <p class="hm-muted" style="margin-top:4px;">Configure print templates for invoices, orders, repair dockets, and credit notes.</p>
+                <p class="hm-muted" style="margin-top:4px;">Configure print templates for invoices, orders, repair dockets, credit notes, and exchange forms.</p>
             </div>
 
             <!-- Global Logo -->
@@ -66,6 +66,7 @@ class HearMed_Admin_Finance_Form_Builder {
                 <button class="hm-ffb-tab" data-type="order">Order</button>
                 <button class="hm-ffb-tab" data-type="repair">Repair Docket</button>
                 <button class="hm-ffb-tab" data-type="creditnote">Credit Note</button>
+                <button class="hm-ffb-tab" data-type="exchange">Exchange Form</button>
             </div>
 
             <!-- Panels -->
@@ -748,6 +749,18 @@ class HearMed_Admin_Finance_Form_Builder {
                 $t['creditReason']    = ['label' => 'Credit Reason',      'value' => $s['creditReason'] ?? true];
                 $t['refundMethod']    = ['label' => 'Refund Method',      'value' => $s['refundMethod'] ?? true];
                 $t['exchangeDetails'] = ['label' => 'Exchange Details',   'value' => $s['exchangeDetails'] ?? false];
+                break;
+            case 'exchange':
+                $t['logo']             = ['label' => 'Show Logo',             'value' => $s['logo'] ?? true];
+                $t['exchangeMeta']     = ['label' => 'Exchange Details',       'value' => $s['exchangeMeta'] ?? true];
+                $t['patient']          = ['label' => 'Patient Info',           'value' => $s['patient'] ?? true];
+                $t['patientAddress']   = ['label' => 'Patient Address',        'value' => $s['patientAddress'] ?? true];
+                $t['originalDevice']   = ['label' => 'Original Device',        'value' => $s['originalDevice'] ?? true];
+                $t['exchangeReason']   = ['label' => 'Exchange Reason',        'value' => $s['exchangeReason'] ?? true];
+                $t['returnedItems']    = ['label' => 'Returned Items',         'value' => $s['returnedItems'] ?? true];
+                $t['newItems']         = ['label' => 'New Order Items',        'value' => $s['newItems'] ?? true];
+                $t['pricing']          = ['label' => 'Pricing Summary',        'value' => $s['pricing'] ?? true];
+                $t['creditApplied']    = ['label' => 'Credit Applied',         'value' => $s['creditApplied'] ?? true];
                 break;
         }
         return $t;

@@ -246,6 +246,29 @@ class HearMed_Utils {
 
         return $prefix . str_pad( (string) $next, 5, '0', STR_PAD_LEFT );
     }
+
+    /**
+     * Generate a unique exchange form number
+     *
+     * @param string $prefix Prefix (default: HMEXCH)
+     * @return string Exchange number e.g. HMEXCH-00001
+     */
+    public static function generate_exchange_number( $prefix = 'HMEXCH' ) {
+        if ( $prefix === 'HMEXCH' || $prefix === '' || $prefix === null ) {
+            $prefix = (string) HearMed_Settings::get( 'hm_exchange_prefix', 'HMEXCH' );
+        }
+
+        $prefix = preg_replace( '/\s+/', '', (string) $prefix );
+        if ( $prefix === '' ) {
+            $prefix = 'HMEXCH';
+        }
+
+        $last = intval( HearMed_Settings::get( 'hm_exchange_last_number', '0' ) );
+        $next = $last + 1;
+        HearMed_Settings::set( 'hm_exchange_last_number', (string) $next );
+
+        return $prefix . '-' . str_pad( (string) $next, 5, '0', STR_PAD_LEFT );
+    }
     
     /**
      * Generate a unique invoice number

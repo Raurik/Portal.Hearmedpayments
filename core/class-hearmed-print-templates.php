@@ -124,6 +124,31 @@ class HearMed_Print_Templates {
             'footerColor'    => '#94a3b8',
             'sections'       => ['companyHeader','patient','deviceSerials','creditReason','itemsTable','paymentBreakdown','refundMethod','exchangeDetails','footer'],
         ],
+        'exchange' => [
+            'companyName'    => 'HearMed Acoustic Health Care Ltd',
+            'tagline'        => 'Exchange Form',
+            'logo'           => true,
+            'logoSize'       => 80,
+            'headerFont'     => 'Cormorant Garamond',
+            'headerSize'     => 18,
+            'headerColor'    => '#0BB4C4',
+            'accentColor'    => '#0BB4C4',
+            'exchangeMeta'   => true,
+            'patient'        => true,
+            'patientAddress' => true,
+            'originalDevice' => true,
+            'exchangeReason' => true,
+            'returnedItems'  => true,
+            'newItems'       => true,
+            'pricing'        => true,
+            'creditApplied'  => true,
+            'footerLine1'    => 'Exchange processed by HearMed Acoustic Health Care Ltd.',
+            'footerLine2'    => '',
+            'footerFont'     => 'Source Sans 3',
+            'footerSize'     => 9,
+            'footerColor'    => '#94a3b8',
+            'sections'       => ['companyHeader','patient','originalDevice','exchangeReason','returnedItems','newItems','pricing','creditApplied','footer'],
+        ],
     ];
 
     /* ──────────────────────────────────────────────
@@ -152,7 +177,7 @@ class HearMed_Print_Templates {
     }
 
     public static function save_settings(string $type, array $settings): bool {
-        $allowed = ['invoice', 'order', 'repair', 'creditnote'];
+        $allowed = ['invoice', 'order', 'repair', 'creditnote', 'exchange'];
         if (!in_array($type, $allowed)) return false;
         return HearMed_Settings::set("hm_print_template_{$type}", wp_json_encode($settings));
     }
@@ -361,6 +386,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
             'order'      => 'Order Form',
             'repair'     => 'Repair Docket',
             'creditnote' => 'Credit Note',
+            'exchange'   => 'Exchange Form',
         ];
         $form_label = $type_labels[$type] ?? ucfirst($type);
 

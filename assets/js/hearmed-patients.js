@@ -354,7 +354,7 @@ function initProfile(){
         {id:'overview',label:'Overview'},{id:'details',label:'Details'},{id:'appointments',label:'Appointments'},
         {id:'notes',label:'Notes'},{id:'documents',label:'Documents'},{id:'orders',label:'Orders'},
         {id:'invoices',label:'Invoices'},{id:'hearing-aids',label:'Hearing Aids'},{id:'repairs',label:'Repairs'},
-        {id:'returns',label:'Returns'},{id:'forms',label:'Forms'},{id:'case-history',label:'Case History'},
+        {id:'returns',label:'Returns'},{id:'exchanges',label:'Exchanges'},{id:'forms',label:'Forms'},{id:'case-history',label:'Case History'},
         {id:'activity',label:'Activity'}
     ];
 
@@ -435,6 +435,7 @@ function initProfile(){
             case 'appointments':loadAppointments($c);break;case 'notes':loadNotes($c);break;
             case 'documents':loadDocuments($c);break;case 'hearing-aids':loadHearingAids($c);break;
             case 'repairs':loadRepairs($c);break;case 'returns':loadReturns($c);break;
+            case 'exchanges':loadExchanges($c);break;
             case 'forms':loadForms($c);break;case 'case-history':loadCaseHistory($c);break;
             case 'activity':loadActivity($c);break;
             case 'orders':loadOrders($c);break;
@@ -1297,6 +1298,37 @@ function initProfile(){
         $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--sm"><div class="hm-modal-hd"><span>Log Cheque Sent</span><button class="hm-close">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Date sent</label><input type="date" class="hm-inp" id="cheque-date" value="'+new Date().toISOString().split('T')[0]+'"></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="cheque-save">Log</button></div></div></div>');
         $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#cheque-save').on('click',function(){$.post(_hm.ajax,{action:'hm_log_cheque_sent',nonce:_hm.nonce,_ID:cnId,cheque_date:$('#cheque-date').val()},function(r){closeModal();if(r.success){toast('Cheque logged');cb();}else toast('Error','error');});});
+    }
+
+    /* ── EXCHANGES ── */
+    function loadExchanges($c){
+        $.post(_hm.ajax,{action:'hm_get_patient_exchanges',nonce:_hm.nonce,patient_id:pid},function(r){
+            if(!r.success){$c.html('<div class="hm-empty">Error loading exchanges</div>');return;}
+            var ex=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Exchanges ('+ex.length+')</h3></div>';
+            if(!ex.length){
+                h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.returns+'</div><div class="hm-empty-text">No exchanges</div></div>';
+            }else{
+                h+='<table class="hm-table"><thead><tr><th>Exchange #</th><th>Date</th><th>Device</th><th>Type</th><th>Original Amt</th><th>Credit</th><th>Refund</th><th>Status</th><th>Created By</th></tr></thead><tbody>';
+                ex.forEach(function(x){
+                    var typeLabel={same_tech:'Same Tech',same_value:'Same Value',credit:'Credit',refund:'Refund'}[x.exchange_type]||x.exchange_type;
+                    var statusCls=x.status==='completed'?'hm-badge--green':x.status==='pending'?'hm-badge--amber':'hm-badge--red';
+                    var cn=x.credit_note_number?'<div style="font-size:11px;color:#94a3b8;">CN: '+esc(x.credit_note_number)+'</div>':'';
+                    h+='<tr>'+
+                        '<td><code>'+(x.exchange_number||'—')+'</code></td>'+
+                        '<td>'+fmtDate(x.created_at)+'</td>'+
+                        '<td>'+esc(x.device_name)+'</td>'+
+                        '<td>'+typeLabel+'</td>'+
+                        '<td>'+euro(x.original_amount)+'</td>'+
+                        '<td>'+euro(x.credit_amount)+cn+'</td>'+
+                        '<td>'+(x.refund_amount>0?euro(x.refund_amount):'<span style="color:#94a3b8;">—</span>')+'</td>'+
+                        '<td><span class="hm-badge '+statusCls+'">'+x.status.charAt(0).toUpperCase()+x.status.slice(1)+'</span></td>'+
+                        '<td>'+esc(x.created_by_name)+'</td>'+
+                    '</tr>';
+                });
+                h+='</tbody></table>';
+            }
+            $c.html(h+'</div>');
+        });
     }
 
     /* ── FORMS ── */

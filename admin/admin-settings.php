@@ -25,8 +25,7 @@ class HearMed_Admin_Settings {
                 ['key' => 'hm_invoice_prefix', 'label' => 'Invoice Number Prefix', 'type' => 'text', 'default' => 'INV-'],
                 ['key' => 'hm_order_prefix', 'label' => 'Order Number Prefix', 'type' => 'text', 'default' => 'ORD-'],
                 ['key' => 'hm_credit_note_prefix', 'label' => 'Credit Note Prefix', 'type' => 'text', 'default' => 'HMCN'],
-                ['key' => 'hm_repair_prefix', 'label' => 'Repair Number Prefix', 'type' => 'text', 'default' => 'HMREP'],
-            ],
+                ['key' => 'hm_repair_prefix', 'label' => 'Repair Number Prefix', 'type' => 'text', 'default' => 'HMREP'],                ['key' => 'hm_exchange_prefix',   'label' => 'Exchange Form Prefix', 'type' => 'text', 'default' => 'HMEXCH'],            ],
         ],
         'hearmed_comms_settings' => [
             'title' => 'Communication Settings',
@@ -578,6 +577,7 @@ class HearMed_Admin_Settings {
                     ['key' => 'hm_order_prefix',      'label' => 'Order Prefix',       'default' => 'ORD-', 'counter' => 'hm_order_last_number'],
                     ['key' => 'hm_credit_note_prefix', 'label' => 'Credit Note Prefix', 'default' => 'HMCN',  'counter' => 'hm_credit_note_last_number'],
                     ['key' => 'hm_repair_prefix',     'label' => 'Repair Prefix',      'default' => 'HMREP', 'counter' => 'hm_repair_last_number'],
+                    ['key' => 'hm_exchange_prefix',   'label' => 'Exchange Prefix',    'default' => 'HMEXCH', 'counter' => 'hm_exchange_last_number'],
                 ];
                 foreach ($inv_fields as $f):
                     $last_num = intval($v($f['counter'], '0'));

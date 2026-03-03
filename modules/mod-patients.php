@@ -136,6 +136,7 @@ add_action( 'wp_ajax_hm_update_repair_status', 'hm_ajax_update_repair_status' );
 // Exchange flow
 add_action( 'wp_ajax_hm_create_exchange',  'hm_ajax_create_exchange' );
 add_action( 'wp_ajax_hm_get_exchange_item_amount', 'hm_ajax_get_exchange_item_amount' );
+add_action( 'wp_ajax_hm_get_patient_exchanges', 'hm_ajax_get_patient_exchanges' );
 
 // Return flow (full return with PRSI tracking)
 add_action( 'wp_ajax_hm_create_return',  'hm_ajax_create_return' );
@@ -2790,12 +2791,15 @@ function hm_ajax_create_exchange() {
                 'updated_at'     => date( 'c' ),
             ], [ 'id' => $device_id ] );
 
+            $exchange_number = HearMed_Utils::generate_exchange_number();
+
             $exchange_id = $db->insert( 'hearmed_core.exchanges', [
                 'patient_id'          => $pid,
                 'original_order_id'   => $device->order_id ?: null,
                 'original_invoice_id' => $order->inv_id ?? null,
                 'device_id'           => $device_id,
                 'exchange_type'       => 'same_tech',
+                'exchange_number'     => $exchange_number,
                 'original_amount'     => $credit_amount,
                 'credit_amount'       => 0,
                 'refund_amount'       => 0,
@@ -2823,6 +2827,7 @@ function hm_ajax_create_exchange() {
 
             wp_send_json_success( [
                 'exchange_id'        => $exchange_id,
+                'exchange_number'    => $exchange_number,
                 'refund_type'        => 'same_tech',
                 'patient_credit'     => 0,
                 'cash_refund'        => 0,
@@ -2901,6 +2906,8 @@ function hm_ajax_create_exchange() {
         }
 
         // Create exchange record
+        $exchange_number = HearMed_Utils::generate_exchange_number();
+
         $exchange_id = $db->insert( 'hearmed_core.exchanges', [
             'patient_id'          => $pid,
             'original_order_id'   => $device->order_id ?: null,
@@ -2909,6 +2916,7 @@ function hm_ajax_create_exchange() {
             'patient_credit_id'   => $credit_id,
             'device_id'           => $device_id,
             'exchange_type'       => $refund_type,
+            'exchange_number'     => $exchange_number,
             'original_amount'     => $credit_amount,
             'credit_amount'       => $credit_to_acct,
             'refund_amount'       => $cash_refund,
@@ -2967,6 +2975,7 @@ function hm_ajax_create_exchange() {
             'credit_note_id'     => $cn_id,
             'credit_note_number' => $cn_number,
             'exchange_id'        => $exchange_id,
+            'exchange_number'    => $exchange_number,
             'patient_credit_id'  => $credit_id,
             'item_amount'        => $credit_amount,
             'patient_credit'     => $credit_to_acct,
@@ -2978,6 +2987,73 @@ function hm_ajax_create_exchange() {
         $db->rollback();
         wp_send_json_error( 'Exchange failed: ' . $e->getMessage() );
     }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  24-C. GET PATIENT EXCHANGES
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hm_ajax_get_patient_exchanges() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $pid = intval( $_POST['patient_id'] ?? 0 );
+    if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
+
+    $db = HearMed_DB::instance();
+
+    // Check exchanges table exists
+    $has_table = $db->get_var(
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'hearmed_core' AND table_name = 'exchanges'"
+    );
+    if ( ! $has_table ) { wp_send_json_success( [] ); return; }
+
+    // Check if exchange_number column exists
+    $has_exch_num = $db->get_var(
+        "SELECT column_name FROM information_schema.columns
+         WHERE table_schema = 'hearmed_core' AND table_name = 'exchanges' AND column_name = 'exchange_number'"
+    );
+    $exch_num_col = $has_exch_num ? "e.exchange_number," : "NULL AS exchange_number,";
+
+    $rows = $db->get_results(
+        "SELECT e.id, {$exch_num_col}
+                e.exchange_type, e.original_amount, e.new_amount,
+                e.credit_amount, e.balance_due, e.refund_amount,
+                e.prsi_amount, e.reason, e.status,
+                e.created_at,
+                cn.credit_note_number,
+                COALESCE(p.product_name, 'Unknown Device') AS device_name,
+                COALESCE(s.first_name || ' ' || s.last_name, 'System') AS created_by_name
+         FROM hearmed_core.exchanges e
+         LEFT JOIN hearmed_core.credit_notes cn ON cn.id = e.credit_note_id
+         LEFT JOIN hearmed_core.patient_devices pd ON pd.id = e.device_id
+         LEFT JOIN hearmed_reference.products p ON p.id = pd.product_id
+         LEFT JOIN hearmed_reference.staff s ON s.id = e.created_by
+         WHERE e.patient_id = \$1
+         ORDER BY e.created_at DESC",
+        [ $pid ]
+    );
+
+    $out = [];
+    foreach ( $rows as $r ) {
+        $out[] = [
+            'id'                  => (int) $r->id,
+            'exchange_number'     => $r->exchange_number ?? '',
+            'exchange_type'       => $r->exchange_type,
+            'device_name'         => $r->device_name,
+            'original_amount'     => (float) $r->original_amount,
+            'new_amount'          => (float) $r->new_amount,
+            'credit_amount'       => (float) $r->credit_amount,
+            'balance_due'         => (float) $r->balance_due,
+            'refund_amount'       => (float) $r->refund_amount,
+            'prsi_amount'         => (float) $r->prsi_amount,
+            'credit_note_number'  => $r->credit_note_number ?? '',
+            'reason'              => $r->reason ?? '',
+            'status'              => $r->status,
+            'created_at'          => $r->created_at,
+            'created_by_name'     => $r->created_by_name,
+        ];
+    }
+    wp_send_json_success( $out );
 }
 
 
@@ -3518,6 +3594,8 @@ function hm_ensure_returns_tables() {
             refund_amount       DECIMAL(10,2) DEFAULT 0,
             prsi_amount         DECIMAL(10,2) DEFAULT 0,
             reason              TEXT,
+            notes               TEXT,
+            exchange_number     VARCHAR(30),
             status              VARCHAR(20) NOT NULL DEFAULT 'pending',
             completed_at        TIMESTAMP,
             completed_by        BIGINT,
@@ -3526,6 +3604,18 @@ function hm_ensure_returns_tables() {
             updated_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )"
     );
+
+    // Ensure exchange_number + notes columns exist (for existing tables)
+    foreach ( ['exchange_number' => 'VARCHAR(30)', 'notes' => 'TEXT'] as $col => $type ) {
+        $exists = $db->get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_core' AND table_name = 'exchanges' AND column_name = \$1",
+            [ $col ]
+        );
+        if ( ! $exists ) {
+            $db->query( "ALTER TABLE hearmed_core.exchanges ADD COLUMN {$col} {$type}" );
+        }
+    }
 
     // Create returns table
     $db->query(
