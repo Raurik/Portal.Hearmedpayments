@@ -555,7 +555,7 @@ class HearMed_Enqueue {
         $full_path = HEARMED_PATH . $file;
         // Use filemtime + a hard bump suffix to defeat CDN/server caches
         $v = file_exists( $full_path ) ? filemtime( $full_path ) : HEARMED_VERSION;
-        return $v . '.4';
+        return $v . '.5';
     }
     
     /**
