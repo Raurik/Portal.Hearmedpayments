@@ -17,13 +17,22 @@ class HearMed_Staff_Login {
 
     public function __construct() {
         add_shortcode( 'hearmed_staff_login', [ $this, 'render' ] );
-        add_action( 'wp_ajax_nopriv_hm_auth_login',      [ $this, 'ajax_login' ] );
-        add_action( 'wp_ajax_nopriv_hm_auth_verify_2fa', [ $this, 'ajax_verify_2fa' ] );
-        add_action( 'wp_ajax_nopriv_hm_auth_setup_2fa',  [ $this, 'ajax_setup_2fa' ] );
-        add_action( 'wp_ajax_nopriv_hm_auth_get_2fa_qr', [ $this, 'ajax_get_2fa_qr' ] );
-        add_action( 'wp_ajax_nopriv_hm_auth_accept_invite', [ $this, 'ajax_accept_invite' ] );
-        add_action( 'wp_ajax_hm_auth_logout',             [ $this, 'ajax_logout' ] );
-        add_action( 'wp_ajax_nopriv_hm_auth_logout',      [ $this, 'ajax_logout' ] );
+
+        // Register for both logged-in and non-logged-in WP users.
+        // Portal auth is independent of WP auth — a WP-logged-in user
+        // may not have a portal session yet.
+        $actions = [
+            'hm_auth_login'          => 'ajax_login',
+            'hm_auth_verify_2fa'     => 'ajax_verify_2fa',
+            'hm_auth_setup_2fa'      => 'ajax_setup_2fa',
+            'hm_auth_get_2fa_qr'     => 'ajax_get_2fa_qr',
+            'hm_auth_accept_invite'  => 'ajax_accept_invite',
+            'hm_auth_logout'         => 'ajax_logout',
+        ];
+        foreach ( $actions as $action => $method ) {
+            add_action( "wp_ajax_$action",        [ $this, $method ] );
+            add_action( "wp_ajax_nopriv_$action", [ $this, $method ] );
+        }
     }
 
     /* ─────────────────────────────────────────────────────────────────
