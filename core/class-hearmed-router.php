@@ -87,13 +87,19 @@ class HearMed_Router {
     public function auth_redirect() {
         if ( defined( 'DOING_AJAX' ) || defined( 'DOING_CRON' ) || defined( 'REST_REQUEST' ) || defined( 'WP_CLI' ) ) return;
 
-        // Don't redirect the login page itself
-        if ( is_page( 'login' ) ) return;
+        // Don't redirect the login page itself (WP check + URI fallback to prevent loops)
+        $uri = trim( strtok( $_SERVER['REQUEST_URI'] ?? '', '?' ), '/' );
+        if ( is_page( 'login' ) || $uri === 'login' ) return;
 
         // If not authenticated via portal, redirect to login
         if ( ! PortalAuth::is_logged_in() ) {
-            $redirect_to = urlencode( $_SERVER['REQUEST_URI'] ?? '/' );
-            wp_redirect( home_url( "/login/?redirect_to={$redirect_to}" ) );
+            // Use the clean URI (without query string nesting) as redirect target
+            $clean_uri = $_SERVER['REQUEST_URI'] ?? '/';
+            // Prevent redirect_to from pointing back at login (loop guard)
+            if ( strpos( $clean_uri, '/login' ) === 0 ) {
+                $clean_uri = '/';
+            }
+            wp_redirect( home_url( '/login/?redirect_to=' . urlencode( $clean_uri ) ) );
             exit;
         }
     }
