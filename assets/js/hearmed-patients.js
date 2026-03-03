@@ -360,7 +360,7 @@ function initProfile(){
 
     $.post(_hm.ajax,{action:'hm_get_patient',nonce:_hm.nonce,patient_id:pid},function(r){
         if(!r.success){$el.html('<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.warning+'</div><div class="hm-empty-text">Patient not found</div></div>');return;}
-        patient=r.data;renderProfile();loadTab(activeTab);
+        patient=r.data;renderProfile();loadTab(activeTab);checkAlertNotes();
     });
 
     function renderProfile(){
@@ -608,31 +608,129 @@ function initProfile(){
         });
     }
 
-    /* ── NOTES ── */
+    /* ── NOTES (tabbed rebuild) ── */
+    var _noteSubTab='all';
+
     function loadNotes($c){
         $.post(_hm.ajax,{action:'hm_get_patient_notes',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
-            var n=r.data,tc={clinical:'var(--hm-teal)',admin:'#64748b',cancellation:'#e53e3e',system:'#3b82f6','follow-up':'#d97706',manual:'var(--hm-teal)'};
-            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Notes ('+n.length+')</h3><button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-add-note-btn">+ Add Note</button></div>';
-            if(!n.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.note+'</div><div class="hm-empty-text">No notes</div></div>';
-            else n.forEach(function(x){var c=tc[x.note_type.toLowerCase()]||'var(--hm-teal)';var pinCls=x.is_pinned?' hm-note-pinned':'';var pinIcon=x.is_pinned?'':'';h+='<div class="hm-note-card'+pinCls+'" style="border-left-color:'+c+';">'+(x.is_pinned?'<div class="hm-note-pin-badge">Pinned</div>':'')+'<div class="hm-note-type"><span class="hm-badge hm-badge--sm" style="background:'+c+';color:#fff;">'+esc(x.note_type)+'</span></div><div class="hm-note-text">'+esc(x.note_text)+'</div><div style="display:flex;gap:16px;align-items:center;margin-top:8px;"><div class="hm-note-meta">By '+esc(x.created_by)+' at '+fmtDateTime(x.created_at)+'</div>'+(x.can_edit?'<a href="#" class="hm-pin-note" data-id="'+x._ID+'" data-pinned="'+(x.is_pinned?'1':'0')+'" style="font-size:12px;color:#d97706;">'+(x.is_pinned?'Unpin':'Pin')+'</a><a href="#" class="hm-edit-note" data-id="'+x._ID+'" data-text="'+esc(x.note_text)+'" data-type="'+esc(x.note_type)+'" style="font-size:12px;color:var(--hm-teal);">Edit</a><a href="#" class="hm-delete-note" data-id="'+x._ID+'" style="font-size:12px;color:#e53e3e;">Delete</a>':'')+'</div></div>';});
+            var data=r.data, notes=data.notes, counts=data.counts||{};
+            var total=notes.length;
+            var catLabels={all:'All',general:'General',appointment:'Appointment',clinical:'Clinical'};
+            var catCounts={all:total,general:counts.general||0,appointment:counts.appointment||0,clinical:counts.clinical||0};
+
+            // Build sub-tab bar
+            var st='<div class="hm-notes-subtabs">';
+            ['all','general','appointment','clinical'].forEach(function(k){
+                st+='<button class="hm-notes-subtab'+(_noteSubTab===k?' active':'')+'" data-cat="'+k+'">'+catLabels[k]+' <span class="hm-notes-count">'+catCounts[k]+'</span></button>';
+            });
+            st+='</div>';
+
+            // Filter notes by active sub-tab
+            var filtered=_noteSubTab==='all'?notes:notes.filter(function(x){return x.note_category===_noteSubTab;});
+
+            var tc={clinical:'var(--hm-teal)',admin:'#64748b',cancellation:'#e53e3e',system:'#3b82f6','follow-up':'#d97706',manual:'var(--hm-teal)'};
+            var catColors={general:'#64748b',appointment:'#3b82f6',clinical:'var(--hm-teal)'};
+
+            var h='<div class="hm-tab-section">';
+            h+='<div class="hm-section-header"><h3>Notes ('+total+')</h3><button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-add-note-btn">+ Add Note</button></div>';
+            h+=st;
+
+            if(!filtered.length){
+                h+='<div class="hm-empty" style="margin-top:16px;"><div class="hm-empty-icon">'+HM_ICONS.note+'</div><div class="hm-empty-text">No '+(_noteSubTab==='all'?'':_noteSubTab+' ')+'notes</div></div>';
+            } else {
+                h+='<div class="hm-notes-list">';
+                filtered.forEach(function(x){
+                    var c=tc[x.note_type.toLowerCase()]||'var(--hm-teal)';
+                    var pinCls=x.is_pinned?' hm-note-pinned':'';
+                    var alertCls=x.is_alert?' hm-note-alert':'';
+                    var catBadge='<span class="hm-badge hm-badge--sm" style="background:'+( catColors[x.note_category]||'#64748b')+';color:#fff;">'+esc(x.note_category.charAt(0).toUpperCase()+x.note_category.slice(1))+'</span>';
+
+                    h+='<div class="hm-note-card'+pinCls+alertCls+'" style="border-left-color:'+c+';">';
+                    if(x.is_pinned) h+='<div class="hm-note-pin-badge">📌 Pinned</div>';
+                    if(x.is_alert) h+='<div class="hm-note-alert-badge">⚠️ Alert</div>';
+                    h+='<div class="hm-note-badges">'+catBadge+' <span class="hm-badge hm-badge--sm" style="background:'+c+';color:#fff;">'+esc(x.note_type)+'</span></div>';
+                    h+='<div class="hm-note-text">'+esc(x.note_text)+'</div>';
+                    h+='<div style="display:flex;gap:16px;align-items:center;margin-top:8px;">';
+                    h+='<div class="hm-note-meta">By '+esc(x.created_by)+' · '+fmtDateTime(x.created_at)+'</div>';
+                    if(x.can_edit){
+                        h+='<a href="#" class="hm-pin-note" data-id="'+x._ID+'" data-pinned="'+(x.is_pinned?'1':'0')+'" style="font-size:12px;color:#d97706;">'+(x.is_pinned?'Unpin':'Pin')+'</a>';
+                        h+='<a href="#" class="hm-edit-note" data-id="'+x._ID+'" data-text="'+esc(x.note_text)+'" data-type="'+esc(x.note_type)+'" data-category="'+esc(x.note_category)+'" data-alert="'+(x.is_alert?'1':'0')+'" style="font-size:12px;color:var(--hm-teal);">Edit</a>';
+                        h+='<a href="#" class="hm-delete-note" data-id="'+x._ID+'" style="font-size:12px;color:#e53e3e;">Delete</a>';
+                    }
+                    h+='</div></div>';
+                });
+                h+='</div>';
+            }
             $c.html(h+'</div>');
         });
+
+        // Sub-tab switching
+        $c.off('click','.hm-notes-subtab').on('click','.hm-notes-subtab',function(){
+            _noteSubTab=$(this).data('cat');
+            loadNotes($('#hm-tab-content'));
+        });
         $c.off('click','#hm-add-note-btn').on('click','#hm-add-note-btn',function(){showNoteModal();});
-        $c.off('click','.hm-edit-note').on('click','.hm-edit-note',function(e){e.preventDefault();showNoteModal($(this).data('id'),$(this).data('text'),$(this).data('type'));});
+        $c.off('click','.hm-edit-note').on('click','.hm-edit-note',function(e){
+            e.preventDefault();
+            showNoteModal($(this).data('id'),$(this).data('text'),$(this).data('type'),$(this).data('category'),$(this).data('alert'));
+        });
         $c.off('click','.hm-pin-note').on('click','.hm-pin-note',function(e){e.preventDefault();$.post(_hm.ajax,{action:'hm_toggle_note_pin',nonce:_hm.nonce,_ID:$(this).data('id')},function(r){if(r.success){toast(r.data.pinned?'Note pinned':'Note unpinned');loadNotes($('#hm-tab-content'));}else toast('Error','error');});});
         $c.off('click','.hm-delete-note').on('click','.hm-delete-note',function(e){e.preventDefault();if(!confirm('Delete?'))return;$.post(_hm.ajax,{action:'hm_delete_patient_note',nonce:_hm.nonce,_ID:$(this).data('id')},function(r){if(r.success){toast('Deleted');loadNotes($('#hm-tab-content'));}else toast('Cannot delete','error');});});
     }
 
-    function showNoteModal(id,text,type){
+    function showNoteModal(id,text,type,category,isAlert){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>'+(id?'Edit':'Add')+' Note</span><button class="hm-close">&times;</button></div><div class="hm-modal-body"><div class="hm-form-group"><label class="hm-label">Note type</label><select class="hm-dd" id="note-type">'+['Clinical','Admin','Follow-up','Cancellation','System','Manual'].map(function(t){return'<option'+(type&&type.toLowerCase()===t.toLowerCase()?' selected':'')+'>'+t+'</option>';}).join('')+'</select></div><div class="hm-form-group"><label class="hm-label">Note text</label><textarea class="hm-textarea" id="note-text" rows="6">'+esc(text||'')+'</textarea></div></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="note-save">Save</button></div></div></div>');
+        var cats=['general','appointment','clinical'];
+        var types=['Clinical','Admin','Follow-up','Cancellation','System','Manual'];
+        var catOpts=cats.map(function(c){return'<option value="'+c+'"'+(category&&category===c?' selected':'')+'>'+c.charAt(0).toUpperCase()+c.slice(1)+'</option>';}).join('');
+        var typeOpts=types.map(function(t){return'<option'+(type&&type.toLowerCase()===t.toLowerCase()?' selected':'')+'>'+t+'</option>';}).join('');
+        var alertChecked=(isAlert==='1'||isAlert===1||isAlert===true)?' checked':'';
+
+        $('body').append(
+            '<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal"><div class="hm-modal-hd"><span>'+(id?'Edit':'Add')+' Note</span><button class="hm-close">&times;</button></div>'+
+            '<div class="hm-modal-body">'+
+                '<div class="hm-form-row">'+
+                    '<div class="hm-form-group"><label class="hm-label">Category</label><select class="hm-dd" id="note-category">'+catOpts+'</select></div>'+
+                    '<div class="hm-form-group"><label class="hm-label">Type</label><select class="hm-dd" id="note-type">'+typeOpts+'</select></div>'+
+                '</div>'+
+                '<div class="hm-form-group"><label class="hm-label">Note text</label><textarea class="hm-textarea" id="note-text" rows="6">'+esc(text||'')+'</textarea></div>'+
+                '<div class="hm-form-group"><label class="hm-checkbox-label"><input type="checkbox" id="note-is-alert"'+alertChecked+'> <span class="hm-alert-check-label">⚠️ Mark as Alert Note</span></label><div class="hm-field-hint">Alert notes pop up automatically when any staff member opens this patient.</div></div>'+
+            '</div>'+
+            '<div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="note-save">Save</button></div></div></div>'
+        );
         $('.hm-close').on('click',closeModal);
         $('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#note-save').on('click',function(){
             var txt=$.trim($('#note-text').val());if(!txt){toast('Note text required','error');return;}
             $(this).prop('disabled',true).text('Saving…');
-            $.post(_hm.ajax,{action:'hm_save_patient_note',nonce:_hm.nonce,patient_id:pid,_ID:id||0,note_type:$('#note-type').val(),note_text:txt},function(r){closeModal();if(r.success){toast('Note saved');loadNotes($('#hm-tab-content'));}else toast('Error','error');});
+            $.post(_hm.ajax,{
+                action:'hm_save_patient_note',nonce:_hm.nonce,patient_id:pid,_ID:id||0,
+                note_type:$('#note-type').val(),
+                note_text:txt,
+                note_category:$('#note-category').val(),
+                is_alert:$('#note-is-alert').is(':checked')?1:0
+            },function(r){closeModal();if(r.success){toast('Note saved');loadNotes($('#hm-tab-content'));}else toast('Error','error');});
+        });
+    }
+
+    /* ── ALERT NOTES POPUP (fires on patient profile load) ── */
+    function checkAlertNotes(){
+        $.post(_hm.ajax,{action:'hm_get_patient_alerts',nonce:_hm.nonce,patient_id:pid},function(r){
+            if(!r.success||!r.data||!r.data.length)return;
+            var alerts=r.data;
+            var h='<div id="hm-alert-overlay" class="hm-modal-bg hm-alert-modal-bg"><div class="hm-modal hm-alert-modal"><div class="hm-modal-hd hm-alert-modal-hd"><span>⚠️ Patient Alert'+(alerts.length>1?'s':'')+'</span><button class="hm-close hm-alert-close">&times;</button></div>';
+            h+='<div class="hm-modal-body hm-alert-modal-body">';
+            alerts.forEach(function(a){
+                h+='<div class="hm-alert-note-item">';
+                h+='<div class="hm-alert-note-text">'+esc(a.note_text)+'</div>';
+                h+='<div class="hm-alert-note-meta">'+esc(a.created_by)+' · '+fmtDateTime(a.created_at)+'</div>';
+                h+='</div>';
+            });
+            h+='</div><div class="hm-modal-ft hm-alert-modal-ft"><button class="hm-btn hm-btn--primary hm-alert-close">Acknowledged</button></div></div></div>';
+            $('body').append(h);
+            $('body').off('click','.hm-alert-close').on('click','.hm-alert-close',function(){$('#hm-alert-overlay').remove();});
+            $('#hm-alert-overlay').on('click',function(e){if(e.target===this)$('#hm-alert-overlay').remove();});
         });
     }
 

@@ -65,6 +65,7 @@ add_action( 'wp_ajax_hm_update_patient',    'hm_ajax_update_patient' );
 add_action( 'wp_ajax_hm_get_patient_notes',    'hm_ajax_get_patient_notes' );
 add_action( 'wp_ajax_hm_save_patient_note',    'hm_ajax_save_patient_note' );
 add_action( 'wp_ajax_hm_delete_patient_note',  'hm_ajax_delete_patient_note' );
+add_action( 'wp_ajax_hm_get_patient_alerts',   'hm_ajax_get_patient_alerts' );
 
 // Documents
 add_action( 'wp_ajax_hm_get_patient_documents',     'hm_ajax_get_patient_documents' );
@@ -791,42 +792,65 @@ function hm_ajax_get_patient_notes() {
     $pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
 
+    $category = sanitize_text_field( $_POST['note_category'] ?? '' );
+
     $db   = HearMed_DB::instance();
-    $rows = $db->get_results(
-        "SELECT n.id, n.note_type, n.note_text, n.created_by, n.created_at,
-                COALESCE(n.is_pinned, false) AS is_pinned,
-                COALESCE(s.first_name || ' ' || s.last_name, 'System') AS created_by_name
-         FROM hearmed_core.patient_notes n
-         LEFT JOIN hearmed_reference.staff s ON s.id = n.created_by
-         WHERE n.patient_id = \$1
-         ORDER BY COALESCE(n.is_pinned, false) DESC, n.created_at DESC",
-        [ $pid ]
-    );
+
+    $sql = "SELECT n.id, n.note_type, n.note_text, n.created_by, n.created_at,
+                   COALESCE(n.is_pinned, false) AS is_pinned,
+                   COALESCE(n.note_category, 'general') AS note_category,
+                   COALESCE(n.is_alert, false) AS is_alert,
+                   COALESCE(s.first_name || ' ' || s.last_name, 'System') AS created_by_name
+            FROM hearmed_core.patient_notes n
+            LEFT JOIN hearmed_reference.staff s ON s.id = n.created_by
+            WHERE n.patient_id = \$1";
+    $params = [ $pid ];
+
+    if ( $category && in_array( $category, [ 'general', 'appointment', 'clinical' ], true ) ) {
+        $sql .= " AND COALESCE(n.note_category, 'general') = \$2";
+        $params[] = $category;
+    }
+
+    $sql .= " ORDER BY COALESCE(n.is_pinned, false) DESC, n.created_at DESC";
+
+    $rows = $db->get_results( $sql, $params );
 
     $staff_id = hm_patient_staff_id();
     $is_admin = hm_patient_is_admin();
 
     $out = [];
+    $counts = [ 'general' => 0, 'appointment' => 0, 'clinical' => 0 ];
     foreach ( $rows as $r ) {
+        $cat = $r->note_category ?? 'general';
+        if ( isset( $counts[ $cat ] ) ) $counts[ $cat ]++;
         $out[] = [
-            '_ID'        => (int) $r->id,
-            'note_type'  => $r->note_type,
-            'note_text'  => $r->note_text,
-            'is_pinned'  => hm_pg_bool( $r->is_pinned ),
-            'created_by' => $r->created_by_name,
-            'created_at' => $r->created_at,
-            'can_edit'   => $is_admin || (int) $r->created_by === $staff_id,
+            '_ID'           => (int) $r->id,
+            'note_type'     => $r->note_type,
+            'note_text'     => $r->note_text,
+            'note_category' => $cat,
+            'is_pinned'     => hm_pg_bool( $r->is_pinned ),
+            'is_alert'      => hm_pg_bool( $r->is_alert ?? false ),
+            'created_by'    => $r->created_by_name,
+            'created_at'    => $r->created_at,
+            'can_edit'      => $is_admin || (int) $r->created_by === $staff_id,
         ];
     }
-    wp_send_json_success( $out );
+    wp_send_json_success( [ 'notes' => $out, 'counts' => $counts ] );
 }
 
 function hm_ajax_save_patient_note() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    $pid  = intval( $_POST['patient_id'] ?? 0 );
-    $nid  = intval( $_POST['_ID'] ?? 0 );
-    $type = sanitize_text_field( $_POST['note_type'] ?? 'Manual' );
-    $text = sanitize_textarea_field( $_POST['note_text'] ?? '' );
+    $pid      = intval( $_POST['patient_id'] ?? 0 );
+    $nid      = intval( $_POST['_ID'] ?? 0 );
+    $type     = sanitize_text_field( $_POST['note_type'] ?? 'Manual' );
+    $text     = sanitize_textarea_field( $_POST['note_text'] ?? '' );
+    $category = sanitize_text_field( $_POST['note_category'] ?? 'general' );
+    $is_alert = ! empty( $_POST['is_alert'] ) && $_POST['is_alert'] !== '0';
+
+    // Validate category
+    if ( ! in_array( $category, [ 'general', 'appointment', 'clinical' ], true ) ) {
+        $category = 'general';
+    }
 
     if ( ! $pid || ! $text ) wp_send_json_error( 'Patient ID and note text required' );
 
@@ -835,22 +859,59 @@ function hm_ajax_save_patient_note() {
 
     if ( $nid ) {
         $db->update( 'hearmed_core.patient_notes', [
-            'note_type'  => $type,
-            'note_text'  => $text,
-            'updated_at' => date( 'c' ),
+            'note_type'     => $type,
+            'note_text'     => $text,
+            'note_category' => $category,
+            'is_alert'      => $is_alert,
+            'updated_at'    => date( 'c' ),
         ], [ 'id' => $nid ] );
         hm_patient_audit( 'UPDATE_NOTE', 'patient_note', $nid, [ 'patient_id' => $pid ] );
     } else {
         $nid = $db->insert( 'hearmed_core.patient_notes', [
-            'patient_id' => $pid,
-            'note_type'  => $type,
-            'note_text'  => $text,
-            'created_by' => $staff_id ?: null,
+            'patient_id'    => $pid,
+            'note_type'     => $type,
+            'note_text'     => $text,
+            'note_category' => $category,
+            'is_alert'      => $is_alert,
+            'created_by'    => $staff_id ?: null,
         ]);
         hm_patient_audit( 'CREATE_NOTE', 'patient_note', $nid, [ 'patient_id' => $pid ] );
     }
 
     wp_send_json_success( [ 'id' => $nid ] );
+}
+
+/**
+ * Get alert notes for a patient — used for the popup on profile load.
+ */
+function hm_ajax_get_patient_alerts() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    $pid = intval( $_POST['patient_id'] ?? 0 );
+    if ( ! $pid ) wp_send_json_error( 'Missing patient_id' );
+
+    $db   = HearMed_DB::instance();
+    $rows = $db->get_results(
+        "SELECT n.id, n.note_type, n.note_text, n.note_category, n.created_at,
+                COALESCE(s.first_name || ' ' || s.last_name, 'System') AS created_by_name
+         FROM hearmed_core.patient_notes n
+         LEFT JOIN hearmed_reference.staff s ON s.id = n.created_by
+         WHERE n.patient_id = \$1 AND COALESCE(n.is_alert, false) = true
+         ORDER BY n.created_at DESC",
+        [ $pid ]
+    );
+
+    $out = [];
+    foreach ( $rows as $r ) {
+        $out[] = [
+            '_ID'        => (int) $r->id,
+            'note_text'  => $r->note_text,
+            'note_type'  => $r->note_type,
+            'category'   => $r->note_category ?? 'general',
+            'created_by' => $r->created_by_name,
+            'created_at' => $r->created_at,
+        ];
+    }
+    wp_send_json_success( $out );
 }
 
 function hm_ajax_delete_patient_note() {

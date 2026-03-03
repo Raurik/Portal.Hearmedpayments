@@ -964,6 +964,154 @@
   color: #0BB4C4;
 }
 
+/* ── Notes sub-tabs ── */
+.hm-notes-subtabs {
+  display: flex;
+  gap: 6px;
+  margin: 14px 0 16px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0;
+}
+.hm-notes-subtab {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hm-notes-subtab:hover {
+  color: #0BB4C4;
+}
+.hm-notes-subtab.active {
+  color: #0BB4C4;
+  border-bottom-color: #0BB4C4;
+  font-weight: 600;
+}
+.hm-notes-count {
+  font-size: 11px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 1px 7px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+.hm-notes-subtab.active .hm-notes-count {
+  background: rgba(11, 180, 196, 0.12);
+  color: #0BB4C4;
+}
+
+/* ── Notes list ── */
+.hm-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.hm-note-badges {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+/* ── Alert note card ── */
+.hm-note-alert {
+  background: #fef2f2 !important;
+  border-left: 3px solid #ef4444 !important;
+}
+.hm-note-alert-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #dc2626;
+  margin-bottom: 4px;
+}
+
+/* ── Alert modal popup ── */
+.hm-alert-modal-bg {
+  z-index: 10000;
+}
+.hm-alert-modal {
+  max-width: 560px;
+  border: 2px solid #fca5a5;
+}
+.hm-alert-modal-hd {
+  background: #fef2f2 !important;
+  border-bottom-color: #fecaca !important;
+  color: #dc2626 !important;
+}
+.hm-alert-modal-hd span {
+  color: #dc2626;
+  font-size: 16px;
+}
+.hm-alert-modal-body {
+  max-height: 400px;
+  overflow-y: auto;
+}
+.hm-alert-note-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #fee2e2;
+}
+.hm-alert-note-item:last-child {
+  border-bottom: none;
+}
+.hm-alert-note-text {
+  font-size: 14px;
+  color: #1e293b;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.hm-alert-note-meta {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+.hm-alert-modal-ft {
+  background: #fef2f2 !important;
+  border-top-color: #fecaca !important;
+}
+.hm-alert-modal-ft .hm-btn--primary {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+.hm-alert-modal-ft .hm-btn--primary:hover {
+  background: #b91c1c;
+}
+
+/* ── Alert checkbox in modal ── */
+.hm-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.hm-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #0BB4C4;
+}
+.hm-alert-check-label {
+  font-weight: 500;
+  color: #dc2626;
+}
+.hm-field-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
 /* ── Serial code display ── */
 .hm-serial {
   font-family: 'SF Mono', 'Consolas', monospace;
