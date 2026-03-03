@@ -1057,25 +1057,24 @@ function initProfile(){
                 orderNum=r.data.order_number||'';
                 orderTotal=parseFloat(r.data.order_total)||0;
             }
-            showStep1();
+            showExchForm();
         });
 
-        /* ── Step 1: Device info, original amount, reason ── */
-        function showStep1(){
+        function showExchForm(){
             var h='<div style="margin-bottom:16px">';
 
-            // Device being exchanged
+            // Device banner
             h+='<div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
             h+='<div style="font-size:14px;font-weight:700;color:#0d9488">'+esc(productName)+'</div>';
             h+='<div style="font-size:12px;color:#64748b;margin-top:2px">'+esc(sideLabel)+'</div>';
             h+='</div>';
 
-            // Original order amount
+            // Original amount
             if(hasOrder&&itemAmt>0){
                 h+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
-                h+='<div style="font-size:12px;color:#64748b;margin-bottom:4px">Original Order Amount'+(orderNum?' — '+esc(orderNum):'')+'</div>';
+                h+='<div style="font-size:12px;color:#64748b;margin-bottom:4px">Original Order'+(orderNum?' — '+esc(orderNum):'')+'</div>';
                 h+='<div style="font-size:22px;font-weight:700;color:var(--hm-navy,#151B33)">€'+itemAmt.toFixed(2)+'</div>';
-                if(prsiAmt>0) h+='<div style="font-size:12px;color:#94a3b8;margin-top:4px">Includes PRSI: €'+prsiAmt.toFixed(2)+' (tracked separately)</div>';
+                if(prsiAmt>0) h+='<div style="font-size:12px;color:#94a3b8;margin-top:4px">PRSI: €'+prsiAmt.toFixed(2)+' (tracked separately) · Patient paid: €'+patientAmt.toFixed(2)+'</div>';
                 h+='</div>';
             } else {
                 h+='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
@@ -1084,27 +1083,48 @@ function initProfile(){
                 h+='</div>';
             }
 
-            // Reason for exchange
+            // Reason
             h+='<div class="hm-form-group"><label class="hm-label">Reason for exchange *</label>';
             h+='<select class="hm-dd" id="exch-reason"><option value="">— Select reason —</option>';
-            h+='<option value="Fit">Fit</option>';
-            h+='<option value="Sound">Sound</option>';
-            h+='<option value="Look">Look</option>';
-            h+='<option value="Faulty Aid">Faulty Aid</option>';
+            h+='<option value="Fit">Fit</option><option value="Sound">Sound</option>';
+            h+='<option value="Look">Look</option><option value="Faulty Aid">Faulty Aid</option>';
             h+='<option value="Change of Technology">Change of Technology</option>';
             h+='</select></div>';
 
             h+='<div class="hm-form-group"><label class="hm-label">Notes (optional)</label>';
             h+='<textarea class="hm-textarea" id="exch-notes" rows="2" placeholder="Any additional notes…"></textarea></div>';
 
+            // Exchange type
+            h+='<p style="font-size:13px;font-weight:600;color:var(--hm-navy,#151B33);margin-bottom:10px">Exchange type</p>';
+
+            h+='<div id="exch-opt-exchange" class="hm-exch-opt" style="border:2px solid var(--hm-teal,#0BB4C4);border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;background:#f0fdfa">';
+            h+='<label style="display:flex;align-items:center;gap:10px;cursor:pointer">';
+            h+='<input type="radio" name="exch-type" value="exchange" checked style="accent-color:#0BB4C4;width:16px;height:16px">';
+            h+='<div><strong style="font-size:13px;color:var(--hm-navy,#151B33)">Exchange — Credit to Account</strong>';
+            h+='<div style="font-size:11px;color:#64748b;margin-top:1px">Credit original amount to patient account. Apply it on the new order.</div>';
+            h+='</div></label></div>';
+
+            h+='<div id="exch-opt-sametech" class="hm-exch-opt" style="border:2px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer">';
+            h+='<label style="display:flex;align-items:center;gap:10px;cursor:pointer">';
+            h+='<input type="radio" name="exch-type" value="same_tech" style="accent-color:#0BB4C4;width:16px;height:16px">';
+            h+='<div><strong style="font-size:13px;color:var(--hm-navy,#151B33)">Same Technology — Just Swap</strong>';
+            h+='<div style="font-size:11px;color:#64748b;margin-top:1px">No money changes hands. Old device returned to stock.</div>';
+            h+='</div></label></div>';
+
             h+='</div>';
             h+='<div class="hm-modal-ft" style="border-top:1px solid #e2e8f0;padding-top:16px;display:flex;gap:8px;justify-content:flex-end">';
             h+='<button class="hm-btn hm-btn--secondary hm-close">Cancel</button>';
-            h+='<button class="hm-btn hm-btn--primary" id="exch-step1-next">Next →</button>';
+            h+='<button class="hm-btn hm-btn--primary" id="exch-confirm">Confirm Exchange</button>';
             h+='</div>';
             $('#exch-body').html(h);
 
-            $('#exch-step1-next').on('click',function(){
+            // Radio toggle styling
+            $('input[name="exch-type"]').on('change',function(){
+                $('.hm-exch-opt').css({borderColor:'#e2e8f0',background:'#fff'});
+                $(this).closest('.hm-exch-opt').css({borderColor:'var(--hm-teal,#0BB4C4)',background:'#f0fdfa'});
+            });
+
+            $('#exch-confirm').on('click',function(){
                 var reason=$('#exch-reason').val();
                 if(!reason){toast('Select a reason for exchange','error');return;}
                 if(!hasOrder||itemAmt<=0){
@@ -1112,207 +1132,26 @@ function initProfile(){
                     if(!manual){toast('Enter the original item amount','error');return;}
                     itemAmt=manual;patientAmt=manual;
                 }
-                showStep2(reason,$('#exch-notes').val());
-            });
-        }
-
-        /* ── Step 2: Credit / Refund / Same Tech ── */
-        function showStep2(reason,notes){
-            var h='<div style="margin-bottom:16px">';
-            h+='<div style="font-size:13px;color:#64748b;margin-bottom:16px">'+esc(productName)+' — <strong>€'+itemAmt.toFixed(2)+'</strong></div>';
-
-            h+='<p style="font-size:15px;font-weight:600;color:var(--hm-navy,#151B33);margin-bottom:14px">Is there a credit or refund due?</p>';
-
-            // Credit option
-            h+='<div id="exch-opt-credit" class="hm-exch-opt" style="border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .15s">';
-            h+='<div style="display:flex;align-items:center;gap:12px">';
-            h+='<div style="width:40px;height:40px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0">';
-            h+='<svg width="20" height="20" fill="none" stroke="#059669" stroke-width="2"><rect x="2" y="5" width="16" height="12" rx="2"/><path d="M2 9h16"/></svg></div>';
-            h+='<div><strong style="font-size:14px;color:var(--hm-navy,#151B33)">Credit</strong>';
-            h+='<div style="font-size:12px;color:#64748b;margin-top:2px">Credit the amount to patient account. Apply it to the new invoice.</div>';
-            h+='</div></div></div>';
-
-            // Refund option
-            h+='<div id="exch-opt-refund" class="hm-exch-opt" style="border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .15s">';
-            h+='<div style="display:flex;align-items:center;gap:12px">';
-            h+='<div style="width:40px;height:40px;border-radius:10px;background:#fef2f2;display:flex;align-items:center;justify-content:center;flex-shrink:0">';
-            h+='<svg width="20" height="20" fill="none" stroke="#dc2626" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M7 10h6M10 7v6"/></svg></div>';
-            h+='<div><strong style="font-size:14px;color:var(--hm-navy,#151B33)">Refund</strong>';
-            h+='<div style="font-size:12px;color:#64748b;margin-top:2px">Send cheque to refunds. Any remainder stays as credit on account.</div>';
-            h+='</div></div></div>';
-
-            // Same tech option
-            h+='<div id="exch-opt-sametech" class="hm-exch-opt" style="border:2px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .15s">';
-            h+='<div style="display:flex;align-items:center;gap:12px">';
-            h+='<div style="width:40px;height:40px;border-radius:10px;background:#f0f9ff;display:flex;align-items:center;justify-content:center;flex-shrink:0">';
-            h+='<svg width="20" height="20" fill="none" stroke="#0284c7" stroke-width="2"><path d="M1 4v6h6M19 16v-6h-6"/><path d="M17.5 7.5a8 8 0 0 0-13-2L1 9m18 2l-3.5 3.5a8 8 0 0 1-13-2"/></svg></div>';
-            h+='<div><strong style="font-size:14px;color:var(--hm-navy,#151B33)">No — Same Technology Exchange</strong>';
-            h+='<div style="font-size:12px;color:#64748b;margin-top:2px">Just swap the device. No money changes hands.</div>';
-            h+='</div></div></div>';
-
-            h+='</div>';
-            h+='<div class="hm-modal-ft" style="border-top:1px solid #e2e8f0;padding-top:16px;display:flex;gap:8px;justify-content:flex-end">';
-            h+='<button class="hm-btn hm-btn--secondary" id="exch-step2-back">← Back</button>';
-            h+='</div>';
-            $('#exch-body').html(h);
-
-            $('.hm-exch-opt').on('mouseenter',function(){$(this).css({borderColor:'var(--hm-teal,#0BB4C4)',background:'#f8fffe'});})
-                .on('mouseleave',function(){$(this).css({borderColor:'#e2e8f0',background:'#fff'});});
-
-            $('#exch-opt-credit').on('click',function(){ showStepCredit(reason,notes); });
-            $('#exch-opt-refund').on('click',function(){ showStepRefund(reason,notes); });
-            $('#exch-opt-sametech').on('click',function(){ showStepSameTech(reason,notes); });
-            $('#exch-step2-back').on('click',function(){ showStep1(); });
-        }
-
-        /* ── Credit path: ask amount, confirm ── */
-        function showStepCredit(reason,notes){
-            var h='<div style="margin-bottom:16px">';
-            h+='<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
-            h+='<div style="font-size:14px;font-weight:700;color:#059669;margin-bottom:4px">Credit to Patient Account</div>';
-            h+='<div style="font-size:12px;color:#334155">A credit note will be created and the amount added to the patient\'s account. Apply it to the new invoice when ready.</div>';
-            h+='</div>';
-
-            h+='<div class="hm-form-group"><label class="hm-label">Credit amount (€) *</label>';
-            h+='<input type="number" class="hm-inp" id="exch-credit-amt" step="0.01" min="0" value="'+patientAmt.toFixed(2)+'" style="font-size:16px;font-weight:600">';
-            h+='<p style="font-size:11px;color:#94a3b8;margin-top:4px">Pre-filled from original order. Adjust if needed.</p></div>';
-
-            h+='<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:12px">';
-            h+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;color:#64748b">Original item</span><span style="font-size:13px;font-weight:600">€'+itemAmt.toFixed(2)+'</span></div>';
-            if(prsiAmt>0) h+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;color:#64748b">PRSI (tracked separately)</span><span style="font-size:13px;color:#dc2626">−€'+prsiAmt.toFixed(2)+'</span></div>';
-            h+='<div id="exch-credit-line" style="border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px;display:flex;justify-content:space-between"><span style="font-size:13px;font-weight:700;color:#334155">Credit on account</span><span style="font-size:16px;font-weight:700;color:#059669">€'+patientAmt.toFixed(2)+'</span></div>';
-            h+='</div>';
-
-            h+='<div style="font-size:12px;color:#94a3b8">Reason: '+esc(reason)+'</div>';
-            h+='</div>';
-            h+='<div class="hm-modal-ft" style="border-top:1px solid #e2e8f0;padding-top:16px;display:flex;gap:8px;justify-content:flex-end">';
-            h+='<button class="hm-btn hm-btn--secondary" id="exch-credit-back">← Back</button>';
-            h+='<button class="hm-btn hm-btn--primary" id="exch-credit-confirm" style="background:#059669">Confirm Credit</button>';
-            h+='</div>';
-            $('#exch-body').html(h);
-
-            $('#exch-credit-amt').on('input',function(){
-                var v=parseFloat($(this).val())||0;
-                $('#exch-credit-line span:last').text('€'+v.toFixed(2));
-            });
-
-            $('#exch-credit-back').on('click',function(){ showStep2(reason,notes); });
-            $('#exch-credit-confirm').on('click',function(){
-                var amt=parseFloat($('#exch-credit-amt').val())||0;
-                if(amt<=0){toast('Enter a credit amount','error');return;}
+                var exchType=$('input[name="exch-type"]:checked').val();
+                var notes=$('#exch-notes').val();
                 $(this).prop('disabled',true).text('Processing…');
+
                 $.post(_hm.ajax,{action:'hm_create_exchange',nonce:_hm.nonce,
                     patient_id:pid,device_id:ppId,reason:reason,
-                    credit_amount:amt,refund_type:'credit',
+                    credit_amount:itemAmt,refund_type:exchType,
                     refund_amount:0,notes:notes,side:side||'both'
                 },function(r){
                     closeModal();
                     if(r.success){
-                        toast('Exchange processed — '+r.data.credit_note_number+'. €'+parseFloat(r.data.patient_credit||0).toFixed(2)+' credited to patient account.');
+                        if(exchType==='same_tech'){
+                            toast('Same-tech exchange complete. Old device returned to stock.');
+                        } else {
+                            toast('Exchange processed — '+r.data.credit_note_number+'. €'+parseFloat(r.data.patient_credit||0).toFixed(2)+' credited to patient account. Apply it on the new order.');
+                        }
                         if(cb)cb();
                     } else { toast(r.data||'Error','error'); }
                 });
             });
-        }
-
-        /* ── Refund path: ask refund amount, remainder to credit ── */
-        function showStepRefund(reason,notes){
-            var h='<div style="margin-bottom:16px">';
-            h+='<div style="background:#fef2f2;border:1px solid #fecdd3;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
-            h+='<div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:4px">Refund to Patient</div>';
-            h+='<div style="font-size:12px;color:#334155">Enter the amount to refund by cheque. Any remainder will be saved as credit on the patient\'s account.</div>';
-            h+='</div>';
-
-            h+='<div class="hm-form-group"><label class="hm-label">Refund amount (€) — send by cheque *</label>';
-            h+='<input type="number" class="hm-inp" id="exch-refund-amt" step="0.01" min="0" max="'+patientAmt.toFixed(2)+'" value="'+patientAmt.toFixed(2)+'" style="font-size:16px;font-weight:600">';
-            h+='<p style="font-size:11px;color:#94a3b8;margin-top:4px">Max refundable: €'+patientAmt.toFixed(2)+'</p></div>';
-
-            h+='<div id="exch-refund-summary" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:12px">';
-            h+=buildRefundSummary(patientAmt);
-            h+='</div>';
-
-            h+='<div style="font-size:12px;color:#94a3b8">Reason: '+esc(reason)+'</div>';
-            h+='</div>';
-            h+='<div class="hm-modal-ft" style="border-top:1px solid #e2e8f0;padding-top:16px;display:flex;gap:8px;justify-content:flex-end">';
-            h+='<button class="hm-btn hm-btn--secondary" id="exch-refund-back">← Back</button>';
-            h+='<button class="hm-btn hm-btn--primary" id="exch-refund-confirm" style="background:#dc2626">Confirm Refund & Exchange</button>';
-            h+='</div>';
-            $('#exch-body').html(h);
-
-            $('#exch-refund-amt').on('input',function(){
-                var v=parseFloat($(this).val())||0;
-                if(v>patientAmt)v=patientAmt;
-                $('#exch-refund-summary').html(buildRefundSummary(v));
-            });
-
-            $('#exch-refund-back').on('click',function(){ showStep2(reason,notes); });
-            $('#exch-refund-confirm').on('click',function(){
-                var refAmt=parseFloat($('#exch-refund-amt').val())||0;
-                if(refAmt<=0){toast('Enter a refund amount','error');return;}
-                if(refAmt>patientAmt){toast('Refund cannot exceed €'+patientAmt.toFixed(2),'error');return;}
-                $(this).prop('disabled',true).text('Processing…');
-                $.post(_hm.ajax,{action:'hm_create_exchange',nonce:_hm.nonce,
-                    patient_id:pid,device_id:ppId,reason:reason,
-                    credit_amount:itemAmt,refund_type:'refund',
-                    refund_amount:refAmt,notes:notes,side:side||'both'
-                },function(r){
-                    closeModal();
-                    if(r.success){
-                        var msg='Exchange processed — '+r.data.credit_note_number+'. Cheque refund: €'+parseFloat(r.data.cash_refund||0).toFixed(2);
-                        if(parseFloat(r.data.patient_credit||0)>0) msg+='. €'+parseFloat(r.data.patient_credit).toFixed(2)+' credited to account.';
-                        toast(msg);if(cb)cb();
-                    } else { toast(r.data||'Error','error'); }
-                });
-            });
-        }
-
-        /* ── Same Tech: no money, just swap ── */
-        function showStepSameTech(reason,notes){
-            var h='<div style="margin-bottom:16px">';
-            h+='<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
-            h+='<div style="font-size:14px;font-weight:700;color:#0284c7;margin-bottom:4px">Same Technology Exchange</div>';
-            h+='<div style="font-size:12px;color:#334155">The old device will be marked as replaced and returned to stock. No credit note or refund will be created.</div>';
-            h+='</div>';
-
-            h+='<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:16px">';
-            h+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;color:#64748b">Device</span><span style="font-size:13px;font-weight:600">'+esc(productName)+'</span></div>';
-            h+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;color:#64748b">Side</span><span style="font-size:13px;font-weight:600">'+esc(sideLabel)+'</span></div>';
-            h+='<div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:#64748b">Reason</span><span style="font-size:13px;font-weight:600">'+esc(reason)+'</span></div>';
-            h+='</div>';
-
-            h+='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;font-size:12px;color:#92400e">';
-            h+='<strong>No financial transaction.</strong> The device will be swapped with no credit or refund.</div>';
-            h+='</div>';
-            h+='<div class="hm-modal-ft" style="border-top:1px solid #e2e8f0;padding-top:16px;display:flex;gap:8px;justify-content:flex-end">';
-            h+='<button class="hm-btn hm-btn--secondary" id="exch-same-back">← Back</button>';
-            h+='<button class="hm-btn hm-btn--primary" id="exch-same-confirm" style="background:#0284c7">Confirm Exchange</button>';
-            h+='</div>';
-            $('#exch-body').html(h);
-
-            $('#exch-same-back').on('click',function(){ showStep2(reason,notes); });
-            $('#exch-same-confirm').on('click',function(){
-                $(this).prop('disabled',true).text('Processing…');
-                $.post(_hm.ajax,{action:'hm_create_exchange',nonce:_hm.nonce,
-                    patient_id:pid,device_id:ppId,reason:reason,
-                    credit_amount:itemAmt,refund_type:'same_tech',
-                    refund_amount:0,notes:notes,side:side||'both'
-                },function(r){
-                    closeModal();
-                    if(r.success){
-                        toast('Same-tech exchange complete. Old device returned to stock.');
-                        if(cb)cb();
-                    } else { toast(r.data||'Error','error'); }
-                });
-            });
-        }
-
-        function buildRefundSummary(refAmt){
-            var remainder=Math.max(0,patientAmt-refAmt);
-            var s='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;color:#64748b">Cheque refund</span><span style="font-size:13px;font-weight:600;color:#dc2626">€'+refAmt.toFixed(2)+'</span></div>';
-            if(remainder>0.01){
-                s+='<div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:#64748b">Credit on account</span><span style="font-size:13px;font-weight:600;color:#059669">€'+remainder.toFixed(2)+'</span></div>';
-            }
-            return s;
         }
     }
 
