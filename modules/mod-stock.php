@@ -8,7 +8,7 @@
 if (!defined("ABSPATH")) exit;
 
 function hm_stock_render() {
-    if (!is_user_logged_in()) return;
+    if (!PortalAuth::is_logged_in()) return;
     ?>
     <div id="hm-stock-app" class="hm-content">
         <div class="hm-page-header">
@@ -173,7 +173,7 @@ class HearMed_Stock {
     }
 
     public static function render($atts = []): string {
-        if (!is_user_logged_in()) return "";
+        if (!PortalAuth::is_logged_in()) return "";
         ob_start();
         hm_stock_render();
         return ob_get_clean();

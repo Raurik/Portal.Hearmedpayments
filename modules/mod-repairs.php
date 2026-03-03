@@ -9,7 +9,7 @@ if (!defined("ABSPATH")) exit;
 
 //Standalone render function called by router
 function hm_repairs_render() {
-    if (!is_user_logged_in()) return;
+    if (!PortalAuth::is_logged_in()) return;
     ?>
     <div id="hm-repairs-app" class="hm-page">
         <div class="hm-page-header">
@@ -50,7 +50,7 @@ class HearMed_Repairs {
     }
 
     public static function render($atts = []): string {
-        if (!is_user_logged_in()) return "";
+        if (!PortalAuth::is_logged_in()) return "";
         
         ob_start();
         hm_repairs_render();

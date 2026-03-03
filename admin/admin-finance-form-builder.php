@@ -18,7 +18,7 @@ class HearMed_Admin_Finance_Form_Builder {
     }
 
     public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
         if (!HearMed_Auth::can('manage_settings')) return '<p>Permission denied.</p>';
 
         // Load current settings for all 4 types

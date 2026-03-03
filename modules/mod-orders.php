@@ -1174,7 +1174,7 @@ class HearMed_Orders {
           && ! wp_verify_nonce( $_REQUEST['nonce'] ?? '', 'hm_nonce' ) ) {
             wp_die( 'Security check failed — please refresh the page and try again.' );
         }
-        if ( ! is_user_logged_in() ) wp_die( 'Access denied.' );
+        if ( ! PortalAuth::is_logged_in() ) wp_die( 'Access denied.' );
 
         $order_id = intval( $_GET['order_id'] ?? $_POST['order_id'] ?? 0 );
         if ( ! $order_id ) wp_die( 'Missing order ID.' );

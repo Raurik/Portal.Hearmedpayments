@@ -41,7 +41,7 @@ class HearMed_Admin_Appointment_Type_Detail {
        RENDER
        ═══════════════════════════════════════════════════════ */
     public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $service_id = intval($_GET['id'] ?? 0);
         if (!$service_id) return '<p>No appointment type specified.</p>';

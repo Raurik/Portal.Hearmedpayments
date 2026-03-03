@@ -76,7 +76,7 @@ class HearMed_Admin_Manage_Users {
     }
 
     public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $staff = $this->get_staff();
         

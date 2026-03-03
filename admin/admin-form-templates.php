@@ -60,7 +60,7 @@ class HearMed_Admin_Form_Templates {
     // ─── Render ───────────────────────────────────────────────────────────
 
     public function render() {
-        if ( ! is_user_logged_in() ) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $role = HearMed_Auth::current_role();
         if ( ! in_array( $role, [ 'c_level', 'admin' ] ) ) {

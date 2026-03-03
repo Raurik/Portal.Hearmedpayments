@@ -206,7 +206,7 @@ class HearMed_Admin_Document_Templates {
        JOB 1 — Render: Document Types listing (upgraded)
        ════════════════════════════════════════════════════════════════════════ */
     public function render() {
-        if ( ! is_user_logged_in() ) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
         $types = $this->get_types();
 
         $category_labels = [
@@ -417,7 +417,7 @@ class HearMed_Admin_Document_Templates {
        JOB 2 — Render: Template Section & Field Builder (rebuilt)
        ════════════════════════════════════════════════════════════════════════ */
     public function render_editor() {
-        if ( ! is_user_logged_in() ) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
         $this->ensure_table();
 
         $doc_id = intval( $_GET['doc_type_id'] ?? 0 );

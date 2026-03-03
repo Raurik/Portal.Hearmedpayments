@@ -57,7 +57,7 @@ class HearMed_Admin_Groups {
     }
 
     public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $groups = $this->get_groups();
         $memberships = $this->get_memberships();

@@ -24,7 +24,7 @@ add_shortcode( 'hearmed_order_status', 'hm_render_order_status_page' );
 // RENDER
 // ═══════════════════════════════════════════════════════════════
 function hm_render_order_status_page() {
-    if ( ! is_user_logged_in() ) return '<p>Please log in.</p>';
+    if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
     $db = HearMed_DB::instance();
 

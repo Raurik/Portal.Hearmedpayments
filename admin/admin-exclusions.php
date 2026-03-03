@@ -26,7 +26,7 @@ class HearMed_Admin_Exclusions {
     }
 
     public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $exclusions = $this->get_exclusions();
 

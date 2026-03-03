@@ -31,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_patients_render() {
-    if ( ! is_user_logged_in() ) {
+    if ( ! PortalAuth::is_logged_in() ) {
         echo '<p>Please log in.</p>';
         return;
     }

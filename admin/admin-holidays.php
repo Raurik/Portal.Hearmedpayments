@@ -37,7 +37,7 @@ class HearMed_Admin_Holidays {
     }
 
     public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $holidays = $this->get_holidays();
         $staff = $this->get_staff();

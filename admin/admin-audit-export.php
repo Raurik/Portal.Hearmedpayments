@@ -31,7 +31,7 @@ class HearMed_Admin_AuditLog {
     }
 
     public function render_audit() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         ob_start(); ?>
         <div class="hm-admin">
@@ -143,7 +143,7 @@ class HearMed_Admin_AuditLog {
     }
 
     public function render_export() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         ob_start(); ?>
         <style>

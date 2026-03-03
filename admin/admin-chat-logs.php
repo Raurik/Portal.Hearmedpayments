@@ -18,7 +18,7 @@ class HearMed_Admin_ChatLogs {
     }
 
     public static function render(): string {
-        if ( ! is_user_logged_in() ) return '';
+        if ( ! PortalAuth::is_logged_in() ) return '';
 
         $auth = new HearMed_Auth();
         if ( ! $auth->is_admin() ) {
@@ -262,7 +262,7 @@ class HearMed_Admin_ChatLogs {
      */
     public static function ajax_search_users(): void {
         check_ajax_referer( 'hm_chat_nonce', 'nonce' );
-        if ( ! is_user_logged_in() ) wp_send_json_error( 'Not logged in', 401 );
+        if ( ! PortalAuth::is_logged_in() ) wp_send_json_error( 'Not logged in', 401 );
 
         $query   = sanitize_text_field( $_GET['q'] ?? '' );
         $current = get_current_user_id();

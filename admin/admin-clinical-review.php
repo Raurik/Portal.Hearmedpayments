@@ -18,7 +18,7 @@ class HearMed_Admin_Clinical_Review {
     }
 
     public function render() {
-        if ( ! is_user_logged_in() ) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $doc_id = intval( $_GET['doc_id'] ?? 0 );
         if ( ! $doc_id ) return '<p>No clinical document selected.</p>';

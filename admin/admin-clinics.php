@@ -81,7 +81,7 @@ class HearMed_Admin_Clinics {
     }
 
     public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $clinics = $this->get_clinics();
         $days_labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];

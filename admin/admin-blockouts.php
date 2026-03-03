@@ -57,7 +57,7 @@ class HearMed_Admin_Blockouts {
     }
 
     public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $blockouts = $this->get_blockouts();
         $appt_types = $this->get_appointment_types();

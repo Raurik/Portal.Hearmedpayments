@@ -57,7 +57,7 @@ class HearMed_Admin_Roles {
     }
 
     public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $roles = $this->get_roles();
         $perms = self::$available_permissions;

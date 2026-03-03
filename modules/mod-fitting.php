@@ -27,7 +27,7 @@ add_shortcode( 'hearmed_awaiting_fitting', 'hm_render_fitting_page' ); // alias
 // RENDER
 // ═══════════════════════════════════════════════════════════════
 function hm_render_fitting_page() {
-    if ( ! is_user_logged_in() ) return '<p>Please log in.</p>';
+    if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
     $db = HearMed_DB::instance();
 
@@ -913,7 +913,7 @@ function hm_fitting_compute_prsi( $o ) {
 
 function hm_ajax_fitting_load() {
     check_ajax_referer('hm_nonce', 'nonce');
-    if (!is_user_logged_in()) { wp_send_json_error(['msg' => 'Access denied']); return; }
+    if (!PortalAuth::is_logged_in()) { wp_send_json_error(['msg' => 'Access denied']); return; }
 
     $db = HearMed_DB::instance();
 
@@ -1032,7 +1032,7 @@ add_action('wp_ajax_hm_fitting_receive', 'hm_ajax_fitting_receive');
 
 function hm_ajax_fitting_receive() {
     check_ajax_referer('hm_nonce', 'nonce');
-    if (!is_user_logged_in()) { wp_send_json_error(['msg' => 'Access denied']); return; }
+    if (!PortalAuth::is_logged_in()) { wp_send_json_error(['msg' => 'Access denied']); return; }
 
     $db       = HearMed_DB::instance();
     $order_id = intval($_POST['order_id'] ?? 0);
@@ -1191,7 +1191,7 @@ add_action('wp_ajax_hm_fitting_load_invoice', 'hm_ajax_fitting_load_invoice');
 
 function hm_ajax_fitting_load_invoice() {
     check_ajax_referer('hm_nonce', 'nonce');
-    if (!is_user_logged_in()) { wp_send_json_error(['msg' => 'Access denied']); return; }
+    if (!PortalAuth::is_logged_in()) { wp_send_json_error(['msg' => 'Access denied']); return; }
 
     wp_send_json_error(['msg' => 'Use Appointment close-off to complete payment and close this order.']);
     return;
@@ -1310,7 +1310,7 @@ add_action('wp_ajax_hm_fitting_record_payment', 'hm_ajax_fitting_record_payment'
 
 function hm_ajax_fitting_record_payment() {
     check_ajax_referer('hm_nonce', 'nonce');
-    if (!is_user_logged_in()) { wp_send_json_error(['msg' => 'Access denied']); return; }
+    if (!PortalAuth::is_logged_in()) { wp_send_json_error(['msg' => 'Access denied']); return; }
 
     wp_send_json_error(['msg' => 'Use Appointment close-off to complete payment and close this order.']);
     return;
@@ -1497,7 +1497,7 @@ add_action('wp_ajax_hm_fitting_receipt', 'hm_ajax_fitting_receipt');
 
 function hm_ajax_fitting_receipt() {
     if (!wp_verify_nonce($_GET['nonce'] ?? '', 'hm_nonce')) { wp_die('Invalid nonce'); }
-    if (!is_user_logged_in()) { wp_die('Access denied'); }
+    if (!PortalAuth::is_logged_in()) { wp_die('Access denied'); }
 
     $db       = HearMed_DB::instance();
     $order_id = intval($_GET['order_id'] ?? 0);

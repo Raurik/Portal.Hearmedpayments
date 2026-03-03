@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 // ─── Shortcode render function (keeps original shortcode name) ────────────────
 function hm_refunds_render() {
-    if ( ! is_user_logged_in() ) return;
+    if ( ! PortalAuth::is_logged_in() ) return;
     echo HearMed_Refunds::render();
 }
 add_shortcode( 'hearmed_refunds', 'hm_refunds_render' );
@@ -24,7 +24,7 @@ class HearMed_Refunds {
     // ─── Render ──────────────────────────────────────────────────────────────
 
     public static function render(): string {
-        if ( ! is_user_logged_in() ) return '';
+        if ( ! PortalAuth::is_logged_in() ) return '';
         if ( ! HearMed_Auth::can('view_accounting') ) {
             return '<div class="hm-notice hm-notice--error">Access denied.</div>';
         }
@@ -633,7 +633,7 @@ class HearMed_Refunds {
 
     public static function ajax_get_all() {
         check_ajax_referer('hm_nonce','nonce');
-        if ( ! is_user_logged_in() ) wp_send_json_error('Not logged in.');
+        if ( ! PortalAuth::is_logged_in() ) wp_send_json_error('Not logged in.');
 
         $db  = HearMed_DB::instance();
 
@@ -804,7 +804,7 @@ class HearMed_Refunds {
 
     public static function ajax_get_patient_invoices() {
         check_ajax_referer('hm_nonce','nonce');
-        if ( ! is_user_logged_in() ) wp_send_json_error('Not logged in.');
+        if ( ! PortalAuth::is_logged_in() ) wp_send_json_error('Not logged in.');
 
         $patient_id = intval( $_POST['patient_id'] ?? 0 );
         if ( ! $patient_id ) wp_send_json_error('No patient.');
@@ -825,7 +825,7 @@ class HearMed_Refunds {
      */
     public static function ajax_print_credit_note() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!is_user_logged_in()) wp_die('Access denied');
+        if (!PortalAuth::is_logged_in()) wp_die('Access denied');
 
         $db = HearMed_DB::instance();
         $cn_id = intval($_GET['credit_note_id'] ?? 0);
@@ -941,7 +941,7 @@ class HearMed_Refunds {
 
     public static function ajax_mark_prsi_notified() {
         check_ajax_referer('hm_nonce','nonce');
-        if ( ! is_user_logged_in() ) wp_send_json_error('Not logged in.');
+        if ( ! PortalAuth::is_logged_in() ) wp_send_json_error('Not logged in.');
 
         $cn_id = intval( $_POST['credit_note_id'] ?? 0 );
         if ( ! $cn_id ) wp_send_json_error('Invalid credit note.');

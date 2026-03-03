@@ -20,7 +20,7 @@ class HearMed_Admin_Global_Settings {
     }
 
     public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
         if (!HearMed_Auth::can('manage_settings')) return '<p>Permission denied.</p>';
 
         $logo      = HearMed_Settings::get('hm_report_logo_url', '');

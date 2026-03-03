@@ -464,7 +464,7 @@ class HearMed_Admin_Dispenser_Schedules {
 
     // ─── MAIN LISTING PAGE ────────────────────────────────────────────
     public function render() {
-        if ( ! is_user_logged_in() ) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $rows = $this->get_schedules();
         $staff = $this->get_staff();

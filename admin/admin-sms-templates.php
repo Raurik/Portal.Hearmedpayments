@@ -52,7 +52,7 @@ class HearMed_Admin_SMS_Templates {
     }
 
     public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $templates = $this->get_templates();
 

@@ -240,7 +240,7 @@ class HearMed_Admin_Products {
     }
 
     public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $active_tab = sanitize_text_field($_GET['tab'] ?? 'product');
         if (!isset(self::$item_types[$active_tab])) $active_tab = 'product';

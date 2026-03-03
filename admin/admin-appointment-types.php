@@ -34,7 +34,7 @@ class HearMed_Admin_Appointment_Types {
      * Render the appointment types admin page
      */
     public function render() {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
         $types = $this->get_types();
 

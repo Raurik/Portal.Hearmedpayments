@@ -35,7 +35,7 @@ class HearMed_Admin_Taxonomies {
     }
 
     public function render($atts, $content, $tag) {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
         $cfg = $this->configs[$tag] ?? null;
         if (!$cfg) return '<p>Unknown reference table.</p>';
 

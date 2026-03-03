@@ -56,7 +56,7 @@ class HearMed_TeamChat {
     // =========================================================================
 
     public static function render( $atts = [] ): string {
-        if ( ! is_user_logged_in() ) {
+        if ( ! PortalAuth::is_logged_in() ) {
             return '<div class="hm-notice hm-notice--error"><div class="hm-notice-body"><span class="hm-notice-icon">×</span> Please log in to access Team Chat.</div></div>';
         }
 
@@ -210,7 +210,7 @@ class HearMed_TeamChat {
      */
     private static function verify(): int {
         check_ajax_referer( 'hm_chat_nonce', 'nonce' );
-        if ( ! is_user_logged_in() ) {
+        if ( ! PortalAuth::is_logged_in() ) {
             wp_send_json_error( [ 'message' => 'Not logged in' ], 401 );
         }
         return get_current_user_id();
@@ -626,7 +626,7 @@ class HearMed_TeamChat {
      */
     public static function ajax_search_users(): void {
         check_ajax_referer( 'hm_chat_nonce', 'nonce' );
-        if ( ! is_user_logged_in() ) wp_send_json_error( 'Not logged in', 401 );
+        if ( ! PortalAuth::is_logged_in() ) wp_send_json_error( 'Not logged in', 401 );
 
         $query   = sanitize_text_field( $_GET['q'] ?? '' );
         $current = get_current_user_id();

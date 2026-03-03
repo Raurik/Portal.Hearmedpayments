@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) exit;
    STANDALONE RENDER (called by router)
    ═══════════════════════════════════════════════════════════ */
 function hm_kpi_render() {
-    if (!is_user_logged_in()) return;
+    if (!PortalAuth::is_logged_in()) return;
 
     $uid      = get_current_user_id();
     $staff    = HearMed_DB::get_row(
@@ -876,7 +876,7 @@ class HearMed_KPI {
     }
 
     public static function render($atts = []): string {
-        if (!is_user_logged_in()) return '';
+        if (!PortalAuth::is_logged_in()) return '';
         ob_start();
         hm_kpi_render();
         return ob_get_clean();

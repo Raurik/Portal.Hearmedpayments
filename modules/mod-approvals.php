@@ -19,7 +19,7 @@ add_shortcode( 'hearmed_approvals', 'hm_render_approvals_page' );
 // RENDER
 // ═══════════════════════════════════════════════════════════════
 function hm_render_approvals_page() {
-    if ( ! is_user_logged_in() ) return '<p>Please log in.</p>';
+    if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
     if ( ! hm_user_can_approve() ) {
         return '<div class="hm-admin"><p style="padding:2rem;color:var(--hm-text-muted);">You do not have permission to view this page.</p></div>';
     }
@@ -528,7 +528,7 @@ function hm_ajax_deny_order() {
 // ═══════════════════════════════════════════════════════════════
 if (!function_exists('hm_user_can_approve')) {
     function hm_user_can_approve() {
-        if (!is_user_logged_in()) return false;
+        if (!PortalAuth::is_logged_in()) return false;
         $user = wp_get_current_user();
         if (in_array('administrator', (array)$user->roles)) return true;
         if (class_exists('HearMed_Auth')) {

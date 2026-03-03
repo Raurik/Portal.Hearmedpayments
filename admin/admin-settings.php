@@ -156,7 +156,7 @@ class HearMed_Admin_Settings {
     }
 
     public function render($atts, $content, $tag) {
-        if (!is_user_logged_in()) return '<p>Please log in.</p>';
+        if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
         $page = $this->pages[$tag] ?? null;
         if (!$page) return '<p>Unknown settings page.</p>';
 

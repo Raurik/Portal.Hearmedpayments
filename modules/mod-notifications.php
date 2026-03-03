@@ -166,7 +166,7 @@ class HearMed_Notifications {
 
     /* ── Render shortcode ──────────────────────────────────────── */
     public static function render( $atts = [] ): string {
-        if ( ! is_user_logged_in() ) return '';
+        if ( ! PortalAuth::is_logged_in() ) return '';
 
         ob_start();
         hm_notifications_render();
@@ -279,7 +279,7 @@ HearMed_Notifications::init();
    ═══════════════════════════════════════════════════════════════════════════ */
 
 function hm_notifications_render() {
-    if ( ! is_user_logged_in() ) return;
+    if ( ! PortalAuth::is_logged_in() ) return;
 
     $staff_id = hm_notif_staff_id();
     $role     = HearMed_Auth::current_role();
@@ -386,7 +386,7 @@ function hm_notifications_render() {
 add_action( 'wp_footer', 'hm_notifications_bell_widget', 99 );
 
 function hm_notifications_bell_widget() {
-    if ( ! is_user_logged_in() ) return;
+    if ( ! PortalAuth::is_logged_in() ) return;
 
     // Only render on portal pages
     $page_slug = get_post_field( 'post_name', get_the_ID() );
