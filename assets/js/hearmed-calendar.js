@@ -2641,7 +2641,18 @@ var Cal={
                             else{
                                 $btn.prop('disabled',false).text('Confirm Payment');
                                 if(pr.data&&pr.data.code==='serials_required'){
-                                    $('#hm-op-pay-err').css('color','#ef4444').text(pr.data&&pr.data.message?pr.data.message:'Serial numbers required. Please complete the Awaiting Fitting process first.');
+                                    var serialItems=(pr.data&&Array.isArray(pr.data.serial_items))?pr.data.serial_items:[];
+                                    if(!serialItems.length){$('#hm-op-pay-err').text('Serial numbers required but no items returned.');return;}
+                                    _showSerialModal(serialItems,newOrderId,function(){
+                                        $btn.prop('disabled',true).text('Processing...');
+                                        post('record_order_payment',{
+                                            order_id:newOrderId,order_number:newOrderNum,amount:totalDue,payment_method:firstMethod,
+                                            split_payments_json:sendSplitJson
+                                        }).then(function(pr2){
+                                            if(pr2.success){cleanupEvents();self.toast('Payment of €'+totalDue.toFixed(2)+' recorded on '+newOrderNum);self.refresh();}
+                                            else{$btn.prop('disabled',false).text('Confirm Payment');$('#hm-op-pay-err').css('color','#ef4444').text(pr2.data&&pr2.data.message?pr2.data.message:'Payment failed after serials.');}
+                                        }).fail(function(){$btn.prop('disabled',false).text('Confirm Payment');$('#hm-op-pay-err').text('Network error');});
+                                    });
                                     return;
                                 }
                                 var msg=(pr.data&&pr.data.message)?pr.data.message:'Failed';
