@@ -2542,6 +2542,9 @@ function hm_ajax_update_repair_status() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hm_ajax_create_return() {
+    // Suppress PHP warnings/notices from corrupting JSON output
+    @ob_start();
+
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $pid       = intval( $_POST['patient_id'] ?? 0 );
     $device_id = intval( $_POST['device_id'] ?? 0 );
@@ -2549,8 +2552,8 @@ function hm_ajax_create_return() {
     $side      = sanitize_text_field( $_POST['side'] ?? 'both' );
     $notes     = sanitize_textarea_field( $_POST['notes'] ?? '' );
 
-    if ( ! $pid || ! $device_id ) wp_send_json_error( 'Patient and device required' );
-    if ( ! $reason ) wp_send_json_error( 'Reason for return is required' );
+    if ( ! $pid || ! $device_id ) { @ob_end_clean(); wp_send_json_error( 'Patient and device required' ); }
+    if ( ! $reason ) { @ob_end_clean(); wp_send_json_error( 'Reason for return is required' ); }
 
     $db       = HearMed_DB::instance();
     $staff_id = hm_patient_staff_id();
@@ -2558,16 +2561,19 @@ function hm_ajax_create_return() {
     hm_ensure_returns_tables();
 
     $device = $db->get_row( "SELECT * FROM hearmed_core.patient_devices WHERE id = \$1", [ $device_id ] );
-    if ( ! $device ) wp_send_json_error( 'Device not found' );
+    if ( ! $device ) { @ob_end_clean(); wp_send_json_error( 'Device not found (id=' . $device_id . ')' ); }
 
     // Get original order/invoice info for amounts + PRSI
-    $order       = null;
-    $total_amount = 0;
-    $prsi_amount  = 0;
-    $patient_paid = 0;
-    $per_ear      = floatval( HearMed_Settings::get( 'hm_prsi_amount_per_ear', '500' ) );
+    $order            = null;
+    $total_amount     = 0;
+    $prsi_amount      = 0;
+    $patient_paid     = 0;
+    $order_prsi       = 0;
+    $prsi_left_flag   = false;
+    $prsi_right_flag  = false;
+    $per_ear          = floatval( HearMed_Settings::get( 'hm_prsi_amount_per_ear', '500' ) );
 
-    if ( $device->order_id ) {
+    if ( ! empty( $device->order_id ) ) {
         $order = $db->get_row(
             "SELECT o.*, inv.grand_total AS inv_total, inv.id AS inv_id
              FROM hearmed_core.orders o
@@ -2576,25 +2582,23 @@ function hm_ajax_create_return() {
             [ $device->order_id ]
         );
         if ( $order ) {
-            $total_amount   = floatval( $order->grand_total ?? 0 );
-            $order_prsi     = floatval( $order->prsi_amount ?? 0 );
-            $prsi_left_flag = hm_pg_bool( $order->prsi_left ?? false );
-            $prsi_right_flag= hm_pg_bool( $order->prsi_right ?? false );
-            $patient_paid   = $total_amount; // grand_total already has PRSI deducted
+            $total_amount    = floatval( $order->grand_total ?? 0 );
+            $order_prsi      = floatval( $order->prsi_amount ?? 0 );
+            $prsi_left_flag  = hm_pg_bool( $order->prsi_left ?? false );
+            $prsi_right_flag = hm_pg_bool( $order->prsi_right ?? false );
+            $patient_paid    = $total_amount;
         }
     }
 
     // ── Side-aware PRSI calculation ──
     if ( $side === 'left' ) {
         $prsi_amount  = $prsi_left_flag ? $per_ear : 0;
-        // Half the patient-paid amount for single-side return
         $patient_paid = $patient_paid / 2;
     } elseif ( $side === 'right' ) {
         $prsi_amount  = $prsi_right_flag ? $per_ear : 0;
         $patient_paid = $patient_paid / 2;
     } else {
-        // Both sides — full PRSI
-        $prsi_amount = $order_prsi ?? 0;
+        $prsi_amount = $order_prsi;
     }
 
     // Allow override of refund amount from POST
@@ -2615,8 +2619,8 @@ function hm_ajax_create_return() {
             ], [ 'id' => $device_id ] );
         } else {
             // Single-side return: clear that side's serial
-            $clear_col = ( $side === 'left' ) ? 'serial_left' : 'serial_right';
-            $other_col = ( $side === 'left' ) ? 'serial_right' : 'serial_left';
+            $clear_col = ( $side === 'left' ) ? 'serial_number_left' : 'serial_number_right';
+            $other_col = ( $side === 'left' ) ? 'serial_number_right' : 'serial_number_left';
             $other_serial = $device->$other_col ?? null;
 
             $upd = [
@@ -2639,11 +2643,14 @@ function hm_ajax_create_return() {
         $cn_count  = (int) $db->get_var( "SELECT COUNT(*) FROM hearmed_core.credit_notes" );
         $cn_number = $cn_prefix . '-' . date('Y') . '-' . str_pad( $cn_count + 1, 4, '0', STR_PAD_LEFT );
 
+        $inv_id  = $order ? ( $order->inv_id ?? null ) : null;
+        $ord_id  = ! empty( $device->order_id ) ? $device->order_id : null;
+
         $cn_id = $db->insert( 'hearmed_core.credit_notes', [
             'credit_note_number'    => $cn_number,
             'patient_id'            => $pid,
-            'invoice_id'            => $order->inv_id ?? null,
-            'order_id'              => $device->order_id ?: null,
+            'invoice_id'            => $inv_id,
+            'order_id'              => $ord_id,
             'device_id'             => $device_id,
             'amount'                => $patient_refund + $prsi_amount,
             'prsi_amount'           => $prsi_amount,
@@ -2660,15 +2667,15 @@ function hm_ajax_create_return() {
         // 3. Create return record (store serials BEFORE they get cleared)
         $return_id = $db->insert( 'hearmed_core.returns', [
             'patient_id'            => $pid,
-            'order_id'              => $device->order_id ?: null,
-            'invoice_id'            => $order->inv_id ?? null,
+            'order_id'              => $ord_id,
+            'invoice_id'            => $inv_id,
             'credit_note_id'        => $cn_id,
             'device_id'             => $device_id,
             'return_date'           => date( 'Y-m-d' ),
             'reason'                => $reason,
             'side'                  => $side,
-            'serial_left'           => $device->serial_left ?? null,
-            'serial_right'          => $device->serial_right ?? null,
+            'serial_left'           => $device->serial_number_left ?? null,
+            'serial_right'          => $device->serial_number_right ?? null,
             'total_refund_amount'   => $patient_refund + $prsi_amount,
             'patient_refund_amount' => $patient_refund,
             'prsi_refund_amount'    => $prsi_amount,
@@ -2695,8 +2702,8 @@ function hm_ajax_create_return() {
             $db->insert( 'hearmed_core.patient_credits', [
                 'patient_id'          => $pid,
                 'credit_note_id'      => $cn_id,
-                'original_invoice_id' => $order->inv_id ?? null,
-                'original_order_id'   => $device->order_id ?: null,
+                'original_invoice_id' => $inv_id,
+                'original_order_id'   => $ord_id,
                 'amount'              => $patient_refund,
                 'used_amount'         => 0,
                 'status'              => 'active',
@@ -2726,6 +2733,7 @@ function hm_ajax_create_return() {
             'prsi_amount'     => $prsi_amount,
         ]);
 
+        @ob_end_clean();
         wp_send_json_success( [
             'return_id'          => $return_id,
             'credit_note_id'     => $cn_id,
@@ -2734,8 +2742,10 @@ function hm_ajax_create_return() {
             'prsi_amount'        => $prsi_amount,
             'side'               => $side,
         ]);
-    } catch ( \Exception $e ) {
+    } catch ( \Throwable $e ) {
         $db->rollback();
+        @ob_end_clean();
+        error_log( '[HearMed] Return failed: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() );
         wp_send_json_error( 'Return failed: ' . $e->getMessage() );
     }
 }
