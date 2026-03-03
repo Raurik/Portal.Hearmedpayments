@@ -204,7 +204,7 @@ class HearMed_Print_Templates {
 
     public static function ajax_load() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!is_user_logged_in()) wp_send_json_error('Not logged in');
+        if (!PortalAuth::is_logged_in()) wp_send_json_error('Not logged in');
         $type = sanitize_text_field($_POST['template_type'] ?? $_GET['template_type'] ?? '');
         if (!$type) wp_send_json_error('Missing type');
         wp_send_json_success(self::get_settings($type));

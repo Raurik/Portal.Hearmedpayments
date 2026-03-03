@@ -1038,7 +1038,7 @@ function hm_ajax_fitting_receive() {
     $order_id = intval($_POST['order_id'] ?? 0);
     $serials  = json_decode(stripslashes($_POST['serials'] ?? '[]'), true);
     $received_date = sanitize_text_field($_POST['received_date'] ?? '');
-    $uid      = get_current_user_id();
+    $uid      = PortalAuth::staff_id();
     $now      = current_time('Y-m-d H:i:s');
     $received_at = $now;
     if ($received_date) {
@@ -1051,7 +1051,7 @@ function hm_ajax_fitting_receive() {
         return;
     }
 
-    $staff_id = $db->get_var("SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1", [$uid]);
+    $staff_id = $uid;
 
     // Group serials by product_id to create patient_devices records
     $by_product = [];
@@ -1270,8 +1270,8 @@ function hm_ajax_fitting_load_invoice() {
 
     // If no invoice exists, create one automatically
     if (!$invoice) {
-        $uid = get_current_user_id();
-        $staff_id = $db->get_var("SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1", [$uid]);
+        $uid = PortalAuth::staff_id();
+        $staff_id = $uid;
 
         $inv_id = false;
         if (class_exists('HearMed_Invoice') && method_exists('HearMed_Invoice', 'ensure_invoice_for_order')) {
@@ -1322,7 +1322,7 @@ function hm_ajax_fitting_record_payment() {
     $amount     = floatval($_POST['amount'] ?? 0);
     $split_raw  = wp_unslash($_POST['split_payments_json'] ?? '[]');
     $split_payments = json_decode($split_raw, true);
-    $uid        = get_current_user_id();
+    $uid        = PortalAuth::staff_id();
     $now        = current_time('Y-m-d H:i:s');
     $today      = date('Y-m-d');
 
@@ -1364,7 +1364,7 @@ function hm_ajax_fitting_record_payment() {
         }
     }
 
-    $staff_id = $db->get_var("SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1", [$uid]);
+    $staff_id = $uid;
 
     // Use invoice from order if not provided
     if (!$invoice_id && $order->invoice_id) {

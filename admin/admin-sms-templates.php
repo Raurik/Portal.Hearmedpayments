@@ -233,7 +233,7 @@ class HearMed_Admin_SMS_Templates {
 
     public function ajax_save() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
         $id       = intval($_POST['id'] ?? 0);
         $name     = sanitize_text_field($_POST['template_name'] ?? '');
@@ -272,7 +272,7 @@ class HearMed_Admin_SMS_Templates {
 
     public function ajax_delete() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
         $id = intval($_POST['id'] ?? 0);
         if (!$id) { wp_send_json_error('Invalid ID'); return; }

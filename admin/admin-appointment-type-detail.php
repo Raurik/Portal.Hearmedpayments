@@ -667,7 +667,7 @@ class HearMed_Admin_Appointment_Type_Detail {
        ═══════════════════════════════════════════════════════ */
     public function ajax_save_detail() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Denied'); return; }
 
         $id = intval($_POST['id'] ?? 0);
         if (!$id) { wp_send_json_error('Invalid ID'); return; }
@@ -753,7 +753,7 @@ class HearMed_Admin_Appointment_Type_Detail {
        ═══════════════════════════════════════════════════════ */
     public function ajax_save_outcome() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Denied'); return; }
 
         $id         = intval($_POST['id'] ?? 0);
         $service_id = intval($_POST['service_id'] ?? 0);
@@ -823,7 +823,7 @@ class HearMed_Admin_Appointment_Type_Detail {
        ═══════════════════════════════════════════════════════ */
     public function ajax_delete_outcome() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Denied'); return; }
 
         $id = intval($_POST['id'] ?? 0);
         if (!$id) { wp_send_json_error('Invalid ID'); return; }
@@ -843,7 +843,7 @@ class HearMed_Admin_Appointment_Type_Detail {
        ═══════════════════════════════════════════════════════ */
     public function ajax_save_staff() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Denied'); return; }
 
         $service_id = intval($_POST['service_id'] ?? 0);
         if (!$service_id) { wp_send_json_error('No service specified'); return; }

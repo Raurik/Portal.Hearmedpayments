@@ -150,12 +150,12 @@ function hm_notif_staff_id() {
     }
 
     // Fallback: WP user → staff lookup
-    $uid = get_current_user_id();
+    $uid = PortalAuth::staff_id();
     if ( ! $uid ) { $sid = 0; return 0; }
 
     $db  = HearMed_DB::instance();
     $row = $db->get_row(
-        "SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1 AND is_active = true LIMIT 1",
+        "SELECT id FROM hearmed_reference.staff WHERE id = \$1 AND is_active = true LIMIT 1",
         [ $uid ]
     );
     $sid = $row ? (int) $row->id : 0;

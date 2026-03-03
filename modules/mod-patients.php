@@ -149,23 +149,41 @@ add_action( 'wp_ajax_hm_get_prsi_info',  'hm_ajax_get_prsi_info' );
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Get current staff row from hearmed_reference.staff matched by WP user ID.
+ * Get current staff row from hearmed_reference.staff.
+ * Uses PortalAuth as source of truth — no WP dependency.
  */
 function hm_patient_current_staff() {
     static $staff = null;
     if ( $staff !== null ) return $staff ?: null;
 
+    // Use PortalAuth as source of truth — no WP dependency
+    $portal_user = PortalAuth::current_user();
+    if ( $portal_user ) {
+        $db = HearMed_DB::instance();
+        $row = $db->get_row(
+            "SELECT s.id, s.first_name, s.last_name, s.role,
+                    r.role_name
+             FROM hearmed_reference.staff s
+             LEFT JOIN hearmed_reference.roles r ON r.role_name = s.role
+             WHERE s.id = $1 AND s.is_active = true
+             LIMIT 1",
+            [ $portal_user->id ]
+        );
+        $staff = $row ?: false;
+        return $staff ?: null;
+    }
+
+    // Fallback: try WP user bridge (only works if bridge_wp_login has fired)
     $uid = get_current_user_id();
     if ( ! $uid ) { $staff = false; return null; }
 
     $db = HearMed_DB::instance();
-    // Try with role_id FK first, fall back to role column if it fails
     $row = $db->get_row(
         "SELECT s.id, s.first_name, s.last_name, s.role,
                 r.role_name
          FROM hearmed_reference.staff s
          LEFT JOIN hearmed_reference.roles r ON r.role_name = s.role
-         WHERE s.wp_user_id = \$1 AND s.is_active = true
+         WHERE s.wp_user_id = $1 AND s.is_active = true
          LIMIT 1",
         [ $uid ]
     );
@@ -196,7 +214,7 @@ function hm_patient_audit( $action, $entity_type, $entity_id, $details = '' ) {
     try {
         $db = HearMed_DB::instance();
         $row = [
-            'user_id'     => get_current_user_id(),
+            'user_id'     => PortalAuth::staff_id(),
             'action'      => $action,
             'entity_type' => $entity_type,
             'entity_id'   => $entity_id,
@@ -1965,7 +1983,7 @@ function hm_ajax_anonymise_patient() {
         // Log GDPR deletion
         $db->insert( 'hearmed_admin.gdpr_deletions', [
             'patient_id'   => $pid,
-            'deleted_by'   => $staff_id ?: get_current_user_id(),
+            'deleted_by'   => $staff_id ?: PortalAuth::staff_id(),
             'deleted_at'   => date( 'c' ),
             'deletion_type'=> 'anonymise',
             'details'      => wp_json_encode( [ 'patient_number' => $patient->patient_number ?? '' ] ),
@@ -2002,7 +2020,7 @@ function hm_ajax_export_patient_data() {
 
     $db->insert( 'hearmed_admin.gdpr_exports', [
         'patient_id'   => $pid,
-        'exported_by'  => $staff_id ?: get_current_user_id(),
+        'exported_by'  => $staff_id ?: PortalAuth::staff_id(),
         'exported_at'  => date( 'c' ),
         'export_format'=> 'json',
     ]);

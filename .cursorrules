@@ -1,0 +1,46 @@
+# HearMed Portal — Codespace Rules
+# These rules are enforced by the AI assistant when writing code for this project.
+
+## CRITICAL: No WordPress Auth Dependencies
+
+This project uses PortalAuth (core/class-portal-auth.php) for ALL authentication.
+WordPress auth functions are BANNED in module and admin code.
+
+### BANNED functions — NEVER use these in modules/, admin/, or includes/:
+- `get_current_user_id()` → Use `PortalAuth::staff_id()` instead
+- `current_user_can()` → Use `PortalAuth::is_logged_in()` or `PortalAuth::is_admin()` instead
+- `is_user_logged_in()` → Use `PortalAuth::is_logged_in()` instead
+- `wp_get_current_user()` → Use `PortalAuth::current_user()` instead
+- `update_user_meta()` with user IDs → Use `HearMed_DB` to write to PG instead
+- `get_user_meta()` with user IDs → Query PG staff/settings tables instead
+
+### EXCEPTIONS (these files MAY use WP auth):
+- mu-plugins/disable-wp-login.php (runs before plugin, needs WP)
+- core/class-hearmed-router.php bridge_wp_login() method ONLY
+- core/class-portal-auth.php resolve_legacy() method ONLY
+- migrations/ (one-time scripts)
+
+### Auth quick reference:
+- Get staff ID: `PortalAuth::staff_id()` → int
+- Get staff object: `PortalAuth::current_user()` → object with id, first_name, last_name, email, role
+- Check logged in: `PortalAuth::is_logged_in()` → bool
+- Check admin: `PortalAuth::is_admin()` → bool
+- Get WP user ID (rare): `PortalAuth::wp_user_id()` → int
+
+### Nonce standard:
+- Always use 'hm_nonce' as the nonce action name
+- Create: `wp_create_nonce('hm_nonce')`
+- Verify: `check_ajax_referer('hm_nonce', 'nonce')`
+- NEVER use 'hearmed_nonce'
+
+### AJAX handler registration:
+- Each module registers its OWN handlers at file level
+- NEVER register handlers in class-hearmed-ajax.php (it's a helper class only)
+- NEVER register the same action name in two different files
+- Action names must be globally unique
+
+### Database:
+- All business data is in PostgreSQL (hearmed_core, hearmed_reference, hearmed_admin schemas)
+- Use HearMed_DB class for all queries
+- WordPress MySQL (wp_options, wp_users, wp_posts) is ONLY for WordPress internals
+- NEVER store business data in wp_options or wp_usermeta

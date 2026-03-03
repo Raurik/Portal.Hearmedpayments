@@ -456,10 +456,8 @@ function hm_ajax_approve_order() {
 
     $db       = HearMed_DB::instance();
     $order_id = intval($_POST['order_id'] ?? 0);
-    $uid      = get_current_user_id();
+    $staff_id = PortalAuth::staff_id();
     $now      = current_time('Y-m-d H:i:s');
-
-    $staff_id = $db->get_var("SELECT id FROM hearmed_reference.staff WHERE wp_user_id = $1", [$uid]);
 
     $order = $db->get_row("SELECT * FROM hearmed_core.orders WHERE id = $1", [$order_id]);
     if (!$order || $order->current_status !== 'Awaiting Approval') {
@@ -468,16 +466,16 @@ function hm_ajax_approve_order() {
 
     $db->query(
         "UPDATE hearmed_core.orders SET current_status = 'Approved', approved_by = $1, approved_date = $2, updated_at = $2 WHERE id = $3",
-        [$staff_id ?: $uid, $now, $order_id]
+        [$staff_id, $now, $order_id]
     );
 
     $db->query(
         "INSERT INTO hearmed_core.order_status_history (order_id, from_status, to_status, changed_by, changed_at) VALUES ($1, $2, $3, $4, $5)",
-        [$order_id, 'Awaiting Approval', 'Approved', $staff_id ?: $uid, $now]
+        [$order_id, 'Awaiting Approval', 'Approved', $staff_id, $now]
     );
 
     if (function_exists('hm_audit_log')) {
-        hm_audit_log($uid, 'approve', 'order', $order_id, ['status' => 'Awaiting Approval'], ['status' => 'Approved']);
+        hm_audit_log($staff_id, 'approve', 'order', $order_id, ['status' => 'Awaiting Approval'], ['status' => 'Approved']);
     }
 
     wp_send_json_success(['order_id' => $order_id, 'new_status' => 'Approved']);
@@ -495,7 +493,7 @@ function hm_ajax_deny_order() {
     $db       = HearMed_DB::instance();
     $order_id = intval($_POST['order_id'] ?? 0);
     $reason   = sanitize_textarea_field($_POST['reason'] ?? '');
-    $uid      = get_current_user_id();
+    $staff_id = PortalAuth::staff_id();
     $now      = current_time('Y-m-d H:i:s');
 
     if (!$reason) { wp_send_json_error(['msg' => 'A denial reason is required']); return; }
@@ -510,14 +508,13 @@ function hm_ajax_deny_order() {
         [$reason, $now, $order_id]
     );
 
-    $staff_id = $db->get_var("SELECT id FROM hearmed_reference.staff WHERE wp_user_id = $1", [$uid]);
     $db->query(
         "INSERT INTO hearmed_core.order_status_history (order_id, from_status, to_status, changed_by, changed_at, notes) VALUES ($1, $2, $3, $4, $5, $6)",
-        [$order_id, 'Awaiting Approval', 'Cancelled', $staff_id ?: $uid, $now, 'Denied: ' . $reason]
+        [$order_id, 'Awaiting Approval', 'Cancelled', $staff_id, $now, 'Denied: ' . $reason]
     );
 
     if (function_exists('hm_audit_log')) {
-        hm_audit_log($uid, 'deny', 'order', $order_id, ['status' => 'Awaiting Approval'], ['status' => 'Cancelled', 'reason' => $reason]);
+        hm_audit_log($staff_id, 'deny', 'order', $order_id, ['status' => 'Awaiting Approval'], ['status' => 'Cancelled', 'reason' => $reason]);
     }
 
     wp_send_json_success(['order_id' => $order_id, 'new_status' => 'Cancelled']);
@@ -535,6 +532,6 @@ if (!function_exists('hm_user_can_approve')) {
             $role = HearMed_Auth::current_role();
             return $role === 'c_level';
         }
-        return current_user_can('manage_options');
+        return PortalAuth::is_admin();
     }
 }

@@ -9,8 +9,10 @@ function hm_acknowledge_privacy_notice_handler() {
         wp_send_json_error('User not logged in');
     }
 
-    $user_id = get_current_user_id();
-    update_user_meta($user_id, 'hm_privacy_notice_accepted', current_time('mysql'));
+    $wpuid = PortalAuth::wp_user_id();
+    if ( $wpuid ) {
+        update_user_meta($wpuid, 'hm_privacy_notice_accepted', current_time('mysql'));
+    }
     wp_send_json_success();
 }
 
@@ -19,7 +21,7 @@ add_action('wp_ajax_hm_quick_add', 'hm_quick_add_handler');
 
 function hm_quick_add_handler() {
     check_ajax_referer('hm_nonce', 'nonce');
-    if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+    if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
     $entity = sanitize_text_field($_POST['entity'] ?? '');
     $name   = sanitize_text_field($_POST['name'] ?? '');

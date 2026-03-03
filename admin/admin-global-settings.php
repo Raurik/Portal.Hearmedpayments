@@ -335,7 +335,7 @@ class HearMed_Admin_Global_Settings {
     /* ── AJAX: Upload Logo ── */
     public function ajax_upload_logo() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
         if (empty($_FILES['file'])) { wp_send_json_error('No file uploaded'); return; }
         $file = $_FILES['file'];
@@ -363,7 +363,7 @@ class HearMed_Admin_Global_Settings {
     /* ── AJAX: Save Settings ── */
     public function ajax_save() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
         $fields = [
             'logo_url'           => 'hm_report_logo_url',

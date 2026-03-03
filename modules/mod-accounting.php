@@ -211,7 +211,7 @@ class HearMed_Accounting {
                     <span class="hm-badge hm-badge--red">Failed</span>
                     <button class="hm-btn hm-btn--sm hm-btn--ghost hm-retry-qbo"
                             data-invoice-id="<?php echo $inv->id; ?>"
-                            data-nonce="<?php echo wp_create_nonce('hearmed_nonce'); ?>">Retry</button>
+                            data-nonce="<?php echo wp_create_nonce('hm_nonce'); ?>">Retry</button>
                     <?php elseif ($inv->qbo_sync_status === 'queued') : ?>
                     <span class="hm-badge hm-badge--orange">Queued</span>
                     <?php else : ?>
@@ -294,7 +294,7 @@ class HearMed_Accounting {
 
     public static function render_supplier_form() {
         $base  = HearMed_Utils::page_url('accounting');
-        $nonce = wp_create_nonce('hearmed_nonce');
+        $nonce = wp_create_nonce('hm_nonce');
         $accounts = HearMed_DB::get_results(
             "SELECT qbo_account_id, account_name FROM hearmed_admin.qbo_accounts
              WHERE account_type IN ('Expense','Cost of Goods Sold','Other Expense')
@@ -461,7 +461,7 @@ class HearMed_Accounting {
     public static function render_bank_feed() {
         $db    = HearMed_DB::instance();
         $base  = HearMed_Utils::page_url('accounting');
-        $nonce = wp_create_nonce('hearmed_nonce');
+        $nonce = wp_create_nonce('hm_nonce');
 
         if (isset($_GET['refresh'])) {
             HearMed_QBO::pull_bank_transactions(30);
@@ -561,7 +561,7 @@ class HearMed_Accounting {
     public static function render_qbo_manager() {
         $base   = HearMed_Utils::page_url('accounting');
         $status = HearMed_QBO::connection_status();
-        $nonce  = wp_create_nonce('hearmed_nonce');
+        $nonce  = wp_create_nonce('hm_nonce');
         $log    = HearMed_DB::get_results("SELECT * FROM hearmed_admin.qbo_sync_log ORDER BY created_at DESC LIMIT 20", []);
 
         ob_start(); ?>
@@ -790,7 +790,7 @@ class HearMed_Accounting {
     // =========================================================================
 
     public static function ajax_save_supplier_invoice() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
         if (!HearMed_Auth::can('view_accounting')) wp_send_json_error('Access denied.');
 
         $sn    = sanitize_text_field($_POST['supplier_name'] ?? '');
@@ -842,7 +842,7 @@ class HearMed_Accounting {
     }
 
     public static function ajax_retry_qbo_sync() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
         $inv_id = intval($_POST['invoice_id'] ?? 0);
         $order  = HearMed_DB::get_row("SELECT id FROM hearmed_core.orders WHERE invoice_id=\$1", [$inv_id]);
         if (!$order) wp_send_json_error('Order not found.');
@@ -852,7 +852,7 @@ class HearMed_Accounting {
     }
 
     public static function ajax_run_qbo_batch() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
         if (!in_array(HearMed_Auth::current_role(), ['c_level','finance'])) {
             wp_send_json_error('Access denied.');
         }
@@ -861,7 +861,7 @@ class HearMed_Accounting {
     }
 
     public static function ajax_assign_bank_txn() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
         $id  = intval($_POST['txn_id'] ?? 0);
         $acc = sanitize_text_field($_POST['account_id'] ?? '');
         if (!$id || !$acc) wp_send_json_error('Missing data.');
@@ -870,13 +870,13 @@ class HearMed_Accounting {
     }
 
     public static function ajax_qbo_sync_accounts() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
         $a = HearMed_QBO::pull_chart_of_accounts();
         $a ? wp_send_json_success(count($a).' accounts synced.') : wp_send_json_error('Failed. Check connection.');
     }
 
     public static function ajax_qbo_disconnect() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
         HearMed_QBO::disconnect();
         wp_send_json_success('Disconnected.');
     }

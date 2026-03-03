@@ -451,7 +451,7 @@ function hm_ajax_os_mark_ordered() {
 
     $db       = HearMed_DB::instance();
     $order_id = intval($_POST['order_id'] ?? 0);
-    $uid      = get_current_user_id();
+    $staff_id = PortalAuth::staff_id();
     $now      = current_time('Y-m-d H:i:s');
 
     $order = $db->get_row("SELECT * FROM hearmed_core.orders WHERE id = \$1", [$order_id]);
@@ -464,14 +464,13 @@ function hm_ajax_os_mark_ordered() {
         [$now, $order_id]
     );
 
-    $staff_id = $db->get_var("SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1", [$uid]);
     $db->query(
         "INSERT INTO hearmed_core.order_status_history (order_id, from_status, to_status, changed_by, changed_at) VALUES (\$1, \$2, \$3, \$4, \$5)",
-        [$order_id, 'Approved', 'Ordered', $staff_id ?: $uid, $now]
+        [$order_id, 'Approved', 'Ordered', $staff_id, $now]
     );
 
     if (function_exists('hm_audit_log')) {
-        hm_audit_log($uid, 'order_placed', 'order', $order_id, ['status' => 'Approved'], ['status' => 'Ordered']);
+        hm_audit_log($staff_id, 'order_placed', 'order', $order_id, ['status' => 'Approved'], ['status' => 'Ordered']);
     }
 
     wp_send_json_success(['order_id' => $order_id, 'new_status' => 'Ordered']);
@@ -485,9 +484,7 @@ if (!has_action('wp_ajax_hm_order_pdf')) {
 }
 
 function hm_ajax_os_order_pdf() {
-    // Accept both nonce types for compatibility
-    if (!wp_verify_nonce($_REQUEST['nonce'] ?? '', 'hm_nonce')
-     && !wp_verify_nonce($_REQUEST['nonce'] ?? '', 'hearmed_nonce')) {
+    if (!wp_verify_nonce($_REQUEST['nonce'] ?? '', 'hm_nonce')) {
         wp_die('Invalid nonce — please refresh the page and try again.');
     }
 

@@ -3432,7 +3432,7 @@ var Cal={
             var ph=$('#hmqp-phone').val().trim(),mb=$('#hmqp-mobile').val().trim();
             if(!ph&&!mb){$('.hm-qp-err').text('Phone or mobile number is required.');return;}
             var $btn=$(this);$btn.prop('disabled',true).text('Creating...');
-            post('create_patient',{
+            post('create_patient_calendar',{
                 patient_title:$('#hmqp-title').val(),
                 first_name:fn,last_name:ln,
                 dob:$('#hmqp-dob').val(),

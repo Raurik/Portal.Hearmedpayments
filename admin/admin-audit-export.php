@@ -100,7 +100,7 @@ class HearMed_Admin_AuditLog {
 
     public function ajax_get_log() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Denied'); return; }
         // PostgreSQL only - no $wpdb needed
         $t = HearMed_DB::table('audit_log');
         if (HearMed_DB::get_var("SELECT to_regclass($1)", [$t]) === null) { wp_send_json_success([]); return; }
@@ -321,7 +321,7 @@ class HearMed_Admin_AuditLog {
 
     public function ajax_export_patient() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Denied'); return; }
         $patient_id = intval($_POST['patient_id'] ?? 0);
         $format = sanitize_text_field($_POST['format'] ?? 'json');
         if (!$patient_id) { wp_send_json_error('Invalid patient'); return; }
@@ -339,7 +339,7 @@ class HearMed_Admin_AuditLog {
 
         $data = $this->gather_patient_data($patient_id, $patient, $sections);
 
-        $exported_by = get_current_user_id();
+        $exported_by = PortalAuth::staff_id();
         HearMed_DB::insert('hearmed_admin.gdpr_exports', [
             'patient_id' => $patient_id,
             'exported_by' => $exported_by,
@@ -366,7 +366,7 @@ class HearMed_Admin_AuditLog {
 
     public function ajax_export_all_patients() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Denied'); return; }
 
         $format = sanitize_text_field($_POST['format'] ?? 'csv');
         $sections = json_decode(stripslashes($_POST['sections'] ?? '[]'), true);

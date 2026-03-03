@@ -250,7 +250,7 @@ class HearMed_Orders {
         );
 
         $base  = HearMed_Utils::page_url('orders');
-        $nonce = wp_create_nonce('hearmed_nonce');
+        $nonce = wp_create_nonce('hm_nonce');
 
         ob_start(); ?>
         <div class="hm-content hm-orders-create">
@@ -457,7 +457,7 @@ class HearMed_Orders {
 
         $db    = HearMed_DB::instance();
         $role  = HearMed_Auth::current_role();
-        $nonce = wp_create_nonce('hearmed_nonce');
+        $nonce = wp_create_nonce('hm_nonce');
 
         $order = $db->get_row(
             "SELECT o.*,
@@ -780,7 +780,7 @@ class HearMed_Orders {
     // ═══════════════════════════════════════════════════════════════════════
     public static function render_serials( $order_id ) {
         $db    = HearMed_DB::instance();
-        $nonce = wp_create_nonce('hearmed_nonce');
+        $nonce = wp_create_nonce('hm_nonce');
         $base  = HearMed_Utils::page_url('orders');
 
         $order = $db->get_row(
@@ -913,7 +913,7 @@ class HearMed_Orders {
     // ═══════════════════════════════════════════════════════════════════════
     public static function render_complete( $order_id ) {
         $db    = HearMed_DB::instance();
-        $nonce = wp_create_nonce('hearmed_nonce');
+        $nonce = wp_create_nonce('hm_nonce');
         $base  = HearMed_Utils::page_url('orders');
 
         $order = $db->get_row(
@@ -1169,9 +1169,7 @@ class HearMed_Orders {
      * Outputs a complete HTML document and exits — avoids nesting inside WP template.
      */
     public static function ajax_print_order_sheet() {
-        // Accept both hearmed_nonce and hm_nonce for compatibility
-        if ( ! wp_verify_nonce( $_REQUEST['nonce'] ?? '', 'hearmed_nonce' )
-          && ! wp_verify_nonce( $_REQUEST['nonce'] ?? '', 'hm_nonce' ) ) {
+        if ( ! wp_verify_nonce( $_REQUEST['nonce'] ?? '', 'hm_nonce' ) ) {
             wp_die( 'Security check failed — please refresh the page and try again.' );
         }
         if ( ! PortalAuth::is_logged_in() ) wp_die( 'Access denied.' );
@@ -1190,7 +1188,7 @@ class HearMed_Orders {
     // ═══════════════════════════════════════════════════════════════════════
 
     public static function ajax_create_order() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
         if (!HearMed_Auth::can('create_orders')) wp_send_json_error('Access denied.');
 
         $patient_id      = intval($_POST['patient_id'] ?? 0);
@@ -1417,7 +1415,7 @@ class HearMed_Orders {
     }
 
     public static function ajax_approve_order() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
         if (HearMed_Auth::current_role() !== 'c_level') wp_send_json_error('Access denied.');
 
         $order_id = intval($_POST['order_id'] ?? 0);
@@ -1439,7 +1437,7 @@ class HearMed_Orders {
     }
 
     public static function ajax_reject_order() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
         if (HearMed_Auth::current_role() !== 'c_level') wp_send_json_error('Access denied.');
 
         $order_id = intval($_POST['order_id'] ?? 0);
@@ -1460,7 +1458,7 @@ class HearMed_Orders {
     }
 
     public static function ajax_mark_ordered() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
         if (!HearMed_Auth::can('manage_orders')) wp_send_json_error('Access denied.');
 
         $order_id = intval($_POST['order_id'] ?? 0);
@@ -1478,7 +1476,7 @@ class HearMed_Orders {
     }
 
     public static function ajax_mark_received() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
         if (!HearMed_Auth::can('manage_orders')) wp_send_json_error('Access denied.');
 
         $order_id = intval($_POST['order_id'] ?? 0);
@@ -1501,7 +1499,7 @@ class HearMed_Orders {
     }
 
     public static function ajax_save_serials() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
 
         $order_id = intval($_POST['order_id'] ?? 0);
         $items    = $_POST['items'] ?? [];
@@ -1581,7 +1579,7 @@ class HearMed_Orders {
     }
 
     public static function ajax_complete_order() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
         if (!HearMed_Auth::can('create_orders')) wp_send_json_error('Access denied.');
 
         $order_id = intval($_POST['order_id'] ?? 0);
@@ -1721,7 +1719,7 @@ class HearMed_Orders {
     }
 
     public static function ajax_patient_search() {
-        check_ajax_referer('hearmed_nonce','nonce');
+        check_ajax_referer('hm_nonce','nonce');
         $q      = sanitize_text_field($_POST['q'] ?? '');
         $clinic = HearMed_Auth::current_clinic();
         if (strlen($q) < 2) wp_send_json_success([]);

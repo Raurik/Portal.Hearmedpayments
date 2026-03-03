@@ -839,7 +839,7 @@ class HearMed_Admin_Settings {
 
     public function ajax_save() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
         $tag = sanitize_text_field($_POST['page_tag'] ?? '');
         $page = $this->pages[$tag] ?? null;
@@ -900,7 +900,7 @@ class HearMed_Admin_Settings {
 
     public function ajax_upload_gdpr_doc() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
         if (empty($_FILES['file'])) { wp_send_json_error('No file uploaded'); return; }
         $file = $_FILES['file'];
@@ -926,7 +926,7 @@ class HearMed_Admin_Settings {
             'doc_type'   => $doc_type,
             'file_url'   => $movefile['url'],
             'file_path'  => $movefile['file'],
-            'uploaded_by' => get_current_user_id(),
+            'uploaded_by' => PortalAuth::staff_id(),
             'is_active'  => true,
             'created_at' => current_time('mysql'),
         ]);
@@ -940,7 +940,7 @@ class HearMed_Admin_Settings {
 
     public function ajax_delete_gdpr_doc() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
         $doc_id = intval($_POST['doc_id'] ?? 0);
         if (!$doc_id) { wp_send_json_error('Invalid document'); return; }
@@ -960,7 +960,7 @@ class HearMed_Admin_Settings {
 
     public function ajax_upload_report_logo() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
         if (empty($_FILES['file'])) { wp_send_json_error('No file uploaded'); return; }
         $file = $_FILES['file'];

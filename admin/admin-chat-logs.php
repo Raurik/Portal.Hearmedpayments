@@ -265,14 +265,14 @@ class HearMed_Admin_ChatLogs {
         if ( ! PortalAuth::is_logged_in() ) wp_send_json_error( 'Not logged in', 401 );
 
         $query   = sanitize_text_field( $_GET['q'] ?? '' );
-        $current = get_current_user_id();
+        $current = PortalAuth::staff_id();
 
         $rows = HearMed_DB::get_results(
             "SELECT wp_user_id, first_name, last_name, role
              FROM hearmed_reference.staff
              WHERE is_active = true
                AND wp_user_id IS NOT NULL
-               AND wp_user_id != $1
+               AND id != $1
                AND (
                    first_name ILIKE $2
                    OR last_name ILIKE $2

@@ -50,17 +50,6 @@ class HearMed_Invoice {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // INIT
-    // ═══════════════════════════════════════════════════════════════════════
-
-    public static function init() {
-        add_action( 'wp_ajax_hm_get_invoice',       [__CLASS__, 'ajax_get_invoice'] );
-        add_action( 'wp_ajax_hm_print_invoice',     [__CLASS__, 'ajax_print_invoice'] );
-        // hm_create_credit_note is handled by HearMed_Refunds — do NOT register here (duplicate)
-        add_action( 'wp_ajax_hm_mark_cn_cheque',    [__CLASS__, 'ajax_mark_cheque_sent'] );
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
     // INVOICE CREATION — called from mod-orders.php ajax_complete_order()
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -769,7 +758,7 @@ class HearMed_Invoice {
     // ═══════════════════════════════════════════════════════════════════════
 
     public static function ajax_get_invoice() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        check_ajax_referer( 'hm_nonce', 'nonce' );
         if ( ! HearMed_Auth::can( 'view_accounting' ) ) wp_send_json_error( 'Access denied.' );
 
         $invoice_id = intval( $_POST['invoice_id'] ?? 0 );
@@ -780,7 +769,7 @@ class HearMed_Invoice {
     }
 
     public static function ajax_print_invoice() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        check_ajax_referer( 'hm_nonce', 'nonce' );
 
         $invoice_id = intval( $_GET['invoice_id'] ?? $_POST['invoice_id'] ?? 0 );
         $data       = self::get_invoice_data( $invoice_id );
@@ -846,8 +835,7 @@ class HearMed_Invoice {
      * Kept as internal helper — not registered as AJAX handler to avoid duplicates.
      */
     public static function ajax_create_credit_note() {
-        // Accept either nonce convention
-        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hm_nonce' ) && ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hearmed_nonce' ) ) {
+        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hm_nonce' ) ) {
             wp_send_json_error( 'Invalid nonce.' ); return;
         }
         if ( ! HearMed_Auth::can( 'create_credit_note' ) ) wp_send_json_error( 'Access denied.' );
@@ -867,8 +855,7 @@ class HearMed_Invoice {
     }
 
     public static function ajax_mark_cheque_sent() {
-        // Accept either nonce convention
-        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hm_nonce' ) && ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hearmed_nonce' ) ) {
+        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hm_nonce' ) ) {
             wp_send_json_error( 'Invalid nonce.' ); return;
         }
         if ( ! HearMed_Auth::can( 'process_refund' ) ) wp_send_json_error( 'Access denied.' );

@@ -125,7 +125,7 @@ function hm_ajax_get_clinical_doc() {
    ════════════════════════════════════════════════════════════════════════ */
 function hm_ajax_save_clinical_doc() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) wp_send_json_error( 'Permission denied' );
+    if ( ! PortalAuth::is_logged_in() ) wp_send_json_error( 'Permission denied' );
 
     $id   = intval( $_POST['doc_id'] ?? 0 );
     $json = stripslashes( $_POST['reviewed_json'] ?? '{}' );
@@ -151,7 +151,7 @@ function hm_ajax_save_clinical_doc() {
    ════════════════════════════════════════════════════════════════════════ */
 function hm_ajax_update_clinical_doc_status() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) wp_send_json_error( 'Permission denied' );
+    if ( ! PortalAuth::is_logged_in() ) wp_send_json_error( 'Permission denied' );
 
     $id     = intval( $_POST['doc_id'] ?? 0 );
     $status = sanitize_text_field( $_POST['status'] ?? '' );
@@ -166,7 +166,7 @@ function hm_ajax_update_clinical_doc_status() {
     ];
 
     if ( $status === 'reviewed' || $status === 'approved' ) {
-        $data['reviewed_by'] = get_current_user_id();
+        $data['reviewed_by'] = PortalAuth::staff_id();
         $data['reviewed_at'] = current_time( 'mysql' );
     }
 
@@ -183,7 +183,7 @@ function hm_ajax_update_clinical_doc_status() {
    ════════════════════════════════════════════════════════════════════════ */
 function hm_ajax_reextract_clinical_doc() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) wp_send_json_error( 'Permission denied' );
+    if ( ! PortalAuth::is_logged_in() ) wp_send_json_error( 'Permission denied' );
 
     $doc_id      = intval( $_POST['doc_id'] ?? 0 );
     $template_id = intval( $_POST['template_id'] ?? 0 );
@@ -507,7 +507,7 @@ function hm_ajax_preview_clinical_pdf() {
    ════════════════════════════════════════════════════════════════════════ */
 function hm_ajax_generate_clinical_pdf() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) wp_send_json_error( 'Permission denied' );
+    if ( ! PortalAuth::is_logged_in() ) wp_send_json_error( 'Permission denied' );
 
     $id = intval( $_POST['doc_id'] ?? 0 );
     if ( ! $id ) wp_send_json_error( 'Missing doc_id' );
@@ -609,18 +609,14 @@ function hm_ajax_generate_clinical_pdf() {
     // Save a copy to the patient's documents tab
     $file_url = $upload['baseurl'] . $rel_path;
     $doc_type = $doc->template_name ?? 'Clinical Document';
-    $staff_id = get_current_user_id();
-    $staff_row = HearMed_DB::get_row(
-        "SELECT id FROM hearmed_reference.staff WHERE wp_user_id = $1",
-        [ $staff_id ]
-    );
+    $staff_id = PortalAuth::staff_id();
 
     HearMed_DB::insert( 'hearmed_core.patient_documents', [
         'patient_id'    => $doc->patient_id,
         'document_type' => $doc_type,
         'file_url'      => $file_url,
         'file_name'     => $filename,
-        'created_by'    => $staff_row ? $staff_row->id : null,
+        'created_by'    => $staff_id ?: null,
     ] );
 
     wp_send_json_success( [

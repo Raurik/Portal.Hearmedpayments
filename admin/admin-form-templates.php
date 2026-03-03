@@ -68,7 +68,7 @@ class HearMed_Admin_Form_Templates {
         }
 
         $templates = $this->get_templates();
-        $nonce     = wp_create_nonce( 'hearmed_nonce' );
+        $nonce     = wp_create_nonce( 'hm_nonce' );
 
         ob_start(); ?>
 
@@ -735,7 +735,7 @@ class HearMed_Admin_Form_Templates {
     // ─── AJAX: get ────────────────────────────────────────────────────────
 
     public function ajax_get() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        check_ajax_referer( 'hm_nonce', 'nonce' );
         $id  = intval( $_POST['id'] ?? 0 );
         $row = HearMed_DB::get_row( "SELECT * FROM {$this->table} WHERE id = \$1", [ $id ] );
         if ( ! $row ) wp_send_json_error( 'Not found.' );
@@ -751,7 +751,7 @@ class HearMed_Admin_Form_Templates {
     // ─── AJAX: save ───────────────────────────────────────────────────────
 
     public function ajax_save() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        check_ajax_referer( 'hm_nonce', 'nonce' );
         if ( ! in_array( HearMed_Auth::current_role(), [ 'c_level', 'admin' ] ) ) wp_send_json_error( 'Access denied.' );
 
         $id        = intval( $_POST['id'] ?? 0 );
@@ -800,7 +800,7 @@ class HearMed_Admin_Form_Templates {
     // ─── AJAX: toggle ─────────────────────────────────────────────────────
 
     public function ajax_toggle() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        check_ajax_referer( 'hm_nonce', 'nonce' );
         if ( ! in_array( HearMed_Auth::current_role(), [ 'c_level', 'admin' ] ) ) wp_send_json_error('Access denied.');
         HearMed_DB::update( $this->table, ['is_active' => !empty($_POST['active'])], ['id' => intval($_POST['id'])] );
         wp_send_json_success();
@@ -809,7 +809,7 @@ class HearMed_Admin_Form_Templates {
     // ─── AJAX: delete ─────────────────────────────────────────────────────
 
     public function ajax_delete() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        check_ajax_referer( 'hm_nonce', 'nonce' );
         if ( ! in_array( HearMed_Auth::current_role(), [ 'c_level', 'admin' ] ) ) wp_send_json_error('Access denied.');
         $id = intval( $_POST['id'] ?? 0 );
         if ( $id ) HearMed_DB::delete( $this->table, ['id' => $id] );

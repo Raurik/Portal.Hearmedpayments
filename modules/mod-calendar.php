@@ -54,7 +54,7 @@ add_action( 'wp_ajax_hm_save_service',         'hm_ajax_save_service' );
 add_action( 'wp_ajax_hm_delete_service',       'hm_ajax_delete_service' );
 add_action( 'wp_ajax_hm_save_dispenser_order', 'hm_ajax_save_dispenser_order' );
 add_action( 'wp_ajax_hm_get_exclusion_types',  'hm_ajax_get_exclusion_types' );
-add_action( 'wp_ajax_hm_create_patient',       'hm_ajax_create_patient_from_calendar' );
+add_action( 'wp_ajax_hm_create_patient_calendar', 'hm_ajax_create_patient_from_calendar' );
 add_action( 'wp_ajax_hm_get_outcome_templates', 'hm_ajax_get_outcome_templates' );
 add_action( 'wp_ajax_hm_save_appointment_outcome', 'hm_ajax_save_appointment_outcome' );
 add_action( 'wp_ajax_hm_create_outcome_order',  'hm_ajax_create_outcome_order' );
@@ -118,7 +118,7 @@ function hm_ajax_get_settings() {
 
 function hm_ajax_save_settings() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { 
+    if ( ! PortalAuth::is_logged_in() ) { 
         wp_send_json_error( 'Denied' ); 
         return; 
     }
@@ -915,7 +915,7 @@ function hm_ajax_get_appointments() {
 
 function hm_ajax_create_appointment() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
     $t   = HearMed_Portal::table( 'appointments' );
     $sid = intval( $_POST['service_id'] );
@@ -1055,7 +1055,7 @@ function hm_ajax_create_appointment() {
         'sms_reminder_hours' => intval( $_POST['sms_reminder_hours'] ?? 0 ) ?: null,
         'sms_reminder_sent'  => false,
         'notes'              => sanitize_textarea_field( $_POST['notes'] ?? '' ),
-        'created_by'         => get_current_user_id(),
+        'created_by'         => PortalAuth::staff_id(),
         'created_at'         => current_time( 'mysql' ),
         'updated_at'         => current_time( 'mysql' ),
     ];
@@ -1086,7 +1086,7 @@ function hm_ajax_create_appointment() {
 
 function hm_ajax_update_appointment() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
     $t   = HearMed_Portal::table( 'appointments' );
     $id  = intval( $_POST['appointment_id'] );
@@ -1204,7 +1204,7 @@ function hm_ajax_update_appointment() {
 // ================================================================
 function hm_ajax_update_appointment_status() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
         $id     = intval( $_POST['appointment_id'] );
         $status = sanitize_text_field( $_POST['status'] ?? '' );
@@ -1361,7 +1361,7 @@ function hm_ajax_update_appointment_status() {
                         'sms_reminder_hours' => $appt->sms_reminder_hours ?? null,
                         'sms_reminder_sent'  => false,
                         'notes'              => '',
-                        'created_by'         => get_current_user_id(),
+                        'created_by'         => PortalAuth::staff_id(),
                         'created_at'         => current_time( 'mysql' ),
                         'updated_at'         => current_time( 'mysql' ),
                     ]);
@@ -1393,7 +1393,7 @@ function hm_ajax_update_appointment_status() {
 
 function hm_ajax_delete_appointment() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
     if ( HearMed_Portal::setting( 'require_cancel_reason', '1' ) === '1' ) {
         if ( empty( $_POST['reason'] ) ) { wp_send_json_error( 'Reason required' ); return; }
@@ -1470,7 +1470,7 @@ function hm_ajax_get_holidays() {
 
 function hm_ajax_save_holiday() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
     $t  = HearMed_Portal::table( 'staff_absences' );
     $id = intval( $_POST['id'] ?? 0 );
@@ -1507,7 +1507,7 @@ function hm_ajax_save_holiday() {
 
 function hm_ajax_delete_holiday() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
     HearMed_DB::delete( HearMed_Portal::table( 'staff_absences' ), [ 'id' => intval( $_POST['id'] ) ] );
     wp_send_json_success();
@@ -1540,7 +1540,7 @@ function hm_ajax_get_blockouts() {
 
 function hm_ajax_save_blockout() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
     $t  = HearMed_Portal::table( 'calendar_blockouts' );
     $id = intval( $_POST['id'] ?? 0 );
@@ -1568,7 +1568,7 @@ function hm_ajax_save_blockout() {
 
 function hm_ajax_delete_blockout() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
     HearMed_DB::delete( HearMed_Portal::table( 'calendar_blockouts' ), [ 'id' => intval( $_POST['id'] ) ] );
     wp_send_json_success();
@@ -1583,7 +1583,7 @@ function hm_ajax_delete_blockout() {
 // ================================================================
 function hm_ajax_save_service() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
     $id   = intval( $_POST['id'] ?? 0 );
     $name = sanitize_text_field( $_POST['name'] );
@@ -1617,7 +1617,7 @@ function hm_ajax_save_service() {
 
 function hm_ajax_delete_service() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
     HearMed_DB::update( 'appointment_types', [ 'is_active' => false ], [ 'id' => intval( $_POST['id'] ) ] );
     wp_send_json_success();
@@ -1632,7 +1632,7 @@ function hm_ajax_delete_service() {
 // ================================================================
 function hm_ajax_save_dispenser_order() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
     $order = json_decode( stripslashes( $_POST['order'] ), true );
     if ( is_array( $order ) ) {
@@ -1677,7 +1677,7 @@ function hm_ajax_get_exclusion_types() {
 // ================================================================
 function hm_ajax_create_patient_from_calendar() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
         $fn = sanitize_text_field( $_POST['first_name'] ?? '' );
         $ln = sanitize_text_field( $_POST['last_name']  ?? '' );
@@ -1847,7 +1847,7 @@ function hm_ajax_get_outcome_templates() {
 // ================================================================
 function hm_ajax_save_appointment_outcome() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
     $appt_id    = intval( $_POST['appointment_id'] );
     $outcome_id = intval( $_POST['outcome_id'] ?? 0 );
@@ -1897,7 +1897,7 @@ function hm_ajax_save_appointment_outcome() {
             'report_category'    => $report_category,
             'notes'              => $note,
             'created_at'         => current_time( 'mysql' ),
-            'created_by'         => get_current_user_id(),
+            'created_by'         => PortalAuth::staff_id(),
         ];
 
         // Auto-create table if it doesn't exist
@@ -1950,7 +1950,7 @@ function hm_ajax_save_appointment_outcome() {
 // ================================================================
 function hm_ajax_get_order_products() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
 
     try {
         $db = HearMed_DB::instance();
@@ -2002,7 +2002,7 @@ function hm_ajax_get_order_products() {
 // ================================================================
 function hm_ajax_record_order_payment() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
 
     try {
         $order_id       = intval( $_POST['order_id'] ?? 0 );
@@ -2024,11 +2024,7 @@ function hm_ajax_record_order_payment() {
 
         $db = HearMed_DB::instance();
 
-        $wp_uid   = get_current_user_id();
-        $staff_id = $db->get_var(
-            "SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1",
-            [ $wp_uid ]
-        );
+        $staff_id = PortalAuth::staff_id();
 
         $order = null;
         if ( $order_id > 0 ) {
@@ -2345,7 +2341,7 @@ function hm_ajax_record_order_payment() {
 // ================================================================
 function hm_ajax_save_order_serials_from_payment() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( [ 'message' => 'Denied' ] ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( [ 'message' => 'Denied' ] ); return; }
 
     try {
         $db = HearMed_DB::instance();
@@ -2364,8 +2360,8 @@ function hm_ajax_save_order_serials_from_payment() {
         );
         if ( ! $order ) { wp_send_json_error( [ 'message' => 'Order not found.' ] ); return; }
 
-        $wp_uid = get_current_user_id();
-        $staff_id = $db->get_var( "SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1", [ $wp_uid ] );
+        $wp_uid = PortalAuth::staff_id();
+        $staff_id = $wp_uid;
 
         $by_product = [];
         foreach ( $serials as $entry ) {
@@ -2475,7 +2471,7 @@ function hm_ajax_save_order_serials_from_payment() {
 // ================================================================
 function hm_ajax_create_prsi_form_reminder() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
 
     try {
         $order_id     = intval( $_POST['order_id'] ?? 0 );
@@ -2538,7 +2534,7 @@ function hm_ajax_create_prsi_form_reminder() {
 // ================================================================
 function hm_ajax_get_patient_pipeline_orders() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
 
     try {
         $patient_id = intval( $_POST['patient_id'] ?? 0 );
@@ -2705,7 +2701,7 @@ function hm_ajax_get_patient_pipeline_orders() {
 // ================================================================
 function hm_ajax_create_outcome_order() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
     try {
         $patient_id     = intval( $_POST['patient_id'] ?? 0 );
         $appointment_id = intval( $_POST['appointment_id'] ?? 0 );
@@ -2787,12 +2783,8 @@ function hm_ajax_create_outcome_order() {
 
         $order_num = HearMed_Utils::generate_order_number();
 
-        // Resolve staff table ID from WP user
-        $wp_uid   = get_current_user_id();
-        $staff_id = $db->get_var(
-            "SELECT id FROM hearmed_reference.staff WHERE wp_user_id = \$1",
-            [ $wp_uid ]
-        );
+        // Resolve staff table ID
+        $staff_id = PortalAuth::staff_id();
 
         $order_id = $db->insert( 'hearmed_core.orders', [
             'order_number'    => $order_num,
@@ -2893,7 +2885,7 @@ function hm_ajax_create_outcome_order() {
 
 function hm_ajax_save_exclusion() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
 
     try {
         $t = 'hearmed_core.exclusion_instances';
@@ -2949,7 +2941,7 @@ function hm_ajax_save_exclusion() {
 
 function hm_ajax_delete_exclusion() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
-    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+    if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
 
     try {
         $id = intval( $_POST['id'] ?? 0 );

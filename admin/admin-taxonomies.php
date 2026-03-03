@@ -407,7 +407,7 @@ class HearMed_Admin_Taxonomies {
 
     public function ajax_save() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
         $tag = sanitize_text_field($_POST['tag'] ?? '');
         $name = sanitize_text_field($_POST['name'] ?? '');
@@ -474,7 +474,7 @@ class HearMed_Admin_Taxonomies {
 
     public function ajax_delete() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
         $tag = sanitize_text_field($_POST['tag'] ?? '');
         $term_id = intval($_POST['term_id'] ?? 0);

@@ -215,6 +215,8 @@ class HearMed_Router {
 
         // If not authenticated via portal, redirect to login
         if ( ! PortalAuth::is_logged_in() ) {
+            nocache_headers();
+            header( 'X-Accel-Expires: 0' );
             $clean_uri = $_SERVER['REQUEST_URI'] ?? '/';
             // Only strip redirect_to if it points at the exact login page, not
             // at other pages that happen to live under the /login/ home path.
@@ -342,7 +344,7 @@ class HearMed_Router {
     private function check_privacy_notice() {
         // Use PortalAuth as source of truth for identity, not WP user.
         if ( ! PortalAuth::is_v2() ) {
-            $user_id = get_current_user_id();
+            $user_id = PortalAuth::wp_user_id();
             if ( ! $user_id ) return false;
             $accepted = get_user_meta( $user_id, 'hm_privacy_notice_accepted', true );
             return $accepted ? false : '<div id="hm-app"><p>Please accept the privacy notice to continue.</p></div>';
@@ -364,7 +366,7 @@ class HearMed_Router {
         }
 
         // Also check WP user meta as fallback
-        $wp_user_id = get_current_user_id();
+        $wp_user_id = PortalAuth::wp_user_id();
         if ( $wp_user_id && get_user_meta( $wp_user_id, 'hm_privacy_notice_accepted', true ) ) {
             return false;
         }

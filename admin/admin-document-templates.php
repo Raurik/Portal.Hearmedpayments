@@ -971,7 +971,7 @@ class HearMed_Admin_Document_Templates {
     /* ── Save document type metadata (unchanged logic) ── */
     public function ajax_save() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
-        if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Permission denied' ); return; }
+        if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Permission denied' ); return; }
         $this->ensure_table();
 
         $doc_id = intval( $_POST['doc_id'] ?? 0 );
@@ -1008,7 +1008,7 @@ class HearMed_Admin_Document_Templates {
     /* ── Soft-delete ── */
     public function ajax_delete() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
-        if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Permission denied' ); return; }
+        if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Permission denied' ); return; }
 
         $doc_id = intval( $_POST['doc_id'] ?? 0 );
         if ( ! $doc_id ) { wp_send_json_error( 'Invalid document type' ); return; }
@@ -1030,7 +1030,7 @@ class HearMed_Admin_Document_Templates {
        ════════════════════════════════════════════════════════════════════════ */
     public function ajax_save_sections() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
-        if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Permission denied' ); return; }
+        if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Permission denied' ); return; }
 
         $doc_id = intval( $_POST['doc_id'] ?? 0 );
         if ( ! $doc_id ) { wp_send_json_error( 'Invalid document type' ); return; }
@@ -1111,7 +1111,7 @@ class HearMed_Admin_Document_Templates {
         }
 
         /* ── Insert version snapshot ── */
-        $staff_id = get_current_user_id();
+        $staff_id = PortalAuth::staff_id();
         HearMed_DB::insert( $this->versions_table, [
             'template_id'     => $doc_id,
             'version'         => $new_version,

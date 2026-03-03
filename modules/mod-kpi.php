@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) exit;
 function hm_kpi_render() {
     if (!PortalAuth::is_logged_in()) return;
 
-    $uid      = get_current_user_id();
+    $uid      = PortalAuth::staff_id();
     $staff    = HearMed_DB::get_row(
         "SELECT s.id, s.first_name, s.last_name, s.role, s.base_salary,
                 sc.clinic_id AS primary_clinic_id,
@@ -28,7 +28,7 @@ function hm_kpi_render() {
          LEFT JOIN hearmed_reference.staff_clinics sc 
               ON sc.staff_id = s.id AND sc.is_primary_clinic = true
          LEFT JOIN hearmed_reference.clinics c ON c.id = sc.clinic_id
-         WHERE s.wp_user_id = $1 AND s.is_active = true
+         WHERE s.id = $1 AND s.is_active = true
          LIMIT 1",
         [$uid]
     );
@@ -888,7 +888,7 @@ class HearMed_KPI {
     public static function ajax_get_data() {
         check_ajax_referer('hm_nonce', 'nonce');
 
-        $uid = get_current_user_id();
+        $uid = PortalAuth::staff_id();
         if (!$uid) { wp_send_json_error('Not logged in'); return; }
 
         $target_staff_id = intval($_POST['staff_id'] ?? 0);
@@ -902,7 +902,7 @@ class HearMed_KPI {
 
         // Security: non-admins can only see their own data
         $viewer = HearMed_DB::get_row(
-            "SELECT id, role FROM hearmed_reference.staff WHERE wp_user_id = $1 AND is_active = true",
+            "SELECT id, role FROM hearmed_reference.staff WHERE id = $1 AND is_active = true",
             [$uid]
         );
         if (!$viewer) { wp_send_json_error('Staff not found'); return; }
@@ -946,7 +946,7 @@ class HearMed_KPI {
     public static function ajax_get_unclosed() {
         check_ajax_referer('hm_nonce', 'nonce');
 
-        $uid = get_current_user_id();
+        $uid = PortalAuth::staff_id();
         if (!$uid) { wp_send_json_error('Not logged in'); return; }
 
         $target_staff_id = intval($_POST['staff_id'] ?? 0);
@@ -960,7 +960,7 @@ class HearMed_KPI {
 
         // Security: non-admins can only see their own data
         $viewer = HearMed_DB::get_row(
-            "SELECT id, role FROM hearmed_reference.staff WHERE wp_user_id = $1 AND is_active = true",
+            "SELECT id, role FROM hearmed_reference.staff WHERE id = $1 AND is_active = true",
             [$uid]
         );
         if (!$viewer) { wp_send_json_error('Staff not found'); return; }

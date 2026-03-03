@@ -186,7 +186,7 @@ class HearMed_TeamChat {
         $channel_id = HearMed_DB::insert( 'chat_channels', [
             'channel_type' => 'company',
             'channel_name' => 'HearMed Team',
-            'created_by'   => get_current_user_id(),
+            'created_by'   => PortalAuth::staff_id(),
         ] );
 
         if ( ! $channel_id ) return;
@@ -213,7 +213,7 @@ class HearMed_TeamChat {
         if ( ! PortalAuth::is_logged_in() ) {
             wp_send_json_error( [ 'message' => 'Not logged in' ], 401 );
         }
-        $uid = get_current_user_id();
+        $uid = PortalAuth::staff_id();
         if ( ! $uid ) {
             wp_send_json_error( [ 'message' => 'Session error — please log out and back in.' ], 401 );
         }
@@ -653,7 +653,7 @@ class HearMed_TeamChat {
         if ( ! PortalAuth::is_logged_in() ) wp_send_json_error( 'Not logged in', 401 );
 
         $query   = sanitize_text_field( $_GET['q'] ?? '' );
-        $current = get_current_user_id();
+        $current = PortalAuth::staff_id();
 
         if ( ! $query ) {
             wp_send_json_success( [] );
@@ -665,7 +665,7 @@ class HearMed_TeamChat {
              FROM hearmed_reference.staff
              WHERE is_active = true
                AND wp_user_id IS NOT NULL
-               AND wp_user_id != $1
+               AND id != $1
                AND (
                    first_name ILIKE $2
                    OR last_name ILIKE $2

@@ -56,7 +56,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
  * Render system status page
  */
 function hearmed_render_system_status_page() {
-    if ( ! current_user_can( 'manage_options' ) ) {
+    if ( ! PortalAuth::is_admin() ) {
         wp_die( 'Unauthorized' );
     }
     

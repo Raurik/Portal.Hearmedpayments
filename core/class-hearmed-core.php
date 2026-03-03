@@ -429,7 +429,7 @@ class HearMed_Core {
                     'action' => $action,
                     'entity_type' => $entity,
                     'entity_id' => intval( $entity_id ),
-                    'user_id' => get_current_user_id(),
+                    'user_id' => PortalAuth::staff_id(),
                     'details' => wp_json_encode( $meta ),
                     'created_at' => current_time( 'mysql' ),
                 ],
@@ -444,7 +444,7 @@ class HearMed_Core {
                 $action,
                 $entity,
                 intval( $entity_id ),
-                get_current_user_id(),
+                PortalAuth::staff_id(),
                 wp_json_encode( $meta )
             )
         );

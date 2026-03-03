@@ -415,7 +415,7 @@ class HearMed_Admin_Resources {
 
     public function ajax_save() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Denied'); return; }
 
         $id     = intval($_POST['id'] ?? 0);
         $title  = sanitize_text_field($_POST['title'] ?? '');
@@ -457,7 +457,7 @@ class HearMed_Admin_Resources {
 
     public function ajax_delete() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Denied'); return; }
 
         $id = intval($_POST['id'] ?? 0);
         if (!$id) { wp_send_json_error('Invalid ID'); return; }
@@ -479,7 +479,7 @@ class HearMed_Admin_Resources {
 
     public function ajax_add_type() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Denied'); return; }
 
         $name = sanitize_text_field($_POST['type_name'] ?? '');
         if (!$name) { wp_send_json_error('Type name required'); return; }

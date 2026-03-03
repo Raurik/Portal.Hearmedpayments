@@ -58,75 +58,9 @@ class HearMed_Ajax {
     // Register every AJAX action in one place
     // -------------------------------------------------------------------------
     private function register_all() {
-
-        // ── Core / Auth ───────────────────────────────────────────────────────
-        add_action( 'wp_ajax_hm_acknowledge_privacy_notice', [ $this, 'acknowledge_privacy_notice' ] );
-
-        // ── Orders — full 6-stage workflow ────────────────────────────────────
-        add_action( 'wp_ajax_hm_create_order',   [ 'HearMed_Orders', 'ajax_create_order' ] );   // Stage 1
-        add_action( 'wp_ajax_hm_approve_order',  [ 'HearMed_Orders', 'ajax_approve_order' ] );  // Stage 2a
-        add_action( 'wp_ajax_hm_reject_order',   [ 'HearMed_Orders', 'ajax_reject_order' ] );   // Stage 2b
-        add_action( 'wp_ajax_hm_mark_ordered',   [ 'HearMed_Orders', 'ajax_mark_ordered' ] );   // Stage 3
-        add_action( 'wp_ajax_hm_mark_received',  [ 'HearMed_Orders', 'ajax_mark_received' ] );  // Stage 4
-        add_action( 'wp_ajax_hm_save_serials',   [ 'HearMed_Orders', 'ajax_save_serials' ] );   // Stage 4→5
-        add_action( 'wp_ajax_hm_complete_order', [ 'HearMed_Orders', 'ajax_complete_order' ] ); // Stage 6 (fires QBO)
-        add_action( 'wp_ajax_hm_patient_search', [ 'HearMed_Orders', 'ajax_patient_search' ] ); // Autocomplete
-        add_action( 'wp_ajax_hm_print_order_sheet', [ 'HearMed_Orders', 'ajax_print_order_sheet' ] ); // Print order
-
-        // ── Orders — AJAX list/detail/status (hearmed-orders.js) ─────────────
-        add_action( 'wp_ajax_hm_get_orders',           [ 'HearMed_Orders', 'ajax_get_orders' ] );
-        add_action( 'wp_ajax_hm_get_order_detail',     [ 'HearMed_Orders', 'ajax_get_order_detail' ] );
-        add_action( 'wp_ajax_hm_update_order_status',  [ 'HearMed_Orders', 'ajax_update_order_status' ] );
-        add_action( 'wp_ajax_hm_get_pending_orders',   [ 'HearMed_Orders', 'ajax_get_pending_orders' ] );
-        add_action( 'wp_ajax_hm_get_awaiting_fitting', [ 'HearMed_Orders', 'ajax_get_awaiting_fitting' ] );
-        add_action( 'wp_ajax_hm_prefit_cancel',        [ 'HearMed_Orders', 'ajax_prefit_cancel' ] );
-
-        // ── Accounting / QuickBooks ───────────────────────────────────────────
-        add_action( 'wp_ajax_hm_save_supplier_invoice', [ 'HearMed_Accounting', 'ajax_save_supplier_invoice' ] );
-        add_action( 'wp_ajax_hm_retry_qbo_sync',        [ 'HearMed_Accounting', 'ajax_retry_qbo_sync' ] );
-        add_action( 'wp_ajax_hm_assign_bank_txn',        [ 'HearMed_Accounting', 'ajax_assign_bank_txn' ] );
-        add_action( 'wp_ajax_hm_qbo_sync_accounts',      [ 'HearMed_Accounting', 'ajax_qbo_sync_accounts' ] );
-        add_action( 'wp_ajax_hm_qbo_disconnect',         [ 'HearMed_Accounting', 'ajax_qbo_disconnect' ] );
-        add_action( 'wp_ajax_hm_run_qbo_batch',          [ 'HearMed_Accounting', 'ajax_run_qbo_batch' ] );
-
-        // ── Stock / Inventory ─────────────────────────────────────────────
-        add_action( 'wp_ajax_hm_stock_hearing_aids', [ 'HearMed_Stock', 'ajax_load_hearing_aids' ] );
-        add_action( 'wp_ajax_hm_stock_consumables',  [ 'HearMed_Stock', 'ajax_load_consumables' ] );
-        add_action( 'wp_ajax_hm_stock_movements',    [ 'HearMed_Stock', 'ajax_load_movements' ] );
-        add_action( 'wp_ajax_hm_stock_transfer',     [ 'HearMed_Stock', 'ajax_transfer' ] );
-        add_action( 'wp_ajax_hm_stock_add',          [ 'HearMed_Stock', 'ajax_add_stock' ] );
-        add_action( 'wp_ajax_hm_stock_adjust_qty',   [ 'HearMed_Stock', 'ajax_adjust_quantity' ] );
-        add_action( 'wp_ajax_hm_stock_reserve',      [ 'HearMed_Stock', 'ajax_reserve' ] );
-
-        // ── QBO Review (self-registers via mod-qbo-review.php) ──────────────
-
-        // ── Calendar ─────────────────────────────────────────────────────────
-        // Calendar registers its own handlers inside mod-calendar.php
-        // (legacy pattern kept until calendar is refactored)
-
-        // ── Patients ─────────────────────────────────────────────────────────
-        // Patients registers its own handlers inside mod-patients.php
-        // (legacy pattern kept until patients is refactored)
-
-        // ── Approvals ────────────────────────────────────────────────────────
-        // Approvals registers its own handlers inside mod-approvals.php
-
-        // ── Notifications (registered when module is built) ───────────────────
-        // add_action( 'wp_ajax_hm_mark_notification_read', [ 'HearMed_Notifications', 'ajax_mark_read' ] );
-        // add_action( 'wp_ajax_hm_dismiss_notification',   [ 'HearMed_Notifications', 'ajax_dismiss' ] );
-
-        // ── Repairs (registered when module is built) ─────────────────────────
-        // add_action( 'wp_ajax_hm_create_repair',   [ 'HearMed_Repairs', 'ajax_create' ] );
-        // add_action( 'wp_ajax_hm_update_repair',   [ 'HearMed_Repairs', 'ajax_update' ] );
-
-        // ── Team Chat (registered when module is built) ───────────────────────
-        // add_action( 'wp_ajax_hm_send_message',    [ 'HearMed_Chat', 'ajax_send' ] );
-        // add_action( 'wp_ajax_hm_get_messages',    [ 'HearMed_Chat', 'ajax_get' ] );
-
-        // ── Reports / Commissions / KPI / Cash (registered when built) ────────
-        // add_action( 'wp_ajax_hm_get_report',      [ 'HearMed_Reports',     'ajax_get' ] );
-        // add_action( 'wp_ajax_hm_get_commissions', [ 'HearMed_Commissions', 'ajax_get' ] );
-        // add_action( 'wp_ajax_hm_get_kpi',         [ 'HearMed_KPI',         'ajax_get' ] );
+        // All AJAX handlers are registered by their own modules.
+        // Do NOT add registrations here — it creates duplicates.
+        // See: mod-orders.php, mod-accounting.php, mod-stock.php, etc.
     }
 
     // -------------------------------------------------------------------------
@@ -146,8 +80,8 @@ class HearMed_Ajax {
         if ( empty( $_POST[ $nonce_field ] ) ) {
             wp_send_json_error( 'Missing nonce' ); exit;
         }
-        // Accept either nonce name — 'hm_nonce' (global HM.nonce) or 'hearmed_nonce' (inline)
-        if ( wp_verify_nonce( $_POST[ $nonce_field ], 'hm_nonce' ) || wp_verify_nonce( $_POST[ $nonce_field ], 'hearmed_nonce' ) ) {
+        // All nonces now standardised to 'hm_nonce'
+        if ( wp_verify_nonce( $_POST[ $nonce_field ], 'hm_nonce' ) ) {
             return true;
         }
         wp_send_json_error( 'Invalid nonce' ); exit;
@@ -190,22 +124,5 @@ class HearMed_Ajax {
     // -------------------------------------------------------------------------
     public static function error( $message, $data = null, $status_code = 400 ) {
         wp_send_json_error( [ 'message' => $message, 'data' => $data ], $status_code ); exit;
-    }
-
-    // -------------------------------------------------------------------------
-    // Privacy notice acknowledgement
-    // -------------------------------------------------------------------------
-    public function acknowledge_privacy_notice() {
-        // Accept either nonce convention (hm_nonce from HM.nonce global, or hearmed_nonce from inline)
-        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hm_nonce' ) && ! wp_verify_nonce( $_POST['nonce'] ?? '', 'hearmed_nonce' ) ) {
-            wp_send_json_error( 'Invalid nonce' ); return;
-        }
-
-        if ( ! is_user_logged_in() ) {
-            wp_send_json_error( 'Unauthorized' ); return;
-        }
-
-        update_user_meta( get_current_user_id(), 'hm_privacy_notice_accepted', current_time('mysql') );
-        wp_send_json_success();
     }
 }

@@ -1075,7 +1075,7 @@ class HearMed_Admin_Products {
 
     public function ajax_save() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
         $id   = intval($_POST['id'] ?? 0);
         $name = sanitize_text_field($_POST['product_name'] ?? '');
@@ -1166,7 +1166,7 @@ class HearMed_Admin_Products {
 
     public function ajax_delete() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
         $id   = intval($_POST['id'] ?? 0);
         $type = sanitize_text_field($_POST['item_type'] ?? '');
@@ -1188,7 +1188,7 @@ class HearMed_Admin_Products {
 
     public function ajax_import() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Permission denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Permission denied'); return; }
 
         if (empty($_FILES['csv_file'])) { wp_send_json_error('No file uploaded'); return; }
 
@@ -1280,7 +1280,7 @@ class HearMed_Admin_Products {
 
     public function ajax_add_bundled_category() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Denied'); return; }
 
         $name = sanitize_text_field($_POST['category_name'] ?? '');
         if (!$name) { wp_send_json_error('Name required'); return; }

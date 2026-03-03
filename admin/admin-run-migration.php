@@ -29,7 +29,7 @@ class HearMed_Run_Migration {
     }
 
     public function render() {
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! PortalAuth::is_admin() ) {
             wp_die( 'Unauthorized' );
         }
 

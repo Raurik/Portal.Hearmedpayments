@@ -30,7 +30,7 @@ class HearMed_Commission_Pin {
        ────────────────────────────────────────────── */
     public function ajax_set_pin() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
-        if ( ! current_user_can( 'edit_posts' ) ) {
+        if ( ! PortalAuth::is_logged_in() ) {
             wp_send_json_error( 'Permission denied' );
             return;
         }

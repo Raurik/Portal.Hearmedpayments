@@ -184,7 +184,7 @@ class HearMed_Admin_KPI_Targets {
 
     public function ajax_save() {
         check_ajax_referer('hm_nonce', 'nonce');
-        if (!current_user_can('edit_posts')) { wp_send_json_error('Denied'); return; }
+        if (!PortalAuth::is_logged_in()) { wp_send_json_error('Denied'); return; }
 
         $t = HearMed_DB::table('kpi_targets');
         $staff_id_raw = sanitize_text_field($_POST['staff_id'] ?? 'global');
@@ -193,7 +193,7 @@ class HearMed_Admin_KPI_Targets {
         $targets = json_decode(stripslashes($_POST['targets'] ?? '[]'), true);
         if (!is_array($targets)) { wp_send_json_error('Invalid data'); return; }
 
-        $uid = get_current_user_id();
+        $uid = PortalAuth::staff_id();
         $now = current_time('mysql');
 
         foreach ($targets as $tgt) {

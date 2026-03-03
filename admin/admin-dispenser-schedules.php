@@ -741,7 +741,7 @@ class HearMed_Admin_Dispenser_Schedules {
     // ─── AJAX: Save ────────────────────────────────────────────────
     public function ajax_save() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
-        if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+        if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
 
         // Ensure columns exist before insert (same connection)
         $this->ensure_schedule_columns();
@@ -803,7 +803,7 @@ class HearMed_Admin_Dispenser_Schedules {
     // ─── AJAX: Delete (single — sets effective_to) ────────────────
     public function ajax_delete() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
-        if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+        if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
 
         $id = intval( $_POST['id'] ?? 0 );
         if ( ! $id ) { wp_send_json_error( 'Invalid ID' ); return; }
@@ -830,7 +830,7 @@ class HearMed_Admin_Dispenser_Schedules {
     // ─── AJAX: Bulk delete ────────────────────────────────────────
     public function ajax_bulk_delete() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
-        if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+        if ( ! PortalAuth::is_logged_in() ) { wp_send_json_error( 'Denied' ); return; }
 
         $ids_raw = sanitize_text_field( $_POST['ids'] ?? '' );
         $effective_to = ! empty( $_POST['effective_to'] ) ? sanitize_text_field( $_POST['effective_to'] ) : date( 'Y-m-d' );

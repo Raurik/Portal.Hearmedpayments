@@ -62,7 +62,7 @@ add_action( 'wp_enqueue_scripts', function () {
         );
         wp_localize_script( 'hearmed-forms', 'hmFormsConfig', [
             'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-            'nonce'   => wp_create_nonce( 'hearmed_nonce' ),
+            'nonce'   => wp_create_nonce( 'hm_nonce' ),
         ] );
     }
 } );
@@ -76,7 +76,7 @@ class HearMed_Forms {
 
     public static function render( $patient_id ) {
         $db      = HearMed_DB::instance();
-        $nonce   = wp_create_nonce( 'hearmed_nonce' );
+        $nonce   = wp_create_nonce( 'hm_nonce' );
         $role    = HearMed_Auth::current_role();
         $can_inv = in_array( $role, [ 'c_level', 'admin' ] );
 
@@ -274,7 +274,7 @@ class HearMed_Forms {
     // ═══════════════════════════════════════════════════════════════════════
 
     public static function ajax_get_forms() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        check_ajax_referer( 'hm_nonce', 'nonce' );
         $patient_id = intval( $_POST['patient_id'] ?? 0 );
         if ( ! $patient_id ) wp_send_json_error( 'No patient.' );
 
@@ -313,7 +313,7 @@ class HearMed_Forms {
     // ═══════════════════════════════════════════════════════════════════════
 
     public static function ajax_load_template() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        check_ajax_referer( 'hm_nonce', 'nonce' );
         $template_id = intval( $_POST['template_id'] ?? 0 );
         $patient_id  = intval( $_POST['patient_id']  ?? 0 );
         if ( ! $template_id ) wp_send_json_error( 'No template.' );
@@ -356,7 +356,7 @@ class HearMed_Forms {
     // ═══════════════════════════════════════════════════════════════════════
 
     public static function ajax_submit_form() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        check_ajax_referer( 'hm_nonce', 'nonce' );
         if ( ! HearMed_Auth::can( 'edit_patients' ) ) wp_send_json_error( 'Access denied.' );
 
         $patient_id         = intval( $_POST['patient_id']           ?? 0 );
@@ -464,7 +464,7 @@ class HearMed_Forms {
     // ═══════════════════════════════════════════════════════════════════════
 
     public static function ajax_get_form_view() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        check_ajax_referer( 'hm_nonce', 'nonce' );
         $form_id = intval( $_POST['form_id'] ?? 0 );
         if ( ! $form_id ) wp_send_json_error( 'No form specified.' );
 
@@ -504,7 +504,7 @@ class HearMed_Forms {
     // ═══════════════════════════════════════════════════════════════════════
 
     public static function ajax_invalidate_form() {
-        check_ajax_referer( 'hearmed_nonce', 'nonce' );
+        check_ajax_referer( 'hm_nonce', 'nonce' );
         $role = HearMed_Auth::current_role();
         if ( ! in_array( $role, [ 'c_level', 'admin' ] ) ) wp_send_json_error( 'Access denied.' );
 

@@ -277,6 +277,42 @@ class PortalAuth {
     /** @return bool Is anyone logged in? */
     public static function is_logged_in()  { return self::current_user() !== null; }
 
+    /**
+     * Get current portal staff ID (from PG, not WP).
+     * Use this EVERYWHERE instead of get_current_user_id().
+     */
+    public static function staff_id() {
+        $staff = self::current_user();
+        return $staff ? (int) $staff->id : 0;
+    }
+
+    /**
+     * Get the WP user ID linked to the current portal user.
+     * Only needed for WP-specific operations (cache bypass, user_meta).
+     */
+    public static function wp_user_id() {
+        $staff = self::current_user();
+        if ( ! $staff ) return 0;
+        static $wp_id = null;
+        if ( $wp_id === null ) {
+            $wp_id = (int) HearMed_DB::get_var(
+                "SELECT wp_user_id FROM hearmed_reference.staff WHERE id = $1",
+                [ $staff->id ]
+            ) ?: 0;
+        }
+        return $wp_id;
+    }
+
+    /**
+     * Check if current portal user has admin/c_level role.
+     * Replaces current_user_can('manage_options').
+     */
+    public static function is_admin() {
+        $staff = self::current_user();
+        if ( ! $staff ) return false;
+        return in_array( self::normalize_role( $staff->role ), [ self::ROLE_CLEVEL, 'admin' ], true );
+    }
+
     /** @return object|null Real actor (C-Level) during impersonation, null otherwise */
     public static function actor_user()    { self::resolve(); return self::$actor_staff; }
 
