@@ -101,14 +101,22 @@ class HearMed_Run_Migration {
             $password = $_POST['new_password'] ?? '';
             if ( $staff_id > 0 && strlen( $password ) >= 10 ) {
                 $hash = password_hash( $password, PASSWORD_BCRYPT, [ 'cost' => 12 ] );
+
+                // Get email for username fallback
+                $staff_r = @pg_query_params( $conn,
+                    "SELECT email FROM hearmed_reference.staff WHERE id = $1", [ $staff_id ] );
+                $staff_email = $staff_r ? pg_fetch_result( $staff_r, 0, 0 ) : 'staff' . $staff_id;
+
+                // Upsert: insert if no staff_auth row, update if exists
                 $ok = @pg_query_params( $conn,
-                    "UPDATE hearmed_reference.staff_auth
-                     SET password_hash = $2, temp_password = true, password_changed_at = NOW(), updated_at = NOW()
-                     WHERE staff_id = $1",
-                    [ $staff_id, $hash ]
+                    "INSERT INTO hearmed_reference.staff_auth (staff_id, username, password_hash, temp_password, password_changed_at, created_at, updated_at)
+                     VALUES ($1, $3, $2, true, NOW(), NOW(), NOW())
+                     ON CONFLICT (staff_id) DO UPDATE
+                     SET password_hash = $2, temp_password = true, password_changed_at = NOW(), updated_at = NOW()",
+                    [ $staff_id, $hash, $staff_email ]
                 );
                 if ( $ok ) {
-                    echo '<div class="notice notice-success"><p>✅ Password set for staff ID ' . $staff_id . '. They will be prompted to set up 2FA on first login.</p></div>';
+                    echo '<div class="notice notice-success"><p>✅ Password set for staff ID ' . $staff_id . ' (' . esc_html( $staff_email ) . '). They will be prompted to set up 2FA on first login.</p></div>';
                 } else {
                     echo '<div class="notice notice-error"><p>❌ Failed: ' . esc_html( pg_last_error( $conn ) ) . '</p></div>';
                 }
