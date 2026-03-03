@@ -13,13 +13,18 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// ── Already portal-authenticated → send home ──
+// ── Already portal-authenticated → redirect away from login ──
 if ( PortalAuth::is_v2() && PortalAuth::is_logged_in() ) {
-    wp_redirect( home_url( '/' ) );
+    $go = $_REQUEST['redirect_to'] ?? '';
+    // If redirect_to is empty or points back at the login page, go to calendar
+    if ( empty( $go ) || preg_match( '#/login/?(?:\\?|$)#', $go ) ) {
+        $go = home_url( '/calendar/' );
+    }
+    wp_redirect( esc_url( $go ) );
     exit;
 }
 
-$atts = [ 'redirect' => home_url( '/' ) ];
+$atts = [ 'redirect' => home_url( '/calendar/' ) ];
 $redirect_to = esc_url( $_REQUEST['redirect_to'] ?? $atts['redirect'] );
 $ajax_url    = admin_url( 'admin-ajax.php' );
 

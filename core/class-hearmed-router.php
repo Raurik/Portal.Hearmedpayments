@@ -164,20 +164,23 @@ class HearMed_Router {
     public function auth_redirect() {
         if ( defined( 'DOING_AJAX' ) || defined( 'DOING_CRON' ) || defined( 'REST_REQUEST' ) || defined( 'WP_CLI' ) ) return;
 
-        // Don't redirect the login page itself (WP check + URI fallback to prevent loops)
+        // Don't redirect the login page itself (WP check + exact URI match).
+        // home_url is /login/ so every page starts with "login/" — we must
+        // match ONLY the login page paths, not /login/calendar/ etc.
         $uri = trim( strtok( $_SERVER['REQUEST_URI'] ?? '', '?' ), '/' );
-        if ( is_page( 'login' ) || basename( $uri ) === 'login' || strpos( $uri, 'login' ) === 0 ) return;
+        if ( is_page( 'login' ) || $uri === 'login' || $uri === 'login/login' ) return;
 
         // Don't redirect WordPress admin or REST API requests
         if ( strpos( $uri, 'wp-admin' ) === 0 || strpos( $uri, 'wp-json' ) === 0 ) return;
 
         // If not authenticated via portal, redirect to login
         if ( ! PortalAuth::is_logged_in() ) {
-            // Use the clean URI (without query string nesting) as redirect target
             $clean_uri = $_SERVER['REQUEST_URI'] ?? '/';
-            // Prevent redirect_to from pointing back at login (loop guard)
-            if ( strpos( $clean_uri, '/login' ) === 0 ) {
-                $clean_uri = '/';
+            // Only strip redirect_to if it points at the exact login page, not
+            // at other pages that happen to live under the /login/ home path.
+            $clean_path = trim( strtok( $clean_uri, '?' ), '/' );
+            if ( $clean_path === 'login' || $clean_path === 'login/login' || $clean_path === '' ) {
+                $clean_uri = home_url( '/calendar/' );
             }
             wp_redirect( home_url( '/login/?redirect_to=' . urlencode( $clean_uri ) ) );
             exit;
@@ -206,7 +209,8 @@ class HearMed_Router {
         $logged_in = PortalAuth::is_v2() ? PortalAuth::is_logged_in() : is_user_logged_in();
         if ( ! $logged_in ) {
             if ( PortalAuth::is_v2() ) {
-                wp_redirect( home_url( '/login/?redirect_to=' . urlencode( $_SERVER['REQUEST_URI'] ?? '' ) ) );
+                $return_to = $_SERVER['REQUEST_URI'] ?? home_url( '/calendar/' );
+                wp_redirect( home_url( '/login/?redirect_to=' . urlencode( $return_to ) ) );
                 exit;
             }
             return '<div id="hm-app"><p>Please log in to access this page.</p></div>';
