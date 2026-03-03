@@ -46,7 +46,31 @@ class HearMed_Run_Migration {
 
         echo '<div class="notice notice-success"><p>✅ Connected to Railway Postgres (' . esc_html( HEARMED_PG_HOST ) . ':' . esc_html( HEARMED_PG_PORT ) . '/' . esc_html( HEARMED_PG_DB ) . ')</p></div>';
 
-        // Run migration if requested
+        // V2 status
+        $v2_active = defined( 'PORTAL_AUTH_V2' ) && PORTAL_AUTH_V2;
+        echo '<p><strong>Auth V2 Status:</strong> ' . ( $v2_active ? '🟢 ACTIVE' : '🔴 Inactive (comment out in wp-config.php)' ) . '</p>';
+
+        // Tab navigation
+        $tab = sanitize_text_field( $_GET['tab'] ?? 'migration' );
+        echo '<h2 class="nav-tab-wrapper">';
+        echo '<a href="?page=hm-run-migration&tab=migration" class="nav-tab ' . ( $tab === 'migration' ? 'nav-tab-active' : '' ) . '">Migration</a>';
+        echo '<a href="?page=hm-run-migration&tab=passwords" class="nav-tab ' . ( $tab === 'passwords' ? 'nav-tab-active' : '' ) . '">Staff Passwords</a>';
+        echo '<a href="?page=hm-run-migration&tab=activate" class="nav-tab ' . ( $tab === 'activate' ? 'nav-tab-active' : '' ) . '">Activate V2</a>';
+        echo '</h2>';
+
+        if ( $tab === 'passwords' ) {
+            $this->render_passwords_tab( $conn );
+        } elseif ( $tab === 'activate' ) {
+            $this->render_activate_tab( $conn, $v2_active );
+        } else {
+            $this->render_migration_tab( $conn );
+        }
+
+        echo '</div>';
+    }
+
+    /* ── MIGRATION TAB ─────────────────────────────────────────────── */
+    private function render_migration_tab( $conn ) {
         if ( isset( $_POST['run_migration'] ) && check_admin_referer( 'hm_run_migration' ) ) {
             $results = $this->run_migration( $conn );
             echo '<h2>Migration Results</h2>';
@@ -55,33 +79,139 @@ class HearMed_Run_Migration {
                 echo esc_html( $r ) . "\n";
             }
             echo '</pre>';
-
-            // Verify tables
             echo '<h2>Verification</h2>';
             $this->verify_tables( $conn );
         } else {
-            // Show current state
             echo '<h2>Current State</h2>';
             $this->verify_tables( $conn );
-
             echo '<form method="post">';
             wp_nonce_field( 'hm_run_migration' );
-            echo '<p>This will create/extend the following in your <strong>Railway Postgres</strong>:</p>';
-            echo '<ul style="list-style:disc;margin-left:20px;">';
-            echo '<li><code>hearmed_reference.staff_auth</code> — add lockout + security columns</li>';
-            echo '<li><code>hearmed_reference.staff_devices</code> — new table</li>';
-            echo '<li><code>hearmed_reference.staff_sessions</code> — new table</li>';
-            echo '<li><code>hearmed_reference.staff_invites</code> — new table</li>';
-            echo '<li><code>hearmed_admin.auth_audit_log</code> — new table</li>';
-            echo '<li><code>hearmed_admin.impersonation_sessions</code> — new table</li>';
-            echo '<li><code>hearmed_admin.report_permissions</code> — new table + seed data</li>';
-            echo '</ul>';
+            echo '<p>This will create/extend auth V2 tables in your <strong>Railway Postgres</strong>.</p>';
             echo '<p><strong>Safe to re-run</strong> — uses IF NOT EXISTS / ADD COLUMN IF NOT EXISTS.</p>';
             echo '<p><input type="submit" name="run_migration" class="button button-primary button-hero" value="Run Migration Now"></p>';
             echo '</form>';
         }
+    }
 
-        echo '</div>';
+    /* ── PASSWORDS TAB ─────────────────────────────────────────────── */
+    private function render_passwords_tab( $conn ) {
+        // Handle password set
+        if ( isset( $_POST['set_password'] ) && check_admin_referer( 'hm_set_password' ) ) {
+            $staff_id = (int) $_POST['staff_id'];
+            $password = $_POST['new_password'] ?? '';
+            if ( $staff_id > 0 && strlen( $password ) >= 10 ) {
+                $hash = password_hash( $password, PASSWORD_BCRYPT, [ 'cost' => 12 ] );
+                $ok = @pg_query_params( $conn,
+                    "UPDATE hearmed_reference.staff_auth
+                     SET password_hash = $2, temp_password = true, password_changed_at = NOW(), updated_at = NOW()
+                     WHERE staff_id = $1",
+                    [ $staff_id, $hash ]
+                );
+                if ( $ok ) {
+                    echo '<div class="notice notice-success"><p>✅ Password set for staff ID ' . $staff_id . '. They will be prompted to set up 2FA on first login.</p></div>';
+                } else {
+                    echo '<div class="notice notice-error"><p>❌ Failed: ' . esc_html( pg_last_error( $conn ) ) . '</p></div>';
+                }
+            } else {
+                echo '<div class="notice notice-error"><p>❌ Password must be at least 10 characters.</p></div>';
+            }
+        }
+
+        // List all staff with auth status
+        $result = @pg_query( $conn,
+            "SELECT s.id, s.first_name, s.last_name, s.email, s.role, s.is_active,
+                    sa.username, sa.password_hash, sa.two_factor_enabled, sa.last_login
+             FROM hearmed_reference.staff s
+             LEFT JOIN hearmed_reference.staff_auth sa ON sa.staff_id = s.id
+             ORDER BY s.first_name, s.last_name"
+        );
+
+        echo '<h2>Staff Auth Status</h2>';
+        echo '<p>Set temporary passwords for staff before activating V2. They will set up 2FA on first login.</p>';
+        echo '<table class="widefat striped" style="max-width:1000px;">';
+        echo '<thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Username</th><th>Role</th><th>Has Password</th><th>2FA</th><th>Last Login</th><th>Set Password</th></tr></thead><tbody>';
+
+        while ( $row = pg_fetch_object( $result ) ) {
+            $has_pw = ! empty( $row->password_hash ) ? '✅' : '❌';
+            $has_2fa = $row->two_factor_enabled === 't' ? '✅' : '❌';
+            $last = $row->last_login ? date( 'd M Y', strtotime( $row->last_login ) ) : 'Never';
+            $active = $row->is_active === 't' ? '' : ' <span style="color:red;">(Inactive)</span>';
+
+            echo '<tr>';
+            echo '<td>' . (int) $row->id . '</td>';
+            echo '<td>' . esc_html( $row->first_name . ' ' . $row->last_name ) . $active . '</td>';
+            echo '<td>' . esc_html( $row->email ) . '</td>';
+            echo '<td>' . esc_html( $row->username ?? '—' ) . '</td>';
+            echo '<td>' . esc_html( $row->role ) . '</td>';
+            echo '<td style="text-align:center;">' . $has_pw . '</td>';
+            echo '<td style="text-align:center;">' . $has_2fa . '</td>';
+            echo '<td>' . esc_html( $last ) . '</td>';
+            echo '<td>';
+            echo '<form method="post" style="display:flex;gap:4px;align-items:center;">';
+            wp_nonce_field( 'hm_set_password' );
+            echo '<input type="hidden" name="staff_id" value="' . (int) $row->id . '">';
+            echo '<input type="text" name="new_password" placeholder="Min 10 chars" style="width:140px;" minlength="10" required>';
+            echo '<input type="submit" name="set_password" class="button button-small" value="Set">';
+            echo '</form>';
+            echo '</td>';
+            echo '</tr>';
+        }
+
+        echo '</tbody></table>';
+    }
+
+    /* ── ACTIVATE TAB ──────────────────────────────────────────────── */
+    private function render_activate_tab( $conn, $v2_active ) {
+        // Check readiness
+        $tables_ok = true;
+        $tables_to_check = [
+            'hearmed_reference.staff_devices',
+            'hearmed_reference.staff_sessions',
+            'hearmed_reference.staff_invites',
+            'hearmed_admin.auth_audit_log',
+        ];
+        foreach ( $tables_to_check as $table ) {
+            $parts = explode( '.', $table );
+            $check = @pg_query_params( $conn,
+                "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2)",
+                [ $parts[0], $parts[1] ]
+            );
+            if ( ! $check || pg_fetch_result( $check, 0, 0 ) !== 't' ) {
+                $tables_ok = false;
+                break;
+            }
+        }
+
+        // Count staff with passwords
+        $pw_check = @pg_query( $conn,
+            "SELECT COUNT(*) AS total,
+                    COUNT(CASE WHEN sa.password_hash IS NOT NULL AND sa.password_hash != '' THEN 1 END) AS has_pw
+             FROM hearmed_reference.staff s
+             LEFT JOIN hearmed_reference.staff_auth sa ON sa.staff_id = s.id
+             WHERE s.is_active = true"
+        );
+        $pw_row = $pw_check ? pg_fetch_object( $pw_check ) : null;
+        $total_staff = $pw_row ? (int) $pw_row->total : 0;
+        $staff_with_pw = $pw_row ? (int) $pw_row->has_pw : 0;
+
+        $totp_key_set = defined( 'HEARMED_TOTP_KEY' ) && strlen( HEARMED_TOTP_KEY ) === 64;
+
+        echo '<h2>Activation Checklist</h2>';
+        echo '<table class="widefat" style="max-width:600px;">';
+        echo '<tr><td>Migration tables created</td><td>' . ( $tables_ok ? '✅' : '❌ <a href="?page=hm-run-migration&tab=migration">Run migration</a>' ) . '</td></tr>';
+        echo '<tr><td>HEARMED_TOTP_KEY defined (64-char hex)</td><td>' . ( $totp_key_set ? '✅' : '❌ Add to wp-config.php' ) . '</td></tr>';
+        echo '<tr><td>Staff with passwords</td><td>' . $staff_with_pw . ' / ' . $total_staff . ( $staff_with_pw === 0 ? ' ❌ <a href="?page=hm-run-migration&tab=passwords">Set passwords</a>' : ( $staff_with_pw < $total_staff ? ' ⚠️' : ' ✅' ) ) . '</td></tr>';
+        echo '<tr><td>PORTAL_AUTH_V2 in wp-config.php</td><td>' . ( $v2_active ? '✅ Active' : '❌ Not set' ) . '</td></tr>';
+        echo '<tr><td>Login page exists at /login/</td><td>Check: <a href="' . esc_url( home_url( '/login/' ) ) . '" target="_blank">/login/</a></td></tr>';
+        echo '</table>';
+
+        if ( $tables_ok && $totp_key_set && $staff_with_pw > 0 && ! $v2_active ) {
+            echo '<div class="notice notice-info" style="margin-top:16px;"><p><strong>Ready to activate!</strong> Add this to wp-config.php above the "stop editing" line:</p>';
+            echo '<pre style="background:#1d2327;color:#0f0;padding:12px;border-radius:4px;">define( \'PORTAL_AUTH_V2\', true );</pre>';
+            echo '<p>After saving, all portal auth will use the new system. WP admin remains accessible for super-admins.</p></div>';
+        } elseif ( $v2_active ) {
+            echo '<div class="notice notice-success" style="margin-top:16px;"><p><strong>Auth V2 is live!</strong> Staff should log in at <a href="' . esc_url( home_url( '/login/' ) ) . '">/login/</a>.</p></div>';
+        }
     }
 
     private function run_migration( $conn ) {
