@@ -1763,11 +1763,13 @@ var Cal={
     // ── Full-Screen Order Page ──
     _openOrderPage:function(a,outcome){
         var self=this;
-        // Loading overlay
-        $('body').append('<div id="hm-op-loading" style="position:fixed;inset:0;z-index:99999;background:var(--hm-navy,#151B33);display:flex;align-items:center;justify-content:center"><div style="text-align:center;color:#fff;font-family:var(--hm-font)"><div style="font-size:18px;font-weight:600;margin-bottom:6px">Loading Order Page</div><div style="font-size:13px;opacity:.6">'+esc(a.patient_name||'')+'</div></div></div>');
+        // Hide calendar, show loading inside .hm-main
+        var $hmMain=$('.hm-main').first();
+        $hmMain.find('#hm-app').hide();
+        $hmMain.append('<div id="hm-op-loading" style="display:flex;align-items:center;justify-content:center;min-height:400px"><div style="text-align:center;color:var(--hm-text-muted,#94a3b8);font-family:var(--hm-font)"><div style="font-size:16px;font-weight:600;margin-bottom:6px">Loading Order Page</div><div style="font-size:13px;opacity:.6">'+esc(a.patient_name||'')+'</div></div></div>');
 
         post('get_order_products',{}).then(function(pR){
-            if(!pR.success){$('#hm-op-loading').remove();self.toast('Failed to load products');return;}
+            if(!pR.success){$('#hm-op-loading').remove();$hmMain.find('#hm-app').show();self.toast('Failed to load products');return;}
             var allProducts=pR.data.products||[];
             var allSvcs=pR.data.services||[];
             var allRanges=pR.data.ranges||[];
@@ -1793,10 +1795,10 @@ var Cal={
                 var INP='font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;background:#fff;transition:border-color .15s;box-sizing:border-box';
 
                 // ═══════ BUILD HTML ═══════
-                var h='<div id="hm-op" style="position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;font-family:var(--hm-font,\'Source Sans 3\',sans-serif);color:var(--hm-text,#334155);-webkit-font-smoothing:antialiased;animation:hmOpIn .25s ease">';
+                var h='<div id="hm-op" style="display:flex;flex-direction:column;font-family:var(--hm-font,\'Source Sans 3\',sans-serif);color:var(--hm-text,#334155);-webkit-font-smoothing:antialiased;animation:hmOpIn .25s ease;min-height:600px">';
 
                 // ── Top bar ──
-                h+='<div style="background:var(--hm-navy,#151B33);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.15)">';
+                h+='<div style="background:var(--hm-navy,#151B33);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:50px;flex-shrink:0;border-radius:12px 12px 0 0">';
                 h+='<button id="hm-op-back" style="background:none;border:1px solid rgba(255,255,255,.2);color:#fff;font-size:13px;font-weight:600;cursor:pointer;padding:6px 14px;border-radius:6px;font-family:var(--hm-font-btn);display:flex;align-items:center;gap:6px;transition:all .15s">';
                 h+='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8H1M8 15L1 8l7-7"/></svg> Calendar</button>';
                 h+='<div style="text-align:center"><div style="font-family:var(--hm-font-title,\'Cormorant Garamond\',serif);font-size:20px;font-weight:700;letter-spacing:-.3px">New Order</div>';
@@ -1804,7 +1806,7 @@ var Cal={
                 h+='<div style="min-width:90px;text-align:right"><span style="font-size:11px;opacity:.5">'+esc(a.service_name||'')+'</span></div></div>';
 
                 // ── Split panels ──
-                h+='<div style="display:flex;flex:1;overflow:hidden">';
+                h+='<div style="display:flex;flex:1;overflow:hidden;border:1px solid var(--hm-border,#e2e8f0);border-top:none;border-radius:0 0 12px 12px">';
 
                 // ═════ LEFT PANEL ═════
                 h+='<div id="hm-op-left" style="flex:0 0 58%;max-width:58%;overflow-y:auto;padding:24px 28px;background:#fff;border-right:1px solid var(--hm-border,#e2e8f0)">';
@@ -2014,10 +2016,10 @@ var Cal={
                 h+='</div>'; // end #hm-op-neworder
                 h+='</div>'; // end right panel
                 h+='</div>'; // end split
-                h+='<style>@keyframes hmOpIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}</style>';
+                h+='<style>@keyframes hmOpIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}</style>';
                 h+='</div>'; // end #hm-op
 
-                $('body').append(h);
+                $hmMain.append(h);
 
                 // ═══════ STATE ═══════
                 var orderItems=[];
@@ -2027,7 +2029,7 @@ var Cal={
                 var selectedRangeId=null;
                 var _cleanupNs='.opback .opexcard .opexhover .opcancelex .opexconfirm .opcat .opbrowse .oprange .opmfr .opstyle .opprod .opadd .oprem .opdisc .opslider .opdiscmode .opprsi .opsubmit .oppaybtn .oppaycancel .oppayconfirm .opaddmethod .opremmethod .oppayexback';
 
-                function cleanupEvents(){$(document).off(_cleanupNs);$('#hm-op').remove();}
+                function cleanupEvents(){$(document).off(_cleanupNs);$('#hm-op').remove();$hmMain.find('#hm-app').show();}
 
                 // ═══════ HELPERS ═══════
                 function updateQuickpayState(){
@@ -2498,6 +2500,7 @@ var Cal={
 
         }).fail(function(){
             $('#hm-op-loading').remove();
+            $hmMain.find('#hm-app').show();
             self.toast('Failed to load product data');
         });
     },
