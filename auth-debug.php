@@ -11,6 +11,65 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_action( 'wp_ajax_hm_auth_debug', 'hm_auth_debug_output' );
 add_action( 'wp_ajax_nopriv_hm_auth_debug', 'hm_auth_debug_output' );
 
+// Cache purge endpoint
+add_action( 'wp_ajax_hm_purge_cache', 'hm_purge_cache_output' );
+add_action( 'wp_ajax_nopriv_hm_purge_cache', 'hm_purge_cache_output' );
+
+function hm_purge_cache_output() {
+    header( 'Content-Type: text/plain; charset=utf-8' );
+    header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+    echo "=== Cache Purge ===\n\n";
+
+    // Method 1: SG Optimizer
+    if ( function_exists( 'sg_cachepress_purge_everything' ) ) {
+        sg_cachepress_purge_everything();
+        echo "SG Optimizer: purged\n";
+    } else {
+        echo "SG Optimizer: not found\n";
+    }
+
+    // Method 2: SG SuperCacher class
+    if ( class_exists( 'SG_CachePress_Supercacher' ) ) {
+        SG_CachePress_Supercacher::purge_cache();
+        echo "SG SuperCacher: purged\n";
+    }
+
+    // Method 3: WP Super Cache
+    if ( function_exists( 'wp_cache_clear_cache' ) ) {
+        wp_cache_clear_cache();
+        echo "WP Super Cache: purged\n";
+    }
+
+    // Method 4: WP object cache flush
+    wp_cache_flush();
+    echo "WP object cache: flushed\n";
+
+    // Method 5: OPcache
+    if ( function_exists( 'opcache_reset' ) ) {
+        opcache_reset();
+        echo "OPcache: reset\n";
+    }
+
+    // Method 6: List active caching plugins
+    $active = get_option( 'active_plugins', [] );
+    $cache_plugins = array_filter( $active, function($p) {
+        return stripos($p, 'cache') !== false || stripos($p, 'sg-') !== false || stripos($p, 'speed') !== false || stripos($p, 'optim') !== false;
+    });
+    echo "\nActive cache-related plugins:\n";
+    if ($cache_plugins) {
+        foreach ($cache_plugins as $p) echo "  - $p\n";
+    } else {
+        echo "  (none found)\n";
+    }
+
+    // List ALL active plugins for reference
+    echo "\nAll active plugins:\n";
+    foreach ($active as $p) echo "  - $p\n";
+
+    echo "\n=== DONE ===\n";
+    die();
+}
+
 function hm_auth_debug_output() {
     header( 'Content-Type: text/plain; charset=utf-8' );
     header( 'Cache-Control: no-cache, no-store, must-revalidate' );
