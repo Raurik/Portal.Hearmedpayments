@@ -1108,18 +1108,26 @@ function initProfile(){
                     var statusBadge, cnCol, refundCol, chequeCol, actions='';
 
                     if(x.has_credit_note){
-                        statusBadge='<span class="hm-badge hm-badge--sm hm-badge--green">Completed</span>';
-                        cnCol='<code>'+esc(x.credit_note_num)+'</code>';
+                        // If credit note has €0 refund, mark as needing redo
+                        var cnIsZero = parseFloat(x.patient_refund_amount||0)===0 && parseFloat(x.refund_amount||0)===0;
+                        statusBadge = cnIsZero
+                            ? '<span class="hm-badge hm-badge--sm hm-badge--red">€0 — Needs Redo</span>'
+                            : '<span class="hm-badge hm-badge--sm hm-badge--green">Completed</span>';
+                        cnCol='<code>'+esc(x.credit_note_num||'—')+'</code>';
                         refundCol=euro(x.patient_refund_amount)+(parseFloat(x.prsi_amount||0)>0?'<br><span style="font-size:11px;color:#64748b;">PRSI: '+euro(x.prsi_amount)+'</span>':'');
                         var ch=x.cheque_sent?'<span class="hm-badge hm-badge--sm hm-badge--green">Sent '+fmtDate(x.cheque_sent_date)+'</span>':'<span class="hm-badge hm-badge--sm hm-badge--red">Outstanding</span>';
                         chequeCol=ch;
                         var pdfUrl=_hm.ajax+'?action=hm_print_credit_note&nonce='+_hm.nonce+'&credit_note_id='+x.credit_note_id;
                         actions='<a href="'+pdfUrl+'" target="_blank" class="hm-btn hm-btn--secondary hm-btn--sm" title="View Credit Note PDF" style="margin-right:4px;">PDF</a>';
                         if(!x.cheque_sent) actions+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-log-cheque" data-id="'+x.credit_note_id+'">Log Cheque</button>';
+                        // Allow redo for €0 credit notes
+                        if(cnIsZero) actions+=' <button class="hm-btn hm-btn--primary hm-btn--sm hm-redo-cn" data-return-id="'+x.return_id+'" data-cn-id="'+x.credit_note_id+'">Redo Credit Note</button>';
                     } else {
                         statusBadge='<span class="hm-badge hm-badge--sm hm-badge--amber">Pending</span>';
                         cnCol='<span style="color:#94a3b8;">—</span>';
-                        refundCol='<span style="color:#94a3b8;">—</span>';
+                        refundCol = x.estimated_refund > 0
+                            ? '<span style="color:#0369a1;font-size:12px;">Est: '+euro(x.estimated_refund)+'</span>'
+                            : (x.has_order ? '<span style="color:#94a3b8;">—</span>' : '<span style="color:#dc2626;font-size:11px;">No order linked</span>');
                         chequeCol='<span style="color:#94a3b8;">—</span>';
                         actions='<button class="hm-btn hm-btn--primary hm-btn--sm hm-create-cn" data-return-id="'+x.return_id+'">Create Credit Note</button>';
                     }
@@ -1137,36 +1145,55 @@ function initProfile(){
         // Create Credit Note from pending return
         $c.off('click','.hm-create-cn').on('click','.hm-create-cn',function(){
             var returnId=$(this).data('return-id');
-            showCreateCreditNoteModal(returnId,function(){loadReturns($c);});
+            showCreateCreditNoteModal(returnId,false,function(){loadReturns($c);});
+        });
+        // Redo Credit Note (for €0 credit notes)
+        $c.off('click','.hm-redo-cn').on('click','.hm-redo-cn',function(){
+            var returnId=$(this).data('return-id');
+            var oldCnId=$(this).data('cn-id');
+            showCreateCreditNoteModal(returnId,oldCnId,function(){loadReturns($c);});
         });
         // Log cheque
         $c.off('click','.hm-log-cheque').on('click','.hm-log-cheque',function(){var id=$(this).data('id');showLogChequeModal(id,function(){loadReturns($c);});});
     }
 
-    /* Create Credit Note from a pending return */
-    function showCreateCreditNoteModal(returnId,cb){
+    /* Create Credit Note from a pending return (or redo a €0 one) */
+    function showCreateCreditNoteModal(returnId,oldCnId,cb){
         if($('#hm-modal-overlay').length)return;
-        $('body').append(
-            '<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Create Credit Note</span><button class="hm-close">&times;</button></div><div class="hm-modal-body">'+
-            '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-bottom:16px;">'+
+        var isRedo = !!oldCnId;
+        var title = isRedo ? 'Redo Credit Note' : 'Create Credit Note';
+        var infoBox = isRedo
+            ? '<div style="background:#fef2f2;border:1px solid #fecdd3;border-radius:8px;padding:12px 16px;margin-bottom:16px;">'+
+                '<p style="font-size:13px;color:#991b1b;margin:0;"><strong>The previous credit note had €0.00.</strong> This will void that credit note and create a new one with the correct amount.</p>'+
+              '</div>'
+            : '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-bottom:16px;">'+
                 '<p style="font-size:13px;color:#166534;margin:0;">This will create a credit note, save the PDF to patient documents, mark the device as returned, return it to stock, and create a cheque refund entry.</p>'+
-            '</div>'+
-            '<div class="hm-form-group"><label class="hm-label">Patient refund amount (€)</label><input type="number" class="hm-inp" id="cn-refund-amt" step="0.01" min="0" placeholder="Auto-calculated from original invoice"><p style="font-size:11px;color:#94a3b8;margin-top:4px;">Leave blank to auto-calculate from original order (excluding PRSI).</p></div>'+
-            '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="cn-save">Create Credit Note</button></div></div></div>'
+              '</div>';
+        $('body').append(
+            '<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>'+title+'</span><button class="hm-close">&times;</button></div><div class="hm-modal-body">'+
+            infoBox+
+            '<div class="hm-form-group"><label class="hm-label">Patient refund amount (€)</label><input type="number" class="hm-inp" id="cn-refund-amt" step="0.01" min="0" placeholder="Auto-calculated from original order"><p style="font-size:11px;color:#94a3b8;margin-top:4px;">Leave blank to auto-calculate from original order (excluding PRSI). Enter a value to override.</p></div>'+
+            '<div id="cn-error" style="display:none;background:#fef2f2;border:1px solid #fecdd3;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:13px;color:#991b1b;"></div>'+
+            '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="cn-save">'+title+'</button></div></div></div>'
         );
         $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#cn-save').on('click',function(){
             $(this).prop('disabled',true).text('Creating…');
             var data={action:'hm_create_return_credit_note',nonce:_hm.nonce,return_id:returnId};
+            if(isRedo) data.redo_cn_id=oldCnId;
             var amt=$('#cn-refund-amt').val();
             if(amt) data.refund_amount=parseFloat(amt);
             $.post(_hm.ajax,data,function(r){
-                closeModal();
                 if(r.success){
-                    toast('Credit note '+r.data.credit_note_number+' created. PDF saved to patient documents.');
+                    closeModal();
+                    var cn = r.data.credit_note_number || 'unknown';
+                    var refund = r.data.patient_refund ? '€'+parseFloat(r.data.patient_refund).toFixed(2) : '';
+                    toast('Credit note '+cn+' created'+(refund ? ' — refund: '+refund : '')+'. PDF saved.');
                     if(cb)cb();
                 } else {
-                    toast(r.data||'Failed to create credit note','error');
+                    $('#cn-save').prop('disabled',false).text(title);
+                    var msg = (typeof r.data === 'string') ? r.data : (r.data && r.data.message ? r.data.message : 'Failed to create credit note');
+                    $('#cn-error').show().text(msg);
                 }
             }).fail(function(){closeModal();toast('Request failed — please try again','error');});
         });

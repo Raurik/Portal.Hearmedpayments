@@ -1646,24 +1646,29 @@ function hm_ajax_get_patient_returns() {
         // Query from returns table — includes pending (no credit note) and completed
         $rows = $db->get_results(
             "SELECT ret.id AS return_id, ret.return_date, ret.reason, ret.side, ret.notes,
-                    ret.refund_status, ret.device_id,
+                    ret.refund_status, ret.device_id, ret.order_id AS ret_order_id,
                     ret.patient_refund_amount AS ret_patient_amt,
                     ret.prsi_refund_amount AS ret_prsi_amt,
                     ret.credit_note_id,
                     cn.credit_note_number, cn.amount AS refund_amount,
                     cn.credit_date, cn.cheque_sent, cn.cheque_sent_date,
                     cn.prsi_amount, cn.patient_refund_amount,
+                    d.product_id AS device_product_id,
+                    d.order_id AS device_order_id,
                     COALESCE(pd.product_name,
                         (SELECT string_agg(pr.product_name, ', ')
                          FROM hearmed_core.order_items oi
                          JOIN hearmed_reference.products pr ON pr.id = oi.item_id
                          WHERE oi.order_id = ret.order_id AND oi.item_type = 'product'),
                         'N/A'
-                    ) AS product_name
+                    ) AS product_name,
+                    o.grand_total AS order_grand_total,
+                    o.prsi_amount AS order_prsi_amount
              FROM hearmed_core.returns ret
              LEFT JOIN hearmed_core.credit_notes cn ON cn.id = ret.credit_note_id
              LEFT JOIN hearmed_core.patient_devices d ON d.id = ret.device_id
              LEFT JOIN hearmed_reference.products pd ON pd.id = d.product_id
+             LEFT JOIN hearmed_core.orders o ON o.id = COALESCE(ret.order_id, d.order_id)
              WHERE ret.patient_id = \$1
              ORDER BY ret.return_date DESC",
             [ $pid ]
@@ -1671,6 +1676,16 @@ function hm_ajax_get_patient_returns() {
 
         foreach ( ($rows ?: []) as $r ) {
             $has_cn = ! empty( $r->credit_note_id );
+
+            // For pending returns, calculate estimated refund from order
+            $est_refund = 0;
+            if ( ! $has_cn && $r->order_grand_total ) {
+                $est = floatval( $r->order_grand_total );
+                $s = $r->side ?? 'both';
+                if ( $s === 'left' || $s === 'right' ) $est = $est / 2;
+                $est_refund = $est;
+            }
+
             $out[] = [
                 'return_id'            => (int) $r->return_id,
                 'return_date'          => $r->return_date,
@@ -1688,6 +1703,8 @@ function hm_ajax_get_patient_returns() {
                 'credit_date'          => $r->credit_date,
                 'cheque_sent'          => $has_cn ? hm_pg_bool( $r->cheque_sent ) : false,
                 'cheque_sent_date'     => $r->cheque_sent_date,
+                'estimated_refund'     => $est_refund,
+                'has_order'            => ! empty( $r->ret_order_id ) || ! empty( $r->device_order_id ),
             ];
         }
     } else {
@@ -2633,10 +2650,22 @@ function hm_ajax_create_return() {
     $device = $db->get_row( "SELECT * FROM hearmed_core.patient_devices WHERE id = \$1", [ $device_id ] );
     if ( ! $device ) { @ob_end_clean(); wp_send_json_error( 'Device not found' ); }
 
+    // Resolve order_id — direct link first, then fallback via order_items
+    $resolved_order_id = $device->order_id ?? null;
+    if ( ! $resolved_order_id && ! empty( $device->product_id ) ) {
+        $resolved_order_id = $db->get_var(
+            "SELECT o.id FROM hearmed_core.orders o
+             JOIN hearmed_core.order_items oi ON oi.order_id = o.id
+             WHERE o.patient_id = \$1 AND oi.item_id = \$2 AND oi.item_type = 'product'
+             ORDER BY o.created_at DESC LIMIT 1",
+            [ $pid, $device->product_id ]
+        );
+    }
+
     // Just create the return record — nothing else
     $return_id = $db->insert( 'hearmed_core.returns', [
         'patient_id'  => $pid,
-        'order_id'    => $device->order_id ?: null,
+        'order_id'    => $resolved_order_id ?: null,
         'invoice_id'  => null,
         'credit_note_id'        => null,
         'device_id'             => $device_id,
@@ -2681,14 +2710,43 @@ function hm_ajax_create_return_credit_note() {
     $return_id = intval( $_POST['return_id'] ?? 0 );
     if ( ! $return_id ) { @ob_end_clean(); wp_send_json_error( 'Missing return_id' ); }
 
+    $redo_cn_id = intval( $_POST['redo_cn_id'] ?? 0 );
+
     $db       = HearMed_DB::instance();
     $staff_id = hm_patient_staff_id();
 
     hm_ensure_returns_tables();
 
     $ret = $db->get_row( "SELECT * FROM hearmed_core.returns WHERE id = \$1", [ $return_id ] );
-    if ( ! $ret )                           { @ob_end_clean(); wp_send_json_error( 'Return not found' ); }
-    if ( ! empty( $ret->credit_note_id ) )  { @ob_end_clean(); wp_send_json_error( 'Credit note already exists for this return' ); }
+    if ( ! $ret ) { @ob_end_clean(); wp_send_json_error( 'Return not found' ); }
+
+    // Handle redo: clear the old credit note link so we can create a new one
+    if ( ! empty( $ret->credit_note_id ) ) {
+        if ( $redo_cn_id && (int) $ret->credit_note_id === $redo_cn_id ) {
+            // Void the old credit note
+            $db->update( 'hearmed_core.credit_notes', [
+                'reason' => 'VOIDED — replaced (€0 error). ' . ( $ret->reason ?? '' ),
+            ], [ 'id' => $redo_cn_id ] );
+            // Clear the link on the return
+            $db->update( 'hearmed_core.returns', [
+                'credit_note_id'        => null,
+                'refund_status'         => 'pending',
+                'total_refund_amount'   => 0,
+                'patient_refund_amount' => 0,
+                'prsi_refund_amount'    => 0,
+            ], [ 'id' => $return_id ] );
+            // Remove patient_credit for the old CN
+            $db->query(
+                "DELETE FROM hearmed_core.patient_credits WHERE credit_note_id = \$1",
+                [ $redo_cn_id ]
+            );
+            // Re-fetch updated return
+            $ret = $db->get_row( "SELECT * FROM hearmed_core.returns WHERE id = \$1", [ $return_id ] );
+        } else {
+            @ob_end_clean();
+            wp_send_json_error( 'Credit note already exists for this return' );
+        }
+    }
 
     $pid       = (int) $ret->patient_id;
     $device_id = (int) $ret->device_id;
@@ -2704,8 +2762,19 @@ function hm_ajax_create_return_credit_note() {
     $patient_paid    = 0;
     $order           = null;
     $inv_id          = null;
-    $ord_id          = $ret->order_id ?: ( $device->order_id ?: null );
+    $ord_id          = $ret->order_id ?: ( $device->order_id ?? null );
     $per_ear         = floatval( HearMed_Settings::get( 'hm_prsi_amount_per_ear', '500' ) );
+
+    // Fallback: find order via order_items if no direct link
+    if ( ! $ord_id && ! empty( $device->product_id ) ) {
+        $ord_id = $db->get_var(
+            "SELECT o.id FROM hearmed_core.orders o
+             JOIN hearmed_core.order_items oi ON oi.order_id = o.id
+             WHERE o.patient_id = \$1 AND oi.item_id = \$2 AND oi.item_type = 'product'
+             ORDER BY o.created_at DESC LIMIT 1",
+            [ $pid, $device->product_id ]
+        );
+    }
 
     if ( $ord_id ) {
         $order = $db->get_row(
@@ -2732,7 +2801,11 @@ function hm_ajax_create_return_credit_note() {
             } else {
                 $prsi_amount = floatval( $order->prsi_amount ?? 0 );
             }
+        } else {
+            error_log( "[HearMed] Credit note: order #{$ord_id} not found for return #{$return_id}, device #{$device_id}" );
         }
+    } else {
+        error_log( "[HearMed] Credit note: no order_id found for return #{$return_id}, device #{$device_id}, product=" . ($device->product_id ?? 'null') );
     }
 
     // Allow override from POST
@@ -3177,6 +3250,15 @@ function hm_ensure_returns_tables() {
     $done = true;
 
     $db = HearMed_DB::instance();
+
+    // Ensure patient_devices has order_id column
+    $has_order_id = $db->get_var(
+        "SELECT column_name FROM information_schema.columns
+         WHERE table_schema = 'hearmed_core' AND table_name = 'patient_devices' AND column_name = 'order_id'"
+    );
+    if ( ! $has_order_id ) {
+        $db->query( "ALTER TABLE hearmed_core.patient_devices ADD COLUMN order_id BIGINT" );
+    }
 
     // Ensure credit_notes has new columns
     $cols = [
