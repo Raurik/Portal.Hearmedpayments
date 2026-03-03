@@ -53,11 +53,37 @@ class HearMed_Router {
     ];
     
     /**
-     * Register all shortcodes
+     * Register all shortcodes and hooks
      */
     public function register_shortcodes() {
         foreach ( $this->shortcode_map as $shortcode => $config ) {
             add_shortcode( $shortcode, [ $this, 'render_shortcode' ] );
+        }
+
+        // When V2 auth is active, redirect unauthenticated visitors to /login/
+        if ( PortalAuth::is_v2() ) {
+            add_action( 'template_redirect', [ $this, 'auth_redirect' ] );
+        }
+    }
+
+    /**
+     * Redirect unauthenticated users to /login/ on any portal page.
+     * Skips the login page itself and REST/AJAX/Cron requests.
+     */
+    public function auth_redirect() {
+        if ( defined( 'DOING_AJAX' ) || defined( 'DOING_CRON' ) || defined( 'REST_REQUEST' ) || defined( 'WP_CLI' ) ) return;
+
+        // Don't redirect the login page itself
+        if ( is_page( 'login' ) ) return;
+
+        // Allow WP admin users through (they access wp-admin separately)
+        if ( is_user_logged_in() && current_user_can( 'manage_options' ) ) return;
+
+        // If not authenticated via portal, redirect to login
+        if ( ! PortalAuth::is_logged_in() ) {
+            $redirect_to = urlencode( $_SERVER['REQUEST_URI'] ?? '/' );
+            wp_redirect( home_url( "/login/?redirect_to={$redirect_to}" ) );
+            exit;
         }
     }
     
