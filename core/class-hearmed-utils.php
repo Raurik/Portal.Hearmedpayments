@@ -60,10 +60,11 @@ class HearMed_Utils {
                 "SELECT ID FROM {$wpdb->posts}
                  WHERE post_type = 'page'
                    AND post_status = 'publish'
-                   AND post_content LIKE %s
+                   AND ( post_content LIKE %s OR post_content LIKE %s )
                  ORDER BY ID ASC
                  LIMIT 1",
-                '%[' . $shortcode . '%'
+                '%[' . $shortcode . ']%',
+                '%[' . $shortcode . ' %'
             )
         );
 
