@@ -765,6 +765,32 @@ class HearMed_Refunds {
             }
         }
 
+        // ── Auto-save credit note to patient documents ────────────────────
+        HearMed_Utils::auto_save_document(
+            $patient_id,
+            'Credit Note',
+            $cn_num,
+            '', // HTML generated on demand via print
+            $user->id ?? null
+        );
+
+        // ── Return stock to inventory for exchanges/cancellations ─────────
+        if ( $invoice_id && in_array( $type, [ 'exchange', 'cheque' ] ) ) {
+            // Find the original order from the invoice
+            $orig_order_id = $db->get_var(
+                "SELECT order_id FROM hearmed_core.invoices WHERE id = $1",
+                [ $invoice_id ]
+            );
+            if ( $orig_order_id && class_exists( 'HearMed_Stock' ) ) {
+                $staff_name = trim( ( $user->first_name ?? '' ) . ' ' . ( $user->last_name ?? '' ) ) ?: 'System';
+                HearMed_Stock::return_stock_from_order(
+                    $orig_order_id,
+                    ucfirst( $type ) . ' — Credit Note ' . $cn_num . '. ' . $reason,
+                    $staff_name
+                );
+            }
+        }
+
         wp_send_json_success([
             'message'           => $type === 'exchange'
                 ? "Credit note {$cn_num} raised. Exchange order created — fill in the replacement items."

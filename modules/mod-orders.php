@@ -1707,20 +1707,12 @@ class HearMed_Orders {
             HearMed_Invoice::create_from_order($order_id, $payment_data);
         }
 
-        // Queue invoice for end-of-week QBO batch sync
-        $updated_order = $db->get_row("SELECT invoice_id FROM hearmed_core.orders WHERE id = \$1", [$order_id]);
-        if ($updated_order && $updated_order->invoice_id) {
-            $db->insert('hearmed_admin.qbo_batch_queue', [
-                'entity_type' => 'invoice',
-                'entity_id'   => $updated_order->invoice_id,
-                'status'      => 'pending',
-                'queued_at'   => date('Y-m-d H:i:s'),
-                'created_by'  => $user->id ?? null,
-            ]);
-        }
+        // Queue invoice for QBO review (weekly batch — do NOT auto-sync)
+        // Invoice is created with qbo_sync_status = 'pending_review' by default
+        // Rauri reviews and sends to QBO via /qbo-review/ page
 
         wp_send_json_success([
-            'message'  => 'Fitting complete. Invoice queued for end-of-week QuickBooks sync.',
+            'message'  => 'Fitting complete. Invoice created and queued for QBO review.',
             'order_id' => $order_id,
             'redirect' => HearMed_Utils::page_url('orders').'?hm_action=view&order_id='.$order_id,
         ]);

@@ -140,6 +140,7 @@ class HearMed_Core {
             HEARMED_PATH . 'modules/mod-clinical-pdf.php',
             HEARMED_PATH . 'modules/mod-commission-pin.php',
             HEARMED_PATH . 'admin/admin-form-templates.php',
+            HEARMED_PATH . 'modules/mod-qbo-review.php',
         ];
         foreach ( $module_files as $file ) {
             if ( file_exists( $file ) ) {

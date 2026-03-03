@@ -345,6 +345,48 @@ class HearMed_Utils {
         return round( $amount * $rate, 2 );
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // Document Auto-Save — write invoice / credit note / repair docket
+    // HTML into hearmed_core.patient_documents so it appears in the
+    // patient file automatically.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Auto-save a document (invoice, credit note, repair docket, order sheet)
+     * into the patient_documents table.
+     *
+     * Duplicate-safe: skips insert if (patient_id + document_type + file_name) already exist.
+     *
+     * @param int    $patient_id   Patient ID
+     * @param string $doc_type     e.g. "Invoice", "Credit Note", "Repair Docket", "Order Sheet"
+     * @param string $ref_number   e.g. "HMIN-20260301-ABC123", used as file_name
+     * @param string $html_content Raw print HTML (stored in html_content column)
+     * @param int|null $staff_id   Staff who triggered the action
+     */
+    public static function auto_save_document( $patient_id, $doc_type, $ref_number, $html_content = '', $staff_id = null ) {
+        if ( ! $patient_id || ! $ref_number ) return;
+
+        $db = HearMed_DB::instance();
+
+        // Duplicate check
+        $exists = $db->get_var(
+            "SELECT id FROM hearmed_core.patient_documents
+             WHERE patient_id = $1 AND document_type = $2 AND file_name = $3
+             LIMIT 1",
+            [ $patient_id, $doc_type, $ref_number ]
+        );
+        if ( $exists ) return;
+
+        $db->insert( 'hearmed_core.patient_documents', [
+            'patient_id'    => $patient_id,
+            'document_type' => $doc_type,
+            'file_name'     => $ref_number,
+            'file_url'      => '', // inline document — no external file
+            'html_content'  => $html_content ?: null,
+            'created_by'    => $staff_id,
+        ] );
+    }
+
     /**
      * Detect whether the current request is inside the Elementor editor or preview.
      *

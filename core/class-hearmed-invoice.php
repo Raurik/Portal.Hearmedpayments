@@ -294,6 +294,7 @@ class HearMed_Invoice {
             'prsi_applicable'   => ! empty( $order->prsi_applicable ) && $order->prsi_applicable !== 'f',
             'prsi_amount'       => (float) ( $order->prsi_amount ?? 0 ),
             'created_by'        => $created_by,
+            'qbo_sync_status'   => 'pending_review',
         ] );
 
         if ( ! $invoice_id ) {
@@ -351,6 +352,16 @@ class HearMed_Invoice {
             HearMed_DB::rollback();
             return false;
         }
+
+        // Auto-save invoice to patient documents
+        HearMed_Utils::auto_save_document(
+            $order->patient_id,
+            'Invoice',
+            $invoice_number,
+            '', // HTML generated on demand via print
+            $created_by
+        );
+
         return intval( $invoice_id );
     }
 

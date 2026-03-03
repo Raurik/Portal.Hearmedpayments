@@ -1809,6 +1809,20 @@ var Cal={
             });
             h+='</select></div>';
 
+            // Browse mode toggle — only shown when category = Hearing Aid
+            h+='<div id="hm-oo-browse-toggle" style="display:none;margin-bottom:12px">';
+            h+='<div style="display:flex;gap:0">';
+            h+='<button type="button" class="hm-oo-browse-mode" data-mode="range" style="flex:1;padding:6px 0;font-size:var(--hm-font-size-xs);font-weight:600;cursor:pointer;border:1px solid var(--hm-navy);border-right:none;border-radius:var(--hm-radius-sm) 0 0 var(--hm-radius-sm);background:var(--hm-navy);color:#fff;font-family:var(--hm-font-btn)">HearMed Range</button>';
+            h+='<button type="button" class="hm-oo-browse-mode" data-mode="product" style="flex:1;padding:6px 0;font-size:var(--hm-font-size-xs);font-weight:600;cursor:pointer;border:1px solid var(--hm-navy);border-radius:0 var(--hm-radius-sm) var(--hm-radius-sm) 0;background:#fff;color:var(--hm-navy);font-family:var(--hm-font-btn)">Browse by Manufacturer</button>';
+            h+='</div></div>';
+
+            // Range dropdown (shown when browseMode = 'range')
+            h+='<div id="hm-oo-range-wrap" style="display:none;margin-bottom:12px">';
+            h+='<label style="font-size:var(--hm-font-size-xs);font-weight:600;color:var(--hm-text-light);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px">HearMed Range</label>';
+            h+='<select id="hm-oo-range" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%">';
+            h+='<option value="">— Select Range —</option>';
+            h+='</select></div>';
+
             // Step 2: Manufacturer (hearing aids only)
             h+='<div id="hm-oo-mfr-wrap" style="display:none;margin-bottom:14px"><label style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Manufacturer</label>';
             h+='<select id="hm-oo-mfr" class="hm-inp" style="font-size:13px;padding:8px 10px;border-radius:6px;border:1.5px solid #e2e8f0;width:100%"><option value="">— Select Manufacturer —</option></select></div>';
@@ -1939,6 +1953,8 @@ var Cal={
             var orderItems=[];
             var selectedProduct=null;
             var discountMode='pct';
+            var browseMode='range';
+            var selectedRangeId=null;
 
             // ── Quickpay state: hide Submit Order for service-only orders ──
             function updateQuickpayState(){
@@ -1965,22 +1981,33 @@ var Cal={
                 $('#hm-oo-charger').prop('checked',false);
                 $('#hm-oo-speaker-size,#hm-oo-speaker-type,#hm-oo-dome-size,#hm-oo-dome-type').val('');
                 selectedProduct=null;
+                selectedRangeId=null;
 
-                if(!cat)return;
+                if(!cat){
+                    $('#hm-oo-browse-toggle').hide();
+                    $('#hm-oo-range-wrap').hide();
+                    return;
+                }
 
                 if(cat==='product'){
-                    // Hearing Aid: show manufacturer dropdown
-                    var mfrs={};
-                    allProducts.filter(function(p){return p.item_type==='product';}).forEach(function(p){
-                        if(p.manufacturer_id&&p.manufacturer_name)mfrs[p.manufacturer_id]=p.manufacturer_name;
-                    });
-                    var opts='<option value="">— Select Manufacturer —</option>';
-                    Object.keys(mfrs).sort(function(a,b){return mfrs[a].localeCompare(mfrs[b]);}).forEach(function(id){
-                        opts+='<option value="'+id+'">'+esc(mfrs[id])+'</option>';
-                    });
-                    $('#hm-oo-mfr').html(opts);
+                    // Show browse mode toggle for hearing aids
+                    $('#hm-oo-browse-toggle').show();
+                    if(browseMode==='range'){
+                        $('#hm-oo-range-wrap').show();
+                        _populateRangeDropdown();
+                    } else {
+                        $('#hm-oo-range-wrap').hide();
+                    }
+                    // Populate manufacturer dropdown (respecting range filter)
+                    _populateManufacturerDropdown();
                     $('#hm-oo-mfr-wrap').show();
-                } else if(cat==='service'){
+                } else {
+                    // Hide browse toggle for non-hearing-aid categories
+                    $('#hm-oo-browse-toggle').hide();
+                    $('#hm-oo-range-wrap').hide();
+                    selectedRangeId=null;
+
+                    if(cat==='service'){
                     // Service: show product name dropdown directly with services
                     var opts='<option value="">— Select Service —</option>';
                     allServices.forEach(function(s){
@@ -1999,7 +2026,62 @@ var Cal={
                     $('#hm-oo-prod').html(opts);
                     $('#hm-oo-prod-wrap').show();
                 }
+                }
             });
+
+            // ── Browse mode toggle ──
+            $(document).off('click.oobrowse').on('click.oobrowse','.hm-oo-browse-mode',function(){
+                browseMode=$(this).data('mode');
+                selectedRangeId=null;
+                $('.hm-oo-browse-mode').css({background:'#fff',color:'var(--hm-navy)'});
+                $(this).css({background:'var(--hm-navy)',color:'#fff'});
+                if(browseMode==='range'){
+                    $('#hm-oo-range-wrap').show();
+                    _populateRangeDropdown();
+                } else {
+                    $('#hm-oo-range-wrap').hide();
+                    $('#hm-oo-range').val('');
+                }
+                // Reset downstream
+                _populateManufacturerDropdown();
+                $('#hm-oo-style-wrap,#hm-oo-prod-wrap,#hm-oo-tech-wrap,#hm-oo-ear-wrap,#hm-oo-add-wrap').hide();
+                $('#hm-oo-style,#hm-oo-prod').val('');
+                selectedProduct=null;
+            });
+
+            // ── Range selection ──
+            $(document).off('change.oorange').on('change.oorange','#hm-oo-range',function(){
+                selectedRangeId=$(this).val()?parseInt($(this).val()):null;
+                _populateManufacturerDropdown();
+                $('#hm-oo-style-wrap,#hm-oo-prod-wrap,#hm-oo-tech-wrap,#hm-oo-ear-wrap,#hm-oo-add-wrap').hide();
+                $('#hm-oo-style,#hm-oo-prod').val('');
+                selectedProduct=null;
+            });
+
+            function _populateRangeDropdown(){
+                var sel=$('#hm-oo-range');
+                sel.find('option:not(:first)').remove();
+                allRanges.forEach(function(r){
+                    if(r.is_active==='f'||r.is_active===false||r.is_active===0)return;
+                    var priceTotal=parseFloat(r.price_total||0);
+                    var priceExPrsi=parseFloat(r.price_ex_prsi||0);
+                    sel.append('<option value="'+r.id+'">'+esc(r.range_name)+' — €'+priceTotal.toLocaleString(undefined,{minimumFractionDigits:0})+' (€'+priceExPrsi.toLocaleString(undefined,{minimumFractionDigits:0})+' after PRSI)</option>');
+                });
+            }
+
+            function _populateManufacturerDropdown(){
+                var sel=$('#hm-oo-mfr');
+                sel.find('option:not(:first)').remove();
+                var validMfrIds={};
+                allProducts.filter(function(p){return p.item_type==='product';}).forEach(function(p){
+                    if(selectedRangeId&&parseInt(p.hearmed_range_id)!==selectedRangeId)return;
+                    if(p.manufacturer_id&&p.manufacturer_name)validMfrIds[p.manufacturer_id]=p.manufacturer_name;
+                });
+                var sorted=Object.keys(validMfrIds).sort(function(a,b){return validMfrIds[a].localeCompare(validMfrIds[b]);});
+                sorted.forEach(function(id){
+                    sel.append('<option value="'+id+'">'+esc(validMfrIds[id])+'</option>');
+                });
+            }
 
             // Manufacturer change (hearing aids)
             $(document).off('change.oomfr').on('change.oomfr','#hm-oo-mfr',function(){
@@ -2009,9 +2091,14 @@ var Cal={
                 selectedProduct=null;
                 if(!mfr)return;
 
-                // Get distinct styles for this manufacturer
+                // Get distinct styles for this manufacturer (filtered by range if active)
                 var styles={};
-                allProducts.filter(function(p){return p.item_type==='product'&&String(p.manufacturer_id)===String(mfr);}).forEach(function(p){
+                allProducts.filter(function(p){
+                    if(p.item_type!=='product')return false;
+                    if(String(p.manufacturer_id)!==String(mfr))return false;
+                    if(selectedRangeId&&parseInt(p.hearmed_range_id)!==selectedRangeId)return false;
+                    return true;
+                }).forEach(function(p){
                     if(p.style)styles[p.style]=1;
                 });
                 var opts='<option value="">— Select Style —</option>';
@@ -2031,9 +2118,13 @@ var Cal={
                 selectedProduct=null;
                 if(!style)return;
 
-                // Get products matching this manufacturer + style
+                // Get products matching this manufacturer + style (filtered by range if active)
                 var filtered=allProducts.filter(function(p){
-                    return p.item_type==='product'&&String(p.manufacturer_id)===String(mfr)&&p.style===style;
+                    if(p.item_type!=='product')return false;
+                    if(String(p.manufacturer_id)!==String(mfr))return false;
+                    if(p.style!==style)return false;
+                    if(selectedRangeId&&parseInt(p.hearmed_range_id)!==selectedRangeId)return false;
+                    return true;
                 });
                 var opts='<option value="">— Select Product —</option>';
                 filtered.forEach(function(p){

@@ -35,6 +35,9 @@ class HearMed_Ajax {
             'mod-kpi.php',
             'mod-cash.php',
             'mod-team-chat.php',
+            'mod-stock.php',
+            'mod-refunds.php',
+            'mod-qbo-review.php',
         ];
 
         foreach ( $modules as $file ) {
@@ -85,6 +88,17 @@ class HearMed_Ajax {
         add_action( 'wp_ajax_hm_qbo_sync_accounts',      [ 'HearMed_Accounting', 'ajax_qbo_sync_accounts' ] );
         add_action( 'wp_ajax_hm_qbo_disconnect',         [ 'HearMed_Accounting', 'ajax_qbo_disconnect' ] );
         add_action( 'wp_ajax_hm_run_qbo_batch',          [ 'HearMed_Accounting', 'ajax_run_qbo_batch' ] );
+
+        // ── Stock / Inventory ─────────────────────────────────────────────
+        add_action( 'wp_ajax_hm_stock_hearing_aids', [ 'HearMed_Stock', 'ajax_load_hearing_aids' ] );
+        add_action( 'wp_ajax_hm_stock_consumables',  [ 'HearMed_Stock', 'ajax_load_consumables' ] );
+        add_action( 'wp_ajax_hm_stock_movements',    [ 'HearMed_Stock', 'ajax_load_movements' ] );
+        add_action( 'wp_ajax_hm_stock_transfer',     [ 'HearMed_Stock', 'ajax_transfer' ] );
+        add_action( 'wp_ajax_hm_stock_add',          [ 'HearMed_Stock', 'ajax_add_stock' ] );
+        add_action( 'wp_ajax_hm_stock_adjust_qty',   [ 'HearMed_Stock', 'ajax_adjust_quantity' ] );
+        add_action( 'wp_ajax_hm_stock_reserve',      [ 'HearMed_Stock', 'ajax_reserve' ] );
+
+        // ── QBO Review (self-registers via mod-qbo-review.php) ──────────────
 
         // ── Calendar ─────────────────────────────────────────────────────────
         // Calendar registers its own handlers inside mod-calendar.php
