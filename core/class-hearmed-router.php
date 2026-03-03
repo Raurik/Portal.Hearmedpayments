@@ -76,9 +76,6 @@ class HearMed_Router {
         // Don't redirect the login page itself
         if ( is_page( 'login' ) ) return;
 
-        // Allow WP admin users through (they access wp-admin separately)
-        if ( is_user_logged_in() && current_user_can( 'manage_options' ) ) return;
-
         // If not authenticated via portal, redirect to login
         if ( ! PortalAuth::is_logged_in() ) {
             $redirect_to = urlencode( $_SERVER['REQUEST_URI'] ?? '/' );
