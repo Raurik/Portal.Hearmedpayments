@@ -62,6 +62,7 @@ add_action( 'wp_ajax_hm_get_order_products',    'hm_ajax_get_order_products' );
 add_action( 'wp_ajax_hm_record_order_payment',  'hm_ajax_record_order_payment' );
 add_action( 'wp_ajax_hm_save_order_serials_from_payment',  'hm_ajax_save_order_serials_from_payment' );
 add_action( 'wp_ajax_hm_get_patient_pipeline_orders',    'hm_ajax_get_patient_pipeline_orders' );
+add_action( 'wp_ajax_hm_create_prsi_form_reminder',      'hm_ajax_create_prsi_form_reminder' );
 add_action( 'wp_ajax_hm_update_appointment_status', 'hm_ajax_update_appointment_status' );
 add_action( 'wp_ajax_hm_save_exclusion',           'hm_ajax_save_exclusion' );
 add_action( 'wp_ajax_hm_delete_exclusion',         'hm_ajax_delete_exclusion' );
@@ -2468,6 +2469,69 @@ function hm_ajax_save_order_serials_from_payment() {
 }
 
 // ================================================================
+// CREATE PRSI FORM REMINDER — notification to dispenser
+// ================================================================
+function hm_ajax_create_prsi_form_reminder() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+    if ( ! current_user_can( 'edit_posts' ) ) { wp_send_json_error( 'Denied' ); return; }
+
+    try {
+        $order_id     = intval( $_POST['order_id'] ?? 0 );
+        $order_number = sanitize_text_field( $_POST['order_number'] ?? '' );
+        $dispenser_id = intval( $_POST['dispenser_id'] ?? 0 );
+        $patient_name = sanitize_text_field( $_POST['patient_name'] ?? 'Patient' );
+
+        if ( ! $dispenser_id ) {
+            wp_send_json_error( [ 'message' => 'No dispenser specified.' ] );
+            return;
+        }
+
+        $subject = 'PRSI form not yet received — ' . $patient_name . ' (' . $order_number . ')';
+        $message = 'The signed PRSI grant form has not been received from ' . $patient_name
+                 . ' for order ' . $order_number . '. Please follow up with the patient to collect the signed form.';
+
+        if ( class_exists( 'HM_Notifications' ) ) {
+            $notif_id = HM_Notifications::create( $dispenser_id, 'reminder', [
+                'subject'        => $subject,
+                'message'        => $message,
+                'priority'       => 'Normal',
+                'entity_type'    => 'order',
+                'entity_id'      => $order_id,
+            ] );
+        } else {
+            // Fallback: direct insert
+            $db = HearMed_DB::instance();
+            $staff_id = 0;
+            if ( function_exists( 'hm_notif_staff_id' ) ) {
+                $staff_id = hm_notif_staff_id();
+            }
+            $notif_id = $db->insert( 'hearmed_communication.internal_notifications', [
+                'notification_type'   => 'reminder',
+                'subject'             => $subject,
+                'message'             => $message,
+                'created_by'          => $staff_id ?: null,
+                'priority'            => 'Normal',
+                'related_entity_type' => 'order',
+                'related_entity_id'   => $order_id,
+                'is_active'           => true,
+            ] );
+            if ( $notif_id ) {
+                $db->insert( 'hearmed_communication.notification_recipients', [
+                    'notification_id' => $notif_id,
+                    'recipient_type'  => 'staff',
+                    'recipient_id'    => $dispenser_id,
+                    'is_read'         => false,
+                ] );
+            }
+        }
+
+        wp_send_json_success( [ 'notification_id' => $notif_id ?? 0 ] );
+    } catch ( Throwable $e ) {
+        wp_send_json_error( [ 'message' => $e->getMessage() ] );
+    }
+}
+
+// ================================================================
 // GET PATIENT ORDERS — for income-bearing appointment order picker
 // ================================================================
 function hm_ajax_get_patient_pipeline_orders() {
@@ -2616,6 +2680,7 @@ function hm_ajax_get_patient_pipeline_orders() {
                 'deposit'       => (float) ( $r->deposit_amount ?? 0 ),
                 'balance_due'   => (float) max( 0, $r->balance_due ?? $r->grand_total ),
                 'items_summary' => $r->items_summary ?: '—',
+                'has_prsi'      => (float) ( $r->prsi_amount ?? 0 ) > 0,
             ];
         }
 

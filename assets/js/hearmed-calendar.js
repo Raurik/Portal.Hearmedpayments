@@ -1818,7 +1818,7 @@ var Cal={
                     h+='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7h8M8 11h6M8 15h4"/></svg> Active Orders for '+esc(a.patient_name||'Patient')+'</div>';
                     existOrders.forEach(function(ord){
                         var bal=parseFloat(ord.balance_due)||0;
-                        h+='<div class="hm-op-ex-card" data-oid="'+ord.id+'" data-onum="'+esc(ord.order_number)+'" data-total="'+ord.grand_total+'" data-bal="'+bal.toFixed(2)+'" ';
+                        h+='<div class="hm-op-ex-card" data-oid="'+ord.id+'" data-onum="'+esc(ord.order_number)+'" data-total="'+ord.grand_total+'" data-bal="'+bal.toFixed(2)+'" data-prsi="'+(ord.has_prsi?'1':'0')+'" ';
                         h+='style="border:1.5px solid var(--hm-border,#e2e8f0);border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all .15s;background:#fff;display:flex;align-items:center;gap:12px">';
                         h+='<div style="flex:1;min-width:0">';
                         h+='<div style="font-size:14px;font-weight:700;color:var(--hm-navy,#151B33)">'+esc(ord.order_number)+'</div>';
@@ -2009,32 +2009,34 @@ var Cal={
                 h+='</div>';
 
                 // ── Payment section (hidden until Take Payment clicked) ──
-                h+='<div id="hm-op-paysec" style="display:none;background:#fff;border-radius:10px;border:2px solid #059669;padding:16px;margin-bottom:16px">';
-                h+='<div style="font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;display:flex;align-items:center;gap:8px">';
-                h+='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Payment</div>';
-                h+='<div style="text-align:center;margin-bottom:12px"><div style="font-size:11px;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.3px">Total Due</div>';
-                h+='<div id="hm-op-pay-due" style="font-size:24px;font-weight:700;color:#059669">€0.00</div></div>';
+                h+='<div id="hm-op-paysec" style="display:none;border-top:1px solid var(--hm-border,#e2e8f0);padding-top:16px;margin-top:12px">';
+                h+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">';
+                h+='<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#059669">Payment</span>';
+                h+='<span style="font-size:11px;color:var(--hm-text-light,#64748b)">Total: <strong id="hm-op-pay-due" style="color:#059669;font-size:13px">€0.00</strong></span></div>';
+                h+='<input type="hidden" id="hm-op-pay-amt" value="0">';
 
-                h+='<div style="'+LS+'"><label style="'+LB+'">Amount (€)</label>';
-                h+='<input type="number" id="hm-op-pay-amt" step="0.01" min="0" style="'+INP+';font-size:15px;font-weight:600"></div>';
+                // Payment methods container
+                h+='<div id="hm-op-pay-methods">';
+                h+='<div class="hm-op-pay-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+                h+='<select class="hm-op-pay-row-method" style="'+INP+';flex:1"><option value="">— Method —</option><option value="Card">Card</option><option value="Cash">Cash</option><option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option></select>';
+                h+='<div style="position:relative;width:110px;flex-shrink:0"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--hm-text-light,#64748b);pointer-events:none">€</span>';
+                h+='<input type="number" class="hm-op-pay-row-amt" step="0.01" min="0" style="'+INP+';padding-left:22px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums"></div>';
+                h+='</div></div>';
 
-                h+='<div style="'+LS+'"><label style="'+LB+'">Payment Method</label>';
-                h+='<select id="hm-op-pay-method" style="'+INP+'">';
-                h+='<option value="">— Select —</option><option value="Card">Card</option><option value="Cash">Cash</option>';
-                h+='<option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option>';
-                h+='</select></div>';
+                h+='<button type="button" id="hm-op-pay-add-method" style="width:100%;margin-bottom:10px;padding:7px;font-size:11px;border:1px dashed var(--hm-border,#e2e8f0);background:transparent;border-radius:4px;cursor:pointer;color:var(--hm-text-light,#64748b);font-family:var(--hm-font);transition:all .15s">+ Add Payment Method</button>';
 
-                h+='<div id="hm-op-pay-primary-wrap" style="display:none;'+LS+'"><label style="'+LB+'">Primary Method Amount (€)</label>';
-                h+='<input type="number" id="hm-op-pay-amt-1" step="0.01" min="0" style="'+INP+'"></div>';
-
-                h+='<div id="hm-op-pay-extras" style="margin-bottom:8px"></div>';
-                h+='<button type="button" id="hm-op-pay-add-method" style="width:100%;margin-bottom:12px;padding:8px;font-size:12px;border:1px dashed #94a3b8;background:var(--hm-bg-alt,#f8fafc);border-radius:6px;cursor:pointer;color:var(--hm-text-light,#64748b);font-family:var(--hm-font);transition:all .15s">+ Add Payment Method</button>';
+                // Allocation bar
+                h+='<div id="hm-op-pay-alloc-bar" style="margin-bottom:10px">';
+                h+='<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--hm-text-light,#64748b);margin-bottom:3px"><span>Allocated</span><span id="hm-op-pay-alloc-text">€0.00 / €0.00</span></div>';
+                h+='<div style="height:4px;background:var(--hm-border-light,#f1f5f9);border-radius:2px;overflow:hidden"><div id="hm-op-pay-alloc-fill" style="height:100%;background:#059669;border-radius:2px;width:0%;transition:width .2s"></div></div>';
+                h+='<div id="hm-op-pay-alloc-warn" style="display:none;font-size:11px;color:#dc2626;margin-top:3px">⚠ Allocated amount exceeds total</div>';
+                h+='</div>';
 
                 h+='<div id="hm-op-pay-err" style="color:#ef4444;font-size:12px;margin-bottom:8px"></div>';
 
                 h+='<div style="display:flex;gap:8px">';
-                h+='<button id="hm-op-pay-cancel" style="flex:0 0 auto;padding:10px 16px;font-size:13px;font-weight:600;border-radius:8px;border:1px solid var(--hm-border,#e2e8f0);background:#fff;color:var(--hm-text,#334155);cursor:pointer;font-family:var(--hm-font-btn)">Cancel</button>';
-                h+='<button id="hm-op-pay-confirm" style="flex:1;padding:10px;font-size:14px;font-weight:700;border-radius:8px;border:none;background:#059669;color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">Confirm Payment</button>';
+                h+='<button id="hm-op-pay-cancel" style="flex:0 0 auto;padding:10px 16px;font-size:12px;font-weight:600;border-radius:6px;border:1px solid var(--hm-border,#e2e8f0);background:#fff;color:var(--hm-text,#334155);cursor:pointer;font-family:var(--hm-font-btn)">Cancel</button>';
+                h+='<button id="hm-op-pay-confirm" style="flex:1;padding:10px;font-size:13px;font-weight:700;border-radius:6px;border:none;background:#059669;color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">Confirm Payment</button>';
                 h+='</div></div>'; // end payment section
 
                 h+='</div>'; // end #hm-op-neworder
@@ -2051,7 +2053,7 @@ var Cal={
                 var discountMode='pct';
                 var browseMode='range';
                 var selectedRangeId=null;
-                var _cleanupNs='.opback .opexcard .opexhover .opcancelex .opexconfirm .opcat .opbrowse .oprange .opmfr .opstyle .opprod .opadd .oprem .opdisc .opdiscmode .opprsi .opsubmit .oppaybtn .oppaycancel .oppayconfirm .opaddmethod .opremmethod .oppayexback';
+                var _cleanupNs='.opback .opexcard .opexhover .opcancelex .opexconfirm .opcat .opbrowse .oprange .opmfr .opstyle .opprod .opadd .oprem .opdisc .opdiscmode .opprsi .opsubmit .oppaybtn .oppaycancel .oppayconfirm .opaddmethod .opremmethod .oppayrowamt .oppayexback';
 
                 function cleanupEvents(){$(document).off(_cleanupNs);$('#hm-op').remove();$hmMain.css({display:'',flexDirection:''});$hmMain.find('#hm-app').show();}
 
@@ -2137,6 +2139,7 @@ var Cal={
                     var ordNum=$c.data('onum');
                     var bal=parseFloat($c.attr('data-bal'))||0;
                     var ordTotal=parseFloat($c.attr('data-total'))||0;
+                    var hasPrsiEx=$c.attr('data-prsi')==='1';
                     // Switch right panel to pay-existing mode
                     $('#hm-op-neworder').hide();
                     $('#hm-op-payex').show();
@@ -2154,7 +2157,7 @@ var Cal={
                     pf+='<option value="">— Select —</option><option value="Card">Card</option><option value="Cash">Cash</option>';
                     pf+='<option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option></select></div>';
                     pf+='<div id="hm-op-ex-err" style="color:#ef4444;font-size:12px;margin-bottom:8px"></div>';
-                    pf+='<button id="hm-op-ex-confirm" data-oid="'+ordId+'" data-onum="'+esc(ordNum)+'" data-bal="'+bal.toFixed(2)+'" style="width:100%;padding:12px;font-size:14px;font-weight:700;border-radius:8px;border:none;background:#059669;color:#fff;cursor:pointer;font-family:var(--hm-font-btn)">Confirm Payment</button>';
+                    pf+='<button id="hm-op-ex-confirm" data-oid="'+ordId+'" data-onum="'+esc(ordNum)+'" data-bal="'+bal.toFixed(2)+'" data-prsi="'+(hasPrsiEx?'1':'0')+'" style="width:100%;padding:12px;font-size:14px;font-weight:700;border-radius:8px;border:none;background:#059669;color:#fff;cursor:pointer;font-family:var(--hm-font-btn)">Confirm Payment</button>';
                     pf+='</div>';
                     $('#hm-op-payex-form').html(pf);
                 });
@@ -2177,6 +2180,7 @@ var Cal={
                     var ordId=parseInt($btn.attr('data-oid'),10);
                     var ordNum=$btn.attr('data-onum');
                     var maxBal=parseFloat($btn.attr('data-bal'))||0;
+                    var hasPrsiEx=$btn.attr('data-prsi')==='1';
                     var amt=parseFloat($('#hm-op-ex-amt').val())||0;
                     var method=$('#hm-op-ex-method').val();
                     if(!amt||amt<=0){$('#hm-op-ex-err').text('Enter a valid amount.');return;}
@@ -2186,28 +2190,39 @@ var Cal={
                     post('record_order_payment',{
                         order_id:ordId,order_number:ordNum,amount:amt,payment_method:method,split_payments_json:'[]'
                     }).then(function(r){
-                        if(r.success){cleanupEvents();self.toast('Payment of €'+amt.toFixed(2)+' recorded on '+ordNum);self.refresh();}
+                        if(r.success){
+                            // Check PRSI form for existing orders
+                            if(hasPrsiEx){
+                                _checkPrsiForm(ordId,ordNum,a.dispenser_id||0,a.patient_name||'',function(){
+                                    cleanupEvents();self.toast('Payment of €'+amt.toFixed(2)+' recorded on '+ordNum);self.refresh();
+                                });
+                            } else {
+                                cleanupEvents();self.toast('Payment of €'+amt.toFixed(2)+' recorded on '+ordNum);self.refresh();
+                            }
+                        }
                         else{
                             $btn.prop('disabled',false).text('Confirm Payment');
                             if(r.data&&r.data.code==='serials_required'){
-                                var items=(r.data&&Array.isArray(r.data.serial_items))?r.data.serial_items:[];
-                                if(!items.length){$('#hm-op-ex-err').text('Serial numbers required.');return;}
-                                var recDef=(r.data.received_date)?String(r.data.received_date):new Date().toISOString().slice(0,10);
-                                var recDate=window.prompt('Enter received date (YYYY-MM-DD)',recDef);
-                                if(!recDate)return;
-                                var entries=[];
-                                for(var i=0;i<items.length;i++){
-                                    var it=items[i]||{};var lbl=String(it.item_description||('Product #'+String(it.product_id||'')));
-                                    var ear=String(it.ear_side||'Unknown').toLowerCase();
-                                    if(ear==='left'||ear==='binaural'||ear==='unknown'){var sl=window.prompt('Serial (Left) for '+lbl,'');if(sl===null)return;sl=String(sl||'').trim();if(sl)entries.push({product_id:parseInt(it.product_id,10)||0,ear:'left',serial:sl});}
-                                    if(ear==='right'||ear==='binaural'){var sr=window.prompt('Serial (Right) for '+lbl,'');if(sr===null)return;sr=String(sr||'').trim();if(sr)entries.push({product_id:parseInt(it.product_id,10)||0,ear:'right',serial:sr});}
-                                    if(ear==='unknown'&&entries.length===0){var su=window.prompt('Serial for '+lbl+' (saved as Left)','');if(su===null)return;su=String(su||'').trim();if(su)entries.push({product_id:parseInt(it.product_id,10)||0,ear:'left',serial:su});}
-                                }
-                                if(!entries.length){$('#hm-op-ex-err').text('No serials entered.');return;}
-                                post('save_order_serials_from_payment',{order_id:ordId,received_date:recDate,serials_json:JSON.stringify(entries)}).then(function(sv){
-                                    if(sv.success){$('#hm-op-ex-err').css('color','#059669').text('Serials saved. Click Confirm Payment again.');}
-                                    else{$('#hm-op-ex-err').css('color','#ef4444').text(sv.data&&sv.data.message?sv.data.message:'Failed');}
-                                }).fail(function(){$('#hm-op-ex-err').css('color','#ef4444').text('Network error saving serials.');});
+                                var serialItems=(r.data&&Array.isArray(r.data.serial_items))?r.data.serial_items:[];
+                                if(!serialItems.length){$('#hm-op-ex-err').text('Serial numbers required.');return;}
+                                _showSerialModal(serialItems,ordId,function(){
+                                    // Retry payment after serials saved
+                                    $btn.prop('disabled',true).text('Processing...');
+                                    post('record_order_payment',{
+                                        order_id:ordId,order_number:ordNum,amount:amt,payment_method:method,split_payments_json:'[]'
+                                    }).then(function(r2){
+                                        if(r2.success){
+                                            if(hasPrsiEx){
+                                                _checkPrsiForm(ordId,ordNum,a.dispenser_id||0,a.patient_name||'',function(){
+                                                    cleanupEvents();self.toast('Payment of €'+amt.toFixed(2)+' recorded on '+ordNum);self.refresh();
+                                                });
+                                            } else {
+                                                cleanupEvents();self.toast('Payment of €'+amt.toFixed(2)+' recorded on '+ordNum);self.refresh();
+                                            }
+                                        }
+                                        else{$btn.prop('disabled',false).text('Confirm Payment');$('#hm-op-ex-err').css('color','#ef4444').text(r2.data&&r2.data.message?r2.data.message:'Payment failed after serials.');}
+                                    }).fail(function(){$btn.prop('disabled',false).text('Confirm Payment');$('#hm-op-ex-err').text('Network error');});
+                                });
                                 return;
                             }
                             $('#hm-op-ex-err').text(r.data&&r.data.message?r.data.message:'Failed');
@@ -2400,9 +2415,12 @@ var Cal={
                 $(document).off('click.oppaybtn').on('click.oppaybtn','#hm-op-pay-btn',function(){
                     if(!orderItems.length){$('#hm-op-err').text('Please add at least one item.');return;}
                     $('#hm-op-err').text('');
-                    var total=$('#hm-op-total').text().replace('€','');
-                    $('#hm-op-pay-due').text('€'+total);
-                    $('#hm-op-pay-amt').val(total);
+                    var total=parseFloat($('#hm-op-total').text().replace('€',''))||0;
+                    $('#hm-op-pay-due').text('€'+total.toFixed(2));
+                    $('#hm-op-pay-amt').val(total.toFixed(2));
+                    // Set the first row amount to total
+                    $('#hm-op-pay-methods .hm-op-pay-row').first().find('.hm-op-pay-row-amt').val(total.toFixed(2));
+                    _updatePayAlloc();
                     $('#hm-op-paysec').slideDown(200);
                     $('#hm-op-actions').hide();
                     setTimeout(function(){$('#hm-op-paysec')[0].scrollIntoView({behavior:'smooth',block:'center'});},250);
@@ -2411,56 +2429,197 @@ var Cal={
                 // ── Cancel payment ──
                 $(document).off('click.oppaycancel').on('click.oppaycancel','#hm-op-pay-cancel',function(){
                     $('#hm-op-paysec').slideUp(200);$('#hm-op-actions').show();
+                    // Reset to single row
+                    var $methods=$('#hm-op-pay-methods');
+                    $methods.find('.hm-op-pay-row').slice(1).remove();
+                    $methods.find('.hm-op-pay-row').first().find('.hm-op-pay-rem-row').remove();
+                    $methods.find('.hm-op-pay-row-method').val('');
+                    $methods.find('.hm-op-pay-row-amt').val('');
                 });
 
-                // ── Add split method ──
-                $(document).off('click.opaddmethod').on('click.opaddmethod','#hm-op-pay-add-method',function(){
-                    var row='<div class="hm-op-pay-extra-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
-                    row+='<select class="hm-op-pay-extra-method" style="'+INP+';flex:1"><option value="">Method</option><option value="Card">Card</option><option value="Cash">Cash</option><option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option></select>';
-                    row+='<input type="number" class="hm-op-pay-extra-amt" step="0.01" min="0" placeholder="Amount" style="'+INP+';width:120px">';
-                    row+='<button type="button" class="hm-op-pay-rem-method" style="border:0;background:#fee2e2;color:#b91c1c;border-radius:6px;padding:7px 9px;cursor:pointer;flex-shrink:0">✕</button>';
-                    row+='</div>';
-                    $('#hm-op-pay-extras').append(row);
-                    $('#hm-op-pay-primary-wrap').show();
-                    if(!$('#hm-op-pay-amt-1').val())$('#hm-op-pay-amt-1').val($('#hm-op-pay-amt').val());
+                // ── Allocation recalc helper ──
+                function _updatePayAlloc(){
                     var total=parseFloat($('#hm-op-pay-amt').val())||0;
-                    var alloc=parseFloat($('#hm-op-pay-amt-1').val())||0;
-                    $('#hm-op-pay-extras .hm-op-pay-extra-row').each(function(i){
-                        if(i<$('#hm-op-pay-extras .hm-op-pay-extra-row').length-1)alloc+=parseFloat($(this).find('.hm-op-pay-extra-amt').val())||0;
-                    });
-                    var rem=Math.round((total-alloc)*100)/100;
-                    if(rem>0)$('#hm-op-pay-extras .hm-op-pay-extra-row').last().find('.hm-op-pay-extra-amt').val(rem.toFixed(2));
+                    var alloc=0;
+                    $('#hm-op-pay-methods .hm-op-pay-row-amt').each(function(){alloc+=parseFloat($(this).val())||0;});
+                    alloc=Math.round(alloc*100)/100;
+                    var pct=total>0?Math.min(100,Math.round(alloc/total*100)):0;
+                    $('#hm-op-pay-alloc-text').text('€'+alloc.toFixed(2)+' / €'+total.toFixed(2));
+                    $('#hm-op-pay-alloc-fill').css('width',pct+'%').css('background',alloc>total+0.01?'#dc2626':'#059669');
+                    if(alloc>total+0.01){$('#hm-op-pay-alloc-warn').show();}else{$('#hm-op-pay-alloc-warn').hide();}
+                }
+
+                // ── Auto-calc: when user types in any amount, recalc remaining on last row ──
+                $(document).off('input.oppayrowamt').on('input.oppayrowamt','.hm-op-pay-row-amt',function(){
+                    var $rows=$('#hm-op-pay-methods .hm-op-pay-row');
+                    if($rows.length<2){_updatePayAlloc();return;}
+                    var $this=$(this);
+                    var $lastRow=$rows.last();
+                    var $lastAmt=$lastRow.find('.hm-op-pay-row-amt');
+                    // Only auto-fill if user is NOT typing in the last row
+                    if(!$this.is($lastAmt)){
+                        var total=parseFloat($('#hm-op-pay-amt').val())||0;
+                        var allocated=0;
+                        $rows.each(function(){
+                            var $r=$(this);
+                            if(!$r.is($lastRow)){allocated+=parseFloat($r.find('.hm-op-pay-row-amt').val())||0;}
+                        });
+                        var rem=Math.round((total-allocated)*100)/100;
+                        $lastAmt.val(rem>0?rem.toFixed(2):'0.00');
+                    }
+                    // Cap: never allow any single field to exceed total
+                    var total2=parseFloat($('#hm-op-pay-amt').val())||0;
+                    var v=parseFloat($this.val())||0;
+                    if(v>total2){$this.val(total2.toFixed(2));}
+                    _updatePayAlloc();
                 });
 
-                // ── Remove split method ──
-                $(document).off('click.opremmethod').on('click.opremmethod','.hm-op-pay-rem-method',function(){
-                    $(this).closest('.hm-op-pay-extra-row').remove();
-                    if(!$('#hm-op-pay-extras .hm-op-pay-extra-row').length){$('#hm-op-pay-primary-wrap').hide();$('#hm-op-pay-amt-1').val('');}
+                // ── Add payment method row ──
+                $(document).off('click.opaddmethod').on('click.opaddmethod','#hm-op-pay-add-method',function(){
+                    var total=parseFloat($('#hm-op-pay-amt').val())||0;
+                    var allocated=0;
+                    $('#hm-op-pay-methods .hm-op-pay-row-amt').each(function(){allocated+=parseFloat($(this).val())||0;});
+                    var rem=Math.round((total-allocated)*100)/100;
+                    var row='<div class="hm-op-pay-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+                    row+='<select class="hm-op-pay-row-method" style="'+INP+';flex:1"><option value="">— Method —</option><option value="Card">Card</option><option value="Cash">Cash</option><option value="Bank Transfer">Bank Transfer</option><option value="Cheque">Cheque</option></select>';
+                    row+='<div style="position:relative;width:110px;flex-shrink:0"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--hm-text-light,#64748b);pointer-events:none">€</span>';
+                    row+='<input type="number" class="hm-op-pay-row-amt" step="0.01" min="0" value="'+(rem>0?rem.toFixed(2):'0.00')+'" style="'+INP+';padding-left:22px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums"></div>';
+                    row+='<button type="button" class="hm-op-pay-rem-row" style="border:none;background:none;color:#b91c1c;font-size:16px;cursor:pointer;padding:4px;opacity:.5;transition:opacity .15s" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.5">×</button>';
+                    row+='</div>';
+                    $('#hm-op-pay-methods').append(row);
+                    // Add remove button to first row if not present
+                    if(!$('#hm-op-pay-methods .hm-op-pay-row').first().find('.hm-op-pay-rem-row').length){
+                        $('#hm-op-pay-methods .hm-op-pay-row').first().append('<button type="button" class="hm-op-pay-rem-row" style="border:none;background:none;color:#b91c1c;font-size:16px;cursor:pointer;padding:4px;opacity:.5;transition:opacity .15s" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.5">×</button>');
+                    }
+                    _updatePayAlloc();
                 });
+
+                // ── Remove payment method row ──
+                $(document).off('click.opremmethod').on('click.opremmethod','.hm-op-pay-rem-row',function(){
+                    var $rows=$('#hm-op-pay-methods .hm-op-pay-row');
+                    if($rows.length<=1)return;
+                    $(this).closest('.hm-op-pay-row').remove();
+                    $rows=$('#hm-op-pay-methods .hm-op-pay-row');
+                    if($rows.length===1){$rows.find('.hm-op-pay-rem-row').remove();}
+                    // Recalc: fill last row with remainder
+                    var total=parseFloat($('#hm-op-pay-amt').val())||0;
+                    if($rows.length===1){$rows.find('.hm-op-pay-row-amt').val(total.toFixed(2));}
+                    _updatePayAlloc();
+                });
+
+                // ═══ SERIAL NUMBER MODAL ═══
+                function _showSerialModal(serialItems,orderId,onDone){
+                    var recDef=new Date().toISOString().slice(0,10);
+                    var ov='<div id="hm-op-serial-overlay" style="position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);animation:hmOpIn .2s">';
+                    ov+='<div style="background:#fff;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.2);width:440px;max-width:92vw;max-height:85vh;overflow-y:auto;font-family:var(--hm-font)">';
+                    ov+='<div style="padding:20px 24px 16px;border-bottom:1px solid var(--hm-border,#e2e8f0)">';
+                    ov+='<div style="font-size:16px;font-weight:700;color:var(--hm-navy,#151B33)">Serial Numbers Required</div>';
+                    ov+='<div style="font-size:12px;color:var(--hm-text-light,#64748b);margin-top:4px">Enter the receipt date and serial numbers for each device before payment can proceed.</div>';
+                    ov+='</div>';
+                    ov+='<div style="padding:20px 24px">';
+                    ov+='<div style="'+LS+'"><label style="'+LB+'">Date of Receipt</label>';
+                    ov+='<input type="date" id="hm-op-serial-date" value="'+recDef+'" style="'+INP+'"></div>';
+                    serialItems.forEach(function(it,idx){
+                        var lbl=String(it.item_description||('Product #'+String(it.product_id||'')));
+                        var ear=String(it.ear_side||'Unknown').toLowerCase();
+                        ov+='<div style="background:var(--hm-bg-alt,#f8fafc);border:1px solid var(--hm-border,#e2e8f0);border-radius:8px;padding:12px 14px;margin-bottom:10px">';
+                        ov+='<div style="font-size:13px;font-weight:600;color:var(--hm-navy,#151B33);margin-bottom:8px">'+esc(lbl)+' <span style="font-size:11px;color:var(--hm-text-light,#64748b);font-weight:400">('+esc(it.ear_side||'Unknown')+')</span></div>';
+                        if(ear==='left'||ear==='binaural'||ear==='unknown'){
+                            ov+='<div style="'+LS+'"><label style="'+LB+'">Serial — Left ear</label>';
+                            ov+='<input type="text" class="hm-op-serial-input" data-idx="'+idx+'" data-ear="left" data-pid="'+(it.product_id||0)+'" placeholder="Enter serial number" style="'+INP+'"></div>';
+                        }
+                        if(ear==='right'||ear==='binaural'){
+                            ov+='<div style="'+LS+'"><label style="'+LB+'">Serial — Right ear</label>';
+                            ov+='<input type="text" class="hm-op-serial-input" data-idx="'+idx+'" data-ear="right" data-pid="'+(it.product_id||0)+'" placeholder="Enter serial number" style="'+INP+'"></div>';
+                        }
+                        if(ear==='unknown'){
+                            // Already handled above as left
+                        }
+                        ov+='</div>';
+                    });
+                    ov+='<div id="hm-op-serial-err" style="color:#ef4444;font-size:12px;margin-bottom:8px"></div>';
+                    ov+='<div style="display:flex;gap:8px">';
+                    ov+='<button id="hm-op-serial-cancel" style="flex:0 0 auto;padding:10px 16px;font-size:12px;font-weight:600;border-radius:6px;border:1px solid var(--hm-border,#e2e8f0);background:#fff;color:var(--hm-text,#334155);cursor:pointer;font-family:var(--hm-font-btn)">Cancel</button>';
+                    ov+='<button id="hm-op-serial-save" style="flex:1;padding:10px;font-size:13px;font-weight:700;border-radius:6px;border:none;background:var(--hm-teal,#0BB4C4);color:#fff;cursor:pointer;font-family:var(--hm-font-btn)">Save Serials & Continue</button>';
+                    ov+='</div></div></div></div>';
+                    $('body').append(ov);
+
+                    $('#hm-op-serial-cancel').off('click').on('click',function(){$('#hm-op-serial-overlay').remove();});
+                    $('#hm-op-serial-save').off('click').on('click',function(){
+                        var recDate=$('#hm-op-serial-date').val();
+                        if(!recDate){$('#hm-op-serial-err').text('Please enter the receipt date.');return;}
+                        var entries=[];
+                        $('.hm-op-serial-input').each(function(){
+                            var v=$(this).val().trim();
+                            if(v)entries.push({product_id:parseInt($(this).data('pid'),10)||0,ear:$(this).data('ear'),serial:v});
+                        });
+                        if(!entries.length){$('#hm-op-serial-err').text('Please enter at least one serial number.');return;}
+                        var $btn=$('#hm-op-serial-save');$btn.prop('disabled',true).text('Saving...');
+                        post('save_order_serials_from_payment',{order_id:orderId,received_date:recDate,serials_json:JSON.stringify(entries)}).then(function(sv){
+                            if(sv.success){$('#hm-op-serial-overlay').remove();onDone();}
+                            else{$btn.prop('disabled',false).text('Save Serials & Continue');$('#hm-op-serial-err').text(sv.data&&sv.data.message?sv.data.message:'Failed to save serials.');}
+                        }).fail(function(){$btn.prop('disabled',false).text('Save Serials & Continue');$('#hm-op-serial-err').text('Network error saving serials.');});
+                    });
+                }
+
+                // ═══ PRSI FORM CHECK ═══
+                function _checkPrsiForm(orderId,orderNum,dispenserId,patientName,onDone){
+                    var hasPrsi=$('#hm-op-prsi-l').is(':checked')||$('#hm-op-prsi-r').is(':checked');
+                    if(!hasPrsi){onDone();return;}
+                    var ov='<div id="hm-op-prsi-overlay" style="position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);animation:hmOpIn .2s">';
+                    ov+='<div style="background:#fff;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.2);width:400px;max-width:92vw;font-family:var(--hm-font)">';
+                    ov+='<div style="padding:20px 24px 16px;border-bottom:1px solid var(--hm-border,#e2e8f0)">';
+                    ov+='<div style="font-size:16px;font-weight:700;color:var(--hm-navy,#151B33)">PRSI Grant Form</div>';
+                    ov+='<div style="font-size:12px;color:var(--hm-text-light,#64748b);margin-top:4px">This order includes a PRSI grant deduction.</div>';
+                    ov+='</div>';
+                    ov+='<div style="padding:20px 24px">';
+                    ov+='<div style="font-size:13px;color:var(--hm-text,#334155);margin-bottom:16px">Have you received the signed PRSI form from the patient?</div>';
+                    ov+='<div style="display:flex;gap:10px">';
+                    ov+='<button id="hm-op-prsi-no" style="flex:1;padding:12px;font-size:13px;font-weight:700;border-radius:6px;border:1px solid #dc2626;background:#fff;color:#dc2626;cursor:pointer;font-family:var(--hm-font-btn)">No, Not Yet</button>';
+                    ov+='<button id="hm-op-prsi-yes" style="flex:1;padding:12px;font-size:13px;font-weight:700;border-radius:6px;border:none;background:#059669;color:#fff;cursor:pointer;font-family:var(--hm-font-btn)">Yes, Received</button>';
+                    ov+='</div></div></div></div>';
+                    $('body').append(ov);
+
+                    $('#hm-op-prsi-yes').off('click').on('click',function(){$('#hm-op-prsi-overlay').remove();onDone();});
+                    $('#hm-op-prsi-no').off('click').on('click',function(){
+                        var $noBtn=$(this);$noBtn.prop('disabled',true).text('Sending reminder...');
+                        post('create_prsi_form_reminder',{
+                            order_id:orderId,order_number:orderNum,
+                            dispenser_id:dispenserId||HM.staff_id||0,
+                            patient_name:patientName||''
+                        }).then(function(nr){
+                            $('#hm-op-prsi-overlay').remove();
+                            if(nr.success){self.toast('PRSI form reminder sent to dispenser\'s notifications');}
+                            onDone();
+                        }).fail(function(){$('#hm-op-prsi-overlay').remove();onDone();});
+                    });
+                }
 
                 // ── Confirm Payment ──
                 $(document).off('click.oppayconfirm').on('click.oppayconfirm','#hm-op-pay-confirm',function(){
                     if(!orderItems.length){$('#hm-op-pay-err').text('Add items first.');return;}
-                    var amt=parseFloat($('#hm-op-pay-amt').val())||0;
-                    var method=$('#hm-op-pay-method').val();
-                    var hasExtra=$('#hm-op-pay-extras .hm-op-pay-extra-row').length>0;
+                    var totalDue=parseFloat($('#hm-op-pay-amt').val())||0;
+                    var $rows=$('#hm-op-pay-methods .hm-op-pay-row');
                     var splitPayload=[];
-                    if(!amt||amt<=0){$('#hm-op-pay-err').text('Enter a valid amount.');return;}
-                    if(!method){$('#hm-op-pay-err').text('Select a payment method.');return;}
-                    if(hasExtra){
-                        var pa=parseFloat($('#hm-op-pay-amt-1').val())||0;
-                        if(!pa||pa<=0){$('#hm-op-pay-err').text('Enter primary method amount.');return;}
-                        splitPayload.push({method:method,amount:pa});
-                        $('#hm-op-pay-extras .hm-op-pay-extra-row').each(function(){
-                            var m=$(this).find('.hm-op-pay-extra-method').val();
-                            var ea=parseFloat($(this).find('.hm-op-pay-extra-amt').val())||0;
-                            if(m&&ea>0)splitPayload.push({method:m,amount:ea});
-                        });
-                        var sm=0;splitPayload.forEach(function(x){sm+=parseFloat(x.amount)||0;});
-                        if(Math.abs(sm-amt)>0.01){$('#hm-op-pay-err').text('Split amounts must equal total.');return;}
-                    }
+                    var allocated=0;
+                    var firstMethod='';
+                    var valid=true;
+                    $rows.each(function(i){
+                        var m=$(this).find('.hm-op-pay-row-method').val();
+                        var ea=parseFloat($(this).find('.hm-op-pay-row-amt').val())||0;
+                        if(!m){$('#hm-op-pay-err').text('Select a payment method for row '+(i+1)+'.');valid=false;return false;}
+                        if(ea<=0){$('#hm-op-pay-err').text('Enter a valid amount for row '+(i+1)+'.');valid=false;return false;}
+                        if(i===0)firstMethod=m;
+                        splitPayload.push({method:m,amount:ea});
+                        allocated+=ea;
+                    });
+                    if(!valid)return;
+                    allocated=Math.round(allocated*100)/100;
+                    if(allocated>totalDue+0.01){$('#hm-op-pay-err').text('Total payments (€'+allocated.toFixed(2)+') exceed order total (€'+totalDue.toFixed(2)+').');return;}
+                    if(Math.abs(allocated-totalDue)>0.01){$('#hm-op-pay-err').text('Payments must equal the total due (€'+totalDue.toFixed(2)+').');return;}
                     var $btn=$(this);$btn.prop('disabled',true).text('Processing...');
                     var discVal=parseFloat($('#hm-op-disc').val())||0;
+                    var sendSplitJson=$rows.length>1?JSON.stringify(splitPayload):'[]';
                     // Step 1: Create order
                     post('create_outcome_order',{
                         patient_id:$('#hm-op-pid').val(),appointment_id:$('#hm-op-aid').val(),
@@ -2473,31 +2632,35 @@ var Cal={
                         var newOrderNum=r.data.order_number;
                         // Step 2: Record payment
                         post('record_order_payment',{
-                            order_id:newOrderId,order_number:newOrderNum,amount:amt,payment_method:method,
-                            split_payments_json:JSON.stringify(splitPayload)
+                            order_id:newOrderId,order_number:newOrderNum,amount:totalDue,payment_method:firstMethod,
+                            split_payments_json:sendSplitJson
                         }).then(function(pr){
-                            if(pr.success){cleanupEvents();self.toast('Payment of €'+amt.toFixed(2)+' recorded on '+newOrderNum);self.refresh();}
+                            if(pr.success){
+                                // PRSI check before finishing
+                                _checkPrsiForm(newOrderId,newOrderNum,a.dispenser_id||0,a.patient_name||'',function(){
+                                    cleanupEvents();self.toast('Payment of €'+totalDue.toFixed(2)+' recorded on '+newOrderNum);self.refresh();
+                                });
+                            }
                             else{
                                 $btn.prop('disabled',false).text('Confirm Payment');
                                 if(pr.data&&pr.data.code==='serials_required'){
-                                    var items=(pr.data&&Array.isArray(pr.data.serial_items))?pr.data.serial_items:[];
-                                    if(!items.length){$('#hm-op-pay-err').text('Serial numbers required.');return;}
-                                    var recDef=(pr.data.received_date)?String(pr.data.received_date):new Date().toISOString().slice(0,10);
-                                    var recDate=window.prompt('Enter received date (YYYY-MM-DD)',recDef);
-                                    if(!recDate)return;
-                                    var entries=[];
-                                    for(var i=0;i<items.length;i++){
-                                        var it=items[i]||{};var lbl=String(it.item_description||('Product #'+String(it.product_id||'')));
-                                        var ear=String(it.ear_side||'Unknown').toLowerCase();
-                                        if(ear==='left'||ear==='binaural'||ear==='unknown'){var sl=window.prompt('Serial (Left) for '+lbl,'');if(sl===null)return;sl=String(sl||'').trim();if(sl)entries.push({product_id:parseInt(it.product_id,10)||0,ear:'left',serial:sl});}
-                                        if(ear==='right'||ear==='binaural'){var sr=window.prompt('Serial (Right) for '+lbl,'');if(sr===null)return;sr=String(sr||'').trim();if(sr)entries.push({product_id:parseInt(it.product_id,10)||0,ear:'right',serial:sr});}
-                                        if(ear==='unknown'&&entries.length===0){var su=window.prompt('Serial for '+lbl+' (saved as Left)','');if(su===null)return;su=String(su||'').trim();if(su)entries.push({product_id:parseInt(it.product_id,10)||0,ear:'left',serial:su});}
-                                    }
-                                    if(!entries.length){$('#hm-op-pay-err').text('No serials entered.');return;}
-                                    post('save_order_serials_from_payment',{order_id:newOrderId,received_date:recDate,serials_json:JSON.stringify(entries)}).then(function(sv){
-                                        if(sv.success){$('#hm-op-pay-err').css('color','#059669').text('Serials saved. Click Confirm Payment again.');}
-                                        else{$('#hm-op-pay-err').css('color','#ef4444').text(sv.data&&sv.data.message?sv.data.message:'Failed');}
-                                    }).fail(function(){$('#hm-op-pay-err').css('color','#ef4444').text('Network error saving serials.');});
+                                    var serialItems=(pr.data&&Array.isArray(pr.data.serial_items))?pr.data.serial_items:[];
+                                    if(!serialItems.length){$('#hm-op-pay-err').text('Serial numbers required but no items returned.');return;}
+                                    _showSerialModal(serialItems,newOrderId,function(){
+                                        // Serials saved — retry payment
+                                        $btn.prop('disabled',true).text('Processing...');
+                                        post('record_order_payment',{
+                                            order_id:newOrderId,order_number:newOrderNum,amount:totalDue,payment_method:firstMethod,
+                                            split_payments_json:sendSplitJson
+                                        }).then(function(pr2){
+                                            if(pr2.success){
+                                                _checkPrsiForm(newOrderId,newOrderNum,a.dispenser_id||0,a.patient_name||'',function(){
+                                                    cleanupEvents();self.toast('Payment of €'+totalDue.toFixed(2)+' recorded on '+newOrderNum);self.refresh();
+                                                });
+                                            }
+                                            else{$btn.prop('disabled',false).text('Confirm Payment');$('#hm-op-pay-err').css('color','#ef4444').text(pr2.data&&pr2.data.message?pr2.data.message:'Payment failed after serials.');}
+                                        }).fail(function(){$btn.prop('disabled',false).text('Confirm Payment');$('#hm-op-pay-err').text('Network error');});
+                                    });
                                     return;
                                 }
                                 var msg=(pr.data&&pr.data.message)?pr.data.message:'Failed';
