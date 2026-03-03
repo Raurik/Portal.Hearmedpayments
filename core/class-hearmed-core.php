@@ -194,12 +194,16 @@ class HearMed_Core {
      * Only runs the check once (flag stored in settings).
      */
     public function ensure_portal_pages() {
-        $version = 'v2'; // bump to re-check when new pages are added
+        $version = 'v3'; // bump to re-check when new pages are added
         if ( HearMed_Settings::get( 'hm_pages_ensured_' . $version, '' ) ) {
             return;
         }
 
         $pages = [
+            'login' => [
+                'title'     => 'Login',
+                'shortcode' => '[hearmed_staff_login]',
+            ],
             'clinical-review' => [
                 'title'     => 'Clinical Review',
                 'shortcode' => '[hearmed_clinical_review]',

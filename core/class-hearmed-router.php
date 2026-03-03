@@ -65,10 +65,32 @@ class HearMed_Router {
             add_action( 'template_redirect', [ $this, 'auth_redirect' ] );
             add_filter( 'template_include',  [ $this, 'login_template' ], 999 );
 
+            // Prevent WordPress canonical redirect from sending /login to wp-login.php
+            // (WordPress core treats /login as a built-in alias for wp-login.php)
+            add_filter( 'redirect_canonical', [ $this, 'block_login_canonical' ], 10, 2 );
+
             // Bridge: if portal-authenticated but NOT WP-authenticated, set the
             // WP login cookie so SiteGround's Nginx cache is bypassed.
             add_action( 'init', [ $this, 'bridge_wp_login' ], 1 );
         }
+    }
+
+    /**
+     * Prevent WordPress canonical redirect from sending /login to wp-login.php.
+     *
+     * WordPress core (wp-includes/canonical.php) treats /login as a built-in
+     * alias for wp-login.php. When our Login page exists this is usually fine,
+     * but if the page is trashed or the slug changes, WP falls back to the
+     * alias behaviour and creates a redirect loop with disable-wp-login.php.
+     *
+     * Returning false cancels the redirect entirely for /login requests.
+     */
+    public function block_login_canonical( $redirect_url, $requested_url ) {
+        $path = trim( parse_url( $requested_url, PHP_URL_PATH ), '/' );
+        if ( $path === 'login' ) {
+            return false;
+        }
+        return $redirect_url;
     }
 
     /**
@@ -138,7 +160,10 @@ class HearMed_Router {
 
         // Don't redirect the login page itself (WP check + URI fallback to prevent loops)
         $uri = trim( strtok( $_SERVER['REQUEST_URI'] ?? '', '?' ), '/' );
-        if ( is_page( 'login' ) || $uri === 'login' ) return;
+        if ( is_page( 'login' ) || $uri === 'login' || strpos( $uri, 'login' ) === 0 ) return;
+
+        // Don't redirect WordPress admin or REST API requests
+        if ( strpos( $uri, 'wp-admin' ) === 0 || strpos( $uri, 'wp-json' ) === 0 ) return;
 
         // If not authenticated via portal, redirect to login
         if ( ! PortalAuth::is_logged_in() ) {
