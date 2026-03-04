@@ -36,6 +36,7 @@ class HearMed_Stock {
         add_action( 'wp_ajax_hm_stock_import_csv',    [ __CLASS__, 'ajax_import_csv' ] );
         add_action( 'wp_ajax_hm_stock_adjust_qty',    [ __CLASS__, 'ajax_adjust_quantity' ] );
         add_action( 'wp_ajax_hm_stock_reserve',       [ __CLASS__, 'ajax_reserve' ] );
+        add_action( 'wp_ajax_hm_stock_get_products', [ __CLASS__, 'ajax_get_products' ] );
         // Legacy compat
         add_action( 'wp_ajax_hm_get_stock',           [ __CLASS__, 'ajax_load_hearing_aids' ] );
         add_action( 'wp_ajax_hm_transfer_stock',      [ __CLASS__, 'ajax_transfer' ] );
@@ -218,17 +219,14 @@ class HearMed_Stock {
                     <div class="hm-form-row" style="display:flex;gap:12px">
                         <div class="hm-form-group" style="flex:1"><label class="hm-label">Manufacturer</label>
                             <select class="hm-input" id="add-manufacturer"><option value="">— Select —</option></select></div>
-                        <div class="hm-form-group" style="flex:1"><label class="hm-label">Model / Product Name *</label>
-                            <input type="text" class="hm-input" id="add-model" placeholder="e.g. Evolv AI 2400"></div>
+                        <div class="hm-form-group" style="flex:1"><label class="hm-label">Product *</label>
+                            <select class="hm-input" id="add-product"><option value="">— Select manufacturer first —</option></select></div>
                     </div>
                     <div class="hm-form-row" style="display:flex;gap:12px">
                         <div class="hm-form-group" style="flex:1"><label class="hm-label">Style</label>
-                            <input type="text" class="hm-input" id="add-style" placeholder="e.g. RIC, BTE, ITC"></div>
+                            <input type="text" class="hm-input" id="add-style" readonly style="background:#f1f5f9" placeholder="Auto-filled from product"></div>
                         <div class="hm-form-group" style="flex:1"><label class="hm-label">Technology Level</label>
-                            <select class="hm-input" id="add-tech-level">
-                                <option value="">— Select —</option>
-                                <option>Entry</option><option>Essential</option><option>Standard</option><option>Advanced</option><option>Premium</option>
-                            </select></div>
+                            <input type="text" class="hm-input" id="add-tech-level" readonly style="background:#f1f5f9" placeholder="Auto-filled from product"></div>
                     </div>
                     <div id="add-serial-row" class="hm-form-group"><label class="hm-label">Serial Number</label>
                         <input type="text" class="hm-input" id="add-serial" placeholder="Serial #"></div>
@@ -582,30 +580,98 @@ class HearMed_Stock {
         });
 
         // ── Add Stock modal ────────────────────────────────────────
+        var productCache = []; // cached product list for current manufacturer+category
+
         $('#hm-stock-add-btn').on('click',function(){
-            $('#add-category').val('hearing_aid').trigger('change');
+            $('#add-category').val('hearing_aid');
             $('#add-clinic,#add-manufacturer').val('');
-            $('#add-model,#add-style,#add-serial,#add-notes').val('');
-            $('#add-tech-level').val('');
+            $('#add-product').html('<option value="">— Select manufacturer first —</option>');
+            $('#add-style,#add-tech-level').val('');
+            $('#add-serial').val(''); $('#add-notes').val('');
             $('#add-qty').val(1);
+            productCache = [];
+            // Show/hide serial vs qty
+            $('#add-serial-row').show(); $('#add-qty-row').hide();
             $('#hm-add-stock-modal').fadeIn(150);
         });
+
+        // Category change: toggle serial/qty rows AND reload products
         $(document).on('change','#add-category',function(){
             if($(this).val()==='hearing_aid'){
                 $('#add-serial-row').show(); $('#add-qty-row').hide();
             } else {
                 $('#add-serial-row').hide(); $('#add-qty-row').show();
             }
+            // reset product selection
+            $('#add-style,#add-tech-level').val('');
+            loadProductsForStock();
         });
+
+        // Manufacturer change: reload products
+        $(document).on('change','#add-manufacturer',function(){
+            $('#add-style,#add-tech-level').val('');
+            loadProductsForStock();
+        });
+
+        // Product selected: auto-fill style + tech level
+        $(document).on('change','#add-product',function(){
+            var pid = $(this).val();
+            if(!pid){ $('#add-style,#add-tech-level').val(''); return; }
+            var p = null;
+            for(var i=0;i<productCache.length;i++){
+                if(String(productCache[i].id)==String(pid)){ p=productCache[i]; break; }
+            }
+            if(p){
+                $('#add-style').val(p.style||'');
+                $('#add-tech-level').val(p.tech_level||'');
+            }
+        });
+
+        function loadProductsForStock(){
+            var mfr = $('#add-manufacturer').val();
+            var cat = $('#add-category').val();
+            if(!mfr){
+                $('#add-product').html('<option value="">— Select manufacturer first —</option>');
+                productCache = [];
+                return;
+            }
+            $('#add-product').html('<option value="">Loading…</option>');
+            $.post(_hm.ajax,{
+                action:'hm_stock_get_products', nonce:_hm.nonce,
+                manufacturer_id:mfr, stock_category:cat
+            },function(r){
+                productCache = (r && r.success && r.data) ? r.data : [];
+                var opts = '<option value="">— Select product —</option>';
+                productCache.forEach(function(p){
+                    var label = esc(p.product_name);
+                    if(p.style) label += ' — ' + esc(p.style);
+                    if(p.tech_level) label += ' (' + esc(p.tech_level) + ')';
+                    opts += '<option value="'+p.id+'">'+label+'</option>';
+                });
+                if(!productCache.length) opts = '<option value="">No products found for this manufacturer</option>';
+                $('#add-product').html(opts);
+            });
+        }
+
         $('#add-stock-save').on('click',function(){
             var btn=$(this);
-            var cat=$('#add-category').val(), clinic=$('#add-clinic').val(), model=$.trim($('#add-model').val());
-            if(!clinic||!model){ alert('Clinic and model/product name are required'); return; }
+            var cat=$('#add-category').val(), clinic=$('#add-clinic').val();
+            var productId = $('#add-product').val();
+            if(!clinic){ alert('Clinic is required'); return; }
+            if(!productId){ alert('Please select a product'); return; }
+
+            // Find product name from cache
+            var model = '';
+            for(var i=0;i<productCache.length;i++){
+                if(String(productCache[i].id)==String(productId)){ model=productCache[i].product_name; break; }
+            }
+
             btn.prop('disabled',true).text('Adding…');
             $.post(_hm.ajax,{
                 action:'hm_stock_add', nonce:_hm.nonce,
                 item_category:cat, clinic_id:clinic,
                 manufacturer_id:$('#add-manufacturer').val(),
+                product_id:productId,
                 model_name:model, style:$('#add-style').val(),
                 technology_level:$('#add-tech-level').val(),
                 serial_number:$('#add-serial').val(),
@@ -613,8 +679,12 @@ class HearMed_Stock {
                 specification:$('#add-notes').val()
             },function(r){
                 btn.prop('disabled',false).text('Add Stock');
-                $('#hm-add-stock-modal').fadeOut(150);
-                if(r.success) loadTab(currentTab); else alert(r.data?.message||r.data||'Failed');
+                if(r&&r.success){
+                    $('#hm-add-stock-modal').fadeOut(150);
+                    loadTab(currentTab);
+                } else {
+                    alert(r.data?.message||r.data||'Failed');
+                }
             });
         });
 
@@ -1254,6 +1324,81 @@ class HearMed_Stock {
         ] );
 
         wp_send_json_success( [ 'message' => 'Reserved' ] );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AJAX: Get products by manufacturer + stock category
+    // ═══════════════════════════════════════════════════════════════════════
+
+    public static function ajax_get_products() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+
+        $mfr_id   = intval( $_POST['manufacturer_id'] ?? 0 );
+        $stk_cat  = sanitize_key( $_POST['stock_category'] ?? '' );
+
+        if ( ! $mfr_id ) wp_send_json_error( 'Manufacturer is required' );
+
+        $db = HearMed_DB::instance();
+
+        // Map stock category to products.item_type filter
+        // hearing_aid     → item_type = 'product'
+        // consumable      → item_type = 'consumable'
+        // dome_filter     → item_type = 'bundled' AND bundled_category ILIKE 'dome%'
+        // speaker         → item_type = 'bundled' AND bundled_category ILIKE 'speaker%'
+        // charger_accessory → item_type IN ('charger','accessory')
+
+        $where  = "p.is_active = true AND p.manufacturer_id = $1";
+        $params = [ $mfr_id ];
+        $i = 2;
+
+        switch ( $stk_cat ) {
+            case 'hearing_aid':
+                $where .= " AND p.item_type = 'product'";
+                break;
+            case 'consumable':
+                $where .= " AND p.item_type = 'consumable'";
+                break;
+            case 'dome_filter':
+                $where .= " AND p.item_type = 'bundled' AND (p.bundled_category ILIKE 'dome%' OR p.dome_type IS NOT NULL AND p.dome_type != '')";
+                break;
+            case 'speaker':
+                $where .= " AND p.item_type = 'bundled' AND (p.bundled_category ILIKE 'speaker%' OR p.speaker_power IS NOT NULL AND p.speaker_power != '')";
+                break;
+            case 'charger_accessory':
+                $where .= " AND p.item_type IN ('charger','accessory')";
+                break;
+            default:
+                // fallback: return all for this manufacturer
+                break;
+        }
+
+        $rows = $db->get_results(
+            "SELECT p.id, p.product_name, p.style, p.tech_level, p.hearing_aid_class,
+                    p.dome_type, p.dome_size, p.speaker_power, p.speaker_length,
+                    p.product_code, p.item_type, p.bundled_category
+             FROM hearmed_reference.products p
+             WHERE {$where}
+             ORDER BY p.product_name",
+            $params
+        );
+
+        $out = [];
+        foreach ( ( $rows ?: [] ) as $r ) {
+            $out[] = [
+                'id'              => (int) $r->id,
+                'product_name'    => $r->product_name ?? '',
+                'style'           => $r->style ?? '',
+                'tech_level'      => $r->tech_level ?? '',
+                'hearing_aid_class' => $r->hearing_aid_class ?? '',
+                'dome_type'       => $r->dome_type ?? '',
+                'dome_size'       => $r->dome_size ?? '',
+                'speaker_power'   => $r->speaker_power ?? '',
+                'speaker_length'  => $r->speaker_length ?? '',
+                'product_code'    => $r->product_code ?? '',
+            ];
+        }
+
+        wp_send_json_success( $out );
     }
 
     // ═══════════════════════════════════════════════════════════════════════
