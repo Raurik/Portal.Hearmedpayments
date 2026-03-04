@@ -27,6 +27,7 @@ function hm_render_order_status_page() {
     if ( ! PortalAuth::is_logged_in() ) return '<p>Please log in.</p>';
 
     $db = HearMed_DB::instance();
+    $nonce = wp_create_nonce('hm_nonce');
 
     // Summary counts
     $approved_count = (int) $db->get_var("SELECT COUNT(*) FROM hearmed_core.orders WHERE LOWER(TRIM(current_status)) IN ('approved','awaiting order')");
@@ -141,19 +142,41 @@ function hm_render_order_status_page() {
     </div>
 
     <script>
+    var hmOsCtx = {
+        ajax_url: (window.HM && HM.ajax_url) || (window.HMP && HMP.ajax) || '<?php echo esc_js(admin_url('admin-ajax.php')); ?>',
+        nonce:    (window.HM && HM.nonce)    || (window.HMP && HMP.nonce) || '<?php echo esc_js($nonce); ?>'
+    };
+
     var hmOrderStatus = {
 
         init: function() {
+            this.bindActions();
             this.loadApproved();
             this.loadOrdered();
+        },
+
+        bindActions: function() {
+            jQuery(document)
+                .off('click.hmOsOrdered')
+                .on('click.hmOsOrdered', '.hmos-btn-ordered', function() {
+                    var id = parseInt(this.getAttribute('data-order-id') || '0', 10);
+                    if (id) hmOrderStatus.markOrdered(id);
+                });
+
+            jQuery(document)
+                .off('click.hmOsPdf')
+                .on('click.hmOsPdf', '.hmos-btn-pdf', function() {
+                    var id = parseInt(this.getAttribute('data-order-id') || '0', 10);
+                    if (id) hmOrderStatus.downloadPDF(id);
+                });
         },
 
         // ─── Load Approved — Awaiting Order ───
         loadApproved: function() {
             var el = document.getElementById('hmos-approved-content');
-            jQuery.post(HM.ajax_url, {
+            jQuery.post(hmOsCtx.ajax_url, {
                 action: 'hm_order_status_load',
-                nonce: HM.nonce,
+                nonce: hmOsCtx.nonce,
                 section: 'approved'
             }, function(r) {
                 if (r.success) {
@@ -192,8 +215,8 @@ function hm_render_order_status_page() {
                 html += '<td>' + (o.hearing_aid_class ? '<span class="hmos-class-badge ' + clsClass + '">' + hmOsE(clsLabel) + '</span>' : '\u2014') + '</td>';
                 html += '<td>' + hmOsE(o.approved_date) + '</td>';
                 html += '<td style="text-align:right;white-space:nowrap;">';
-                html += '<button class="hm-btn hm-btn-pdf" onclick="hmOrderStatus.downloadPDF(' + o.id + ')" title="Download order sheet">PDF</button> ';
-                html += '<button class="hm-btn hm-btn-order" onclick="hmOrderStatus.markOrdered(' + o.id + ')">Ordered &rarr;</button>';
+                html += '<button class="hm-btn hm-btn-pdf hmos-btn-pdf" data-order-id="' + o.id + '" title="Download order sheet">PDF</button> ';
+                html += '<button class="hm-btn hm-btn-order hmos-btn-ordered" data-order-id="' + o.id + '">Ordered &rarr;</button>';
                 html += '</td>';
                 html += '</tr>';
             });
@@ -205,9 +228,9 @@ function hm_render_order_status_page() {
         // ─── Load Ordered — Awaiting Receipt ───
         loadOrdered: function() {
             var el = document.getElementById('hmos-ordered-content');
-            jQuery.post(HM.ajax_url, {
+            jQuery.post(hmOsCtx.ajax_url, {
                 action: 'hm_order_status_load',
-                nonce: HM.nonce,
+                nonce: hmOsCtx.nonce,
                 section: 'ordered'
             }, function(r) {
                 if (r.success) {
@@ -267,9 +290,9 @@ function hm_render_order_status_page() {
         // ─── Actions ───
         markOrdered: function(id) {
             if (!confirm('Mark this order as placed with the manufacturer?')) return;
-            jQuery.post(HM.ajax_url, {
+            jQuery.post(hmOsCtx.ajax_url, {
                 action: 'hm_mark_ordered',
-                nonce: HM.nonce,
+                nonce: hmOsCtx.nonce,
                 order_id: id
             }, function(r) {
                 if (r.success) { location.reload(); }
@@ -278,7 +301,7 @@ function hm_render_order_status_page() {
         },
 
         downloadPDF: function(id) {
-            window.open(HM.ajax_url + '?action=hm_order_pdf&nonce=' + HM.nonce + '&order_id=' + id, '_blank');
+            window.open(hmOsCtx.ajax_url + '?action=hm_order_pdf&nonce=' + encodeURIComponent(hmOsCtx.nonce) + '&order_id=' + id, '_blank');
         }
     };
 
