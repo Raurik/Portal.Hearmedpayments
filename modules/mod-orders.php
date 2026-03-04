@@ -164,8 +164,14 @@ class HearMed_Orders {
                  WHERE order_id = o.id AND to_status = 'Ordered'
                  ORDER BY changed_at DESC LIMIT 1
              ) osh ON true
-             WHERE o.current_status = 'Ordered' {$clinic_where}
-             ORDER BY o.order_date ASC, o.created_at ASC",
+             WHERE o.current_status IN ('Ordered','Received','Awaiting Fitting') {$clinic_where}
+             ORDER BY
+                 CASE o.current_status
+                     WHEN 'Ordered'          THEN 1
+                     WHEN 'Received'         THEN 2
+                     WHEN 'Awaiting Fitting' THEN 3
+                 END,
+                 o.order_date ASC, o.created_at ASC",
             $clinic_param
         ) ?: [];
 
@@ -283,16 +289,16 @@ class HearMed_Orders {
                 <?php endif; ?>
             </div>
 
-            <!-- ═══ BUBBLE 2: Ordered — Awaiting Delivery ═══ -->
+            <!-- ═══ BUBBLE 2: Ordered — Awaiting Delivery / Fitting ═══ -->
             <div class="hmo-bubble">
                 <div class="hmo-bubble-hd">
                     <h2 class="hmo-bubble-title">
-                        Ordered
+                        Ordered &amp; Awaiting Fitting
                         <span class="hmo-pill hmo-pill-blue"><?php echo count($ordered_rows); ?></span>
                     </h2>
                 </div>
                 <?php if (empty($ordered_rows)) : ?>
-                    <div class="hmo-empty"><div class="hmo-empty-icon">📦</div>No orders out for delivery.</div>
+                    <div class="hmo-empty"><div class="hmo-empty-icon">📦</div>No orders in the pipeline.</div>
                 <?php else : ?>
                 <div style="overflow-x:auto;">
                     <table class="hm-table">
@@ -300,11 +306,17 @@ class HearMed_Orders {
                             <tr>
                                 <th>Order #</th><th>Patient</th><th>Clinic</th>
                                 <th>Dispenser</th><th>Manufacturer</th><th>Product</th><th>Class</th>
-                                <th>Date Ordered</th><th>Days Since Order</th><th style="text-align:right;">Actions</th>
+                                <th>Status</th><th>Days Since Order</th><th style="text-align:right;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                        <?php foreach ($ordered_rows as $o) :
+                        <?php
+                        $st_colors = [
+                            'Ordered'          => ['bg'=>'rgba(11,180,196,.08)','color'=>'#0a8a96','border'=>'rgba(11,180,196,.25)'],
+                            'Received'         => ['bg'=>'rgba(59,130,246,.08)','color'=>'#1e40af','border'=>'rgba(59,130,246,.25)'],
+                            'Awaiting Fitting' => ['bg'=>'rgba(139,92,246,.08)','color'=>'#6d28d9','border'=>'rgba(139,92,246,.25)'],
+                        ];
+                        foreach ($ordered_rows as $o) :
                             $row_cls = $o->_alert === 'red' ? ' class="hmo-row-red"' : ($o->_alert === 'amber' ? ' class="hmo-row-amber"' : '');
                             $days_cls = $o->_alert === 'red' ? 'hmo-days-red' : ($o->_alert === 'amber' ? 'hmo-days-amber' : 'hmo-days-green');
                             $cls_lc = strtolower(trim($o->hearing_aid_class));
@@ -316,6 +328,8 @@ class HearMed_Orders {
                             if ($o->_alert === 'red')   $alert_badge = '<span class="hmo-alert hmo-alert-red">OVERDUE</span>';
                             $ref_date = $o->ordered_at ?? $o->order_date ?? $o->created_at;
                             $pdf_url = $ajax . '?action=hm_print_order_sheet&nonce=' . $nonce . '&order_id=' . $o->id;
+                            $st = $o->current_status;
+                            $sc = $st_colors[$st] ?? ['bg'=>'#f8fafc','color'=>'#64748b','border'=>'#e2e8f0'];
                         ?>
                         <tr<?php echo $row_cls; ?>>
                             <td><strong><?php echo esc_html($o->order_number); ?></strong></td>
@@ -329,7 +343,7 @@ class HearMed_Orders {
                             <td><?php echo esc_html($o->manufacturer_name ?: '—'); ?></td>
                             <td style="max-width:180px;"><?php echo esc_html($o->product_name ?: '—'); ?></td>
                             <td><?php echo $cls_badge; ?></td>
-                            <td class="hm-muted"><?php echo $ref_date ? date('d M Y', strtotime($ref_date)) : '—'; ?></td>
+                            <td><span style="display:inline-flex;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:<?php echo $sc['bg']; ?>;color:<?php echo $sc['color']; ?>;border:1px solid <?php echo $sc['border']; ?>;"><?php echo esc_html($st); ?></span></td>
                             <td>
                                 <span class="hmo-days <?php echo $days_cls; ?>"><?php echo $o->_days; ?> day<?php echo $o->_days !== 1 ? 's' : ''; ?></span>
                                 <?php echo $alert_badge; ?>
@@ -337,7 +351,9 @@ class HearMed_Orders {
                             <td>
                                 <div class="hmo-acts">
                                     <a href="<?php echo esc_url($pdf_url); ?>" target="_blank" class="hmo-btn hmo-btn-pdf">PDF</a>
-                                    <button class="hmo-btn hmo-btn-action hmo-mark-btn" data-id="<?php echo $o->id; ?>" data-num="<?php echo esc_attr($o->order_number); ?>" data-status="Received">Received ✓</button>
+                                    <?php if ($st === 'Ordered') : ?>
+                                        <button class="hmo-btn hmo-btn-action hmo-mark-btn" data-id="<?php echo $o->id; ?>" data-num="<?php echo esc_attr($o->order_number); ?>" data-status="Received">Received ✓</button>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
