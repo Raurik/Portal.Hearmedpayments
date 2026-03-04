@@ -66,6 +66,8 @@ class PortalAuth {
     const CAP_TEAM_AVAILABILITY      = 'team_availability';
     const CAP_IMPERSONATE            = 'impersonate';
     const CAP_STAFF_MANAGEMENT       = 'staff_management';
+    const CAP_CASH                   = 'cash';
+    const CAP_CASH_ADMIN             = 'cash_admin';
 
     /**
      * Role → capabilities map

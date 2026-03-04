@@ -44,6 +44,10 @@ class HearMed_Router {
         'hearmed_report_revenue' => [ 'module' => 'reports', 'view' => 'revenue', 'cap' => 'reports' ],
         'hearmed_report_gp' => [ 'module' => 'reports', 'view' => 'gp', 'cap' => 'reports' ],
         
+        // Cash / Tender management
+        'hearmed_cash' => [ 'module' => 'cash', 'view' => 'dashboard', 'cap' => 'cash' ],
+        'hearmed_till' => [ 'module' => 'cash', 'view' => 'admin', 'cap' => 'cash_admin' ],
+
         // Other modules
         'hearmed_repairs' => [ 'module' => 'repairs', 'view' => 'list', 'cap' => 'repairs' ],
         'hearmed_refunds' => [ 'module' => 'refunds', 'view' => 'list', 'cap' => 'finance_area' ],

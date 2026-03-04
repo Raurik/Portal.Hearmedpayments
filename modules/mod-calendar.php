@@ -2266,6 +2266,19 @@ function hm_ajax_record_order_payment() {
                 wp_send_json_error( [ 'message' => 'Payment failed to save. ' . HearMed_DB::last_error() ] );
                 return;
             }
+
+            // Auto-feed cash/cheque payments into tender
+            $pm = strtolower( $row['payment_method'] ?? '' );
+            if ( in_array( $pm, [ 'cash', 'cheque' ], true ) && class_exists( 'HearMed_Cash' ) ) {
+                HearMed_Cash::record_payment_tender(
+                    $pay_id,
+                    intval( $row['received_by'] ?? PortalAuth::staff_id() ),
+                    $pm,
+                    floatval( $row['amount'] ),
+                    intval( $row['invoice_id'] ?? 0 ) ?: null,
+                    intval( $row['clinic_id'] ?? 0 ) ?: null
+                );
+            }
         }
 
         $new_balance = max( 0, floatval( $invoice->balance_remaining ?? $invoice->grand_total ?? $order->grand_total ) - $amount );

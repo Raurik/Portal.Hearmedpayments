@@ -49,6 +49,8 @@ class HearMed_Utils {
             'kpi'        => 'hearmed_kpi',
             'reports'    => 'hearmed_reporting',
             'team-chat'  => 'hearmed_team_chat',
+            'cash'       => 'hearmed_cash',
+            'till'       => 'hearmed_till',
         ];
 
         $shortcode = $shortcode_map[ $module ] ?? 'hearmed_' . $module;

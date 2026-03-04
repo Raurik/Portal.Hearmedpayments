@@ -606,6 +606,171 @@ class HearMed_QBO {
     }
 
     // =========================================================================
+    // BANK DEPOSIT (confirmed lodgment → QBO)
+    // =========================================================================
+
+    public static function push_bank_deposit( $lodgment_id ) {
+        if ( ! self::is_connected() ) return false;
+
+        $db = HearMed_DB::instance();
+        $l  = $db->get_row(
+            "SELECT l.*, t.staff_id, s.first_name, s.last_name
+             FROM hearmed_core.tender_lodgments l
+             JOIN hearmed_core.staff_tenders t ON t.id = l.tender_id
+             JOIN hearmed_reference.staff s ON s.id = t.staff_id
+             WHERE l.id = $1",
+            [ $lodgment_id ]
+        );
+        if ( ! $l ) return false;
+
+        $total = floatval( $l->cash_amount ?? 0 ) + floatval( $l->cheque_amount ?? 0 );
+        if ( $total <= 0 ) return false;
+
+        $lines = [];
+        if ( floatval( $l->cash_amount ?? 0 ) > 0 ) {
+            $lines[] = [
+                'Amount'           => floatval( $l->cash_amount ),
+                'DepositToAccountRef' => [ 'value' => '1' ], // Undeposited Funds — override per env
+                'Description'      => 'Cash lodgment — ' . trim( $l->first_name . ' ' . $l->last_name ),
+            ];
+        }
+        if ( floatval( $l->cheque_amount ?? 0 ) > 0 ) {
+            $lines[] = [
+                'Amount'           => floatval( $l->cheque_amount ),
+                'DepositToAccountRef' => [ 'value' => '1' ],
+                'Description'      => 'Cheque lodgment (' . intval( $l->cheque_count ?? 0 ) . ' cheques) — ' . trim( $l->first_name . ' ' . $l->last_name ),
+            ];
+        }
+
+        $body = [
+            'DepositToAccountRef' => [ 'value' => '35' ], // Bank account — override per env
+            'TxnDate'             => $l->lodgment_date ?? date( 'Y-m-d' ),
+            'PrivateNote'         => 'HearMed lodgment #' . $lodgment_id . ' — Ref: ' . ( $l->bank_reference ?? '' ),
+            'Line'                => $lines,
+        ];
+
+        $result = self::api( 'POST', '/deposit', $body );
+
+        if ( isset( $result['Deposit']['Id'] ) ) {
+            $qbo_id = $result['Deposit']['Id'];
+            $db->query(
+                "UPDATE hearmed_core.tender_lodgments SET qbo_deposit_id = $1 WHERE id = $2",
+                [ $qbo_id, $lodgment_id ]
+            );
+
+            // Attach lodge slip if present
+            if ( ! empty( $l->lodge_slip_url ) ) {
+                self::attach_file_to_entity( 'Deposit', $qbo_id, $l->lodge_slip_url );
+            }
+
+            self::log_sync( $lodgment_id, 'bank_deposit', 'success', 'QBO Deposit ID: ' . $qbo_id );
+            return true;
+        }
+
+        self::log_sync( $lodgment_id, 'bank_deposit', 'failed', $result['error'] ?? 'Unknown' );
+        return false;
+    }
+
+    // =========================================================================
+    // PETTY CASH EXPENSE → QBO Purchase
+    // =========================================================================
+
+    public static function push_petty_expense( $expense_id ) {
+        if ( ! self::is_connected() ) return false;
+
+        $db = HearMed_DB::instance();
+        $e  = $db->get_row(
+            "SELECT pe.*, t.staff_id, s.first_name, s.last_name
+             FROM hearmed_core.petty_cash_expenses pe
+             JOIN hearmed_core.staff_tenders t ON t.id = pe.tender_id
+             JOIN hearmed_reference.staff s ON s.id = t.staff_id
+             WHERE pe.id = $1",
+            [ $expense_id ]
+        );
+        if ( ! $e ) return false;
+
+        $body = [
+            'PaymentType' => 'Cash',
+            'TxnDate'     => $e->expense_date ?? date( 'Y-m-d' ),
+            'PrivateNote'  => 'HearMed petty cash #' . $expense_id . ' — ' . ( $e->category ?? '' ) . ': ' . ( $e->description ?? '' ),
+            'Line' => [[
+                'Amount'          => floatval( $e->amount ),
+                'DetailType'      => 'AccountBasedExpenseLineDetail',
+                'AccountBasedExpenseLineDetail' => [
+                    'AccountRef' => [ 'value' => '54' ], // Petty Cash expense account — override per env
+                ],
+                'Description' => ucfirst( $e->category ?? 'other' ) . ': ' . ( $e->description ?? '' ) . ( $e->vendor ? ' (' . $e->vendor . ')' : '' ),
+            ]],
+            'AccountRef' => [ 'value' => '86' ], // Petty Cash account — override per env
+        ];
+
+        $result = self::api( 'POST', '/purchase', $body );
+
+        if ( isset( $result['Purchase']['Id'] ) ) {
+            $qbo_id = $result['Purchase']['Id'];
+            $db->query(
+                "UPDATE hearmed_core.petty_cash_expenses SET qbo_expense_id = $1 WHERE id = $2",
+                [ $qbo_id, $expense_id ]
+            );
+
+            // Attach receipt if present
+            if ( ! empty( $e->receipt_url ) ) {
+                self::attach_file_to_entity( 'Purchase', $qbo_id, $e->receipt_url );
+            }
+
+            self::log_sync( $expense_id, 'petty_expense', 'success', 'QBO Purchase ID: ' . $qbo_id );
+            return true;
+        }
+
+        self::log_sync( $expense_id, 'petty_expense', 'failed', $result['error'] ?? 'Unknown' );
+        return false;
+    }
+
+    // =========================================================================
+    // ATTACH FILE TO QBO ENTITY
+    // =========================================================================
+
+    private static function attach_file_to_entity( $entity_type, $entity_id, $file_url ) {
+        if ( ! self::is_connected() || empty( $file_url ) ) return false;
+
+        try {
+            $temp = download_url( $file_url );
+            if ( is_wp_error( $temp ) ) return false;
+
+            $filename  = basename( parse_url( $file_url, PHP_URL_PATH ) );
+            $mime_type = wp_check_filetype( $filename )['type'] ?: 'image/jpeg';
+            $file_data = file_get_contents( $temp );
+            @unlink( $temp );
+
+            if ( ! $file_data ) return false;
+
+            // Upload attachable
+            $attach_result = self::api( 'POST', '/upload', [
+                'FileName'    => $filename,
+                'ContentType' => $mime_type,
+                'FileContent' => base64_encode( $file_data ),
+            ] );
+
+            if ( ! isset( $attach_result['AttachableResponse'][0]['Attachable']['Id'] ) ) return false;
+
+            $attach_id = $attach_result['AttachableResponse'][0]['Attachable']['Id'];
+
+            // Link to entity
+            self::api( 'POST', '/attachable', [
+                'Id'                      => $attach_id,
+                'AttachableRef'           => [[
+                    'EntityRef' => [ 'type' => $entity_type, 'value' => $entity_id ],
+                ]],
+            ] );
+
+            return true;
+        } catch ( \Exception $e ) {
+            error_log( '[HearMed QBO] attach_file_to_entity error: ' . $e->getMessage() );
+            return false;
+        }
+    }
+
+    // =========================================================================
     // SYNC LOG
     // =========================================================================
 

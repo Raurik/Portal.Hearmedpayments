@@ -1,0 +1,232 @@
+/* ---------------------------------------------------
+   HearMed Cash / Tender — Module-Specific Styles
+   Only styles UNIQUE to tender pages.
+   All shared components (cards, tables, badges, buttons,
+   KPI grid, forms, modals) live in hearmed-core.css.
+   --------------------------------------------------- */
+
+/* ═══════════════════════════════════════
+   KPI: 4 columns for tender dashboard
+   ═══════════════════════════════════════ */
+.hm-cash-kpi {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+@media (max-width: 768px) {
+    .hm-cash-kpi {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ═══════════════════════════════════════
+   BACK LINK
+   ═══════════════════════════════════════ */
+.hm-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--hm-teal, #0BB4C4);
+    text-decoration: none;
+    margin-bottom: 12px;
+    cursor: pointer;
+}
+.hm-back:hover {
+    color: var(--hm-navy, #151B33);
+    text-decoration: underline;
+}
+.hm-back::before {
+    content: '←';
+    font-size: 14px;
+}
+
+/* ═══════════════════════════════════════
+   UPLOAD ZONE — drag/click to attach photo
+   ═══════════════════════════════════════ */
+.hm-cash-upload-zone {
+    border: 2px dashed var(--hm-teal, #0BB4C4);
+    border-radius: 10px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    color: var(--hm-grey, #64748b);
+    font-size: 13px;
+    position: relative;
+}
+.hm-cash-upload-zone:hover {
+    background: rgba(11, 180, 196, 0.04);
+}
+.hm-cash-upload-zone--required {
+    border-color: var(--hm-red, #dc2626);
+}
+.hm-cash-upload-zone--attached {
+    border-style: solid;
+    border-color: var(--hm-green, #16a34a);
+    background: rgba(22, 163, 74, 0.04);
+}
+.hm-cash-upload-zone .hm-cash-upload-icon {
+    font-size: 28px;
+    display: block;
+    margin-bottom: 6px;
+    color: var(--hm-teal, #0BB4C4);
+}
+.hm-cash-upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+}
+
+/* Photo preview bar */
+.hm-cash-photo-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--hm-bg, #f8fafc);
+    border-radius: 8px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--hm-text, #334155);
+}
+.hm-cash-photo-preview img {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--hm-border, #e2e8f0);
+}
+.hm-cash-photo-preview .hm-cash-photo-name {
+    font-weight: 600;
+}
+.hm-cash-photo-preview .hm-cash-photo-size {
+    color: var(--hm-grey, #64748b);
+}
+
+/* ═══════════════════════════════════════
+   LODGE SUMMARY BAR
+   ═══════════════════════════════════════ */
+.hm-cash-summary {
+    background: rgba(22, 163, 74, 0.06);
+    border: 1px solid rgba(22, 163, 74, 0.15);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--hm-green, #16a34a);
+    margin: 12px 0;
+}
+
+/* ═══════════════════════════════════════
+   LODGE TYPE BUTTON GROUP
+   ═══════════════════════════════════════ */
+.hm-lodge-type-group {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+}
+.hm-lodge-type-btn {
+    flex: 1;
+    padding: 8px 16px;
+    border: 1px solid var(--hm-border, #e2e8f0);
+    background: var(--hm-white, #fff);
+    color: var(--hm-grey, #64748b);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: var(--hm-font-btn, 'Plus Jakarta Sans', sans-serif);
+}
+.hm-lodge-type-btn:first-child {
+    border-radius: 6px 0 0 6px;
+}
+.hm-lodge-type-btn:last-child {
+    border-radius: 0 6px 6px 0;
+}
+.hm-lodge-type-btn + .hm-lodge-type-btn {
+    border-left: none;
+}
+.hm-lodge-type-btn.active,
+.hm-lodge-type-btn.hm-btn--primary {
+    background: var(--hm-teal, #0BB4C4);
+    color: #fff;
+    border-color: var(--hm-teal, #0BB4C4);
+}
+
+/* ═══════════════════════════════════════
+   QBO INFO BANNER
+   ═══════════════════════════════════════ */
+.hm-cash-qbo-info {
+    background: rgba(59, 130, 246, 0.06);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 12px;
+    color: #1e40af;
+    margin-top: 8px;
+}
+
+/* ═══════════════════════════════════════
+   QR ZONE + WAITING ANIMATION
+   ═══════════════════════════════════════ */
+.hm-cash-qr-zone {
+    text-align: center;
+    padding: 24px;
+}
+.hm-cash-qr-waiting {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--hm-amber, #f59e0b);
+    animation: hm-qr-pulse 2s ease-in-out infinite;
+}
+@keyframes hm-qr-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* ═══════════════════════════════════════
+   ACTION BUTTON ROW
+   ═══════════════════════════════════════ */
+.hm-cash-actions {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+
+/* ═══════════════════════════════════════
+   AMOUNT COLOURS
+   ═══════════════════════════════════════ */
+.hm-amount-in  { color: var(--hm-green, #16a34a); font-weight: 600; }
+.hm-amount-out { color: var(--hm-red, #dc2626); font-weight: 600; }
+
+/* ═══════════════════════════════════════
+   TENDER BALANCE HERO
+   ═══════════════════════════════════════ */
+.hm-cash-balance-hero {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.hm-cash-balance-hero .hm-cash-bal {
+    font-size: 14px;
+    color: var(--hm-grey, #64748b);
+}
+.hm-cash-balance-hero .hm-cash-bal strong {
+    font-size: 20px;
+    color: var(--hm-navy, #151B33);
+}
