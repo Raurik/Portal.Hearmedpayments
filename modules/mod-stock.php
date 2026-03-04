@@ -314,13 +314,13 @@ class HearMed_Stock {
             },
             domes_filters:{
                 filename:'stock_template_domes_filters.csv',
-                headers:['clinic_name','manufacturer_name','model_name','style','specification','quantity','status'],
-                sample:['Dublin City','Phonak','CeruShield','Filter','Black discs',30,'Available']
+                headers:['clinic_name','manufacturer_name','model_name','dome_type','dome_size','quantity','status'],
+                sample:['Dublin City','Phonak','CeruShield','Open','M',30,'Available']
             },
             speakers:{
                 filename:'stock_template_speakers.csv',
-                headers:['clinic_name','manufacturer_name','model_name','style','technology_level','specification','quantity','status'],
-                sample:['Dublin City','Phonak','Receiver 2xM','Speaker','M','Left/Right set',10,'Available']
+                headers:['clinic_name','manufacturer_name','model_name','speaker_power','speaker_length','quantity','status'],
+                sample:['Dublin City','Phonak','Receiver 2xM','M','2',10,'Available']
             },
             chargers_accessories:{
                 filename:'stock_template_chargers_accessories.csv',
@@ -1125,15 +1125,29 @@ class HearMed_Stock {
             if ( $category === 'hearing_aid' ) $qty = 1;
             if ( $qty < 1 ) $qty = 1;
 
+            $style_val = trim( strval( $row['style'] ?? '' ) );
+            $tech_val  = trim( strval( $row['technology_level'] ?? '' ) );
+            $spec_val  = trim( strval( $row['specification'] ?? '' ) );
+
+            if ( $template_type === 'domes_filters' ) {
+                $style_val = trim( strval( $row['dome_type'] ?? '' ) );
+                $spec_val  = trim( strval( $row['dome_size'] ?? '' ) );
+                $tech_val  = '';
+            } elseif ( $template_type === 'speakers' ) {
+                $style_val = trim( strval( $row['speaker_power'] ?? '' ) );
+                $tech_val  = trim( strval( $row['speaker_length'] ?? '' ) );
+                $spec_val  = '';
+            }
+
             $data = [
                 'item_category'    => $category,
                 'clinic_id'        => $clinic_id,
                 'manufacturer_id'  => $mfr_id,
                 'model_name'       => $model_name,
-                'style'            => trim( strval( $row['style'] ?? '' ) ) ?: null,
-                'technology_level' => trim( strval( $row['technology_level'] ?? '' ) ) ?: null,
+                'style'            => $style_val ?: null,
+                'technology_level' => $tech_val ?: null,
                 'serial_number'    => $serial ?: null,
-                'specification'    => trim( strval( $row['specification'] ?? '' ) ) ?: null,
+                'specification'    => $spec_val ?: null,
                 'quantity'         => $qty,
                 'status'           => $status,
             ];
