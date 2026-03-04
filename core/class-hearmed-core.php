@@ -229,9 +229,29 @@ class HearMed_Core {
      * Only runs the check once (flag stored in settings).
      */
     public function ensure_portal_pages() {
-        $version = 'v5'; // bump to re-check when new pages are added
+        $version = 'v6'; // bumped: re-create any pages lost during rollbacks
+
+        // Always verify critical pages exist even if version flag is set.
+        // Pages can vanish (trash, deletion, rollback) while the flag persists.
         if ( HearMed_Settings::get( 'hm_pages_ensured_' . $version, '' ) ) {
-            return;
+            // Quick check: if any required slug is missing, clear the flag and re-run
+            $critical_slugs = [ 'login', 'calendar', 'patients' ];
+            $missing = false;
+            foreach ( $critical_slugs as $slug ) {
+                $found = get_posts( [
+                    'name'        => $slug,
+                    'post_type'   => 'page',
+                    'post_status' => 'publish',
+                    'numberposts' => 1,
+                    'fields'      => 'ids',
+                ] );
+                if ( empty( $found ) ) {
+                    $missing = true;
+                    break;
+                }
+            }
+            if ( ! $missing ) return;
+            // A critical page is missing — fall through and recreate
         }
 
         $pages = [
