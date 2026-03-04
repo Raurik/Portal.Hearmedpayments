@@ -394,10 +394,10 @@
    ============================================================ */
 
 .hm-profile-tabs {
-  display: grid;
-  grid-template-columns: repeat(13, minmax(0, 1fr));
-  column-gap: 0;
-  margin-bottom: 0; overflow-x: hidden; overflow-y: hidden;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0;
+  margin-bottom: 0; overflow-x: auto; overflow-y: hidden;
   background: #fff; border-radius: 12px 12px 0 0; padding: 0;
   scrollbar-width: thin;
   scrollbar-color: #7dd3fc transparent;
@@ -407,9 +407,9 @@
 .hm-profile-tabs::-webkit-scrollbar-thumb { background: #7dd3fc; border-radius: 999px; }
 
 .hm-tab-btn {
-  width: 100%;
-  padding: 11px 8px;
-  font-size: clamp(11px, 1.7vw, 12.5px);
+  flex: 0 0 auto;
+  padding: 11px 10px;
+  font-size: 12.5px;
   font-weight: 500; color: #64748b;
   background: transparent; border: none; cursor: pointer;
   border-bottom: 2px solid transparent; margin-bottom: 0;
@@ -702,16 +702,12 @@
   .hm-notif-title { font-size: 13px; }
   #hm-patient-list .hm-pt-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hm-profile-tabs {
-    display: flex;
-    justify-content: flex-start;
     padding: 0 8px;
-    gap: 2px;
-    overflow-x: auto;
+    gap: 0;
   }
   .hm-tab-btn {
-    flex: 0 0 auto;
-    min-width: max-content;
-    text-align: left;
+    padding: 11px 8px;
+    font-size: 12px;
   }
 
   .hm-detail-grid {
