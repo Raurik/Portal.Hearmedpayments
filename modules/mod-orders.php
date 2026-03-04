@@ -62,6 +62,26 @@ function hm_orders_render() {
 }
 
 // ---------------------------------------------------------------------------
+// AJAX registrations
+// ---------------------------------------------------------------------------
+add_action( 'wp_ajax_hm_print_order_sheet',           [ 'HearMed_Orders', 'ajax_print_order_sheet' ] );
+add_action( 'wp_ajax_hm_create_order',                [ 'HearMed_Orders', 'ajax_create_order' ] );
+add_action( 'wp_ajax_hm_approve_order',               [ 'HearMed_Orders', 'ajax_approve_order' ] );
+add_action( 'wp_ajax_hm_reject_order',                [ 'HearMed_Orders', 'ajax_reject_order' ] );
+add_action( 'wp_ajax_hm_mark_ordered',                [ 'HearMed_Orders', 'ajax_mark_ordered' ] );
+add_action( 'wp_ajax_hm_mark_received',               [ 'HearMed_Orders', 'ajax_mark_received' ] );
+add_action( 'wp_ajax_hm_save_serials',                [ 'HearMed_Orders', 'ajax_save_serials' ] );
+add_action( 'wp_ajax_hm_complete_order',              [ 'HearMed_Orders', 'ajax_complete_order' ] );
+add_action( 'wp_ajax_hm_patient_search',              [ 'HearMed_Orders', 'ajax_patient_search' ] );
+add_action( 'wp_ajax_hm_get_orders',                  [ 'HearMed_Orders', 'ajax_get_orders' ] );
+add_action( 'wp_ajax_hm_get_order_detail',            [ 'HearMed_Orders', 'ajax_get_order_detail' ] );
+add_action( 'wp_ajax_hm_update_order_status',         [ 'HearMed_Orders', 'ajax_update_order_status' ] );
+add_action( 'wp_ajax_hm_get_pending_orders',          [ 'HearMed_Orders', 'ajax_get_pending_orders' ] );
+add_action( 'wp_ajax_hm_get_awaiting_fitting',        [ 'HearMed_Orders', 'ajax_get_awaiting_fitting' ] );
+add_action( 'wp_ajax_hm_prefit_cancel',               [ 'HearMed_Orders', 'ajax_prefit_cancel' ] );
+add_action( 'wp_ajax_hm_get_patient_credit_balance',  [ 'HearMed_Orders', 'ajax_get_patient_credit_balance' ] );
+
+// ---------------------------------------------------------------------------
 // Main class
 // ---------------------------------------------------------------------------
 class HearMed_Orders {
@@ -1011,6 +1031,36 @@ class HearMed_Orders {
 
                 <hr class="hm-divider">
 
+                <!-- Patient credit application -->
+                <div id="hm-credit-available-row" class="hm-form-group" style="display:none;">
+                    <div style="padding:12px 16px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px;margin-bottom:4px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <div>
+                                <span style="font-size:13px;font-weight:600;color:#0e7490;">Patient has available credit</span>
+                                <span style="font-size:16px;font-weight:700;color:#0e7490;margin-left:8px;">
+                                    €<span id="hm-credit-balance-display">0.00</span>
+                                </span>
+                            </div>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <input type="checkbox" id="hm-apply-credit-cb" name="apply_credit" value="1"
+                                       style="width:18px;height:18px;accent-color:var(--hm-teal);">
+                                <span style="font-size:13px;font-weight:600;color:var(--hm-navy);">Apply credit</span>
+                            </label>
+                        </div>
+                        <div id="hm-credit-apply-detail" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #a5f3fc;">
+                            <div style="display:flex;justify-content:space-between;font-size:13px;color:#0e7490;">
+                                <span>Credit applied:</span>
+                                <strong>€<span id="hm-credit-apply-amount">0.00</span></strong>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--hm-navy);margin-top:4px;">
+                                <span>Remaining to collect:</span>
+                                <strong>€<span id="hm-credit-remaining-collect">0.00</span></strong>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="hm-credit-apply-value" name="credit_apply_amount" value="0">
+                </div>
+
                 <div class="hm-form-group">
                     <label class="hm-label">Fitting Date</label>
                     <input type="date" id="hm-fit-date" class="hm-input" value="<?php echo date('Y-m-d'); ?>">
@@ -1043,6 +1093,45 @@ class HearMed_Orders {
         </div>
 
         <script>
+        (function(){
+            // ── Check patient credit balance on form load ──
+            var hmPatientId  = <?php echo (int) $order->patient_id; ?>;
+            var hmGrandTotal = <?php echo (float) $amount_due; ?>;
+            var hmDeposit    = <?php echo (float) ($order->deposit_amount ?? 0); ?>;
+            var hmBalanceDue = hmGrandTotal;
+
+            if (hmBalanceDue > 0) {
+                var fd = new URLSearchParams({action:'hm_get_patient_credit_balance', nonce:'<?php echo $nonce; ?>', patient_id:hmPatientId});
+                fetch('<?php echo admin_url('admin-ajax.php'); ?>', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:fd})
+                .then(function(r){return r.json();})
+                .then(function(res){
+                    if (!res.success) return;
+                    var creditBalance = parseFloat(res.data.balance);
+                    if (creditBalance <= 0) return;
+                    document.getElementById('hm-credit-available-row').style.display = '';
+                    document.getElementById('hm-credit-balance-display').textContent = creditBalance.toFixed(2);
+
+                    document.getElementById('hm-apply-credit-cb').addEventListener('change', function(){
+                        var detail = document.getElementById('hm-credit-apply-detail');
+                        var amtEl  = document.getElementById('hm-fit-amount');
+                        if (this.checked) {
+                            var creditToApply = Math.min(creditBalance, hmBalanceDue);
+                            var remaining     = hmBalanceDue - creditToApply;
+                            detail.style.display = '';
+                            document.getElementById('hm-credit-apply-amount').textContent = creditToApply.toFixed(2);
+                            document.getElementById('hm-credit-remaining-collect').textContent = remaining.toFixed(2);
+                            document.getElementById('hm-credit-apply-value').value = creditToApply.toFixed(2);
+                            amtEl.value = remaining.toFixed(2);
+                        } else {
+                            detail.style.display = 'none';
+                            document.getElementById('hm-credit-apply-value').value = '0';
+                            amtEl.value = hmBalanceDue.toFixed(2);
+                        }
+                    });
+                });
+            }
+        })();
+
         document.getElementById('hm-confirm-complete').addEventListener('click', function() {
 
             // ── Collect inline serials if any are on-screen ──
@@ -1082,7 +1171,9 @@ class HearMed_Orders {
                 nonce: btn.dataset.nonce,
                 fit_date: document.getElementById('hm-fit-date').value,
                 amount: document.getElementById('hm-fit-amount').value,
-                notes: document.getElementById('hm-fit-notes').value
+                notes: document.getElementById('hm-fit-notes').value,
+                apply_credit: document.getElementById('hm-apply-credit-cb').checked ? '1' : '',
+                credit_apply_amount: document.getElementById('hm-credit-apply-value').value
             };
             if (serials.length) params.inline_serials = JSON.stringify(serials);
 
@@ -1618,9 +1709,12 @@ class HearMed_Orders {
         $fit_date = sanitize_text_field($_POST['fit_date'] ?? date('Y-m-d'));
         $amount   = floatval($_POST['amount'] ?? 0);
         $notes    = sanitize_textarea_field($_POST['notes'] ?? '');
+        $apply_credit        = ! empty( $_POST['apply_credit'] );
+        $credit_apply_amount = floatval( $_POST['credit_apply_amount'] ?? 0 );
 
         if (!$order_id) wp_send_json_error('Invalid order.');
-        if (!$amount)   wp_send_json_error('Please enter the amount received.');
+        if ( ! $amount && ! ( $apply_credit && $credit_apply_amount > 0 ) )
+            wp_send_json_error('Please enter the amount received.');
 
         $db   = HearMed_DB::instance();
         $user = HearMed_Auth::current_user();
@@ -1766,14 +1860,69 @@ class HearMed_Orders {
         // 10. Status history log
         self::log_status_change( $order_id, 'Awaiting Fitting', 'Complete', $user->id ?? null, 'Fitted and paid' );
 
+        // ── 11. Apply patient credit if requested ─────────────────────────
+        $credit_actually_applied = 0;
+        if ( $apply_credit && $credit_apply_amount > 0 && $effective_invoice_id && class_exists( 'HearMed_Finance' ) ) {
+            $credit_balance = HearMed_Finance::get_patient_credit_balance( (int) $order->patient_id );
+            $max_apply = min( $credit_apply_amount, $credit_balance );
+
+            if ( $max_apply > 0 ) {
+                $credit_actually_applied = HearMed_Finance::apply_credit(
+                    (int) $order->patient_id,
+                    (int) $effective_invoice_id,
+                    $max_apply,
+                    $user->id ?? 0
+                );
+
+                if ( $credit_actually_applied > 0 ) {
+                    // Update invoice to reflect credit applied
+                    $db->query(
+                        "UPDATE hearmed_core.invoices
+                         SET credit_applied = COALESCE(credit_applied, 0) + \$1,
+                             balance_remaining = GREATEST(0, COALESCE(balance_remaining, 0) - \$1),
+                             updated_at = NOW()
+                         WHERE id = \$2",
+                        [ $credit_actually_applied, $effective_invoice_id ]
+                    );
+
+                    // Record as financial transaction
+                    HearMed_Finance::record(
+                        'credit_applied',
+                        $credit_actually_applied,
+                        'patient_credit',
+                        'revenue',
+                        'invoice',
+                        (int) $effective_invoice_id,
+                        (int) $order->patient_id,
+                        $order->clinic_id ? (int) $order->clinic_id : null,
+                        $user->id ?? null,
+                        'Patient credit applied to order ' . $order->order_number
+                    );
+
+                    // Timeline entry
+                    $db->insert( 'hearmed_core.patient_timeline', [
+                        'patient_id'  => $order->patient_id,
+                        'event_type'  => 'credit_applied',
+                        'event_date'  => $fit_date,
+                        'staff_id'    => $user->id ?? null,
+                        'description' => 'Credit of €' . number_format( $credit_actually_applied, 2 )
+                            . ' applied to order ' . $order->order_number,
+                        'order_id'    => $order_id,
+                    ] );
+                }
+            }
+        }
+
         // Queue invoice for QBO review (weekly batch — do NOT auto-sync)
         // Invoice is created with qbo_sync_status = 'pending_review' by default
         // Rauri reviews and sends to QBO via /qbo-review/ page
 
         wp_send_json_success([
-            'message'  => 'Fitting complete. Invoice created and queued for QBO review.',
-            'order_id' => $order_id,
-            'redirect' => HearMed_Utils::page_url('orders').'?hm_action=view&order_id='.$order_id,
+            'message'         => 'Fitting complete. Invoice created and queued for QBO review.'
+                . ( $credit_actually_applied > 0 ? ' Credit of €' . number_format( $credit_actually_applied, 2 ) . ' applied.' : '' ),
+            'order_id'        => $order_id,
+            'credit_applied'  => $credit_actually_applied,
+            'redirect'        => HearMed_Utils::page_url('orders').'?hm_action=view&order_id='.$order_id,
         ]);
     }
 
@@ -2569,5 +2718,24 @@ class HearMed_Orders {
         self::log_status_change( $order_id, $order->current_status, 'Cancelled', $user->id ?? null, 'Pre-fit cancel: ' . $reason );
 
         wp_send_json_success( 'Order cancelled.' );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CREDIT BALANCE CHECK (used by the complete-order form)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * AJAX: Get patient credit balance.
+     */
+    public static function ajax_get_patient_credit_balance() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+        $patient_id = intval( $_POST['patient_id'] ?? 0 );
+        if ( ! $patient_id ) wp_send_json_error( 'No patient.' );
+
+        $balance = class_exists( 'HearMed_Finance' )
+            ? HearMed_Finance::get_patient_credit_balance( $patient_id )
+            : 0;
+
+        wp_send_json_success( [ 'balance' => number_format( $balance, 2, '.', '' ) ] );
     }
 }
