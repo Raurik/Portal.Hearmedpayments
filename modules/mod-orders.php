@@ -80,6 +80,7 @@ add_action( 'wp_ajax_hm_get_pending_orders',          [ 'HearMed_Orders', 'ajax_
 add_action( 'wp_ajax_hm_get_awaiting_fitting',        [ 'HearMed_Orders', 'ajax_get_awaiting_fitting' ] );
 add_action( 'wp_ajax_hm_prefit_cancel',               [ 'HearMed_Orders', 'ajax_prefit_cancel' ] );
 add_action( 'wp_ajax_hm_get_patient_credit_balance',  [ 'HearMed_Orders', 'ajax_get_patient_credit_balance' ] );
+add_action( 'wp_ajax_hm_record_order_deposit',        [ 'HearMed_Orders', 'ajax_record_order_deposit' ] );
 
 // ---------------------------------------------------------------------------
 // Main class
@@ -507,12 +508,97 @@ class HearMed_Orders {
                     }
                 });
 
-                /* Override the back button to navigate instead of just cleaning up */
+                /* ── Inject deposit section + override handlers ── */
                 setTimeout(function(){
-                    jQuery(document).off('click.opback').on('click.opback','#hm-op-back',function(){
-                        window.location = <?php echo json_encode( $base ); ?>;
+                    var $=jQuery;
+                    var ordersBase=<?php echo json_encode( $base ); ?>;
+
+                    /* Override back button to navigate */
+                    $(document).off('click.opback').on('click.opback','#hm-op-back',function(){
+                        window.location=ordersBase;
                     });
-                }, 100);
+
+                    /* ── Deposit section: inject above action buttons ── */
+                    var LB='font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px';
+                    var INP='font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;background:#fff;box-sizing:border-box';
+                    var today=new Date().toISOString().split('T')[0];
+
+                    var depHtml='<div id="hm-op-deposit-section" style="border-top:1px dashed var(--hm-border-light,#e2e8f0);padding-top:14px;margin-top:14px">';
+                    depHtml+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--hm-text-light,#64748b);margin-bottom:10px;display:flex;align-items:center;gap:6px">';
+                    depHtml+='<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>';
+                    depHtml+='Deposit <span style="font-weight:400;color:var(--hm-text-muted,#94a3b8);text-transform:none;letter-spacing:0;font-size:11px">— optional, balance collected at fitting</span></div>';
+                    depHtml+='<div style="display:flex;gap:10px;flex-wrap:wrap">';
+                    depHtml+='<div style="flex:1;min-width:100px"><label style="'+LB+'">Amount (€)</label>';
+                    depHtml+='<input type="number" id="hm-op-dep-amt" step="0.01" min="0" value="" placeholder="0.00" style="'+INP+'"></div>';
+                    depHtml+='<div style="flex:1;min-width:120px"><label style="'+LB+'">Method</label>';
+                    depHtml+='<select id="hm-op-dep-method" style="'+INP+'"><option value="">— None —</option><option value="Card">Card</option><option value="Cash">Cash</option><option value="Cheque">Cheque</option></select></div>';
+                    depHtml+='<div style="flex:1;min-width:120px"><label style="'+LB+'">Date Paid</label>';
+                    depHtml+='<input type="date" id="hm-op-dep-date" value="'+today+'" style="'+INP+'"></div>';
+                    depHtml+='</div>';
+                    depHtml+='<div id="hm-op-dep-balance" style="display:none;margin-top:10px;padding:10px 14px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px;font-size:13px;color:#0e7490">';
+                    depHtml+='Balance due at fitting: <strong id="hm-op-dep-bal-val">€0.00</strong></div>';
+                    depHtml+='</div>';
+
+                    $('#hm-op-actions').before(depHtml);
+
+                    /* Live "balance due at fitting" update */
+                    function updateDepositBalance(){
+                        var dep=parseFloat($('#hm-op-dep-amt').val())||0;
+                        var total=parseFloat($('#hm-op-total').text().replace(/[^0-9.]/g,''))||0;
+                        if(dep>0){
+                            var bal=Math.max(0,total-dep);
+                            $('#hm-op-dep-bal-val').text('€'+bal.toFixed(2));
+                            $('#hm-op-dep-balance').show();
+                        }else{
+                            $('#hm-op-dep-balance').hide();
+                        }
+                    }
+                    $(document).on('input','#hm-op-dep-amt',updateDepositBalance);
+                    /* Also recalc when totals change (item add/remove, PRSI, discount) */
+                    var _origTotal=$('#hm-op-total').text();
+                    setInterval(function(){
+                        var cur=$('#hm-op-total').text();
+                        if(cur!==_origTotal){_origTotal=cur;updateDepositBalance();}
+                    },300);
+
+                    /* ── Override "Submit Order" to also record deposit after order creation ── */
+
+                    /* Intercept jQuery ajax responses for create_outcome_order */
+                    $(document).ajaxSuccess(function(e,xhr,settings,data){
+                        if(!settings||!settings.data||typeof settings.data!=='string')return;
+                        if(settings.data.indexOf('hm_create_outcome_order')===-1)return;
+                        if(!data||!data.success)return;
+
+                        var dep=parseFloat($('#hm-op-dep-amt').val())||0;
+                        if(dep<=0)return; /* no deposit — nothing to do */
+
+                        var depMethod=$('#hm-op-dep-method').val()||'Card';
+                        var depDate=$('#hm-op-dep-date').val()||today;
+                        var orderId=data.data.order_id;
+
+                        /* Fire-and-forget deposit recording */
+                        $.post(HM.ajax_url,{
+                            action:'hm_record_order_deposit',
+                            nonce:HM.nonce,
+                            order_id:orderId,
+                            deposit_amount:dep,
+                            deposit_method:depMethod,
+                            deposit_paid_at:depDate
+                        });
+                    });
+
+                    /* Deposit validation: block submit if deposit > total */
+                    $(document).on('click','#hm-op-submit',function(e){
+                        var dep=parseFloat($('#hm-op-dep-amt').val())||0;
+                        var total=parseFloat($('#hm-op-total').text().replace(/[^0-9.]/g,''))||0;
+                        if(dep>total+0.01){
+                            e.stopImmediatePropagation();
+                            $('#hm-op-err').text('Deposit (€'+dep.toFixed(2)+') cannot exceed the order total (€'+total.toFixed(2)+').');
+                            return false;
+                        }
+                    });
+
+                }, 200);
             }
             boot();
         })();
@@ -1378,7 +1464,7 @@ class HearMed_Orders {
         $deposit_paid_at = sanitize_text_field($_POST['deposit_paid_at'] ?? '');
 
         if (!$patient_id)     wp_send_json_error('Please select a patient.');
-        if (!$payment_method) wp_send_json_error('Please select a payment method.');
+        // payment_method is optional — may be blank when no deposit is taken
         if (empty($items))    wp_send_json_error('Please add at least one item.');
         if ($deposit_amount < 0) wp_send_json_error('Deposit cannot be negative.');
 
@@ -1397,6 +1483,11 @@ class HearMed_Orders {
         $prsi_amount     = ($prsi_left ? 500 : 0) + ($prsi_right ? 500 : 0);
         // Prices are VAT-inclusive, so grand = net + vat - PRSI = gross - PRSI
         $grand_total     = max(0, $subtotal + $vat_total - $prsi_amount);
+
+        // Deposit validation: may be zero (no deposit) or partial — cannot exceed grand total
+        if ($deposit_amount > $grand_total + 0.01) {
+            wp_send_json_error('Deposit cannot exceed the order total (€' . number_format($grand_total, 2) . ').');
+        }
 
         // ── Quickpay detection: service-only orders bypass approval ──
         $is_quickpay = ! empty($items);
@@ -1616,6 +1707,73 @@ class HearMed_Orders {
             'duplicate_flag_reason' => $dup_reason,
             'redirect'       => HearMed_Utils::page_url('orders').'?hm_action=view&order_id='.$order_id,
         ]);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RECORD DEPOSIT — called after order created from the orders page
+    // Accepts partial payment (deposit).  Balance collected at fitting.
+    // ═══════════════════════════════════════════════════════════════════════
+    public static function ajax_record_order_deposit() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+
+        $order_id       = intval( $_POST['order_id'] ?? 0 );
+        $deposit_amount = floatval( $_POST['deposit_amount'] ?? 0 );
+        $deposit_method = sanitize_text_field( $_POST['deposit_method'] ?? 'Card' );
+        $deposit_date   = sanitize_text_field( $_POST['deposit_paid_at'] ?? date( 'Y-m-d' ) );
+
+        if ( ! $order_id )          wp_send_json_error( 'Missing order.' );
+        if ( $deposit_amount <= 0 ) wp_send_json_error( 'No deposit amount.' );
+        if ( $deposit_amount < 0 )  wp_send_json_error( 'Deposit cannot be negative.' );
+
+        $db   = HearMed_DB::instance();
+        $user = HearMed_Auth::current_user();
+
+        $order = $db->get_row(
+            "SELECT id, patient_id, grand_total, clinic_id, order_number
+             FROM hearmed_core.orders WHERE id = \$1",
+            [ $order_id ]
+        );
+        if ( ! $order ) wp_send_json_error( 'Order not found.' );
+
+        if ( $deposit_amount > floatval( $order->grand_total ) + 0.01 ) {
+            wp_send_json_error( 'Deposit cannot exceed order total (€' . number_format( $order->grand_total, 2 ) . ').' );
+        }
+
+        // Update order with deposit info
+        $db->update( 'hearmed_core.orders', [
+            'deposit_amount'  => $deposit_amount,
+            'deposit_method'  => $deposit_method,
+            'deposit_paid_at' => $deposit_date,
+        ], [ 'id' => $order_id ] );
+
+        // Record in payments table
+        $db->insert( 'hearmed_core.payments', [
+            'invoice_id'     => null,
+            'patient_id'     => $order->patient_id,
+            'amount'         => $deposit_amount,
+            'payment_date'   => $deposit_date,
+            'payment_method' => $deposit_method,
+            'received_by'    => $user->id ?? null,
+            'clinic_id'      => $order->clinic_id,
+            'created_by'     => $user->id ?? null,
+            'is_refund'      => false,
+        ] );
+
+        // Financial transaction
+        if ( class_exists( 'HearMed_Finance' ) ) {
+            HearMed_Finance::record( 'deposit', $deposit_amount, [
+                'patient_id'       => $order->patient_id,
+                'order_id'         => $order_id,
+                'payment_method'   => $deposit_method,
+                'staff_id'         => $user->id ?? null,
+                'clinic_id'        => $order->clinic_id,
+                'notes'            => 'Deposit at order creation — balance collected at fitting',
+                'reference'        => $order->order_number,
+                'transaction_date' => $deposit_date,
+            ] );
+        }
+
+        wp_send_json_success( 'Deposit of €' . number_format( $deposit_amount, 2 ) . ' recorded.' );
     }
 
     public static function ajax_approve_order() {
