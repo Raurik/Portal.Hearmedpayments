@@ -136,6 +136,7 @@ class HearMed_Core {
             HEARMED_PATH . 'modules/mod-cash.php',
             HEARMED_PATH . 'core/class-hearmed-print-templates.php',
             HEARMED_PATH . 'core/class-hearmed-invoice.php',
+            HEARMED_PATH . 'core/class-hearmed-finance.php',
             HEARMED_PATH . 'modules/mod-forms.php', 
             HEARMED_PATH . 'modules/mod-clinical-pdf.php',
             HEARMED_PATH . 'modules/mod-commission-pin.php',
