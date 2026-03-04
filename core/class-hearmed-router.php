@@ -253,8 +253,16 @@ class HearMed_Router {
         if ( ! isset( $this->shortcode_map[ $tag ] ) ) {
             return '<div id="hm-app"><p>Unknown module.</p></div>';
         }
-        
+
         $config = $this->shortcode_map[ $tag ];
+
+        // URL-first safety net: if /stock/ page content has an incorrect
+        // shortcode (e.g. [hearmed_repairs]), force stock module rendering.
+        $uri_path = trim( strtok( $_SERVER['REQUEST_URI'] ?? '', '?' ), '/' );
+        if ( basename( $uri_path ) === 'stock' && $tag !== 'hearmed_stock' && isset( $this->shortcode_map['hearmed_stock'] ) ) {
+            $config = $this->shortcode_map['hearmed_stock'];
+        }
+
         $module = $config['module'];
         $view = $config['view'];
         
