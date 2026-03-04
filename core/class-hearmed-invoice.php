@@ -426,48 +426,18 @@ class HearMed_Invoice {
     // CREDIT NOTES
     // ═══════════════════════════════════════════════════════════════════════
 
+    /**
+     * @deprecated 5.5.0 Use HearMed_Refunds::ajax_create_credit_note() instead.
+     *
+     * This stub remains so any legacy callers get a clear error log.
+     * All credit-note creation now goes through mod-refunds.php which also
+     * records the transaction in financial_transactions via HearMed_Finance.
+     */
     public static function create_credit_note( $invoice_id, $reason, $refund_type = 'cheque', $created_by = null ) {
-        $db = HearMed_DB::instance();
-
-        $invoice = $db->get_row(
-            "SELECT inv.*, p.first_name, p.last_name
-             FROM hearmed_core.invoices inv
-             JOIN hearmed_core.patients p ON p.id = inv.patient_id
-             WHERE inv.id = $1",
-            [ $invoice_id ]
-        );
-        if ( ! $invoice ) return false;
-
-        $cn_number = self::next_credit_note_number();
-
-        $cn_id = $db->insert( 'credit_notes', [
-            'credit_note_number' => $cn_number,
-            'invoice_id'         => $invoice_id,
-            'patient_id'         => $invoice->patient_id,
-            'order_id'           => $invoice->order_id,
-            'amount'             => $invoice->grand_total,
-            'reason'             => $reason,
-            'credit_date'        => date( 'Y-m-d' ),
-            'refund_type'        => $refund_type,
-            'created_by'         => $created_by,
-        ] );
-
-        if ( ! $cn_id ) return false;
-
-        // Notify C-Level and Finance
-        if ( class_exists( 'HearMed_Notifications' ) && method_exists( 'HearMed_Notifications', 'create_for_role' ) ) {
-            $payload = [
-                'cn_id'        => $cn_id,
-                'cn_number'    => $cn_number,
-                'patient_name' => $invoice->first_name . ' ' . $invoice->last_name,
-                'amount'       => $invoice->grand_total,
-                'reason'       => $reason,
-            ];
-            HearMed_Notifications::create_for_role( 'c_level', 'credit_note_created', $payload );
-            HearMed_Notifications::create_for_role( 'finance', 'credit_note_created', $payload );
-        }
-
-        return $cn_id;
+        error_log( '[HearMed] DEPRECATED: HearMed_Invoice::create_credit_note() called. '
+            . 'Use HearMed_Refunds::ajax_create_credit_note() instead. '
+            . 'Invoice: ' . $invoice_id . ', Reason: ' . $reason );
+        return false;
     }
 
     // ═══════════════════════════════════════════════════════════════════════

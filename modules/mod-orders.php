@@ -1343,6 +1343,38 @@ class HearMed_Orders {
         self::log_status_change($order_id, null, $initial_status, $user->id ?? null,
             $is_quickpay ? 'Service quickpay — approval not required' : 'Order created');
 
+        // ── Record deposit payment in payments table + financial_transactions ──
+        if ( $deposit_amount > 0 ) {
+            $db->insert( 'hearmed_core.payments', [
+                'invoice_id'     => null,               // no invoice yet at order creation
+                'patient_id'     => $patient_id,
+                'amount'         => $deposit_amount,
+                'payment_date'   => $deposit_paid_at ?: date( 'Y-m-d' ),
+                'payment_method' => $deposit_method ?: $payment_method,
+                'received_by'    => $user->id ?? null,
+                'clinic_id'      => $clinic,
+                'created_by'     => $user->id ?? null,
+                'is_refund'      => false,
+            ] );
+
+            if ( class_exists( 'HearMed_Finance' ) ) {
+                $debit_acct = in_array( $deposit_method ?: $payment_method, [ 'Card', 'card' ] )
+                    ? 'card' : 'cash';
+                HearMed_Finance::record(
+                    'deposit',
+                    $deposit_amount,
+                    $debit_acct,           // debit: asset received
+                    'revenue',             // credit: revenue recognised
+                    'order',
+                    $order_id,
+                    $patient_id,
+                    $clinic,
+                    $user->id ?? null,
+                    'Deposit on order ' . $order_num . ' (' . ( $deposit_method ?: $payment_method ) . ')'
+                );
+            }
+        }
+
         // ── Quickpay: auto-create invoice for service-only orders ──
         $invoice_id = null;
         if ( $is_quickpay && class_exists( 'HearMed_Invoice' ) ) {
@@ -1661,51 +1693,78 @@ class HearMed_Orders {
             [$fit_date, $order->patient_id]
         );
 
-        // 4. Update invoice to Paid
-        if ($order->invoice_id) {
-            $db->update('hearmed_core.invoices', [
-                'payment_status'  => 'Paid',
-                'balance_remaining' => 0,
-            ], ['id' => $order->invoice_id]);
+        // 4. Calculate deposit already paid vs balance due at fitting
+        $deposit_paid = floatval( $order->deposit_amount ?? 0 );
+        $balance_paid = $amount;  // amount entered by dispenser at fitting
+
+        // 5. Create proper invoice with VAT breakdown (captures invoice_id)
+        $fitting_invoice_id = null;
+        $payment_data = [
+            'amount'         => $balance_paid,
+            'payment_date'   => $fit_date,
+            'payment_method' => $order->payment_method ?? 'Card',
+            'received_by'    => $user->id ?? null,
+        ];
+        if ( class_exists( 'HearMed_Invoice' ) ) {
+            $fitting_invoice_id = HearMed_Invoice::create_from_order( $order_id, $payment_data );
         }
 
-        // 5. Create payment record
-        $db->insert('hearmed_core.payments', [
-            'invoice_id'     => $order->invoice_id,
+        // 6. If create_from_order didn't already mark invoice Paid, do it here
+        if ( $order->invoice_id && ! $fitting_invoice_id ) {
+            $db->update( 'hearmed_core.invoices', [
+                'payment_status'    => 'Paid',
+                'balance_remaining' => 0,
+            ], [ 'id' => $order->invoice_id ] );
+        }
+        $effective_invoice_id = $fitting_invoice_id ?: ( $order->invoice_id ?: null );
+
+        // 7. Create payment record for fitting balance (deposit was already recorded at order creation)
+        $db->insert( 'hearmed_core.payments', [
+            'invoice_id'     => $effective_invoice_id,
             'patient_id'     => $order->patient_id,
-            'amount'         => $amount,
+            'amount'         => $balance_paid,
             'payment_date'   => $fit_date,
             'payment_method' => $order->payment_method ?? 'Card',
             'received_by'    => $user->id ?? null,
             'clinic_id'      => $order->clinic_id,
             'created_by'     => $user->id ?? null,
-        ]);
+            'is_refund'      => false,
+        ] );
 
-        // 6. Log in patient timeline
-        $db->insert('hearmed_core.patient_timeline', [
+        // 8. Record fitting payment in financial_transactions
+        if ( class_exists( 'HearMed_Finance' ) && $balance_paid > 0 ) {
+            $pay_method = $order->payment_method ?? 'Card';
+            $debit_acct = in_array( $pay_method, [ 'Card', 'card' ] ) ? 'card' : 'cash';
+            HearMed_Finance::record(
+                'payment',
+                $balance_paid,
+                $debit_acct,               // debit: asset received
+                'revenue',                 // credit: revenue recognised
+                'invoice',
+                (int) ( $effective_invoice_id ?: $order_id ),
+                (int) $order->patient_id,
+                (int) ( $order->clinic_id ?: 0 ) ?: null,
+                $user->id ?? null,
+                'Fitting payment on order ' . $order->order_number
+                    . ( $deposit_paid > 0 ? ' (deposit €' . number_format( $deposit_paid, 2 ) . ' already recorded)' : '' )
+            );
+        }
+
+        // 9. Log in patient timeline
+        $db->insert( 'hearmed_core.patient_timeline', [
             'patient_id'  => $order->patient_id,
             'event_type'  => 'fitting_complete',
             'event_date'  => $fit_date,
             'staff_id'    => $user->id ?? null,
-            'description' => 'Hearing aids fitted and paid. Order '.$order->order_number.
-                             '. Amount received: €'.number_format($amount,2).
-                             ($notes ? '. Notes: '.$notes : ''),
+            'description' => 'Hearing aids fitted and paid. Order ' . $order->order_number
+                             . '. Amount received: €' . number_format( $balance_paid, 2 )
+                             . ( $deposit_paid > 0 ? ' (deposit €' . number_format( $deposit_paid, 2 ) . ' paid earlier)' : '' )
+                             . ( $notes ? '. Notes: ' . $notes : '' ),
             'order_id'    => $order_id,
-        ]);
+        ] );
 
-        // 7. Status history log
-        self::log_status_change($order_id, 'Awaiting Fitting', 'Complete', $user->id ?? null, 'Fitted and paid');
-
-// Create proper invoice with VAT breakdown
-        $payment_data = [
-            'amount'         => $amount,
-            'payment_date'   => $fit_date,
-            'payment_method' => $order->payment_method ?? 'Card',
-            'received_by'    => $user->id ?? null,
-        ];
-        if (class_exists('HearMed_Invoice')) {
-            HearMed_Invoice::create_from_order($order_id, $payment_data);
-        }
+        // 10. Status history log
+        self::log_status_change( $order_id, 'Awaiting Fitting', 'Complete', $user->id ?? null, 'Fitted and paid' );
 
         // Queue invoice for QBO review (weekly batch — do NOT auto-sync)
         // Invoice is created with qbo_sync_status = 'pending_review' by default

@@ -797,6 +797,32 @@ class HearMed_Refunds {
             $user->id ?? null
         );
 
+        // ── Record credit note in financial_transactions ──────────────────
+        if ( class_exists( 'HearMed_Finance' ) && $amount > 0 ) {
+            $clinic_id = null;
+            if ( $invoice_id ) {
+                $clinic_id = (int) $db->get_var(
+                    "SELECT clinic_id FROM hearmed_core.invoices WHERE id = \$1",
+                    [ $invoice_id ]
+                ) ?: null;
+            }
+            if ( ! $clinic_id ) {
+                $clinic_id = HearMed_Auth::current_clinic() ?: null;
+            }
+            HearMed_Finance::record(
+                'credit_note',
+                $amount,
+                'revenue',           // debit: reverse previously recognised revenue
+                'patient_credit',    // credit: create a liability / patient credit
+                'credit_note',
+                (int) $cn_id,
+                $patient_id,
+                $clinic_id ? (int) $clinic_id : null,
+                $user->id ?? null,
+                'Credit note ' . $cn_num . ' (' . $type . ') — ' . $reason
+            );
+        }
+
         // ── Return stock to inventory for exchanges/cancellations ─────────
         if ( $invoice_id && in_array( $type, [ 'exchange', 'cheque' ] ) ) {
             // Find the original order from the invoice
@@ -835,16 +861,46 @@ class HearMed_Refunds {
         $date   = sanitize_text_field( $_POST['cheque_date']   ?? date('Y-m-d') );
         $user   = HearMed_Auth::current_user();
 
+        $db = HearMed_DB::instance();
+
         if ( ! $cn_id )  wp_send_json_error('Invalid credit note.');
         if ( ! $cheque ) wp_send_json_error('Please enter a cheque number.');
 
-        HearMed_DB::instance()->update( 'hearmed_core.credit_notes', [
+        // Fetch credit note details for the finance transaction
+        $cn = $db->get_row(
+            "SELECT cn.amount, cn.patient_id, cn.credit_note_number,
+                    COALESCE(inv.clinic_id, o.clinic_id) AS clinic_id
+             FROM hearmed_core.credit_notes cn
+             LEFT JOIN hearmed_core.invoices inv ON inv.id = cn.invoice_id
+             LEFT JOIN hearmed_core.orders o     ON o.id   = cn.order_id
+             WHERE cn.id = \$1",
+            [ $cn_id ]
+        );
+        if ( ! $cn ) wp_send_json_error('Credit note not found.');
+
+        $db->update( 'hearmed_core.credit_notes', [
             'cheque_sent'      => true,
             'cheque_sent_date' => $date,
             'cheque_number'    => $cheque,
             'processed_by'     => $user->id ?? null,
             'processed_at'     => date('Y-m-d H:i:s'),
         ], [ 'id' => $cn_id ] );
+
+        // ── Record cheque refund in financial_transactions ────────────────
+        if ( class_exists( 'HearMed_Finance' ) && floatval( $cn->amount ) > 0 ) {
+            HearMed_Finance::record(
+                'refund',
+                floatval( $cn->amount ),
+                'patient_credit',    // debit: consume the patient credit / liability
+                'bank',              // credit: money leaves the bank (cheque)
+                'credit_note',
+                $cn_id,
+                (int) $cn->patient_id,
+                $cn->clinic_id ? (int) $cn->clinic_id : null,
+                $user->id ?? null,
+                'Cheque refund ' . $cheque . ' for ' . ( $cn->credit_note_number ?? 'CN#' . $cn_id )
+            );
+        }
 
         wp_send_json_success(['message' => 'Refund marked as cheque sent.']);
     }
