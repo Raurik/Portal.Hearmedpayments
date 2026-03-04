@@ -74,8 +74,31 @@ class HearMed_Router {
         // Used inside Elementor HTML widgets (e.g. "Welcome, [hearmed_username]").
         add_shortcode( 'hearmed_username', [ $this, 'shortcode_username' ] );
 
+        /* ═══════════════════════════════════════════════════════════
+         * ██  REDIRECT-LOOP PROTECTION — DO NOT MODIFY  ██████████
+         * ═══════════════════════════════════════════════════════════
+         * These four hooks work together to prevent infinite redirect
+         * loops between /login/ and /calendar/.  They were added to
+         * fix a production outage (ERR_TOO_MANY_REDIRECTS) caused by:
+         *   1. Missing WP pages (calendar deleted during rollback)
+         *   2. Stale WP cookies with no HMSESS portal session
+         *   3. WP redirect_canonical 301-ing portal slugs to root
+         *
+         * If you change priorities, remove hooks, or rename methods
+         * below, users WILL be locked out of the portal.
+         *
+         * See also:
+         *   - auth_redirect()         → stale cookie cleanup + missing page recovery
+         *   - block_portal_canonical() → stops WP 301s on portal slugs
+         *   - ensure_page_exists()    → auto-recreates deleted portal pages
+         *   - admin-staff-login.php   → login shortcode stale-cookie guard
+         *
+         * Last verified working: 2026-03-04
+         * ═══════════════════════════════════════════════════════════ */
+
         // Priority 1: run BEFORE WordPress redirect_canonical (priority 10)
         // so we handle auth redirects before WP can 301 missing pages to root.
+        // DO NOT change this priority or the redirect loop returns.
         add_action( 'template_redirect', [ $this, 'auth_redirect' ], 1 );
         add_filter( 'template_include',  [ $this, 'login_template' ], 999 );
 
@@ -84,12 +107,15 @@ class HearMed_Router {
         // so a cached response leaks one user's session into another's view.
         add_action( 'template_redirect', [ $this, 'disable_page_cache' ], 0 );
 
-        // Prevent WordPress canonical redirect from sending portal pages
-        // to wp-login.php or root. Covers /login AND all portal page slugs.
+        // Block WP canonical redirects for ALL portal slugs.
+        // Without this, WP 301s /calendar/ → / when the page is missing.
+        // DO NOT remove or rename. DO NOT change to only cover /login/.
         add_filter( 'redirect_canonical', [ $this, 'block_portal_canonical' ], 10, 2 );
 
         // Remove WordPress built-in /login → wp-login.php redirect.
         remove_action( 'template_redirect', 'wp_redirect_admin_locations', 1000 );
+
+        /* ══════════ END REDIRECT-LOOP PROTECTION ══════════════════ */
 
         // Bridge: if portal-authenticated but NOT WP-authenticated, set the
         // WP login cookie so SiteGround's Nginx cache is bypassed and
@@ -100,26 +126,32 @@ class HearMed_Router {
         add_action( 'wp_footer', [ $this, 'render_user_bar' ], 98 );
     }
 
-    /**
-     * Prevent WordPress canonical redirect from sending /login to wp-login.php.
+    /* ═══════════════════════════════════════════════════════════════
+     * ██  PORTAL SLUG REGISTRY — DO NOT MODIFY  █████████████████
+     * ═══════════════════════════════════════════════════════════════
+     * Master list of every portal page slug.  Used by:
+     *   - block_portal_canonical()  → prevent WP 301 redirects
+     *   - auth_redirect()           → auto-recreate deleted pages
+     *   - ensure_portal_pages()     → initial page creation
      *
-     * WordPress core (wp-includes/canonical.php) treats /login as a built-in
-     * alias for wp-login.php. When our Login page exists this is usually fine,
-     * but if the page is trashed or the slug changes, WP falls back to the
-     * alias behaviour and creates a redirect loop with disable-wp-login.php.
-     *
-     * Returning false cancels the redirect entirely for /login requests.
-     */
-    /**
-     * Known portal page slugs. Used to block canonical redirects
-     * and to verify/create pages on the fly.
-     */
+     * If you add a new portal page, add its slug here too.
+     * DO NOT remove existing slugs or the redirect loop returns.
+     * ═══════════════════════════════════════════════════════════════ */
     private static $portal_slugs = [
         'login', 'calendar', 'patients', 'orders', 'order-status',
         'accounting', 'repairs', 'refunds', 'stock', 'reporting',
         'notifications', 'kpi', 'clinical-review',
     ];
 
+    /**
+     * Block WordPress canonical redirects for portal pages.
+     *
+     * ██ DO NOT MODIFY — redirect-loop protection ██
+     *
+     * Without this, WP treats missing portal pages (trashed, deleted)
+     * as unknown URLs and 301s them to root or wp-login.php, which
+     * creates an infinite redirect loop with auth_redirect().
+     */
     public function block_portal_canonical( $redirect_url, $requested_url ) {
         $path = trim( parse_url( $requested_url, PHP_URL_PATH ), '/' );
         $slug = basename( $path );
@@ -229,6 +261,13 @@ class HearMed_Router {
     /**
      * Redirect unauthenticated users to /login/ on any portal page.
      * Skips the login page itself and REST/AJAX/Cron requests.
+     *
+     * ██ DO NOT MODIFY without testing the full login→calendar flow. ██
+     * ██ This method contains THREE critical redirect-loop fixes:    ██
+     * ██   1. Stale WP cookie cleanup (lines below)                 ██
+     * ██   2. ensure_page_exists() for missing calendar page         ██
+     * ██   3. Auto-recreate any 404'd portal slug                    ██
+     * ██ Removing any of these causes ERR_TOO_MANY_REDIRECTS.        ██
      */
     public function auth_redirect() {
         if ( defined( 'DOING_AJAX' ) || defined( 'DOING_CRON' ) || defined( 'REST_REQUEST' ) || defined( 'WP_CLI' ) ) return;
@@ -292,6 +331,10 @@ class HearMed_Router {
     /**
      * Ensure a WordPress page with the given slug exists.
      * Creates it if missing. Idempotent.
+     *
+     * ██ DO NOT REMOVE — this is the safety net that auto-recreates ██
+     * ██ portal pages if they get deleted. Without it, deleted pages ██
+     * ██ cause redirect loops that lock all users out.               ██
      */
     private function ensure_page_exists( $slug, $title, $shortcode ) {
         $existing = get_posts( [

@@ -219,8 +219,68 @@ class HearMed_Core {
 
         $this->ensure_privacy_column();
 
+        // Self-test: verify redirect-loop protections are intact.
+        // Runs at most once per hour to avoid overhead.
+        $this->verify_redirect_loop_guards();
+
         // Hook for when system is fully initialized
         do_action( 'hearmed_system_ready' );
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+     * ██  REDIRECT-LOOP SELF-TEST — DO NOT REMOVE  ██████████████████
+     * ═══════════════════════════════════════════════════════════════════
+     * Automated guard that runs once per hour and verifies the three
+     * protections that prevent ERR_TOO_MANY_REDIRECTS are still intact.
+     * If any check fails, it error_logs a CRITICAL warning so it shows
+     * up in server monitoring.
+     *
+     * The three protections:
+     *   1. Portal pages exist in WP (especially 'calendar')
+     *   2. redirect_canonical filter is hooked to block_portal_canonical
+     *   3. template_redirect fires auth_redirect at priority 1
+     *
+     * Last verified working: 2026-03-04
+     * ═══════════════════════════════════════════════════════════════════ */
+    public function verify_redirect_loop_guards() {
+        // Throttle: once per hour
+        $last_check = get_transient( 'hm_redirect_guard_check' );
+        if ( $last_check ) return;
+        set_transient( 'hm_redirect_guard_check', time(), 3600 );
+
+        $errors = [];
+
+        // Check 1: Critical portal pages must be published
+        $critical_pages = [ 'login', 'calendar', 'patients' ];
+        foreach ( $critical_pages as $slug ) {
+            $found = get_posts( [
+                'name'        => $slug,
+                'post_type'   => 'page',
+                'post_status' => 'publish',
+                'numberposts' => 1,
+                'fields'      => 'ids',
+            ] );
+            if ( empty( $found ) ) {
+                $errors[] = 'Portal page "' . $slug . '" is missing or not published';
+            }
+        }
+
+        // Check 2: redirect_canonical filter must be hooked
+        if ( ! has_filter( 'redirect_canonical', [ $this->router, 'block_portal_canonical' ] ) ) {
+            $errors[] = 'block_portal_canonical filter is not attached to redirect_canonical';
+        }
+
+        // Check 3: auth_redirect must be on template_redirect at priority 1
+        $auth_priority = has_action( 'template_redirect', [ $this->router, 'auth_redirect' ] );
+        if ( $auth_priority === false ) {
+            $errors[] = 'auth_redirect is not attached to template_redirect';
+        } elseif ( $auth_priority > 5 ) {
+            $errors[] = 'auth_redirect priority is ' . $auth_priority . ' (must be <=5, should be 1)';
+        }
+
+        if ( ! empty( $errors ) ) {
+            error_log( '[HM CRITICAL] Redirect-loop guards BROKEN — users may be locked out: ' . implode( ' | ', $errors ) );
+        }
     }
 
     /**

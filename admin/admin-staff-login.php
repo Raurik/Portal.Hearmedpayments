@@ -44,11 +44,25 @@ class HearMed_Staff_Login {
             return '<p style="padding:2rem;text-align:center;color:#888;">[HearMed Staff Login]</p>';
         }
 
-        // Already logged in → redirect to calendar.
-        // BUT: only trust portal auth if we have a valid HMSESS session.
-        // If the user only has stale WP cookies (no HMSESS), clear them
-        // and show the login form — otherwise we get an infinite redirect
-        // loop: login→calendar→login→calendar...
+        /* ═══════════════════════════════════════════════════════════
+         * ██  REDIRECT-LOOP GUARD — DO NOT MODIFY  ██████████████████
+         * ═══════════════════════════════════════════════════════════
+         * This block prevents ERR_TOO_MANY_REDIRECTS when a user has
+         * stale WP cookies but no HMSESS portal session.
+         *
+         * How the loop happens without this guard:
+         *   1. User has WP cookie (wordpress_logged_in_*) but no HMSESS
+         *   2. This shortcode sees is_logged_in()=true via resolve_legacy()
+         *   3. Redirects to /calendar/
+         *   4. /calendar/ auth_redirect sees no real session → back to /login/
+         *   5. Infinite loop → browser shows ERR_TOO_MANY_REDIRECTS
+         *
+         * The fix: only redirect if HMSESS cookie actually exists.
+         * If only WP cookies exist, clear them and show login form.
+         *
+         * Paired with: class-hearmed-router.php → auth_redirect()
+         * Last verified working: 2026-03-04
+         * ═══════════════════════════════════════════════════════════ */
         $hmsess = $_COOKIE[ PortalAuth::COOKIE_SESSION ] ?? '';
         $has_portal_session = ( $hmsess && strlen( $hmsess ) >= 32 );
 
@@ -57,12 +71,12 @@ class HearMed_Staff_Login {
             exit;
         }
 
-        // If WP thinks user is logged in but there's no valid HMSESS,
-        // the WP cookies are stale — clear them so we don't loop.
+        // Stale WP cookies with no portal session — evict them.
         if ( ! $has_portal_session && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
             wp_clear_auth_cookie();
             wp_set_current_user( 0 );
         }
+        /* ══════════ END REDIRECT-LOOP GUARD ═══════════════════════ */
 
         $atts = shortcode_atts( [ 'redirect' => home_url( '/calendar/' ) ], $atts );
 
