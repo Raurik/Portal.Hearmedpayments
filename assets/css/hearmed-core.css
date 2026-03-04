@@ -648,6 +648,13 @@
   align-items: center;
   gap: 8px;
 }
+.hm-modal-ft .hm-modal-acts,
+.hm-modal-ft > :last-child {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.hm-modal-ft .hm-btn { flex-shrink: 0; white-space: nowrap; }
 
 /* ── Form group (labels + inputs) — GLOBAL ──────────────────── */
 .hm-form-group { margin-bottom: var(--hm-space-md, 16px); }
