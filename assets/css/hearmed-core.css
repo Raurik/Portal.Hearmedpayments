@@ -558,6 +558,183 @@
   padding: 0; border: none; background: none;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL MODAL & FORM STYLES (body-level)
+   ═══════════════════════════════════════════════════════════════
+   Many modals are appended to <body> (outside #hm-app) via JS.
+   Without these un-scoped rules, those modals get plain browser
+   chrome instead of the teal-themed form styling.
+
+   Covers ALL modal patterns:
+   - .hm-modal-bg             (patients, calendar)
+   - .hm-modal-bg--top        (calendar layered modals)
+   - .hm-outcome-modal-bg     (calendar outcome)
+   - .hm-modal-overlay        (HM.modal() core helper)
+   - #hm-modal-overlay        (patient overlays)
+
+   DO NOT REMOVE — these ensure every modal and form looks
+   consistent site-wide regardless of where it is injected.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Modal backdrop ─────────────────────────────────────────── */
+.hm-modal-bg,
+.hm-modal-overlay,
+#hm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+/* ── Modal container ────────────────────────────────────────── */
+.hm-modal-bg .hm-modal,
+.hm-modal-overlay .hm-modal,
+#hm-modal-overlay .hm-modal {
+  background: #fff;
+  border-radius: 14px;
+  width: 480px;
+  max-width: 94vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+  animation: hmModalIn 0.2s ease;
+}
+.hm-modal.hm-modal--sm  { width: 420px; }
+.hm-modal.hm-modal--md  { width: 540px; }
+.hm-modal.hm-modal--lg  { width: 800px; }
+.hm-modal.hm-modal--xl  { width: 960px; }
+
+/* ── Modal header ───────────────────────────────────────────── */
+.hm-modal-hd {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--hm-border, #e2e8f0);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.hm-modal-hd span,
+.hm-modal-hd h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--hm-navy, #151B33);
+  margin: 0;
+}
+.hm-close {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px;
+  background: var(--hm-bg-hover, #f1f5f9);
+  color: var(--hm-text-muted, #94a3b8);
+  border: none; cursor: pointer; font-size: 16px;
+  transition: all 0.15s;
+}
+.hm-close:hover {
+  background: var(--hm-border, #e2e8f0);
+  color: var(--hm-red, #e53e3e);
+}
+
+/* ── Modal body & footer ────────────────────────────────────── */
+.hm-modal-body { padding: 20px; }
+.hm-modal-ft {
+  padding: 12px 20px;
+  border-top: 1px solid var(--hm-border, #e2e8f0);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Form group (labels + inputs) — GLOBAL ──────────────────── */
+.hm-form-group { margin-bottom: var(--hm-space-md, 16px); }
+.hm-form-group:last-child { margin-bottom: 0; }
+.hm-form-group > label,
+.hm-form-group > .hm-label,
+.hm-fld > label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hm-teal, #0BB4C4);
+  margin-bottom: 5px;
+}
+.hm-form-group input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+.hm-form-group select,
+.hm-form-group textarea,
+.hm-fld input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+.hm-fld select,
+.hm-fld textarea,
+.hm-inp,
+.hm-dd,
+.hm-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--hm-border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--hm-text, #334155);
+  background: var(--hm-bg-input, #fff);
+  transition: all 0.15s;
+  box-sizing: border-box;
+}
+.hm-form-group input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus,
+.hm-form-group select:focus,
+.hm-form-group textarea:focus,
+.hm-fld input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus,
+.hm-fld select:focus,
+.hm-fld textarea:focus,
+.hm-inp:focus,
+.hm-dd:focus,
+.hm-textarea:focus {
+  border: 2px solid var(--hm-teal, #0BB4C4);
+  box-shadow: 0 0 0 3px rgba(11,180,196,0.13);
+  outline: none;
+  padding: 7px 11px;
+}
+
+/* ── Form row (side-by-side fields) ─────────────────────────── */
+.hm-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ── Buttons — GLOBAL ───────────────────────────────────────── */
+.hm-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+}
+.hm-btn--primary {
+  background: var(--hm-teal, #0BB4C4);
+  color: #fff;
+  border-color: var(--hm-teal, #0BB4C4);
+}
+.hm-btn--primary:hover { opacity: 0.85; }
+.hm-btn--secondary {
+  background: transparent;
+  color: var(--hm-text-muted, #94a3b8);
+  border-color: var(--hm-border, #e2e8f0);
+}
+.hm-btn--secondary:hover {
+  background: var(--hm-bg-hover, #f1f5f9);
+}
+.hm-btn-danger,
+.hm-btn--danger {
+  background: var(--hm-red, #e53e3e);
+  color: #fff;
+  border-color: var(--hm-red, #e53e3e);
+}
+.hm-btn-danger:hover,
+.hm-btn--danger:hover { opacity: 0.85; }
+
 /* Global input focus (outside form-group) */
 #hm-app input,
 #hm-app select,
