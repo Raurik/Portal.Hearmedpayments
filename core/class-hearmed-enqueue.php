@@ -389,7 +389,7 @@ class HearMed_Enqueue {
         ]);
         
         $this->detect_and_load( 'repairs', $content, [
-            'hearmed_repairs', 'hearmed_stock', 'hearmed_refunds',
+            'hearmed_repairs',
         ]);
         
         $this->detect_and_load( 'notifications', $content, [
