@@ -118,6 +118,8 @@ class HearMed_Stock {
         .hm-stock-tab .pill{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;font-size:11px;font-weight:600;margin-left:6px;background:rgba(0,0,0,.08);color:inherit}
         .hm-stock-tab.active .pill{background:rgba(255,255,255,.2);color:#fff}
         .hm-stock-actions{display:flex;gap:8px}
+        .hm-stock-link-btn{background:transparent !important;border:none !important;color:var(--hm-teal,#0BB4C4) !important;box-shadow:none !important;padding:4px 6px !important;font-weight:700;font-size:13px;cursor:pointer}
+        .hm-stock-link-btn:hover{text-decoration:underline;color:var(--hm-navy,#151B33) !important;background:transparent !important}
         .hm-stock-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
         .hm-stock-top-row .hm-stats{margin:0;flex:1;min-width:0}
         .hm-stock-filters{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;margin:0;flex:0 0 auto}
@@ -137,9 +139,9 @@ class HearMed_Stock {
             <div class="hm-page-header">
                 <h1 class="hm-page-title">Stock &amp; Inventory</h1>
                 <div class="hm-stock-actions">
-                    <button class="hm-btn hm-btn--secondary" id="hm-stock-template-btn">CSV Template</button>
-                    <button class="hm-btn hm-btn--secondary" id="hm-stock-import-btn">Import Stock</button>
-                    <button class="hm-btn hm-btn--primary" id="hm-stock-add-btn">+ Add Stock</button>
+                    <button class="hm-btn hm-stock-link-btn" id="hm-stock-template-btn">+ CSV Template</button>
+                    <button class="hm-btn hm-stock-link-btn" id="hm-stock-import-btn">+ Import Stock</button>
+                    <button class="hm-btn hm-stock-link-btn" id="hm-stock-add-btn">+ Add Stock</button>
                 </div>
             </div>
 
