@@ -30,8 +30,10 @@ class HearMed_Stock {
         add_action( 'wp_ajax_hm_stock_hearing_aids',  [ __CLASS__, 'ajax_load_hearing_aids' ] );
         add_action( 'wp_ajax_hm_stock_consumables',   [ __CLASS__, 'ajax_load_consumables' ] );
         add_action( 'wp_ajax_hm_stock_movements',     [ __CLASS__, 'ajax_load_movements' ] );
+        add_action( 'wp_ajax_hm_stock_category',      [ __CLASS__, 'ajax_load_category' ] );
         add_action( 'wp_ajax_hm_stock_transfer',      [ __CLASS__, 'ajax_transfer' ] );
         add_action( 'wp_ajax_hm_stock_add',           [ __CLASS__, 'ajax_add_stock' ] );
+        add_action( 'wp_ajax_hm_stock_import_csv',    [ __CLASS__, 'ajax_import_csv' ] );
         add_action( 'wp_ajax_hm_stock_adjust_qty',    [ __CLASS__, 'ajax_adjust_quantity' ] );
         add_action( 'wp_ajax_hm_stock_reserve',       [ __CLASS__, 'ajax_reserve' ] );
         // Legacy compat
@@ -115,6 +117,7 @@ class HearMed_Stock {
         .hm-stock-tab.active{background:var(--hm-navy,#151B33);color:#fff;border-color:var(--hm-navy,#151B33)}
         .hm-stock-tab .pill{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;font-size:11px;font-weight:600;margin-left:6px;background:rgba(0,0,0,.08);color:inherit}
         .hm-stock-tab.active .pill{background:rgba(255,255,255,.2);color:#fff}
+        .hm-stock-actions{display:flex;gap:8px}
         .hm-stock-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
         .hm-stock-top-row .hm-stats{margin:0;flex:1;min-width:0}
         .hm-stock-filters{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;margin:0;flex:0 0 auto}
@@ -133,7 +136,9 @@ class HearMed_Stock {
         <div id="hm-stock-app" class="hm-content">
             <div class="hm-page-header">
                 <h1 class="hm-page-title">Stock &amp; Inventory</h1>
-                <div style="display:flex;gap:8px;">
+                <div class="hm-stock-actions">
+                    <button class="hm-btn hm-btn--secondary" id="hm-stock-template-btn">CSV Template</button>
+                    <button class="hm-btn hm-btn--secondary" id="hm-stock-import-btn">Import Stock</button>
                     <button class="hm-btn hm-btn--primary" id="hm-stock-add-btn">+ Add Stock</button>
                 </div>
             </div>
@@ -142,6 +147,9 @@ class HearMed_Stock {
             <div class="hm-stock-tabs" id="hm-stock-tabs">
                 <div class="hm-stock-tab active" data-tab="hearing_aids">Hearing Aids <span class="pill" id="ha-count">0</span></div>
                 <div class="hm-stock-tab" data-tab="consumables">Consumables <span class="pill" id="cons-count">0</span></div>
+                <div class="hm-stock-tab" data-tab="domes_filters">Domes / Filters <span class="pill" id="dome-count">0</span></div>
+                <div class="hm-stock-tab" data-tab="speakers">Speakers <span class="pill" id="speaker-count">0</span></div>
+                <div class="hm-stock-tab" data-tab="chargers_accessories">Chargers / Accessories <span class="pill" id="charger-count">0</span></div>
                 <div class="hm-stock-tab" data-tab="movements">Movements Log</div>
             </div>
 
@@ -198,6 +206,9 @@ class HearMed_Stock {
                             <select class="hm-input" id="add-category">
                                 <option value="hearing_aid">Hearing Aid</option>
                                 <option value="consumable">Consumable</option>
+                                <option value="dome_filter">Domes / Filters</option>
+                                <option value="speaker">Speakers</option>
+                                <option value="charger_accessory">Chargers / Accessories</option>
                             </select></div>
                         <div class="hm-form-group" style="flex:1"><label class="hm-label">Clinic *</label>
                             <select class="hm-input" id="add-clinic"><option value="">— Select —</option></select></div>
@@ -250,11 +261,73 @@ class HearMed_Stock {
             </div>
         </div>
 
+        <div class="hm-modal-bg" id="hm-stock-csv-modal" style="display:none">
+            <div class="hm-modal hm-modal--sm">
+                <div class="hm-modal-hd"><h3>Stock CSV Tools</h3><button class="hm-close hm-modal-close">&times;</button></div>
+                <div class="hm-modal-body">
+                    <div class="hm-form-group">
+                        <label class="hm-label">Choose stock template</label>
+                        <select class="hm-input" id="hm-stock-template-type">
+                            <option value="hearing_aids">Hearing Aids</option>
+                            <option value="consumables">Consumables</option>
+                            <option value="domes_filters">Domes / Filters</option>
+                            <option value="speakers">Speakers</option>
+                            <option value="chargers_accessories">Chargers / Accessories</option>
+                        </select>
+                    </div>
+                    <div class="hm-form-group" id="hm-stock-import-file-wrap" style="display:none">
+                        <label class="hm-label">CSV file</label>
+                        <input type="file" class="hm-input" id="hm-stock-import-file" accept=".csv,text/csv">
+                        <small style="color:var(--hm-grey,#64748b)">CSV headers must match the selected template.</small>
+                    </div>
+                </div>
+                <div class="hm-modal-ft">
+                    <button class="hm-btn hm-btn--secondary hm-modal-close">Close</button>
+                    <button class="hm-btn hm-btn--secondary" id="hm-stock-download-template">Download Template</button>
+                    <button class="hm-btn hm-btn--primary" id="hm-stock-run-import">Import CSV</button>
+                </div>
+            </div>
+        </div>
+
         <script>
         (function($){
         var _hm = window._hm || {ajax:'<?php echo admin_url("admin-ajax.php"); ?>',nonce:'<?php echo esc_js($nonce); ?>'};
         var currentTab = 'hearing_aids';
         var clinicCache = [], mfrCache = [];
+        var categoryMap = {
+            hearing_aids:{item_category:'hearing_aid',count:'#ha-count',label:'Hearing Aids'},
+            consumables:{item_category:'consumable',count:'#cons-count',label:'Consumables'},
+            domes_filters:{item_category:'dome_filter',count:'#dome-count',label:'Domes / Filters'},
+            speakers:{item_category:'speaker',count:'#speaker-count',label:'Speakers'},
+            chargers_accessories:{item_category:'charger_accessory',count:'#charger-count',label:'Chargers / Accessories'}
+        };
+        var csvTemplates = {
+            hearing_aids:{
+                filename:'stock_template_hearing_aids.csv',
+                headers:['clinic_name','manufacturer_name','model_name','style','technology_level','serial_number','specification','status'],
+                sample:['Dublin City','Phonak','Audeo Lumity 70','RIC','Advanced','PH123456','Demo device','Available']
+            },
+            consumables:{
+                filename:'stock_template_consumables.csv',
+                headers:['clinic_name','manufacturer_name','model_name','specification','quantity','status'],
+                sample:['Dublin City','Oticon','Wax Guard Pack','10 pack',50,'Available']
+            },
+            domes_filters:{
+                filename:'stock_template_domes_filters.csv',
+                headers:['clinic_name','manufacturer_name','model_name','style','specification','quantity','status'],
+                sample:['Dublin City','Phonak','CeruShield','Filter','Black discs',30,'Available']
+            },
+            speakers:{
+                filename:'stock_template_speakers.csv',
+                headers:['clinic_name','manufacturer_name','model_name','style','technology_level','specification','quantity','status'],
+                sample:['Dublin City','Phonak','Receiver 2xM','Speaker','M','Left/Right set',10,'Available']
+            },
+            chargers_accessories:{
+                filename:'stock_template_chargers_accessories.csv',
+                headers:['clinic_name','manufacturer_name','model_name','specification','quantity','status'],
+                sample:['Dublin City','Phonak','Charger Case Go','Travel charger',8,'Available']
+            }
+        };
 
         function esc(s){ return $('<span>').text(s||'').html(); }
 
@@ -309,6 +382,7 @@ class HearMed_Stock {
         function loadTab(tab){
             if(tab==='hearing_aids') loadHearingAids();
             else if(tab==='consumables') loadConsumables();
+            else if(tab==='domes_filters' || tab==='speakers' || tab==='chargers_accessories') loadCategory(tab);
             else loadMovements();
 
             // Show/hide filters
@@ -418,6 +492,50 @@ class HearMed_Stock {
             $('#hm-stock-table').html(h);
         }
 
+        function loadCategory(tab){
+            var c = categoryMap[tab];
+            if(!c) return;
+            var params = {
+                action:'hm_stock_category', nonce:_hm.nonce,
+                item_category:c.item_category,
+                clinic_id:$('#hm-stock-clinic').val(),
+                manufacturer_id:$('#hm-stock-mfr').val(),
+                search:$('#hm-stock-search').val()
+            };
+            $.post(_hm.ajax, params, function(r){
+                if(!r||!r.success){ $('#hm-stock-table').html('<div class="hm-empty"><div class="hm-empty-text">Failed to load</div></div>'); return; }
+                var rows = r.data.rows||[];
+                var stats = r.data.stats||{};
+                $(c.count).text(stats.total||0);
+                var h='<div class="hm-stat"><div class="hm-stat-val">'+(stats.total||0)+'</div><div class="hm-stat-label">Total Lines</div></div>'+
+                      '<div class="hm-stat"><div class="hm-stat-val">'+(stats.total_qty||0)+'</div><div class="hm-stat-label">Total Units</div></div>';
+                $('#hm-stock-stats').html(h);
+                renderCategoryTable(rows,c.label);
+            });
+        }
+
+        function renderCategoryTable(rows,label){
+            if(!rows.length){ $('#hm-stock-table').html('<div class="hm-empty"><div class="hm-empty-text">No '+esc(label)+' match filters</div></div>'); return; }
+            var h='<table class="hm-table"><thead><tr><th>Manufacturer</th><th>Item</th><th>Style</th><th>Tech</th><th>Specification</th><th>Clinic</th><th style="text-align:center">Qty</th><th></th></tr></thead><tbody>';
+            rows.forEach(function(x){
+                var low = parseInt(x.quantity||0) <= 5;
+                h+='<tr>'+
+                    '<td>'+esc(x.manufacturer_name)+'</td>'+
+                    '<td style="font-weight:500">'+esc(x.model_name)+'</td>'+
+                    '<td>'+esc(x.style||'—')+'</td>'+
+                    '<td>'+esc(x.technology_level||'—')+'</td>'+
+                    '<td>'+esc(x.specification||'—')+'</td>'+
+                    '<td>'+esc(x.clinic_name)+'</td>'+
+                    '<td style="text-align:center">'+(low?'<span class="hm-low-stock">'+esc(x.quantity)+'</span>':esc(x.quantity))+'</td>'+
+                    '<td style="display:flex;gap:4px">'+
+                        '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-stock-adjust" data-id="'+x._ID+'" data-qty="'+esc(x.quantity)+'" data-name="'+esc(x.model_name)+'">Adjust Qty</button>'+
+                        '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-stock-transfer" data-id="'+x._ID+'">Transfer</button>'+
+                    '</td></tr>';
+            });
+            h+='</tbody></table>';
+            $('#hm-stock-table').html(h);
+        }
+
         // ── TAB 3: Movements Log ──────────────────────────────────
         function loadMovements(){
             $.post(_hm.ajax,{action:'hm_stock_movements',nonce:_hm.nonce},function(r){
@@ -515,6 +633,93 @@ class HearMed_Stock {
                 $('#hm-adjust-modal').fadeOut(150);
                 if(r.success) loadTab(currentTab); else alert(r.data?.message||r.data||'Failed');
             });
+        });
+
+        function toCsvLine(arr){
+            return arr.map(function(v){
+                var s=String(v==null?'':v);
+                if(/[",\n]/.test(s)) s='"'+s.replace(/"/g,'""')+'"';
+                return s;
+            }).join(',');
+        }
+
+        function parseCsv(text){
+            var lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(function(l){return $.trim(l).length>0;});
+            if(!lines.length) return [];
+            function parseLine(line){
+                var out=[],cur='',inQ=false;
+                for(var i=0;i<line.length;i++){
+                    var ch=line.charAt(i),nx=line.charAt(i+1);
+                    if(ch==='"'){
+                        if(inQ&&nx==='"'){cur+='"';i++;}
+                        else inQ=!inQ;
+                    } else if(ch===','&&!inQ){ out.push(cur); cur=''; }
+                    else cur+=ch;
+                }
+                out.push(cur);
+                return out;
+            }
+            var headers=parseLine(lines[0]).map(function(h){return $.trim(h);});
+            var rows=[];
+            for(var r=1;r<lines.length;r++){
+                var vals=parseLine(lines[r]);
+                var row={};
+                headers.forEach(function(h,idx){row[h]=vals[idx]!=null?$.trim(vals[idx]):'';});
+                rows.push(row);
+            }
+            return rows;
+        }
+
+        function openCsvModal(forImport){
+            $('#hm-stock-import-file').val('');
+            $('#hm-stock-import-file-wrap').toggle(!!forImport);
+            $('#hm-stock-run-import').toggle(!!forImport);
+            $('#hm-stock-csv-modal').fadeIn(150);
+        }
+
+        $('#hm-stock-template-btn').on('click',function(){ openCsvModal(false); });
+        $('#hm-stock-import-btn').on('click',function(){ openCsvModal(true); });
+
+        $('#hm-stock-download-template').on('click',function(){
+            var t=$('#hm-stock-template-type').val();
+            var cfg=csvTemplates[t];
+            if(!cfg) return;
+            var csv=toCsvLine(cfg.headers)+'\n'+toCsvLine(cfg.sample)+'\n';
+            var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+            var url=URL.createObjectURL(blob);
+            var a=document.createElement('a');
+            a.href=url; a.download=cfg.filename; document.body.appendChild(a); a.click();
+            setTimeout(function(){URL.revokeObjectURL(url);a.remove();},0);
+        });
+
+        $('#hm-stock-run-import').on('click',function(){
+            var btn=$(this);
+            var templateType=$('#hm-stock-template-type').val();
+            var file=$('#hm-stock-import-file')[0].files[0];
+            if(!file){ alert('Please choose a CSV file'); return; }
+            var reader=new FileReader();
+            btn.prop('disabled',true).text('Importing…');
+            reader.onload=function(){
+                try{
+                    var rows=parseCsv(String(reader.result||''));
+                    if(!rows.length){ btn.prop('disabled',false).text('Import CSV'); alert('CSV has no rows'); return; }
+                    $.post(_hm.ajax,{action:'hm_stock_import_csv',nonce:_hm.nonce,template_type:templateType,rows_json:JSON.stringify(rows)},function(r){
+                        btn.prop('disabled',false).text('Import CSV');
+                        if(r&&r.success){
+                            $('#hm-stock-csv-modal').fadeOut(150);
+                            alert('Imported '+(r.data.imported||0)+' rows'+((r.data.failed||0)>0?' ('+r.data.failed+' failed)':''));
+                            loadTab(currentTab);
+                        } else {
+                            var msg=(r&&r.data&&r.data.message)?r.data.message:(r&&r.data?r.data:'Import failed');
+                            alert(msg);
+                        }
+                    });
+                } catch(e){
+                    btn.prop('disabled',false).text('Import CSV');
+                    alert('Unable to parse CSV');
+                }
+            };
+            reader.readAsText(file);
         });
 
         // ── Modal close ────────────────────────────────────────────
@@ -649,6 +854,64 @@ class HearMed_Stock {
         ]);
     }
 
+    public static function ajax_load_category() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+        self::ensure_tables();
+        $db = HearMed_DB::instance();
+
+        $allowed = [ 'consumable', 'dome_filter', 'speaker', 'charger_accessory' ];
+        $category = sanitize_key( $_POST['item_category'] ?? '' );
+        if ( ! in_array( $category, $allowed, true ) ) {
+            wp_send_json_error( 'Invalid category' );
+        }
+
+        $where = [ "s.item_category = '{$category}'" ];
+        $params = [];
+        $i = 1;
+
+        $clinic = intval( $_POST['clinic_id'] ?? 0 );
+        if ( $clinic ) { $where[] = "s.clinic_id = \${$i}"; $params[] = $clinic; $i++; }
+
+        $mfr = intval( $_POST['manufacturer_id'] ?? 0 );
+        if ( $mfr ) { $where[] = "s.manufacturer_id = \${$i}"; $params[] = $mfr; $i++; }
+
+        $search = sanitize_text_field( $_POST['search'] ?? '' );
+        if ( $search ) {
+            $where[] = "(s.model_name ILIKE \${$i} OR s.specification ILIKE \${$i} OR m.name ILIKE \${$i})";
+            $params[] = '%' . $search . '%';
+            $i++;
+        }
+
+        $w = implode( ' AND ', $where );
+
+        $rows = $db->get_results(
+            "SELECT s.id AS \"_ID\", s.model_name, s.style, s.technology_level, s.specification, s.quantity,
+                    COALESCE(m.name, '') AS manufacturer_name,
+                    COALESCE(c.clinic_name, 'Unassigned') AS clinic_name
+             FROM hearmed_reference.inventory_stock s
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = s.manufacturer_id
+             LEFT JOIN hearmed_reference.clinics c ON c.id = s.clinic_id
+             WHERE {$w}
+             ORDER BY m.name, s.model_name",
+            $params
+        );
+
+        $stats = $db->get_row(
+            "SELECT COUNT(*) AS total, SUM(quantity) AS total_qty
+             FROM hearmed_reference.inventory_stock
+             WHERE item_category = $1",
+            [ $category ]
+        );
+
+        wp_send_json_success([
+            'rows'  => $rows ?: [],
+            'stats' => [
+                'total'     => (int) ( $stats->total ?? 0 ),
+                'total_qty' => (int) ( $stats->total_qty ?? 0 ),
+            ],
+        ]);
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // AJAX: Load Movements Log
     // ═══════════════════════════════════════════════════════════════════════
@@ -767,7 +1030,7 @@ class HearMed_Stock {
             'technology_level' => $tech ?: null,
             'serial_number'    => ( $category === 'hearing_aid' && $serial ) ? $serial : null,
             'specification'    => $spec ?: null,
-            'quantity'         => ( $category === 'consumable' ) ? max( 1, $qty ) : 1,
+            'quantity'         => ( $category === 'hearing_aid' ) ? 1 : max( 1, $qty ),
             'status'           => 'Available',
         ];
 
@@ -786,6 +1049,118 @@ class HearMed_Stock {
         ] );
 
         wp_send_json_success( [ 'message' => 'Stock added', 'id' => $id ] );
+    }
+
+    public static function ajax_import_csv() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+        self::ensure_tables();
+
+        $template_type = sanitize_key( $_POST['template_type'] ?? '' );
+        $rows_json = wp_unslash( $_POST['rows_json'] ?? '[]' );
+        $rows = json_decode( $rows_json, true );
+
+        $template_to_category = [
+            'hearing_aids' => 'hearing_aid',
+            'consumables' => 'consumable',
+            'domes_filters' => 'dome_filter',
+            'speakers' => 'speaker',
+            'chargers_accessories' => 'charger_accessory',
+        ];
+
+        if ( ! isset( $template_to_category[ $template_type ] ) ) {
+            wp_send_json_error( [ 'message' => 'Invalid template type' ] );
+        }
+        if ( ! is_array( $rows ) || empty( $rows ) ) {
+            wp_send_json_error( [ 'message' => 'No CSV rows provided' ] );
+        }
+
+        $category = $template_to_category[ $template_type ];
+        $db = HearMed_DB::instance();
+        $user = HearMed_Auth::current_user();
+        $created_by = trim( ( $user->first_name ?? '' ) . ' ' . ( $user->last_name ?? '' ) );
+
+        $clinic_rows = $db->get_results( "SELECT id, clinic_name FROM hearmed_reference.clinics" ) ?: [];
+        $mfr_rows = $db->get_results( "SELECT id, name FROM hearmed_reference.manufacturers" ) ?: [];
+
+        $clinics = [];
+        foreach ( $clinic_rows as $c ) { $clinics[ strtolower( trim( $c->clinic_name ) ) ] = intval( $c->id ); }
+        $mfrs = [];
+        foreach ( $mfr_rows as $m ) { $mfrs[ strtolower( trim( $m->name ) ) ] = intval( $m->id ); }
+
+        $imported = 0;
+        $failed = 0;
+        $errors = [];
+
+        foreach ( $rows as $idx => $row ) {
+            $line = $idx + 2;
+            $clinic_name = strtolower( trim( strval( $row['clinic_name'] ?? '' ) ) );
+            $model_name  = trim( strval( $row['model_name'] ?? '' ) );
+            $mfr_name    = strtolower( trim( strval( $row['manufacturer_name'] ?? '' ) ) );
+            $status      = trim( strval( $row['status'] ?? 'Available' ) );
+            $allowed_statuses = [ 'Available', 'Reserved', 'Fitted', 'Returned' ];
+            if ( ! in_array( $status, $allowed_statuses, true ) ) $status = 'Available';
+
+            if ( empty( $clinic_name ) || empty( $clinics[ $clinic_name ] ) ) {
+                $failed++; $errors[] = 'Line ' . $line . ': Clinic not found.'; continue;
+            }
+            if ( $model_name === '' ) {
+                $failed++; $errors[] = 'Line ' . $line . ': model_name is required.'; continue;
+            }
+
+            $clinic_id = $clinics[ $clinic_name ];
+            $mfr_id = $mfr_name !== '' && isset( $mfrs[ $mfr_name ] ) ? $mfrs[ $mfr_name ] : null;
+            $serial = trim( strval( $row['serial_number'] ?? '' ) );
+
+            if ( $category === 'hearing_aid' && $serial === '' ) {
+                $failed++; $errors[] = 'Line ' . $line . ': serial_number is required for hearing aids.'; continue;
+            }
+            if ( $category === 'hearing_aid' && $serial !== '' ) {
+                $dup = $db->get_var( "SELECT id FROM hearmed_reference.inventory_stock WHERE serial_number = $1", [ $serial ] );
+                if ( $dup ) {
+                    $failed++; $errors[] = 'Line ' . $line . ': serial_number already exists.'; continue;
+                }
+            }
+
+            $qty = intval( $row['quantity'] ?? 1 );
+            if ( $category === 'hearing_aid' ) $qty = 1;
+            if ( $qty < 1 ) $qty = 1;
+
+            $data = [
+                'item_category'    => $category,
+                'clinic_id'        => $clinic_id,
+                'manufacturer_id'  => $mfr_id,
+                'model_name'       => $model_name,
+                'style'            => trim( strval( $row['style'] ?? '' ) ) ?: null,
+                'technology_level' => trim( strval( $row['technology_level'] ?? '' ) ) ?: null,
+                'serial_number'    => $serial ?: null,
+                'specification'    => trim( strval( $row['specification'] ?? '' ) ) ?: null,
+                'quantity'         => $qty,
+                'status'           => $status,
+            ];
+
+            $id = $db->insert( 'hearmed_reference.inventory_stock', $data );
+            if ( ! $id ) {
+                $failed++; $errors[] = 'Line ' . $line . ': insert failed.'; continue;
+            }
+
+            $db->insert( 'hearmed_reference.stock_movements', [
+                'stock_id'       => $id,
+                'movement_type'  => 'imported',
+                'to_clinic_id'   => $clinic_id,
+                'quantity'       => $qty,
+                'notes'          => 'Imported via CSV (' . $template_type . ')',
+                'created_by'     => $created_by ?: 'System',
+                'created_at'     => date( 'Y-m-d H:i:s' ),
+            ] );
+
+            $imported++;
+        }
+
+        wp_send_json_success([
+            'imported' => $imported,
+            'failed' => $failed,
+            'errors' => array_slice( $errors, 0, 20 ),
+        ]);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
