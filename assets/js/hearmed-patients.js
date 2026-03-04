@@ -1586,6 +1586,7 @@ function initProfile(){
         e.preventDefault();
         closeModal(); // close any open modal (e.g. the order-prompt after add-HA)
         var pName=(patient&&patient.name)||(patient&&(patient.first_name+' '+patient.last_name))||'';
+        var orderCreateUrl='/orders/?hm_action=create&patient_id='+encodeURIComponent(pid||0);
         if(typeof window.HM_openOrderPage==='function'){
             HM_openOrderPage({
                 patient_id:pid,
@@ -1600,7 +1601,7 @@ function initProfile(){
                 }
             });
         } else {
-            toast('Order page not available — please refresh the page','error');
+            window.location=orderCreateUrl;
         }
     });
 

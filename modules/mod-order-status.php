@@ -29,7 +29,7 @@ function hm_render_order_status_page() {
     $db = HearMed_DB::instance();
 
     // Summary counts
-    $approved_count = (int) $db->get_var("SELECT COUNT(*) FROM hearmed_core.orders WHERE current_status = 'Approved'");
+    $approved_count = (int) $db->get_var("SELECT COUNT(*) FROM hearmed_core.orders WHERE LOWER(TRIM(current_status)) IN ('approved','awaiting order')");
     $ordered_count  = (int) $db->get_var("SELECT COUNT(*) FROM hearmed_core.orders WHERE current_status = 'Ordered'");
 
     // Aging alerts for ordered items
@@ -317,7 +317,7 @@ function hm_ajax_order_status_load() {
              LEFT JOIN hearmed_core.order_items oi ON oi.order_id = o.id AND oi.item_type = 'product'
              LEFT JOIN hearmed_reference.products pr ON pr.id = oi.item_id
              LEFT JOIN hearmed_reference.manufacturers m ON m.id = pr.manufacturer_id
-             WHERE o.current_status = 'Approved'
+               WHERE LOWER(TRIM(o.current_status)) IN ('approved','awaiting order')
              ORDER BY o.approved_date ASC, o.created_at ASC"
         );
 
@@ -455,8 +455,12 @@ function hm_ajax_os_mark_ordered() {
     $now      = current_time('Y-m-d H:i:s');
 
     $order = $db->get_row("SELECT * FROM hearmed_core.orders WHERE id = \$1", [$order_id]);
-    if (!$order || $order->current_status !== 'Approved') {
-        wp_send_json_error(['msg' => 'Order not found or not in Approved state']); return;
+    if (!$order) {
+        wp_send_json_error(['msg' => 'Order not found']); return;
+    }
+    $curr = strtolower(trim((string)($order->current_status ?? '')));
+    if (!in_array($curr, ['approved', 'awaiting order'], true)) {
+        wp_send_json_error(['msg' => 'Order is not in Awaiting Order state']); return;
     }
 
     $db->query(
@@ -466,11 +470,11 @@ function hm_ajax_os_mark_ordered() {
 
     $db->query(
         "INSERT INTO hearmed_core.order_status_history (order_id, from_status, to_status, changed_by, changed_at) VALUES (\$1, \$2, \$3, \$4, \$5)",
-        [$order_id, 'Approved', 'Ordered', $staff_id, $now]
+        [$order_id, $order->current_status, 'Ordered', $staff_id, $now]
     );
 
     if (function_exists('hm_audit_log')) {
-        hm_audit_log($staff_id, 'order_placed', 'order', $order_id, ['status' => 'Approved'], ['status' => 'Ordered']);
+        hm_audit_log($staff_id, 'order_placed', 'order', $order_id, ['status' => $order->current_status], ['status' => 'Ordered']);
     }
 
     wp_send_json_success(['order_id' => $order_id, 'new_status' => 'Ordered']);
