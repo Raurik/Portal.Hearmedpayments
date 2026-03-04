@@ -44,17 +44,24 @@ class HearMed_Staff_Login {
             return '<p style="padding:2rem;text-align:center;color:#888;">[HearMed Staff Login]</p>';
         }
 
-        // Already logged in → the standalone login-page.php template
-        // handles this case with a "Logged in as X" screen.
-        // If this shortcode somehow runs anyway (e.g. on a non-login page),
-        // redirect to calendar.
-        if ( PortalAuth::is_v2() && PortalAuth::is_logged_in() ) {
+        // Already logged in → redirect to calendar.
+        // BUT: only trust portal auth if we have a valid HMSESS session.
+        // If the user only has stale WP cookies (no HMSESS), clear them
+        // and show the login form — otherwise we get an infinite redirect
+        // loop: login→calendar→login→calendar...
+        $hmsess = $_COOKIE[ PortalAuth::COOKIE_SESSION ] ?? '';
+        $has_portal_session = ( $hmsess && strlen( $hmsess ) >= 32 );
+
+        if ( PortalAuth::is_logged_in() && $has_portal_session ) {
             wp_redirect( home_url( '/calendar/' ) );
             exit;
         }
-        if ( ! PortalAuth::is_v2() && PortalAuth::is_logged_in() ) {
-            wp_redirect( home_url( '/calendar/' ) );
-            exit;
+
+        // If WP thinks user is logged in but there's no valid HMSESS,
+        // the WP cookies are stale — clear them so we don't loop.
+        if ( ! $has_portal_session && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
+            wp_clear_auth_cookie();
+            wp_set_current_user( 0 );
         }
 
         $atts = shortcode_atts( [ 'redirect' => home_url( '/calendar/' ) ], $atts );

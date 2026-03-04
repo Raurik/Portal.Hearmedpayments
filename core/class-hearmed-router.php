@@ -228,6 +228,20 @@ class HearMed_Router {
         // Don't redirect WordPress admin or REST API requests
         if ( strpos( $uri, 'wp-admin' ) === 0 || strpos( $uri, 'wp-json' ) === 0 ) return;
 
+        // Check for a real portal session (HMSESS cookie exists and is plausible).
+        // If the user only has stale WP cookies (no HMSESS), clear them and
+        // redirect to login — without this, resolve_legacy() bridges WP cookies
+        // into a "logged in" state that the login page also sees, creating a
+        // redirect loop: /login/ → /calendar/ → /login/ → ...
+        $hmsess_cookie = $_COOKIE[ PortalAuth::COOKIE_SESSION ] ?? '';
+        $has_hmsess    = ( $hmsess_cookie && strlen( $hmsess_cookie ) >= 32 );
+
+        if ( ! $has_hmsess && function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
+            // Stale WP cookies with no portal session — evict them.
+            wp_clear_auth_cookie();
+            wp_set_current_user( 0 );
+        }
+
         // If not authenticated via portal, redirect to login
         if ( ! PortalAuth::is_logged_in() ) {
             nocache_headers();
