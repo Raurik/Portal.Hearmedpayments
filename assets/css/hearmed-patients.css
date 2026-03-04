@@ -407,9 +407,9 @@
 .hm-profile-tabs::-webkit-scrollbar-thumb { background: #7dd3fc; border-radius: 999px; }
 
 .hm-tab-btn {
-  flex: 0 0 auto;
-  padding: 11px 10px;
-  font-size: 12.5px;
+  flex: 1 1 0%;
+  padding: 11px 4px;
+  font-size: 13px;
   font-weight: 500; color: #64748b;
   background: transparent; border: none; cursor: pointer;
   border-bottom: 2px solid transparent; margin-bottom: 0;
