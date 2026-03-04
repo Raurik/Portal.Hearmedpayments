@@ -356,6 +356,7 @@ function initProfile(){
         {id:'notes',label:'Notes'},{id:'documents',label:'Documents'},{id:'orders',label:'Orders'},
         {id:'invoices',label:'Invoices'},{id:'hearing-aids',label:'Hearing Aids'},{id:'repairs',label:'Repairs'},
         {id:'returns',label:'Returns'},{id:'forms',label:'Forms'},{id:'case-history',label:'Case History'},
+        {id:'account',label:'Account'},
         {id:'activity',label:'Activity'}
     ];
 
@@ -440,6 +441,7 @@ function initProfile(){
             case 'activity':loadActivity($c);break;
             case 'orders':loadOrders($c);break;
             case 'invoices':loadInvoices($c);break;
+            case 'account':loadAccount($c);break;
             default:$c.html('<div class="hm-empty">Tab not found</div>');
         }
     }
@@ -1637,6 +1639,88 @@ function initProfile(){
             showDownloadConsent('I confirm this document is being shared for the purpose of providing healthcare to this patient, and that the patient has been informed their data will be shared with the receiving party.',function(){
                 window.open(_hm.ajax+'?action=hm_download_invoice&nonce='+_hm.nonce+'&_ID='+id,'_blank');
             });
+        });
+    }
+
+    /* ── ACCOUNT ── */
+    function loadAccount($c){
+        $c.html(
+            '<div class="hm-tab-section">'+
+            '<div class="hm-settings-panel" style="margin-bottom:16px;">'+
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'+
+                    '<h3 style="margin:0;font-size:15px;font-weight:600;color:var(--hm-navy);">Patient Account</h3>'+
+                    '<div id="hm-account-balance-badge" style="font-size:14px;font-weight:700;padding:6px 16px;border-radius:20px;background:#f5f5f5;border:1px solid #e0e0e0;color:#888;">'+
+                        'Available Credit: &euro;<span id="hm-account-balance">0.00</span>'+
+                    '</div>'+
+                '</div>'+
+                '<h4 style="font-size:13px;font-weight:600;color:var(--hm-text);margin:20px 0 8px;">Credits</h4>'+
+                '<table class="hm-table" id="hm-credits-table"><thead><tr>'+
+                    '<th>Credit Note</th><th>Date</th><th>Original</th><th>Used</th><th>Remaining</th><th>Status</th>'+
+                '</tr></thead><tbody id="hm-credits-tbody">'+
+                    '<tr><td colspan="6" class="hm-muted" style="text-align:center;padding:20px;">Loading\u2026</td></tr>'+
+                '</tbody></table>'+
+                '<h4 style="font-size:13px;font-weight:600;color:var(--hm-text);margin:20px 0 8px;">Transaction History</h4>'+
+                '<table class="hm-table" id="hm-transactions-table"><thead><tr>'+
+                    '<th>Date</th><th>Type</th><th>Amount</th><th>Reference</th><th>Staff</th><th>Notes</th>'+
+                '</tr></thead><tbody id="hm-transactions-tbody">'+
+                    '<tr><td colspan="6" class="hm-muted" style="text-align:center;padding:20px;">Loading\u2026</td></tr>'+
+                '</tbody></table>'+
+            '</div></div>'
+        );
+        $.post(_hm.ajax,{action:'hm_get_patient_account',nonce:_hm.nonce,patient_id:pid},function(res){
+            if(!res.success){
+                $('#hm-credits-tbody').html('<tr><td colspan="6" class="hm-muted" style="text-align:center;">Failed to load</td></tr>');
+                $('#hm-transactions-tbody').html('<tr><td colspan="6" class="hm-muted" style="text-align:center;">Failed to load</td></tr>');
+                return;
+            }
+            var d=res.data;
+            $('#hm-account-balance').text(d.balance);
+            var bal=parseFloat(d.balance);
+            if(bal>0){
+                $('#hm-account-balance-badge').css({background:'#f0fdfe',border:'1px solid #a5f3fc',color:'#0e7490'});
+            } else {
+                $('#hm-account-balance-badge').css({background:'#f5f5f5',border:'1px solid #e0e0e0',color:'#888'});
+            }
+            var html='';
+            if(d.credits&&d.credits.length){
+                d.credits.forEach(function(c){
+                    var remaining=parseFloat(c.remaining_amount||0);
+                    var statusClass=c.status==='active'?'hm-badge--green':c.status==='exhausted'?'hm-badge--amber':'';
+                    html+='<tr>'+
+                        '<td>'+esc(c.credit_note_number||'\u2014')+'</td>'+
+                        '<td>'+fmtDate((c.created_at||'').substring(0,10))+'</td>'+
+                        '<td style="text-align:right;">\u20ac'+parseFloat(c.amount).toFixed(2)+'</td>'+
+                        '<td style="text-align:right;">\u20ac'+parseFloat(c.used_amount).toFixed(2)+'</td>'+
+                        '<td style="text-align:right;font-weight:600;">\u20ac'+remaining.toFixed(2)+'</td>'+
+                        '<td><span class="hm-badge '+statusClass+'">'+esc(c.status)+'</span></td>'+
+                    '</tr>';
+                });
+            } else {
+                html='<tr><td colspan="6" class="hm-muted" style="text-align:center;padding:16px;">No credits on this account</td></tr>';
+            }
+            $('#hm-credits-tbody').html(html);
+            html='';
+            if(d.transactions&&d.transactions.length){
+                var typeLabels={'deposit':'Deposit','payment':'Payment','credit_note':'Credit Note','refund':'Refund','credit_applied':'Credit Applied','prsi_claim':'PRSI Claim'};
+                d.transactions.forEach(function(t){
+                    var typeLabel=typeLabels[t.transaction_type]||t.transaction_type;
+                    var refLabel='';
+                    if(t.reference_type&&t.reference_id){
+                        refLabel=t.reference_type.charAt(0).toUpperCase()+t.reference_type.slice(1).replace('_',' ')+' #'+t.reference_id;
+                    }
+                    html+='<tr>'+
+                        '<td>'+fmtDate((t.transaction_date||'').substring(0,10))+'</td>'+
+                        '<td>'+esc(typeLabel)+'</td>'+
+                        '<td style="text-align:right;font-weight:600;">\u20ac'+parseFloat(t.amount).toFixed(2)+'</td>'+
+                        '<td>'+esc(refLabel)+'</td>'+
+                        '<td>'+esc(t.staff_name||'\u2014')+'</td>'+
+                        '<td style="font-size:12px;color:#94a3b8;">'+esc(t.notes||'\u2014')+'</td>'+
+                    '</tr>';
+                });
+            } else {
+                html='<tr><td colspan="6" class="hm-muted" style="text-align:center;padding:16px;">No transactions recorded</td></tr>';
+            }
+            $('#hm-transactions-tbody').html(html);
         });
     }
 

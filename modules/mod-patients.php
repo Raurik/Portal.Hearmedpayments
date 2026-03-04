@@ -93,6 +93,9 @@ add_action( 'wp_ajax_hm_create_patient_repair',  'hm_ajax_create_patient_repair'
 add_action( 'wp_ajax_hm_get_patient_returns',    'hm_ajax_get_patient_returns' );
 add_action( 'wp_ajax_hm_log_cheque_sent',        'hm_ajax_log_cheque_sent' );
 
+// Account (financial transactions + credits)
+add_action( 'wp_ajax_hm_get_patient_account',    'hm_ajax_get_patient_account' );
+
 // Forms (integrates with admin Form Settings + Document Types)
 add_action( 'wp_ajax_hm_get_patient_forms',      'hm_ajax_get_patient_forms' );
 add_action( 'wp_ajax_hm_submit_patient_form',    'hm_ajax_submit_patient_form' );
@@ -2404,6 +2407,41 @@ function hm_ajax_get_patient_transcripts() {
     wp_send_json_success( $data );
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  19A. PATIENT ACCOUNT (credits + financial transactions)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * AJAX: Load patient account data — credits and financial transactions.
+ */
+function hm_ajax_get_patient_account() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+
+    $patient_id = intval( $_POST['patient_id'] ?? 0 );
+    if ( ! $patient_id ) wp_send_json_error( 'No patient ID.' );
+
+    // Credits (all, not just active — so staff can see history)
+    $credits = class_exists( 'HearMed_Finance' )
+        ? HearMed_Finance::get_patient_credits( $patient_id )
+        : [];
+
+    // Financial transactions
+    $transactions = class_exists( 'HearMed_Finance' )
+        ? HearMed_Finance::get_patient_transactions( $patient_id )
+        : [];
+
+    // Available balance
+    $balance = class_exists( 'HearMed_Finance' )
+        ? HearMed_Finance::get_patient_credit_balance( $patient_id )
+        : 0;
+
+    wp_send_json_success( [
+        'credits'      => $credits,
+        'transactions' => $transactions,
+        'balance'      => number_format( $balance, 2, '.', '' ),
+    ] );
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  19. ACTIVITY / AUDIT LOG

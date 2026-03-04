@@ -139,7 +139,8 @@ class HearMed_Finance {
     public static function get_patient_credits(int $patient_id): array {
         $db = HearMed_DB::instance();
         return $db->get_results(
-            "SELECT pc.*, cn.credit_note_number
+            "SELECT pc.*, cn.credit_note_number,
+                    (pc.amount - pc.used_amount) AS remaining_amount
              FROM hearmed_core.patient_credits pc
              LEFT JOIN hearmed_core.credit_notes cn ON cn.id = pc.credit_note_id
              WHERE pc.patient_id = $1
