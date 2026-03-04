@@ -493,6 +493,9 @@ class HearMed_Orders {
                 var ph=document.getElementById('hm-orders-create-placeholder');
                 if(ph)ph.remove();
 
+                /* Shared promise — set by ajaxSuccess when a deposit is recorded */
+                window._hmDepositPromise = null;
+
                 window.HM_openOrderPage({
                     patient_id:    <?php echo (int) $pid; ?>,
                     patient_name:  <?php echo json_encode( $patient_name ); ?>,
@@ -504,12 +507,25 @@ class HearMed_Orders {
                     dispenser_id:  0,
                     backLabel:     'Orders',
                     onDone: function(){
-                        window.location = <?php echo json_encode( $base ); ?>;
+                        var dest = <?php echo json_encode( $base ); ?>;
+                        if (window._hmDepositPromise) {
+                            /* Wait for deposit recording to finish before navigating */
+                            window._hmDepositPromise.always(function(){ window.location = dest; });
+                        } else {
+                            window.location = dest;
+                        }
                     }
                 });
 
                 /* ── Inject deposit section + override handlers ── */
-                setTimeout(function(){
+                /* Poll until #hm-op-actions exists (products AJAX must complete first) */
+                var _depWait=0;
+                function _injectDeposit(){
+                    if(!document.getElementById('hm-op-actions')){
+                        if(++_depWait>200)return; /* give up after ~10 s */
+                        setTimeout(_injectDeposit,50);
+                        return;
+                    }
                     var $=jQuery;
                     var ordersBase=<?php echo json_encode( $base ); ?>;
 
@@ -576,8 +592,8 @@ class HearMed_Orders {
                         var depDate=$('#hm-op-dep-date').val()||today;
                         var orderId=data.data.order_id;
 
-                        /* Fire-and-forget deposit recording */
-                        $.post(HM.ajax_url,{
+                        /* Record deposit — store promise so onDone waits */
+                        window._hmDepositPromise = $.post(HM.ajax_url,{
                             action:'hm_record_order_deposit',
                             nonce:HM.nonce,
                             order_id:orderId,
@@ -598,7 +614,8 @@ class HearMed_Orders {
                         }
                     });
 
-                }, 200);
+                }
+                _injectDeposit();
             }
             boot();
         })();
