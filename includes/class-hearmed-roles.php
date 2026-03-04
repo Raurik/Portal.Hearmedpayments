@@ -84,21 +84,18 @@ class HearMed_Roles {
 
     /** Get current user's dispenser record */
     public static function get_dispenser_id(): ?int {
-        $user_id = get_current_user_id();
-        if (!$user_id) return null;
-        
-        // Query PostgreSQL staff table by wp_user_id
-        return HearMed_DB::get_var(
-            "SELECT id FROM hearmed_reference.staff WHERE wp_user_id = $1",
-            [$user_id]
-        );
+        $staff_id = PortalAuth::staff_id();
+        return $staff_id ?: null;
     }
 
     /** Get current user's primary clinic */
     public static function get_primary_clinic(): ?int {
-        $disp_id = self::get_dispenser_id();
-        if (!$disp_id) return null;
-        // TODO: USE PostgreSQL: Get from table columns
-        return (int) get_post_meta($disp_id, "primary_clinic", true);
+        $staff_id = self::get_dispenser_id();
+        if (!$staff_id) return null;
+
+        return (int) HearMed_DB::get_var(
+            "SELECT clinic_id FROM hearmed_reference.staff_clinics WHERE staff_id = $1 AND is_primary_clinic = true LIMIT 1",
+            [$staff_id]
+        ) ?: null;
     }
 }

@@ -217,6 +217,8 @@ class HearMed_Core {
         // Ensure required portal pages exist
         $this->ensure_portal_pages();
 
+        $this->ensure_privacy_column();
+
         // Hook for when system is fully initialized
         do_action( 'hearmed_system_ready' );
     }
@@ -481,6 +483,35 @@ class HearMed_Core {
                 wp_json_encode( $meta )
             )
         );
+    }
+
+    /**
+     * Ensure the privacy_notice_accepted column exists on staff table.
+     * Runs once, gated by a settings flag.
+     */
+    private function ensure_privacy_column() {
+        if ( HearMed_Settings::get( 'hm_privacy_col_added_v1', '' ) ) {
+            return;
+        }
+
+        $db = HearMed_DB::instance();
+        if ( ! $db ) return;
+
+        $exists = $db->get_var(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_schema = 'hearmed_reference'
+               AND table_name = 'staff'
+               AND column_name = 'privacy_notice_accepted'"
+        );
+
+        if ( ! $exists ) {
+            $db->query(
+                "ALTER TABLE hearmed_reference.staff
+                 ADD COLUMN privacy_notice_accepted BOOLEAN DEFAULT FALSE"
+            );
+        }
+
+        HearMed_Settings::set( 'hm_privacy_col_added_v1', '1' );
     }
 }
 

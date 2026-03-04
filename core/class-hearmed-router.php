@@ -238,6 +238,12 @@ class HearMed_Router {
             wp_redirect( home_url( '/login/?redirect_to=' . urlencode( $clean_uri ) ) );
             exit;
         }
+
+        // Logged-in user hitting root URL → send to calendar
+        if ( $uri === '' ) {
+            wp_redirect( home_url( '/calendar/' ) );
+            exit;
+        }
     }
     
     /**

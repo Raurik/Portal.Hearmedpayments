@@ -39,7 +39,6 @@ function hm_forms_render( $atts ) {
 // ---------------------------------------------------------------------------
 // Register AJAX handlers
 // ---------------------------------------------------------------------------
-add_action( 'wp_ajax_hm_get_patient_forms',    [ 'HearMed_Forms', 'ajax_get_forms' ] );
 add_action( 'wp_ajax_hm_load_form_template',   [ 'HearMed_Forms', 'ajax_load_template' ] );
 add_action( 'wp_ajax_hm_submit_form',          [ 'HearMed_Forms', 'ajax_submit_form' ] );
 add_action( 'wp_ajax_hm_get_form_view',        [ 'HearMed_Forms', 'ajax_get_form_view' ] );
