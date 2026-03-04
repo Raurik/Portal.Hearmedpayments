@@ -13,6 +13,14 @@
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+// Standalone render function used by router module loader.
+function hm_stock_render() {
+    if ( ! PortalAuth::is_logged_in() ) {
+        return;
+    }
+    echo HearMed_Stock::render();
+}
+
 class HearMed_Stock {
 
     public static function init() {
