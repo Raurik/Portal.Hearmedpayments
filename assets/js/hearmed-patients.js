@@ -1608,28 +1608,12 @@ function initProfile(){
         });
     }
 
-    /* ── INLINE ORDER PAGE (trigger from patient file) ── */
+    /* ── CREATE ORDER — navigates to full orders page ── */
     $(document).off('click.hm-inline-order').on('click.hm-inline-order','.hm-inline-order-btn',function(e){
         e.preventDefault();
         closeModal(); // close any open modal (e.g. the order-prompt after add-HA)
-        var pName=(patient&&patient.name)||(patient&&(patient.first_name+' '+patient.last_name))||'';
         var orderCreateUrl='/orders/?hm_action=create&patient_id='+encodeURIComponent(pid||0);
-        if(typeof window.HM_openOrderPage==='function'){
-            HM_openOrderPage({
-                patient_id:pid,
-                patient_name:pName,
-                appointment_id:0,
-                backLabel:'Patient',
-                outcome:{name:'',color:'#3B82F6'},
-                onDone:function(){
-                    // Reload orders tab after returning from order page
-                    var $tab=$('#hm-tab-orders');
-                    if($tab.length)loadOrders($tab);
-                }
-            });
-        } else {
-            window.location=orderCreateUrl;
-        }
+        window.location=orderCreateUrl;
     });
 
     /* ── INVOICES ── */
