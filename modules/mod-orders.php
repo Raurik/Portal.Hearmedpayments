@@ -531,11 +531,11 @@ class HearMed_Orders {
 
         $base = HearMed_Utils::page_url('orders');
 
-        $can_approve  = $role === 'c_level'                      && $order->current_status === 'Awaiting Approval';
-        $can_order    = in_array($role,['admin','finance'])       && $order->current_status === 'Approved';
-        $can_receive  = in_array($role,['admin','finance'])       && $order->current_status === 'Ordered';
+        $can_approve  = $role === 'c_level'                                            && $order->current_status === 'Awaiting Approval';
+        $can_order    = in_array($role,['admin','finance','dispenser','c_level'])       && $order->current_status === 'Approved';
+        $can_receive  = in_array($role,['admin','finance','dispenser','c_level'])       && $order->current_status === 'Ordered';
         $can_serials  = $order->current_status === 'Received';
-        $can_complete = in_array($role,['dispenser','c_level'])   && $order->current_status === 'Awaiting Fitting';
+        $can_complete = in_array($role,['admin','finance','dispenser','c_level'])       && $order->current_status === 'Awaiting Fitting';
         $can_print    = !in_array($order->current_status, ['Awaiting Approval','Cancelled']);
 
         ob_start(); ?>
@@ -687,16 +687,15 @@ class HearMed_Orders {
                     </div>
                     <?php endif; ?>
 
-                    <!-- STAGE 3→4: Received in clinic -->
+                    <!-- STAGE 3→4: Receive in Branch → then enter serials -->
                     <?php if ($can_receive) : ?>
                     <div class="hm-card hm-card--action">
                         <h3 class="hm-card-title">Aids Arrived?</h3>
-                        <p class="hm-form__hint">Mark received. Dispenser will be notified to enter serial numbers.</p>
-                        <button class="hm-btn hm-btn--primary hm-btn--block hm-order-action"
-                                data-ajax="hm_mark_received" data-order-id="<?php echo $order_id; ?>"
-                                data-nonce="<?php echo esc_attr($nonce); ?>"
-                                data-confirm="Mark this order as received in clinic?">
-                            Received in Clinic
+                        <p class="hm-form__hint">Mark received and enter serial numbers.</p>
+                        <button class="hm-btn hm-btn--primary hm-btn--block" id="hm-receive-branch-btn"
+                                data-order-id="<?php echo $order_id; ?>"
+                                data-nonce="<?php echo esc_attr($nonce); ?>">
+                            Receive in Branch + Enter Serials
                         </button>
                     </div>
                     <?php endif; ?>
@@ -791,6 +790,32 @@ class HearMed_Orders {
                 });
             });
         });
+
+        // Receive in Branch — marks as received then redirects to serial entry page
+        var receiveBtn = document.getElementById('hm-receive-branch-btn');
+        if (receiveBtn) {
+            receiveBtn.addEventListener('click', function() {
+                if (!confirm('Confirm aids have arrived in branch? You will be asked to enter serial numbers next.')) return;
+                var me = this;
+                me.disabled = true; me.textContent = 'Marking received...';
+                fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({
+                        action: 'hm_mark_received',
+                        order_id: me.dataset.orderId,
+                        nonce: me.dataset.nonce
+                    })
+                }).then(function(r){return r.json();}).then(function(d){
+                    if (d.success) {
+                        window.location.href = '<?php echo esc_url($base); ?>?hm_action=serials&order_id=<?php echo $order_id; ?>';
+                    } else {
+                        alert('Error: ' + (d.data && d.data.message ? d.data.message : d.data));
+                        me.disabled = false; me.textContent = 'Receive in Branch + Enter Serials';
+                    }
+                });
+            });
+        }
         </script>
         <?php return ob_get_clean();
     }
@@ -1582,7 +1607,8 @@ class HearMed_Orders {
 
     public static function ajax_mark_ordered() {
         check_ajax_referer('hm_nonce','nonce');
-        if (!HearMed_Auth::can('manage_orders')) wp_send_json_error('Access denied.');
+        if ( ! HearMed_Auth::can('manage_orders') && ! HearMed_Auth::can('create_orders') )
+            wp_send_json_error('Access denied.');
 
         $order_id = intval($_POST['order_id'] ?? 0);
         $user     = HearMed_Auth::current_user();
@@ -1600,7 +1626,8 @@ class HearMed_Orders {
 
     public static function ajax_mark_received() {
         check_ajax_referer('hm_nonce','nonce');
-        if (!HearMed_Auth::can('manage_orders')) wp_send_json_error('Access denied.');
+        if ( ! HearMed_Auth::can('manage_orders') && ! HearMed_Auth::can('create_orders') )
+            wp_send_json_error('Access denied.');
 
         $order_id = intval($_POST['order_id'] ?? 0);
         $user     = HearMed_Auth::current_user();
