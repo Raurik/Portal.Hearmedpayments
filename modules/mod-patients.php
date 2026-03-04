@@ -2928,6 +2928,9 @@ function hm_ajax_create_return_credit_note() {
     $refund_override = isset( $_POST['refund_amount'] ) ? floatval( $_POST['refund_amount'] ) : null;
     $patient_refund  = $refund_override !== null ? $refund_override : $patient_paid;
 
+    // ── Ensure stock tables BEFORE transaction (DDL must not run inside txn) ──
+    hm_ensure_stock_tables_for_return();
+
     $db->begin_transaction();
 
     try {
@@ -3000,10 +3003,16 @@ function hm_ajax_create_return_credit_note() {
             'refund_status'         => 'completed',
         ], [ 'id' => $return_id ] );
 
-        // 5. Return hearing aid(s) to stock
-        $returned_count = hm_return_device_to_stock( $device, $side, 'Return', $staff_id );
-        if ( $returned_count < 1 ) {
-            throw new \Exception( 'Failed to return hearing aid to stock.' );
+        // 5. Return hearing aid(s) to stock (non-fatal — credit note is priority)
+        $stock_ok = false;
+        try {
+            $returned_count = hm_return_device_to_stock( $device, $side, 'Return', $staff_id, $inv_id, $ord_id );
+            $stock_ok = ( $returned_count >= 1 );
+            if ( ! $stock_ok ) {
+                error_log( '[HearMed] Stock return inserted 0 rows for device #' . $device_id . ' (return #' . $return_id . '). DB error: ' . HearMed_DB::last_error() );
+            }
+        } catch ( \Throwable $stock_err ) {
+            error_log( '[HearMed] Stock return exception for device #' . $device_id . ': ' . $stock_err->getMessage() );
         }
 
         // 6. Create patient credit (spendable on future orders / refundable)
@@ -3032,12 +3041,13 @@ function hm_ajax_create_return_credit_note() {
 
         // 8. Timeline entry
         $side_label = $side === 'both' ? 'both sides' : $side . ' side';
+        $stock_note = $stock_ok ? 'Device returned to stock.' : 'Stock return pending (manual check needed).';
         $db->insert( 'hearmed_core.patient_timeline', [
             'patient_id'  => $pid,
             'event_type'  => 'credit_note_created',
             'event_date'  => date('Y-m-d'),
             'staff_id'    => $staff_id ?: null,
-            'description' => "Credit note {$cn_number} created for return ({$side_label}). Patient refund: \xe2\x82\xac" . number_format($patient_refund, 2) . ($prsi_amount > 0 ? ". PRSI reclaim: \xe2\x82\xac" . number_format($prsi_amount, 2) : '') . ". Reason: {$reason}. Device returned to stock.",
+            'description' => "Credit note {$cn_number} created for return ({$side_label}). Patient refund: \xe2\x82\xac" . number_format($patient_refund, 2) . ($prsi_amount > 0 ? ". PRSI reclaim: \xe2\x82\xac" . number_format($prsi_amount, 2) : '') . ". Reason: {$reason}. {$stock_note}",
         ]);
 
         // 9. Auto-save credit note PDF to patient documents
@@ -3101,7 +3111,8 @@ function hm_ajax_create_return_credit_note() {
             'patient_refund'     => $patient_refund,
             'prsi_amount'        => $prsi_amount,
             'side'               => $side,
-            'message'            => "Credit note {$cn_number} created. PDF saved to patient documents. Device returned to stock.",
+            'stock_returned'     => $stock_ok,
+            'message'            => "Credit note {$cn_number} created. PDF saved to patient documents." . ( $stock_ok ? ' Device returned to stock.' : ' Stock return pending — please check manually.' ),
         ] );
     } catch ( \Throwable $e ) {
         $db->rollback();
@@ -3252,56 +3263,132 @@ function hm_ajax_apply_credit_to_invoice() {
  * @param string $reason   'Return' or 'Exchange'.
  * @param int|null $staff_id  Staff performing the action.
  */
-function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null ) {
+/**
+ * Ensure inventory_stock and stock_movements tables exist.
+ * MUST be called OUTSIDE any transaction to avoid DDL-inside-txn issues.
+ */
+function hm_ensure_stock_tables_for_return() {
+    static $done = false;
+    if ( $done ) return;
+    $done = true;
+
+    $db = HearMed_DB::instance();
+    $db->query(
+        "CREATE TABLE IF NOT EXISTS hearmed_reference.inventory_stock (
+            id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+            item_category VARCHAR(30) NOT NULL DEFAULT 'hearing_aid',
+            clinic_id BIGINT, manufacturer_id BIGINT,
+            model_name VARCHAR(255), style VARCHAR(100), technology_level VARCHAR(50),
+            serial_number VARCHAR(100), specification TEXT,
+            quantity INT NOT NULL DEFAULT 1, status VARCHAR(30) NOT NULL DEFAULT 'Available',
+            reserved_for_patient_id BIGINT, fitted_to_patient_id BIGINT, return_reason TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )"
+    );
+    // Ensure return_reason column exists (older tables might lack it)
+    $has_col = $db->get_var(
+        "SELECT column_name FROM information_schema.columns
+         WHERE table_schema = 'hearmed_reference' AND table_name = 'inventory_stock' AND column_name = 'return_reason'"
+    );
+    if ( ! $has_col ) {
+        $db->query( "ALTER TABLE hearmed_reference.inventory_stock ADD COLUMN return_reason TEXT" );
+    }
+    $db->query(
+        "CREATE TABLE IF NOT EXISTS hearmed_reference.stock_movements (
+            id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+            stock_id BIGINT, movement_type VARCHAR(30),
+            from_clinic_id BIGINT, to_clinic_id BIGINT,
+            quantity INT DEFAULT 1, notes TEXT, created_by VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )"
+    );
+}
+
+/**
+ * Return a hearing aid to stock.
+ *
+ * Uses the invoice-first lookup flow:
+ *   1. invoice_items → products → manufacturers  (preferred)
+ *   2. order_items   → products → manufacturers  (fallback)
+ *   3. patient_devices.product_id → products      (last resort)
+ *
+ * @param object      $device     The patient_devices row (serials intact).
+ * @param string      $side       'left', 'right', or 'both'.
+ * @param string      $reason     Movement reason label.
+ * @param int|null    $staff_id   Staff performing the return.
+ * @param int|null    $inv_id     Invoice ID (preferred source).
+ * @param int|null    $ord_id     Order ID (fallback source).
+ * @return int  Number of stock entries created.
+ */
+function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null, $inv_id = null, $ord_id = null ) {
     $db = HearMed_DB::instance();
     $returned_count = 0;
 
-    // Ensure stock tables exist before inserting
-    if ( class_exists( 'HearMed_Stock' ) ) {
-        // Trigger the auto-migration (render calls it, but we may be called from AJAX)
-        $db->query(
-            "CREATE TABLE IF NOT EXISTS hearmed_reference.inventory_stock (
-                id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-                item_category VARCHAR(30) NOT NULL DEFAULT 'hearing_aid',
-                clinic_id BIGINT, manufacturer_id BIGINT,
-                model_name VARCHAR(255), style VARCHAR(100), technology_level VARCHAR(50),
-                serial_number VARCHAR(100), specification TEXT,
-                quantity INT NOT NULL DEFAULT 1, status VARCHAR(30) NOT NULL DEFAULT 'Available',
-                reserved_for_patient_id BIGINT, fitted_to_patient_id BIGINT, return_reason TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )"
-        );
-        $db->query(
-            "CREATE TABLE IF NOT EXISTS hearmed_reference.stock_movements (
-                id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-                stock_id BIGINT, movement_type VARCHAR(30),
-                from_clinic_id BIGINT, to_clinic_id BIGINT,
-                quantity INT DEFAULT 1, notes TEXT, created_by VARCHAR(255),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )"
-        );
-    }
-
-    // Lookup product + manufacturer info from the device's product_id
-    $product = null;
+    // ── Product lookup: invoice → order → device ("the flow") ──
+    $product         = null;
     $manufacturer_id = null;
-    if ( ! empty( $device->product_id ) ) {
+    $clinic_id       = null;
+    $target_product_id = ! empty( $device->product_id ) ? (int) $device->product_id : 0;
+
+    // Strategy 1: From invoice_items (preferred — matches the invoice the patient was charged on)
+    if ( $inv_id && ! $product ) {
         $product = $db->get_row(
-            "SELECT p.product_name, p.model, p.style, p.tech_level, p.manufacturer_id,
-                    m.name AS manufacturer_name
-             FROM hearmed_reference.products p
+            "SELECT p.id AS product_id, p.product_name, p.model, p.style, p.tech_level,
+                    p.manufacturer_id, m.name AS manufacturer_name
+             FROM hearmed_core.invoice_items ii
+             JOIN hearmed_reference.products p ON p.id = ii.item_id
              LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
-             WHERE p.id = \$1",
-            [ $device->product_id ]
+             WHERE ii.invoice_id = \$1 AND ii.item_type = 'product'
+             ORDER BY CASE WHEN ii.item_id = \$2 THEN 0 ELSE 1 END, ii.line_number
+             LIMIT 1",
+            [ $inv_id, $target_product_id ]
         );
         if ( $product ) {
-            $manufacturer_id = $product->manufacturer_id;
+            error_log( '[HearMed] Stock return: product found via invoice #' . $inv_id . ' → ' . ($product->product_name ?? 'unknown') );
         }
     }
 
-    // Determine clinic from original order — uses hearmed_reference.clinics.id directly
-    $clinic_id = null;
-    $dev_order_id = property_exists( $device, 'order_id' ) ? $device->order_id : null;
+    // Strategy 2: From order_items
+    if ( ! $product && $ord_id ) {
+        $product = $db->get_row(
+            "SELECT p.id AS product_id, p.product_name, p.model, p.style, p.tech_level,
+                    p.manufacturer_id, m.name AS manufacturer_name
+             FROM hearmed_core.order_items oi
+             JOIN hearmed_reference.products p ON p.id = oi.item_id
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+             WHERE oi.order_id = \$1 AND oi.item_type = 'product'
+             ORDER BY CASE WHEN oi.item_id = \$2 THEN 0 ELSE 1 END, oi.line_number
+             LIMIT 1",
+            [ $ord_id, $target_product_id ]
+        );
+        if ( $product ) {
+            error_log( '[HearMed] Stock return: product found via order #' . $ord_id . ' → ' . ($product->product_name ?? 'unknown') );
+        }
+    }
+
+    // Strategy 3: Direct device → product (last resort)
+    if ( ! $product && $target_product_id ) {
+        $product = $db->get_row(
+            "SELECT p.id AS product_id, p.product_name, p.model, p.style, p.tech_level,
+                    p.manufacturer_id, m.name AS manufacturer_name
+             FROM hearmed_reference.products p
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+             WHERE p.id = \$1",
+            [ $target_product_id ]
+        );
+        if ( $product ) {
+            error_log( '[HearMed] Stock return: product found via device product_id #' . $target_product_id . ' → ' . ($product->product_name ?? 'unknown') );
+        }
+    }
+
+    if ( $product ) {
+        $manufacturer_id = $product->manufacturer_id ?? null;
+    } else {
+        error_log( '[HearMed] Stock return: NO product found for device #' . ($device->id ?? '?') . ', inv=' . ($inv_id ?: 'null') . ', ord=' . ($ord_id ?: 'null') . ', product_id=' . ($target_product_id ?: 'null') );
+    }
+
+    // Determine clinic from order
+    $dev_order_id = $ord_id ?: ( property_exists( $device, 'order_id' ) ? $device->order_id : null );
     if ( ! empty( $dev_order_id ) ) {
         $clinic_id = $db->get_var(
             "SELECT clinic_id FROM hearmed_core.orders WHERE id = \$1",
@@ -3315,6 +3402,7 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null ) 
     $mfr_name   = $product->manufacturer_name ?? '';
     $today      = date( 'Y-m-d H:i:s' );
 
+    // Collect serial numbers from the device
     $serials_to_add = [];
     $sl = $device->serial_number_left ?? $device->serial_left ?? '';
     $sr = $device->serial_number_right ?? $device->serial_right ?? '';
@@ -3330,8 +3418,15 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null ) 
         $serials_to_add[] = [ 'serial' => '', 'side' => ucfirst( $side ) ];
     }
 
+    // Resolve staff name once
+    $staff_name = '';
+    if ( $staff_id ) {
+        $sn_row = $db->get_row( "SELECT first_name, last_name FROM hearmed_reference.staff WHERE id = \$1", [ $staff_id ] );
+        $staff_name = $sn_row ? trim( $sn_row->first_name . ' ' . $sn_row->last_name ) : '';
+    }
+
     foreach ( $serials_to_add as $entry ) {
-        $stock_id = $db->insert( 'hearmed_reference.inventory_stock', [
+        $insert_data = [
             'item_category'    => 'hearing_aid',
             'manufacturer_id'  => $manufacturer_id,
             'model_name'       => $model_name,
@@ -3341,15 +3436,12 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null ) 
             'clinic_id'        => $clinic_id,
             'quantity'         => 1,
             'status'           => 'Returned',
-        ]);
+            'return_reason'    => $reason,
+        ];
 
-        // Log stock movement
+        $stock_id = $db->insert( 'hearmed_reference.inventory_stock', $insert_data );
+
         if ( $stock_id ) {
-            $staff_name = '';
-            if ( $staff_id ) {
-                $sn_row = $db->get_row( "SELECT first_name, last_name FROM hearmed_reference.staff WHERE id = \$1", [ $staff_id ] );
-                $staff_name = $sn_row ? trim( $sn_row->first_name . ' ' . $sn_row->last_name ) : '';
-            }
             $db->insert( 'hearmed_reference.stock_movements', [
                 'stock_id'       => $stock_id,
                 'movement_type'  => strtolower( $reason ),
@@ -3360,6 +3452,11 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null ) 
                 'created_at'     => $today,
             ]);
             $returned_count++;
+            error_log( '[HearMed] Stock return OK: stock_id=' . $stock_id . ', serial=' . ($entry['serial'] ?: 'none') . ', model=' . $model_name );
+        } else {
+            $db_err = HearMed_DB::last_error();
+            error_log( '[HearMed] Stock insert FAILED for device #' . ($device->id ?? '?') . ' (' . $entry['side'] . '): ' . $db_err );
+            error_log( '[HearMed] Stock insert data: ' . json_encode( $insert_data ) );
         }
     }
 
