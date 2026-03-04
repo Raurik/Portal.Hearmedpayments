@@ -44,3 +44,4 @@ WordPress auth functions are BANNED in module and admin code.
 - Use HearMed_DB class for all queries
 - WordPress MySQL (wp_options, wp_users, wp_posts) is ONLY for WordPress internals
 - NEVER store business data in wp_options or wp_usermeta
+- Never do the auto create tables and columns in my postgres with php. give me the sql      command to create them 
