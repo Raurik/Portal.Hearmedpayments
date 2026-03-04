@@ -565,19 +565,15 @@
     }
 
     function buildOrderActions(o) {
-        var out = '';
-        var isAdmin = HM.is_admin;
+        var pdfUrl = HM.ajax_url + '?action=hm_print_order_sheet&nonce=' + HM.nonce + '&order_id=' + o.id;
+        var out = '<a href="' + pdfUrl + '" target="_blank" class="hm-btn hm-btn--secondary hm-btn--sm" style="margin-right:4px;">Pull Order PDF</a>';
 
-        if (o.status === 'Awaiting Approval' && isAdmin) {
-            out += '<a href="' + (window.HM.approvals_url || '#') + '" class="hm-btn hm-btn--secondary hm-btn--sm">Go to Approvals</a> ';
+        if (o.status === 'Approved') {
+            out += '<button class="hm-btn hm-btn--primary hm-btn--sm hm-mark-ordered-btn" data-id="' + o.id + '" data-num="' + esc(o.order_number) + '">Ordered</button>';
+        } else if (o.status === 'Ordered') {
+            out += '<button class="hm-btn hm-btn--primary hm-btn--sm hm-mark-received-btn" data-id="' + o.id + '" data-num="' + esc(o.order_number) + '">Received</button>';
         }
-        if (o.status === 'Approved' && isAdmin) {
-            out += '<button class="hm-btn hm-btn--primary hm-btn--sm hm-mark-ordered-btn" data-id="' + o.id + '" data-num="' + esc(o.order_number) + '">Mark Ordered</button> ';
-        }
-        if (o.status === 'Ordered') {
-            out += '<button class="hm-btn hm-btn--primary hm-btn--sm hm-mark-received-btn" data-id="' + o.id + '" data-num="' + esc(o.order_number) + '">Mark Received</button> ';
-        }
-        return out || '<span style="color:#94a3b8;font-size:.8rem;">—</span>';
+        return out;
     }
 
     function buildPagination(selector, current, total, onClick) {

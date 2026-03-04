@@ -64,7 +64,7 @@ class HearMed_Print_Templates {
             'showPatientPhone'=> true,
             'showPatientPPS' => false,
             'clinicInfo'     => true,
-            'pricing'        => true,
+            'pricing'        => false,
             'earMoulds'      => true,
             'notes'          => true,
             'approvalInfo'   => true,
@@ -73,7 +73,7 @@ class HearMed_Print_Templates {
             'footerFont'     => 'Source Sans 3',
             'footerSize'     => 9,
             'footerColor'    => '#94a3b8',
-            'sections'       => ['companyHeader','patient','itemsTable','pricing','earMoulds','notes','approvalInfo','footer'],
+            'sections'       => ['companyHeader','patient','itemsTable','earMoulds','notes','approvalInfo','footer'],
         ],
         'repair' => [
             'companyName'    => 'HearMed Acoustic Health Care Ltd',
@@ -600,24 +600,110 @@ tfoot td { font-weight: 600; border-bottom: none; }
 
     private static function section_order_itemsTable(array $s, object $d): string {
         $items = $d->items ?? [];
-        ob_start(); ?>
-        <div class="hm-print-section-title">Order Items</div>
-        <table>
-            <thead><tr><th>Product</th><th>Code</th><th>Ear</th><th>Tech Level</th><th>Style</th><th>Qty</th></tr></thead>
-            <tbody>
-            <?php foreach ($items as $it): ?>
-            <tr>
-                <td><?php echo esc_html($it->product_name ?? $it->item_description ?? ''); ?></td>
-                <td><?php echo esc_html($it->product_code ?? ''); ?></td>
-                <td><?php echo esc_html($it->ear_side ?? ''); ?></td>
-                <td><?php echo esc_html($it->tech_level ?? ''); ?></td>
-                <td><?php echo esc_html($it->style ?? ''); ?></td>
-                <td><?php echo (int)($it->quantity ?? 1); ?></td>
-            </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-        <?php return ob_get_clean();
+        if ( empty( $items ) ) return '<p style="color:#94a3b8;">No items on this order.</p>';
+
+        // Group items by manufacturer for clear ordering instructions
+        $by_mfr = [];
+        foreach ( $items as $it ) {
+            $mfr_key = $it->manufacturer_name ?? 'Unknown Manufacturer';
+            if ( ! isset( $by_mfr[ $mfr_key ] ) ) {
+                $by_mfr[ $mfr_key ] = [
+                    'name'    => $mfr_key,
+                    'address' => $it->manufacturer_address ?? '',
+                    'email'   => $it->manufacturer_email ?? '',
+                    'phone'   => $it->manufacturer_phone ?? '',
+                    'contact' => $it->manufacturer_contact ?? '',
+                    'account' => $it->manufacturer_account ?? '',
+                    'items'   => [],
+                ];
+            }
+            $by_mfr[ $mfr_key ]['items'][] = $it;
+        }
+
+        $clinic_name    = $d->clinic_name ?? '';
+        $clinic_address = $d->clinic_address ?? '';
+        $clinic_phone   = $d->clinic_phone ?? '';
+
+        ob_start();
+        foreach ( $by_mfr as $mfr ) : ?>
+        <div style="margin-bottom:18px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">
+            <!-- Manufacturer header -->
+            <div style="background:#f1f5f9;padding:10px 14px;border-bottom:1px solid #e2e8f0;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div>
+                        <div style="font-size:13px;font-weight:700;color:#151B33;">ORDER FROM: <?php echo esc_html( $mfr['name'] ); ?></div>
+                        <?php if ( $mfr['address'] ) : ?><div style="font-size:10px;color:#64748b;margin-top:2px;"><?php echo esc_html( $mfr['address'] ); ?></div><?php endif; ?>
+                        <?php if ( $mfr['contact'] ) : ?><div style="font-size:10px;color:#64748b;">Contact: <?php echo esc_html( $mfr['contact'] ); ?></div><?php endif; ?>
+                        <?php if ( $mfr['email'] ) : ?><div style="font-size:10px;color:#64748b;">Email: <?php echo esc_html( $mfr['email'] ); ?></div><?php endif; ?>
+                        <?php if ( $mfr['phone'] ) : ?><div style="font-size:10px;color:#64748b;">Phone: <?php echo esc_html( $mfr['phone'] ); ?></div><?php endif; ?>
+                        <?php if ( $mfr['account'] ) : ?><div style="font-size:10px;color:#64748b;">Account #: <?php echo esc_html( $mfr['account'] ); ?></div><?php endif; ?>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:10px;font-weight:600;color:#151B33;">RETURN / DELIVER TO:</div>
+                        <div style="font-size:10px;color:#64748b;">HearMed — <?php echo esc_html( $clinic_name ); ?></div>
+                        <?php if ( $clinic_address ) : ?><div style="font-size:10px;color:#64748b;"><?php echo esc_html( $clinic_address ); ?></div><?php endif; ?>
+                        <?php if ( $clinic_phone ) : ?><div style="font-size:10px;color:#64748b;">Phone: <?php echo esc_html( $clinic_phone ); ?></div><?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            <!-- Items table -->
+            <table style="width:100%;font-size:11px;border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f8fafc;">
+                        <th style="text-align:left;padding:6px 10px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#64748b;">Product</th>
+                        <th style="text-align:left;padding:6px 10px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#64748b;">Type</th>
+                        <th style="text-align:left;padding:6px 10px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#64748b;">Style</th>
+                        <th style="text-align:left;padding:6px 10px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#64748b;">Ear</th>
+                        <th style="text-align:left;padding:6px 10px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#64748b;">Speaker</th>
+                        <th style="text-align:left;padding:6px 10px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#64748b;">Dome</th>
+                        <th style="text-align:center;padding:6px 10px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#64748b;">Charger</th>
+                        <th style="text-align:center;padding:6px 10px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#64748b;">Qty</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ( $mfr['items'] as $it ) :
+                    $ha_class = $it->hearing_aid_class ?? '';
+                    $type_label = '';
+                    if ( strtolower( $ha_class ) === 'custom' ) $type_label = 'Custom';
+                    elseif ( $ha_class ) $type_label = 'Ready-Fit';
+
+                    $dome_label = '';
+                    if ( ! empty( $it->dome_type ) ) {
+                        $dome_label = $it->dome_type;
+                        if ( ! empty( $it->dome_size ) ) $dome_label .= ' (' . $it->dome_size . ')';
+                    }
+
+                    $speaker = $it->speaker_size ?? '';
+                    $charger = ! empty( $it->needs_charger ) ? 'Yes' : 'No';
+                ?>
+                    <tr style="border-bottom:1px solid #f1f5f9;">
+                        <td style="padding:8px 10px;font-weight:600;">
+                            <?php echo esc_html( $it->product_name ?? $it->item_description ?? '' ); ?>
+                            <?php if ( $it->product_code ) : ?><br><span style="color:#94a3b8;font-size:10px;">Code: <?php echo esc_html( $it->product_code ); ?></span><?php endif; ?>
+                            <?php if ( $it->tech_level ) : ?><br><span style="color:#94a3b8;font-size:10px;">Tech: <?php echo esc_html( $it->tech_level ); ?></span><?php endif; ?>
+                        </td>
+                        <td style="padding:8px 10px;">
+                            <?php if ( $type_label ) : ?>
+                                <span style="background:<?php echo $type_label === 'Custom' ? '#fef2f2' : '#f0fdf4'; ?>;color:<?php echo $type_label === 'Custom' ? '#991b1b' : '#166534'; ?>;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;"><?php echo $type_label; ?></span>
+                            <?php else : ?>—<?php endif; ?>
+                        </td>
+                        <td style="padding:8px 10px;"><?php echo esc_html( $it->style ?? '' ); ?></td>
+                        <td style="padding:8px 10px;"><?php echo esc_html( $it->ear_side ?? '' ); ?></td>
+                        <td style="padding:8px 10px;"><?php echo esc_html( $speaker ?: '—' ); ?></td>
+                        <td style="padding:8px 10px;"><?php echo esc_html( $dome_label ?: '—' ); ?></td>
+                        <td style="padding:8px 10px;text-align:center;">
+                            <?php if ( ! empty( $it->needs_charger ) ) : ?>
+                                <span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;">Yes</span>
+                            <?php else : ?>—<?php endif; ?>
+                        </td>
+                        <td style="padding:8px 10px;text-align:center;font-weight:600;"><?php echo (int)( $it->quantity ?? 1 ); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endforeach;
+        return ob_get_clean();
     }
 
     private static function section_order_pricing(array $s, object $d): string {

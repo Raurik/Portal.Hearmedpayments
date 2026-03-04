@@ -220,9 +220,18 @@ class HearMed_Orders {
                             </td>
                             <td><?php echo self::status_badge($o->current_status); ?></td>
                             <td class="hm-muted"><?php echo date('d M Y',strtotime($o->created_at)); ?></td>
-                            <td>
-                                <a href="<?php echo esc_url($base.'?hm_action=view&order_id='.$o->id); ?>"
-                                   class="hm-btn hm-btn--sm hm-btn--ghost">View</a>
+                            <td style="white-space:nowrap;">
+                                <?php
+                                $print_url = admin_url('admin-ajax.php') . '?action=hm_print_order_sheet&nonce=' . wp_create_nonce('hm_nonce') . '&order_id=' . $o->id;
+                                $st = $o->current_status;
+                                ?>
+                                <a href="<?php echo esc_url($print_url); ?>" target="_blank"
+                                   class="hm-btn hm-btn--sm hm-btn--secondary" style="margin-right:4px;">Pull Order PDF</a>
+                                <?php if ($st === 'Approved') : ?>
+                                    <button class="hm-btn hm-btn--sm hm-btn--primary hm-mark-ordered-btn" data-id="<?php echo $o->id; ?>" data-num="<?php echo esc_attr($o->order_number); ?>">Ordered</button>
+                                <?php elseif ($st === 'Ordered') : ?>
+                                    <button class="hm-btn hm-btn--sm hm-btn--primary hm-mark-received-btn" data-id="<?php echo $o->id; ?>" data-num="<?php echo esc_attr($o->order_number); ?>">Received</button>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -231,6 +240,30 @@ class HearMed_Orders {
                 </table>
             </div>
         </div>
+        <script>
+        (function(){
+            var ajaxUrl = '<?php echo esc_js(admin_url("admin-ajax.php")); ?>';
+            var nonce   = '<?php echo esc_js(wp_create_nonce("hm_nonce")); ?>';
+            function statusAction(btn, newStatus, label){
+                btn.addEventListener('click', function(){
+                    var id  = btn.getAttribute('data-id');
+                    var num = btn.getAttribute('data-num');
+                    if(!confirm('Mark ' + num + ' as ' + label + '?')) return;
+                    btn.disabled = true; btn.textContent = 'Saving…';
+                    var fd = new FormData();
+                    fd.append('action','hm_update_order_status');
+                    fd.append('nonce', nonce);
+                    fd.append('order_id', id);
+                    fd.append('new_status', newStatus);
+                    fetch(ajaxUrl,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(r){
+                        if(r.success){ location.reload(); } else { alert(r.data && r.data.msg ? r.data.msg : 'Error'); btn.disabled=false; btn.textContent=label; }
+                    }).catch(function(){ alert('Network error'); btn.disabled=false; btn.textContent=label; });
+                });
+            }
+            document.querySelectorAll('.hm-mark-ordered-btn').forEach(function(b){ statusAction(b,'Ordered','Ordered'); });
+            document.querySelectorAll('.hm-mark-received-btn').forEach(function(b){ statusAction(b,'Received','Received'); });
+        })();
+        </script>
         <?php return ob_get_clean();
     }
 
@@ -1241,13 +1274,20 @@ class HearMed_Orders {
         );
         if (!$order) return '<p>Order not found.</p>';
 
+        // Full item details including hearing_aid_class, dome, speaker, manufacturer address
         $items = $db->get_results(
-            "SELECT oi.*, 
-                    p.product_name, p.style, p.tech_level, p.product_code,
-                    m.name AS manufacturer_name
+            "SELECT oi.*,
+                    pr.product_name, pr.style, pr.tech_level, pr.product_code,
+                    pr.hearing_aid_class, pr.dome_type, pr.dome_size,
+                    m.name   AS manufacturer_name,
+                    m.address AS manufacturer_address,
+                    m.order_email AS manufacturer_email,
+                    m.order_phone AS manufacturer_phone,
+                    m.order_contact_name AS manufacturer_contact,
+                    m.account_number AS manufacturer_account
              FROM hearmed_core.order_items oi
-             LEFT JOIN hearmed_reference.products p      ON p.id = oi.item_id AND oi.item_type = 'product'
-             LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+             LEFT JOIN hearmed_reference.products pr     ON pr.id = oi.item_id AND oi.item_type = 'product'
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = pr.manufacturer_id
              WHERE oi.order_id = \$1
              ORDER BY oi.line_number", [$order_id]
         );
