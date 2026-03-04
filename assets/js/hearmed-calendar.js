@@ -1765,10 +1765,13 @@ var Cal={
     _openOrderPage:function(a,outcome){
         var self=this;
         var _backLabel=(window._hmOrderOpts&&window._hmOrderOpts.backLabel)||'Calendar';
-        // Hide calendar, show loading inside .hm-main
+        // Hide existing page content, show order page inside main container
+        // .hm-main (Elementor class) → #hm-app (shortcode wrapper) → body
         var $hmMain=$('.hm-main').first();
+        if(!$hmMain.length) $hmMain=$('#hm-app').first();
+        if(!$hmMain.length) $hmMain=$('body');
         $hmMain.children().not('#hm-op,#hm-op-loading').hide();
-        $hmMain.css({display:'flex',flexDirection:'column'});
+        $hmMain.css({display:'flex',flexDirection:'column',minHeight:'calc(100vh - 60px)'});
         $hmMain.append('<div id="hm-op-loading" style="display:flex;align-items:center;justify-content:center;min-height:400px"><div style="text-align:center;color:var(--hm-text-muted,#94a3b8);font-family:var(--hm-font)"><div style="font-size:16px;font-weight:600;margin-bottom:6px">Loading Order Page</div><div style="font-size:13px;opacity:.6">'+esc(a.patient_name||'')+'</div></div></div>');
 
         post('get_order_products',{}).then(function(pR){
