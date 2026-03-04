@@ -2214,7 +2214,22 @@ class HearMed_Orders {
      */
     public static function maybe_prefill_patient_js() {
         $pid = intval( $_GET['patient_id'] ?? 0 );
-        if ( ! $pid ) return '';
+        $from_appt  = intval( $_GET['from_appointment'] ?? 0 );
+        $is_quickpay = ( $_GET['quickpay'] ?? '' ) === '1';
+
+        $out = '';
+
+        // ── Quickpay / from-appointment banner ──
+        if ( $is_quickpay || $from_appt ) {
+            $banner_text = $is_quickpay
+                ? 'Service Invoice — add services and submit. Approval is automatic for service-only orders.'
+                : 'Order linked to appointment #' . $from_appt . '.';
+            $banner_bg   = $is_quickpay ? '#dbeafe' : '#f0fdfe';
+            $banner_fg   = $is_quickpay ? '#1e40af' : '#0e7490';
+            $out .= '<div id="hm-prefill-banner" style="padding:10px 16px;background:' . $banner_bg . ';border:1px solid ' . $banner_fg . '30;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:600;color:' . $banner_fg . ';">' . esc_html( $banner_text ) . '</div>';
+        }
+
+        if ( ! $pid ) return $out;
 
         $db = HearMed_DB::instance();
         $p  = $db->get_row(
@@ -2222,7 +2237,7 @@ class HearMed_Orders {
              FROM hearmed_core.patients WHERE id = \$1",
             [ $pid ]
         );
-        if ( ! $p ) return '';
+        if ( ! $p ) return $out;
 
         $data = json_encode([
             'id'    => (int) $p->id,
@@ -2230,7 +2245,7 @@ class HearMed_Orders {
                        . ( $p->patient_number ? ' (' . $p->patient_number . ')' : '' ),
         ]);
 
-        return '<script>
+        $out .= '<script>
         (function(){
             var pp = ' . $data . ';
             var pInput = document.getElementById("hm-patient-id");
@@ -2247,9 +2262,14 @@ class HearMed_Orders {
                         if (pSearch) { pSearch.style.display = ""; pSearch.value = ""; }
                     });
                 }
+                // Re-validate form since patient is now set
+                var submitBtn = document.getElementById("hm-submit-order");
+                if (submitBtn) submitBtn.disabled = false;
             }
         })();
         </script>';
+
+        return $out;
     }
 
     // ═══════════════════════════════════════════════════════════════════════

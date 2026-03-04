@@ -428,7 +428,7 @@ var Cal={
                 }
                 var oh='';
                 r.data.forEach(function(o){
-                    oh+='<button class="hm-outcome-opt" data-oid="'+o.id+'" data-color="'+esc(o.outcome_color)+'" data-name="'+esc(o.outcome_name)+'" data-note="'+(o.requires_note?'1':'0')+'" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:#334155;transition:all .15s">';
+                    oh+='<button class="hm-outcome-opt" data-oid="'+o.id+'" data-color="'+esc(o.outcome_color)+'" data-name="'+esc(o.outcome_name)+'" data-note="'+(o.requires_note?'1':'0')+'" data-trig-order="'+(o.triggers_order?'1':'0')+'" data-trig-invoice="'+(o.triggers_invoice?'1':'0')+'" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:#334155;transition:all .15s">';
                     oh+='<span style="width:12px;height:12px;border-radius:3px;background:'+esc(o.outcome_color)+';flex-shrink:0"></span>';
                     oh+=esc(o.outcome_name);
                     if(o.triggers_order)oh+='<span style="margin-left:auto;font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px">Order</span>';
@@ -446,7 +446,7 @@ var Cal={
             $('.hm-outcome-opt').css({borderColor:'#e2e8f0',background:'#fff'});
             var $o=$(this);
             $o.css({borderColor:$o.data('color'),background:$o.data('color')+'15'});
-            self._selectedOutcome={id:$o.data('oid'),color:$o.data('color'),name:$o.data('name')};
+            self._selectedOutcome={id:$o.data('oid'),color:$o.data('color'),name:$o.data('name'),triggers_order:$o.data('trig-order')==='1'||$o.data('trig-order')===1,triggers_invoice:$o.data('trig-invoice')==='1'||$o.data('trig-invoice')===1};
             $('.hm-pop-outcome-save').prop('disabled',false);
             if($o.data('note')==='1'||$o.data('note')===1){$('#hm-pop-outcome-note').show();}else{$('#hm-pop-outcome-note').hide();}
         });
@@ -471,6 +471,12 @@ var Cal={
                 if(r.success){
                     $('#hm-pop').removeClass('open');
                     self.refresh();
+
+                    // ── Handle order / invoice triggers ──
+                    var needsOrder=(o.triggers_order||o.triggers_invoice)&&a.patient_id;
+                    if(needsOrder){
+                        self._openOrderPage(a,{name:o.name,color:o.color,triggers_order:o.triggers_order,triggers_invoice:o.triggers_invoice});
+                    }
                 } else {
                     $btn.prop('disabled',false).text('Save Outcome');
                     alert(r.data&&r.data.message?r.data.message:'Failed to save outcome');

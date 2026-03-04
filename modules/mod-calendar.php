@@ -1856,21 +1856,25 @@ function hm_ajax_save_appointment_outcome() {
     if ( $outcome_id ) {
         try {
             $ot = HearMed_DB::get_row(
-                "SELECT outcome_name, outcome_color FROM hearmed_core.outcome_templates WHERE id = $1",
+                "SELECT outcome_name, outcome_color, triggers_order, triggers_invoice
+                 FROM hearmed_core.outcome_templates WHERE id = $1",
                 [ $outcome_id ]
             );
         } catch ( Throwable $ignored ) {}
     }
 
-    // Get appointment details for patient_id and report_category
+    // Get appointment details for patient_id, clinic_id, staff and report_category
     $appt_row = HearMed_DB::get_row(
-        "SELECT a.patient_id, a.service_id, COALESCE(sv.report_category, '') AS report_category
+        "SELECT a.patient_id, a.clinic_id, a.dispenser_id, a.service_id,
+                COALESCE(sv.report_category, '') AS report_category
          FROM hearmed_core.appointments a
          LEFT JOIN hearmed_reference.services sv ON sv.id = a.service_id
          WHERE a.id = $1",
         [ $appt_id ]
     );
     $patient_id      = $appt_row ? (int) $appt_row->patient_id : null;
+    $clinic_id       = $appt_row ? (int) ( $appt_row->clinic_id ?? 0 ) : null;
+    $staff_id        = $appt_row ? (int) ( $appt_row->dispenser_id ?? 0 ) : null;
     $report_category = $appt_row ? ($appt_row->report_category ?: null) : null;
 
     // Update the appointment — known schema: appointment_status + outcome (varchar)
@@ -1935,6 +1939,12 @@ function hm_ajax_save_appointment_outcome() {
         'id'                    => $appt_id,
         'outcome_name'          => $outcome_text,
         'outcome_banner_colour' => $ot ? $ot->outcome_color : '',
+        'triggers_order'        => (bool) ( $ot->triggers_order ?? false ),
+        'triggers_invoice'      => (bool) ( $ot->triggers_invoice ?? false ),
+        'patient_id'            => $patient_id,
+        'clinic_id'             => $clinic_id,
+        'staff_id'              => $staff_id,
+        'appointment_id'        => $appt_id,
     ] );
     } catch ( Throwable $e ) {
         error_log( '[HearMed] save_appointment_outcome error: ' . $e->getMessage() );
