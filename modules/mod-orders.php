@@ -1634,20 +1634,16 @@ class HearMed_Orders {
             ] );
 
             if ( class_exists( 'HearMed_Finance' ) ) {
-                $debit_acct = in_array( $deposit_method ?: $payment_method, [ 'Card', 'card' ] )
-                    ? 'card' : 'cash';
-                HearMed_Finance::record(
-                    'deposit',
-                    $deposit_amount,
-                    $debit_acct,           // debit: asset received
-                    'revenue',             // credit: revenue recognised
-                    'order',
-                    $order_id,
-                    $patient_id,
-                    $clinic,
-                    $user->id ?? null,
-                    'Deposit on order ' . $order_num . ' (' . ( $deposit_method ?: $payment_method ) . ')'
-                );
+                HearMed_Finance::record( 'deposit', $deposit_amount, [
+                    'patient_id'       => $patient_id,
+                    'order_id'         => $order_id,
+                    'payment_method'   => $deposit_method ?: $payment_method,
+                    'staff_id'         => $user->id ?? null,
+                    'clinic_id'        => $clinic,
+                    'notes'            => 'Deposit at order creation — held in patient credits',
+                    'reference'        => $order_num,
+                    'transaction_date' => $deposit_paid_at ?: date('Y-m-d'),
+                ] );
             }
         }
 
@@ -2007,21 +2003,32 @@ class HearMed_Orders {
 
         // 8. Record fitting payment in financial_transactions
         if ( class_exists( 'HearMed_Finance' ) && $balance_paid > 0 ) {
-            $pay_method = $order->payment_method ?? 'Card';
-            $debit_acct = in_array( $pay_method, [ 'Card', 'card' ] ) ? 'card' : 'cash';
-            HearMed_Finance::record(
-                'payment',
-                $balance_paid,
-                $debit_acct,               // debit: asset received
-                'revenue',                 // credit: revenue recognised
-                'invoice',
-                (int) ( $effective_invoice_id ?: $order_id ),
-                (int) $order->patient_id,
-                (int) ( $order->clinic_id ?: 0 ) ?: null,
-                $user->id ?? null,
-                'Fitting payment on order ' . $order->order_number
-                    . ( $deposit_paid > 0 ? ' (deposit €' . number_format( $deposit_paid, 2 ) . ' already recorded)' : '' )
-            );
+            HearMed_Finance::record( 'payment', $balance_paid, [
+                'patient_id'       => (int) $order->patient_id,
+                'order_id'         => $order_id,
+                'invoice_id'       => $effective_invoice_id ?: null,
+                'payment_method'   => $order->payment_method ?? 'Card',
+                'staff_id'         => $user->id ?? null,
+                'clinic_id'        => $order->clinic_id ? (int) $order->clinic_id : null,
+                'notes'            => 'Fitting payment — balance collected',
+                'reference'        => $order->order_number ?? '',
+                'transaction_date' => date('Y-m-d'),
+            ] );
+        }
+
+        // 8b. Record deposit portion applied at fitting
+        if ( $deposit_paid > 0 && class_exists( 'HearMed_Finance' ) ) {
+            HearMed_Finance::record( 'payment', $deposit_paid, [
+                'patient_id'       => (int) $order->patient_id,
+                'order_id'         => $order_id,
+                'invoice_id'       => $effective_invoice_id ?: null,
+                'payment_method'   => $order->deposit_method ?? $order->payment_method ?? 'Card',
+                'staff_id'         => $user->id ?? null,
+                'clinic_id'        => $order->clinic_id ? (int) $order->clinic_id : null,
+                'notes'            => 'Deposit portion — applied at fitting',
+                'reference'        => $order->order_number ?? '',
+                'transaction_date' => $order->deposit_paid_at ?? date('Y-m-d'),
+            ] );
         }
 
         // 9. Log in patient timeline
@@ -2066,18 +2073,16 @@ class HearMed_Orders {
                     );
 
                     // Record as financial transaction
-                    HearMed_Finance::record(
-                        'credit_applied',
-                        $credit_actually_applied,
-                        'patient_credit',
-                        'revenue',
-                        'invoice',
-                        (int) $effective_invoice_id,
-                        (int) $order->patient_id,
-                        $order->clinic_id ? (int) $order->clinic_id : null,
-                        $user->id ?? null,
-                        'Patient credit applied to order ' . $order->order_number
-                    );
+                    HearMed_Finance::record( 'credit_applied', $credit_actually_applied, [
+                        'patient_id'       => (int) $order->patient_id,
+                        'order_id'         => $order_id,
+                        'invoice_id'       => (int) $effective_invoice_id,
+                        'staff_id'         => $user->id ?? null,
+                        'clinic_id'        => $order->clinic_id ? (int) $order->clinic_id : null,
+                        'notes'            => 'Patient credit applied to order ' . $order->order_number,
+                        'reference'        => $order->order_number ?? '',
+                        'transaction_date' => date('Y-m-d'),
+                    ] );
 
                     // Timeline entry
                     $db->insert( 'hearmed_core.patient_timeline', [

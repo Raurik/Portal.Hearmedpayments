@@ -809,18 +809,17 @@ class HearMed_Refunds {
             if ( ! $clinic_id ) {
                 $clinic_id = HearMed_Auth::current_clinic() ?: null;
             }
-            HearMed_Finance::record(
-                'credit_note',
-                $amount,
-                'revenue',           // debit: reverse previously recognised revenue
-                'patient_credit',    // credit: create a liability / patient credit
-                'credit_note',
-                (int) $cn_id,
-                $patient_id,
-                $clinic_id ? (int) $clinic_id : null,
-                $user->id ?? null,
-                'Credit note ' . $cn_num . ' (' . $type . ') — ' . $reason
-            );
+            HearMed_Finance::record( 'credit_note', $amount, [
+                'patient_id'       => $patient_id,
+                'order_id'         => null,
+                'invoice_id'       => $invoice_id,
+                'credit_note_id'   => (int) $cn_id,
+                'staff_id'         => $user->id ?? null,
+                'clinic_id'        => $clinic_id ? (int) $clinic_id : null,
+                'notes'            => 'Credit note ' . $cn_num . ' (' . $type . ') — ' . $reason,
+                'reference'        => $cn_num,
+                'transaction_date' => date('Y-m-d'),
+            ] );
         }
 
         // ── Return stock to inventory for exchanges/cancellations ─────────
@@ -888,18 +887,16 @@ class HearMed_Refunds {
 
         // ── Record cheque refund in financial_transactions ────────────────
         if ( class_exists( 'HearMed_Finance' ) && floatval( $cn->amount ) > 0 ) {
-            HearMed_Finance::record(
-                'refund',
-                floatval( $cn->amount ),
-                'patient_credit',    // debit: consume the patient credit / liability
-                'bank',              // credit: money leaves the bank (cheque)
-                'credit_note',
-                $cn_id,
-                (int) $cn->patient_id,
-                $cn->clinic_id ? (int) $cn->clinic_id : null,
-                $user->id ?? null,
-                'Cheque refund ' . $cheque . ' for ' . ( $cn->credit_note_number ?? 'CN#' . $cn_id )
-            );
+            HearMed_Finance::record( 'refund', floatval( $cn->amount ), [
+                'patient_id'       => (int) $cn->patient_id,
+                'credit_note_id'   => $cn_id,
+                'payment_method'   => 'cheque',
+                'staff_id'         => $user->id ?? null,
+                'clinic_id'        => $cn->clinic_id ? (int) $cn->clinic_id : null,
+                'notes'            => 'Cheque refund sent to patient — ' . $cheque,
+                'reference'        => $cn->credit_note_number ?? '',
+                'transaction_date' => date('Y-m-d'),
+            ] );
         }
 
         wp_send_json_success(['message' => 'Refund marked as cheque sent.']);
