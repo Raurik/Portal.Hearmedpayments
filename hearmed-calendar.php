@@ -62,6 +62,7 @@ require_once HEARMED_PATH . 'core/class-hearmed-logger.php';
 require_once HEARMED_PATH . 'core/class-hearmed-pg.php';
 require_once HEARMED_PATH . 'core/class-hearmed-db.php';  // Main database abstraction
 require_once HEARMED_PATH . 'core/class-hearmed-settings.php';
+require_once HEARMED_PATH . 'core/class-hearmed-finance.php';
 
 // Add AJAX handlers
 require_once HEARMED_PATH . 'includes/ajax-handlers.php';
