@@ -534,6 +534,15 @@ class HearMed_Orders {
                         window.location=ordersBase;
                     });
 
+                    /* ═══ FIX 1: Remove full PAYMENT section — deposits only at order creation ═══ */
+                    $('#hm-op-pay-btn').remove();           /* "Take Payment" button */
+                    $('#hm-op-paysec').remove();            /* Confirm Payment, allocation bar, payment methods */
+                    $('#hm-op-submit').text('Submit Order for Approval').css('flex','1');
+
+                    /* ═══ FIX 2: Serial number modal cannot appear — it is triggered from payment
+                       flow (Confirm Payment → serials_required). Since we removed #hm-op-paysec
+                       and #hm-op-pay-btn, the _showSerialModal pathway is unreachable. ═══ */
+
                     /* ── Deposit section: inject above action buttons ── */
                     var LB='font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px';
                     var INP='font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;background:#fff;box-sizing:border-box';
@@ -603,13 +612,18 @@ class HearMed_Orders {
                         });
                     });
 
-                    /* Deposit validation: block submit if deposit > total */
+                    /* Deposit validation: block submit if deposit > total or method missing */
                     $(document).on('click','#hm-op-submit',function(e){
                         var dep=parseFloat($('#hm-op-dep-amt').val())||0;
                         var total=parseFloat($('#hm-op-total').text().replace(/[^0-9.]/g,''))||0;
                         if(dep>total+0.01){
                             e.stopImmediatePropagation();
                             $('#hm-op-err').text('Deposit (€'+dep.toFixed(2)+') cannot exceed the order total (€'+total.toFixed(2)+').');
+                            return false;
+                        }
+                        if(dep>0 && !$('#hm-op-dep-method').val()){
+                            e.stopImmediatePropagation();
+                            $('#hm-op-err').text('Please select a deposit payment method.');
                             return false;
                         }
                     });
@@ -1722,7 +1736,7 @@ class HearMed_Orders {
             'invoice_id'     => $invoice_id,
             'duplicate_flag' => $duplicate_flag,
             'duplicate_flag_reason' => $dup_reason,
-            'redirect'       => HearMed_Utils::page_url('orders').'?hm_action=view&order_id='.$order_id,
+            'redirect'       => HearMed_Utils::page_url('orders'),
         ]);
     }
 
