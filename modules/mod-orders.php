@@ -87,64 +87,152 @@ add_action( 'wp_ajax_hm_get_patient_credit_balance',  [ 'HearMed_Orders', 'ajax_
 class HearMed_Orders {
 
     // ═══════════════════════════════════════════════════════════════════════
-    // LIST VIEW
+    // LIST VIEW — Two white-bubble tables: Awaiting Approval + Approved History
     // ═══════════════════════════════════════════════════════════════════════
     public static function render_list() {
         $db     = HearMed_DB::instance();
-        $role   = HearMed_Auth::current_role();
         $clinic = HearMed_Auth::current_clinic();
+        $now_ts = time();
+        $nonce  = wp_create_nonce('hm_nonce');
+        $ajax   = admin_url('admin-ajax.php');
 
-        $status_filter = sanitize_text_field( $_GET['status'] ?? 'all' );
-        $search        = sanitize_text_field( $_GET['search'] ?? '' );
+        $clinic_where = $clinic ? 'AND o.clinic_id = $1' : '';
+        $clinic_param = $clinic ? [$clinic] : [];
 
-        $where_parts = [];
-        $params      = [];
-        $i           = 1;
+        // ── Alert-level helper ──
+        $calc_alert = function($days, $hearing_aid_class) {
+            $cls = strtolower(trim($hearing_aid_class));
+            $amber = ($cls === 'ready-fit') ? 5 : 10;
+            $red   = ($cls === 'ready-fit') ? 7 : 14;
+            if ($days >= $red)   return 'red';
+            if ($days >= $amber) return 'amber';
+            return '';
+        };
 
-        if ( $clinic ) {
-            $where_parts[] = "o.clinic_id = \${$i}"; $params[] = $clinic; $i++;
-        }
-        if ( $status_filter && $status_filter !== 'all' ) {
-            $where_parts[] = "o.current_status = \${$i}"; $params[] = $status_filter; $i++;
-        }
-        if ( $search ) {
-            $where_parts[] = "(p.first_name ILIKE \${$i} OR p.last_name ILIKE \${$i} OR o.order_number ILIKE \${$i})";
-            $params[] = '%' . $search . '%'; $i++;
-        }
-
-        $where = $where_parts ? 'WHERE ' . implode( ' AND ', $where_parts ) : '';
-
-        $orders = $db->get_results(
-            "SELECT o.id, o.order_number, o.current_status, o.created_at,
-                    o.grand_total, o.prsi_amount, o.prsi_applicable,
-                    p.first_name, p.last_name, p.id AS patient_id,
+        // ── 1) Awaiting Approval orders ──
+        $awaiting = $db->get_results(
+            "SELECT o.id, o.order_number, o.created_at,
+                    p.first_name, p.last_name, p.patient_number, p.id AS patient_id,
                     c.clinic_name,
-                    CONCAT(s.first_name,' ',s.last_name) AS created_by_name
+                    CONCAT(s.first_name,' ',s.last_name) AS dispenser_name,
+                    m.name AS manufacturer_name,
+                    COALESCE(pr.display_name, pr.product_name, oi.item_description) AS product_name,
+                    COALESCE(pr.hearing_aid_class,'') AS hearing_aid_class
              FROM hearmed_core.orders o
-             JOIN hearmed_core.patients p       ON p.id = o.patient_id
-             JOIN hearmed_reference.clinics c   ON c.id = o.clinic_id
+             JOIN hearmed_core.patients p ON p.id = o.patient_id
+             JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
              LEFT JOIN hearmed_reference.staff s ON s.id = o.staff_id
-             {$where}
-             ORDER BY o.created_at DESC
-             LIMIT 150",
-            $params
-        );
+             LEFT JOIN hearmed_core.order_items oi ON oi.order_id = o.id AND oi.item_type = 'product'
+             LEFT JOIN hearmed_reference.products pr ON pr.id = oi.item_id
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = pr.manufacturer_id
+             WHERE o.current_status = 'Awaiting Approval' {$clinic_where}
+             ORDER BY o.created_at ASC",
+            $clinic_param
+        ) ?: [];
 
-        // Tab counts
-        $cp  = $clinic ? [$clinic] : [];
-        $cw  = $clinic ? 'WHERE clinic_id = $1' : '';
-        $raw = $db->get_results(
-            "SELECT current_status, COUNT(*) AS cnt FROM hearmed_core.orders {$cw} GROUP BY current_status", $cp
-        );
-        $counts = ['all' => 0];
-        foreach ( $raw as $r ) {
-            $counts[$r->current_status] = (int)$r->cnt;
-            $counts['all'] += (int)$r->cnt;
+        // Dedupe by order id
+        $seen = [];
+        $awaiting_rows = [];
+        foreach ($awaiting as $o) {
+            if (isset($seen[$o->id])) continue;
+            $seen[$o->id] = true;
+            $days = $o->created_at ? (int)floor(($now_ts - strtotime($o->created_at)) / 86400) : 0;
+            $o->_days  = $days;
+            $o->_alert = $calc_alert($days, $o->hearing_aid_class);
+            $awaiting_rows[] = $o;
         }
+
+        // ── 2) Approved history (everything past Awaiting Approval) ──
+        $history = $db->get_results(
+            "SELECT o.id, o.order_number, o.created_at, o.current_status,
+                    o.order_date, o.approved_date,
+                    p.first_name, p.last_name, p.patient_number, p.id AS patient_id,
+                    c.clinic_name,
+                    CONCAT(s.first_name,' ',s.last_name) AS dispenser_name,
+                    m.name AS manufacturer_name,
+                    COALESCE(pr.display_name, pr.product_name, oi.item_description) AS product_name,
+                    COALESCE(pr.hearing_aid_class,'') AS hearing_aid_class,
+                    osh.changed_at AS ordered_at
+             FROM hearmed_core.orders o
+             JOIN hearmed_core.patients p ON p.id = o.patient_id
+             JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
+             LEFT JOIN hearmed_reference.staff s ON s.id = o.staff_id
+             LEFT JOIN hearmed_core.order_items oi ON oi.order_id = o.id AND oi.item_type = 'product'
+             LEFT JOIN hearmed_reference.products pr ON pr.id = oi.item_id
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = pr.manufacturer_id
+             LEFT JOIN LATERAL (
+                 SELECT changed_at FROM hearmed_core.order_status_history
+                 WHERE order_id = o.id AND to_status = 'Ordered'
+                 ORDER BY changed_at DESC LIMIT 1
+             ) osh ON true
+             WHERE o.current_status IN ('Approved','Ordered','Received','Awaiting Fitting','Complete','Cancelled') {$clinic_where}
+             ORDER BY
+                 CASE o.current_status
+                     WHEN 'Approved'         THEN 1
+                     WHEN 'Ordered'          THEN 2
+                     WHEN 'Received'         THEN 3
+                     WHEN 'Awaiting Fitting' THEN 4
+                     WHEN 'Complete'         THEN 5
+                     WHEN 'Cancelled'        THEN 6
+                 END,
+                 o.created_at DESC",
+            $clinic_param
+        ) ?: [];
+
+        $seen = [];
+        $history_rows = [];
+        foreach ($history as $o) {
+            if (isset($seen[$o->id])) continue;
+            $seen[$o->id] = true;
+            $st = $o->current_status;
+            if ($st === 'Ordered')      $ref = $o->ordered_at ?? $o->order_date ?? $o->created_at;
+            elseif ($st === 'Approved') $ref = $o->approved_date ?? $o->created_at;
+            else                        $ref = $o->created_at;
+            $days = $ref ? (int)floor(($now_ts - strtotime($ref)) / 86400) : 0;
+            $o->_days  = $days;
+            $o->_alert = in_array($st, ['Approved','Ordered']) ? $calc_alert($days, $o->hearing_aid_class) : '';
+            $history_rows[] = $o;
+        }
+
+        // ── Status badge map ──
+        $status_badges = [
+            'Approved'         => ['bg'=>'rgba(16,185,129,.08)','color'=>'#059669','border'=>'rgba(16,185,129,.25)'],
+            'Ordered'          => ['bg'=>'rgba(11,180,196,.08)','color'=>'#0a8a96','border'=>'rgba(11,180,196,.25)'],
+            'Received'         => ['bg'=>'rgba(59,130,246,.08)','color'=>'#1e40af','border'=>'rgba(59,130,246,.25)'],
+            'Awaiting Fitting' => ['bg'=>'rgba(139,92,246,.08)','color'=>'#6d28d9','border'=>'rgba(139,92,246,.25)'],
+            'Complete'         => ['bg'=>'rgba(16,185,129,.08)','color'=>'#047857','border'=>'rgba(16,185,129,.3)'],
+            'Cancelled'        => ['bg'=>'rgba(239,68,68,.08)', 'color'=>'#dc2626','border'=>'rgba(239,68,68,.25)'],
+        ];
 
         $base = HearMed_Utils::page_url('orders');
 
         ob_start(); ?>
+        <style>
+        .hmo-bubble{background:#fff;border-radius:14px;border:1px solid #f1f5f9;box-shadow:0 2px 10px rgba(15,23,42,.045);overflow:hidden;margin-bottom:28px;}
+        .hmo-bubble-hd{padding:16px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9;}
+        .hmo-bubble-title{font-size:15px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:10px;margin:0;}
+        .hmo-pill{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 8px;border-radius:12px;font-size:11px;font-weight:700;background:#e2e8f0;color:#475569;}
+        .hmo-pill-teal{background:rgba(11,180,196,.12);color:#0a8a96;}
+        .hmo-days{font-weight:700;font-size:12px;white-space:nowrap;}
+        .hmo-days-green{color:#059669;}.hmo-days-amber{color:#d97706;}.hmo-days-red{color:#dc2626;}
+        .hmo-alert{display:inline-flex;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-left:6px;}
+        .hmo-alert-amber{background:#fef3cd;color:#92400e;}.hmo-alert-red{background:#fee2e2;color:#991b1b;}
+        .hmo-cls{display:inline-flex;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;}
+        .hmo-cls-custom{background:#ede9fe;color:#6d28d9;}.hmo-cls-ready{background:#dbeafe;color:#1e40af;}
+        .hmo-st{display:inline-flex;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+        tr.hmo-row-amber td{background:rgba(245,158,11,.04)!important;}
+        tr.hmo-row-red td{background:rgba(239,68,68,.04)!important;}
+        .hmo-empty{padding:32px 20px;text-align:center;color:#94a3b8;font-size:13px;}
+        .hmo-empty-icon{font-size:28px;margin-bottom:6px;}
+        .hmo-acts{display:flex;gap:6px;justify-content:flex-end;white-space:nowrap;}
+        .hmo-btn{display:inline-flex;align-items:center;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;cursor:pointer;border:none;transition:all .15s;text-decoration:none;white-space:nowrap;}
+        .hmo-btn-pdf{background:#fff;color:#475569;border:1px solid #e2e8f0;}
+        .hmo-btn-pdf:hover{background:#f8fafc;border-color:var(--hm-teal,#0bb4c4);color:var(--hm-teal,#0bb4c4);}
+        .hmo-btn-action{background:var(--hm-teal,#0bb4c4);color:#fff;}
+        .hmo-btn-action:hover{background:#0a9aa8;}
+        .hmo-btn-action:disabled{opacity:.6;cursor:not-allowed;}
+        </style>
+
         <div class="hm-content hm-orders-list">
 
             <div class="hm-page-header">
@@ -154,114 +242,153 @@ class HearMed_Orders {
                 </a>
             </div>
 
-            <div class="hm-tab-bar">
-                <?php
-                $tabs = [
-                    'all'               => 'All',
-                    'Awaiting Approval' => 'Awaiting Approval',
-                    'Approved'          => 'Approved',
-                    'Ordered'           => 'Ordered',
-                    'Received'          => 'Received',
-                    'Awaiting Fitting'  => 'Awaiting Fitting',
-                    'Complete'          => 'Complete',
-                    'Cancelled'         => 'Cancelled',
-                ];
-                foreach ( $tabs as $key => $label ) :
-                    $active = $status_filter === $key ? 'hm-tab--active' : '';
-                    $cnt    = $counts[$key] ?? 0;
-                    $urgent = '';
-                    if ($key==='Awaiting Approval' && $role==='c_level'                   && $cnt>0) $urgent='hm-tab--urgent';
-                    if ($key==='Approved'           && in_array($role,['admin','finance']) && $cnt>0) $urgent='hm-tab--urgent';
-                    if ($key==='Received'           && $cnt>0)                                       $urgent='hm-tab--urgent';
-                    ?>
-                    <a href="<?php echo esc_url($base.'?status='.urlencode($key)); ?>"
-                       class="hm-tab <?php echo $active.' '.$urgent; ?>">
-                        <?php echo esc_html($label); ?>
-                        <?php if ($cnt) : ?><span class="hm-tab__badge"><?php echo $cnt; ?></span><?php endif; ?>
-                    </a>
-                <?php endforeach; ?>
-            </div>
-
-            <form class="hm-search-bar" method="get">
-                <input type="hidden" name="page"   value="orders">
-                <input type="hidden" name="status" value="<?php echo esc_attr($status_filter); ?>">
-                <input type="text"   name="search" class="hm-input hm-input--search"
-                       placeholder="Search patient name or order number..."
-                       value="<?php echo esc_attr($search); ?>">
-                <button type="submit" class="hm-btn hm-btn--secondary">Search</button>
-            </form>
-
-            <div class="hm-table-wrap">
-                <table class="hm-table">
-                    <thead>
-                        <tr>
-                            <th>Order #</th><th>Patient</th><th>Clinic</th>
-                            <th>Dispenser</th><th>Total</th><th>PRSI</th>
-                            <th>Status</th><th>Date</th><th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php if ( empty($orders) ) : ?>
-                        <tr><td colspan="9" class="hm-empty hm-empty-text">No orders found.</td></tr>
-                    <?php else : ?>
-                        <?php foreach ( $orders as $o ) : ?>
-                        <tr>
-                            <td class="hm-mono"><?php echo esc_html($o->order_number); ?></td>
+            <!-- ═══ BUBBLE 1: Awaiting Approval ═══ -->
+            <div class="hmo-bubble">
+                <div class="hmo-bubble-hd">
+                    <h2 class="hmo-bubble-title">
+                        Awaiting Approval
+                        <span class="hmo-pill hmo-pill-teal"><?php echo count($awaiting_rows); ?></span>
+                    </h2>
+                </div>
+                <?php if (empty($awaiting_rows)) : ?>
+                    <div class="hmo-empty"><div class="hmo-empty-icon">✓</div>No orders awaiting approval.</div>
+                <?php else : ?>
+                <div style="overflow-x:auto;">
+                    <table class="hm-table">
+                        <thead>
+                            <tr>
+                                <th>Order #</th><th>Patient</th><th>Clinic</th>
+                                <th>Dispenser</th><th>Product</th><th>Class</th>
+                                <th>Date Created</th><th>Days Waiting</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($awaiting_rows as $o) :
+                            $row_cls = $o->_alert === 'red' ? ' class="hmo-row-red"' : ($o->_alert === 'amber' ? ' class="hmo-row-amber"' : '');
+                            $days_cls = $o->_alert === 'red' ? 'hmo-days-red' : ($o->_alert === 'amber' ? 'hmo-days-amber' : 'hmo-days-green');
+                            $cls_lc = strtolower(trim($o->hearing_aid_class));
+                            $cls_badge = $o->hearing_aid_class
+                                ? '<span class="hmo-cls '.($cls_lc==='custom'?'hmo-cls-custom':'hmo-cls-ready').'">'.esc_html($o->hearing_aid_class).'</span>'
+                                : '—';
+                            $alert_badge = '';
+                            if ($o->_alert === 'amber') $alert_badge = '<span class="hmo-alert hmo-alert-amber">LATE</span>';
+                            if ($o->_alert === 'red')   $alert_badge = '<span class="hmo-alert hmo-alert-red">OVERDUE</span>';
+                        ?>
+                        <tr<?php echo $row_cls; ?>>
+                            <td><strong><?php echo esc_html($o->order_number); ?></strong></td>
                             <td>
-                                <a href="<?php echo esc_url(HearMed_Utils::page_url('patients').'?patient_id='.$o->patient_id); ?>">
+                                <a href="<?php echo esc_url(HearMed_Utils::page_url('patients').'?patient_id='.$o->patient_id); ?>" style="color:var(--hm-teal);text-decoration:none;">
                                     <?php echo esc_html($o->first_name.' '.$o->last_name); ?>
                                 </a>
                             </td>
                             <td><?php echo esc_html($o->clinic_name); ?></td>
-                            <td class="hm-muted"><?php echo esc_html($o->created_by_name ?: '—'); ?></td>
-                            <td class="hm-money">€<?php echo number_format($o->grand_total,2); ?></td>
-                            <td class="hm-money <?php echo $o->prsi_applicable ? 'hm-text--green' : 'hm-muted'; ?>">
-                                <?php echo $o->prsi_applicable ? '€'.number_format($o->prsi_amount,2) : '—'; ?>
-                            </td>
-                            <td><?php echo self::status_badge($o->current_status); ?></td>
-                            <td class="hm-muted"><?php echo date('d M Y',strtotime($o->created_at)); ?></td>
-                            <td style="white-space:nowrap;">
-                                <?php
-                                $print_url = admin_url('admin-ajax.php') . '?action=hm_print_order_sheet&nonce=' . wp_create_nonce('hm_nonce') . '&order_id=' . $o->id;
-                                $st = $o->current_status;
-                                ?>
-                                <a href="<?php echo esc_url($print_url); ?>" target="_blank"
-                                   class="hm-btn hm-btn--sm hm-btn--secondary" style="margin-right:4px;">Pull Order PDF</a>
-                                <?php if ($st === 'Approved') : ?>
-                                    <button class="hm-btn hm-btn--sm hm-btn--primary hm-mark-ordered-btn" data-id="<?php echo $o->id; ?>" data-num="<?php echo esc_attr($o->order_number); ?>">Ordered</button>
-                                <?php elseif ($st === 'Ordered') : ?>
-                                    <button class="hm-btn hm-btn--sm hm-btn--primary hm-mark-received-btn" data-id="<?php echo $o->id; ?>" data-num="<?php echo esc_attr($o->order_number); ?>">Received</button>
-                                <?php endif; ?>
+                            <td class="hm-muted"><?php echo esc_html($o->dispenser_name ?: '—'); ?></td>
+                            <td style="max-width:180px;"><?php echo esc_html($o->product_name ?: '—'); ?></td>
+                            <td><?php echo $cls_badge; ?></td>
+                            <td class="hm-muted"><?php echo date('d M Y', strtotime($o->created_at)); ?></td>
+                            <td>
+                                <span class="hmo-days <?php echo $days_cls; ?>"><?php echo $o->_days; ?> day<?php echo $o->_days !== 1 ? 's' : ''; ?></span>
+                                <?php echo $alert_badge; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                    <?php endif; ?>
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
             </div>
+
+            <!-- ═══ BUBBLE 2: Approved Orders (History) ═══ -->
+            <div class="hmo-bubble">
+                <div class="hmo-bubble-hd">
+                    <h2 class="hmo-bubble-title">
+                        Approved Orders
+                        <span class="hmo-pill"><?php echo count($history_rows); ?></span>
+                    </h2>
+                </div>
+                <?php if (empty($history_rows)) : ?>
+                    <div class="hmo-empty"><div class="hmo-empty-icon">📋</div>No approved orders yet.</div>
+                <?php else : ?>
+                <div style="overflow-x:auto;">
+                    <table class="hm-table">
+                        <thead>
+                            <tr>
+                                <th>Order #</th><th>Patient</th><th>Clinic</th>
+                                <th>Dispenser</th><th>Product</th><th>Class</th>
+                                <th>Status</th><th>Days</th><th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($history_rows as $o) :
+                            $row_cls = $o->_alert === 'red' ? ' class="hmo-row-red"' : ($o->_alert === 'amber' ? ' class="hmo-row-amber"' : '');
+                            $days_cls = $o->_alert === 'red' ? 'hmo-days-red' : ($o->_alert === 'amber' ? 'hmo-days-amber' : 'hmo-days-green');
+                            $cls_lc = strtolower(trim($o->hearing_aid_class));
+                            $cls_badge = $o->hearing_aid_class
+                                ? '<span class="hmo-cls '.($cls_lc==='custom'?'hmo-cls-custom':'hmo-cls-ready').'">'.esc_html($o->hearing_aid_class).'</span>'
+                                : '—';
+                            $st = $o->current_status;
+                            $sb = $status_badges[$st] ?? ['bg'=>'#f8fafc','color'=>'#64748b','border'=>'#e2e8f0'];
+                            $alert_badge = '';
+                            if ($o->_alert === 'amber') $alert_badge = '<span class="hmo-alert hmo-alert-amber">LATE</span>';
+                            if ($o->_alert === 'red')   $alert_badge = '<span class="hmo-alert hmo-alert-red">OVERDUE</span>';
+                            $pdf_url = $ajax . '?action=hm_print_order_sheet&nonce=' . $nonce . '&order_id=' . $o->id;
+                        ?>
+                        <tr<?php echo $row_cls; ?>>
+                            <td><strong><?php echo esc_html($o->order_number); ?></strong></td>
+                            <td>
+                                <a href="<?php echo esc_url(HearMed_Utils::page_url('patients').'?patient_id='.$o->patient_id); ?>" style="color:var(--hm-teal);text-decoration:none;">
+                                    <?php echo esc_html($o->first_name.' '.$o->last_name); ?>
+                                </a>
+                            </td>
+                            <td><?php echo esc_html($o->clinic_name); ?></td>
+                            <td class="hm-muted"><?php echo esc_html($o->dispenser_name ?: '—'); ?></td>
+                            <td style="max-width:180px;"><?php echo esc_html($o->product_name ?: '—'); ?></td>
+                            <td><?php echo $cls_badge; ?></td>
+                            <td><span class="hmo-st" style="background:<?php echo $sb['bg']; ?>;color:<?php echo $sb['color']; ?>;border:1px solid <?php echo $sb['border']; ?>;"><?php echo esc_html($st); ?></span></td>
+                            <td>
+                                <span class="hmo-days <?php echo $days_cls; ?>"><?php echo $o->_days; ?>d</span>
+                                <?php echo $alert_badge; ?>
+                            </td>
+                            <td>
+                                <div class="hmo-acts">
+                                    <a href="<?php echo esc_url($pdf_url); ?>" target="_blank" class="hmo-btn hmo-btn-pdf">PDF</a>
+                                    <?php if ($st === 'Approved') : ?>
+                                        <button class="hmo-btn hmo-btn-action hmo-mark-btn" data-id="<?php echo $o->id; ?>" data-num="<?php echo esc_attr($o->order_number); ?>" data-status="Ordered">Ordered →</button>
+                                    <?php elseif ($st === 'Ordered') : ?>
+                                        <button class="hmo-btn hmo-btn-action hmo-mark-btn" data-id="<?php echo $o->id; ?>" data-num="<?php echo esc_attr($o->order_number); ?>" data-status="Received">Received ✓</button>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+            </div>
+
         </div>
         <script>
         (function(){
-            var ajaxUrl = '<?php echo esc_js(admin_url("admin-ajax.php")); ?>';
-            var nonce   = '<?php echo esc_js(wp_create_nonce("hm_nonce")); ?>';
-            function statusAction(btn, newStatus, label){
+            var ajaxUrl = '<?php echo esc_js($ajax); ?>';
+            var nonce   = '<?php echo esc_js($nonce); ?>';
+            document.querySelectorAll('.hmo-mark-btn').forEach(function(btn){
                 btn.addEventListener('click', function(){
-                    var id  = btn.getAttribute('data-id');
-                    var num = btn.getAttribute('data-num');
-                    if(!confirm('Mark ' + num + ' as ' + label + '?')) return;
+                    var id     = btn.getAttribute('data-id');
+                    var num    = btn.getAttribute('data-num');
+                    var status = btn.getAttribute('data-status');
+                    if(!confirm('Mark ' + num + ' as ' + status + '?')) return;
                     btn.disabled = true; btn.textContent = 'Saving…';
                     var fd = new FormData();
                     fd.append('action','hm_update_order_status');
                     fd.append('nonce', nonce);
                     fd.append('order_id', id);
-                    fd.append('new_status', newStatus);
+                    fd.append('new_status', status);
                     fetch(ajaxUrl,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(r){
-                        if(r.success){ location.reload(); } else { alert(r.data && r.data.msg ? r.data.msg : 'Error'); btn.disabled=false; btn.textContent=label; }
-                    }).catch(function(){ alert('Network error'); btn.disabled=false; btn.textContent=label; });
+                        if(r.success){ location.reload(); } else { alert(r.data && r.data.msg ? r.data.msg : 'Error'); btn.disabled=false; }
+                    }).catch(function(){ alert('Network error'); btn.disabled=false; });
                 });
-            }
-            document.querySelectorAll('.hm-mark-ordered-btn').forEach(function(b){ statusAction(b,'Ordered','Ordered'); });
-            document.querySelectorAll('.hm-mark-received-btn').forEach(function(b){ statusAction(b,'Received','Received'); });
+            });
         })();
         </script>
         <?php return ob_get_clean();
