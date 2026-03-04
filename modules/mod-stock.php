@@ -115,8 +115,17 @@ class HearMed_Stock {
         .hm-stock-tab.active{background:var(--hm-navy,#151B33);color:#fff;border-color:var(--hm-navy,#151B33)}
         .hm-stock-tab .pill{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;font-size:11px;font-weight:600;margin-left:6px;background:rgba(0,0,0,.08);color:inherit}
         .hm-stock-tab.active .pill{background:rgba(255,255,255,.2);color:#fff}
-        .hm-stock-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-        .hm-stock-filters select,.hm-stock-filters input{font-size:13px;padding:6px 10px;border:1px solid var(--hm-border,#e2e8f0);border-radius:6px;font-family:var(--hm-font,'Source Sans 3',sans-serif)}
+        .hm-stock-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+        .hm-stock-top-row .hm-stats{margin:0;flex:1;min-width:0}
+        .hm-stock-filters{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;margin:0;flex:0 0 auto}
+        .hm-stock-filters select,.hm-stock-filters input{height:32px;font-size:12px;padding:4px 8px;border:1px solid var(--hm-border,#e2e8f0);border-radius:6px;font-family:var(--hm-font,'Source Sans 3',sans-serif)}
+        #hm-stock-clinic,#hm-stock-mfr{width:140px;min-width:140px}
+        #hm-stock-status{width:120px;min-width:120px}
+        #hm-stock-search{width:170px}
+        @media (max-width: 1200px){
+            .hm-stock-top-row{flex-direction:column;align-items:stretch}
+            .hm-stock-filters{flex-wrap:wrap}
+        }
         .hm-low-stock{background:var(--hm-error-light,#fef2f2);color:var(--hm-error,#dc2626);font-weight:600;padding:2px 8px;border-radius:4px;font-size:12px}
         .hm-serial{font-family:'SF Mono',monospace;font-size:12px;letter-spacing:.5px;color:var(--hm-navy,#151B33)}
         </style>
@@ -136,21 +145,23 @@ class HearMed_Stock {
                 <div class="hm-stock-tab" data-tab="movements">Movements Log</div>
             </div>
 
-            <!-- Stats -->
-            <div class="hm-stats" id="hm-stock-stats"></div>
+            <div class="hm-stock-top-row">
+                <!-- Stats -->
+                <div class="hm-stats" id="hm-stock-stats"></div>
 
-            <!-- Filters -->
-            <div class="hm-stock-filters" id="hm-stock-filters">
-                <select id="hm-stock-clinic" class="hm-dd" style="min-width:160px"><option value="">All clinics</option></select>
-                <select id="hm-stock-mfr" class="hm-dd" style="min-width:160px"><option value="">All manufacturers</option></select>
-                <select id="hm-stock-status" class="hm-dd" style="min-width:130px">
-                    <option value="">All statuses</option>
-                    <option value="Available">Available</option>
-                    <option value="Reserved">Reserved</option>
-                    <option value="Fitted">Fitted</option>
-                    <option value="Returned">Returned</option>
-                </select>
-                <input type="text" id="hm-stock-search" class="hm-inp" style="width:200px" placeholder="Search serial / model…">
+                <!-- Filters -->
+                <div class="hm-stock-filters" id="hm-stock-filters">
+                    <select id="hm-stock-clinic" class="hm-dd"><option value="">All clinics</option></select>
+                    <select id="hm-stock-mfr" class="hm-dd"><option value="">All manufacturers</option></select>
+                    <select id="hm-stock-status" class="hm-dd">
+                        <option value="">All statuses</option>
+                        <option value="Available">Available</option>
+                        <option value="Reserved">Reserved</option>
+                        <option value="Fitted">Fitted</option>
+                        <option value="Returned">Returned</option>
+                    </select>
+                    <input type="text" id="hm-stock-search" class="hm-inp" placeholder="Search serial / model…">
+                </div>
             </div>
 
             <!-- Table area -->
