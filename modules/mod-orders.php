@@ -149,11 +149,9 @@ class HearMed_Orders {
 
             <div class="hm-page-header">
                 <h1 class="hm-page-title">Orders</h1>
-                <?php if ( HearMed_Auth::can('create_orders') ) : ?>
                 <a href="<?php echo esc_url($base.'?hm_action=create'); ?>" class="hm-btn hm-btn--primary">
                     + New Order
                 </a>
-                <?php endif; ?>
             </div>
 
             <div class="hm-tab-bar">
@@ -240,9 +238,7 @@ class HearMed_Orders {
     // CREATE ORDER — Status: 'Awaiting Approval'
     // ═══════════════════════════════════════════════════════════════════════
     public static function render_create() {
-        if ( ! HearMed_Auth::can('create_orders') ) {
-            return '<div class="hm-notice hm-notice--error">Access denied.</div>';
-        }
+        // RBAC: role restrictions removed — will be reimplemented via RBAC later
 
         $db = HearMed_DB::instance();
 
@@ -531,11 +527,12 @@ class HearMed_Orders {
 
         $base = HearMed_Utils::page_url('orders');
 
-        $can_approve  = $role === 'c_level'                                            && $order->current_status === 'Awaiting Approval';
-        $can_order    = in_array($role,['admin','finance','dispenser','c_level'])       && $order->current_status === 'Approved';
-        $can_receive  = in_array($role,['admin','finance','dispenser','c_level'])       && $order->current_status === 'Ordered';
+        // RBAC: role restrictions removed — status-only checks for now
+        $can_approve  = $order->current_status === 'Awaiting Approval';
+        $can_order    = $order->current_status === 'Approved';
+        $can_receive  = $order->current_status === 'Ordered';
         $can_serials  = $order->current_status === 'Received';
-        $can_complete = in_array($role,['admin','finance','dispenser','c_level'])       && $order->current_status === 'Awaiting Fitting';
+        $can_complete = $order->current_status === 'Awaiting Fitting';
         $can_print    = !in_array($order->current_status, ['Awaiting Approval','Cancelled']);
 
         ob_start(); ?>
@@ -1305,7 +1302,6 @@ class HearMed_Orders {
 
     public static function ajax_create_order() {
         check_ajax_referer('hm_nonce','nonce');
-        if (!HearMed_Auth::can('create_orders')) wp_send_json_error('Access denied.');
 
         $patient_id      = intval($_POST['patient_id'] ?? 0);
         $payment_method  = sanitize_text_field($_POST['payment_method'] ?? '');
@@ -1564,7 +1560,6 @@ class HearMed_Orders {
 
     public static function ajax_approve_order() {
         check_ajax_referer('hm_nonce','nonce');
-        if (HearMed_Auth::current_role() !== 'c_level') wp_send_json_error('Access denied.');
 
         $order_id = intval($_POST['order_id'] ?? 0);
         $note     = sanitize_textarea_field($_POST['note'] ?? '');
@@ -1586,7 +1581,6 @@ class HearMed_Orders {
 
     public static function ajax_reject_order() {
         check_ajax_referer('hm_nonce','nonce');
-        if (HearMed_Auth::current_role() !== 'c_level') wp_send_json_error('Access denied.');
 
         $order_id = intval($_POST['order_id'] ?? 0);
         $note     = sanitize_textarea_field($_POST['note'] ?? '');
@@ -1607,8 +1601,6 @@ class HearMed_Orders {
 
     public static function ajax_mark_ordered() {
         check_ajax_referer('hm_nonce','nonce');
-        if ( ! HearMed_Auth::can('manage_orders') && ! HearMed_Auth::can('create_orders') )
-            wp_send_json_error('Access denied.');
 
         $order_id = intval($_POST['order_id'] ?? 0);
         $user     = HearMed_Auth::current_user();
@@ -1626,8 +1618,6 @@ class HearMed_Orders {
 
     public static function ajax_mark_received() {
         check_ajax_referer('hm_nonce','nonce');
-        if ( ! HearMed_Auth::can('manage_orders') && ! HearMed_Auth::can('create_orders') )
-            wp_send_json_error('Access denied.');
 
         $order_id = intval($_POST['order_id'] ?? 0);
         $user     = HearMed_Auth::current_user();
@@ -1730,7 +1720,6 @@ class HearMed_Orders {
 
     public static function ajax_complete_order() {
         check_ajax_referer('hm_nonce','nonce');
-        if (!HearMed_Auth::can('create_orders')) wp_send_json_error('Access denied.');
 
         $order_id = intval($_POST['order_id'] ?? 0);
         $fit_date = sanitize_text_field($_POST['fit_date'] ?? date('Y-m-d'));
@@ -2490,9 +2479,6 @@ class HearMed_Orders {
     // ═══════════════════════════════════════════════════════════════════════
     public static function ajax_update_order_status() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
-        if ( ! HearMed_Auth::can( 'manage_orders' ) ) {
-            wp_send_json_error( [ 'msg' => 'Access denied.' ] );
-        }
 
         $order_id   = intval( $_POST['order_id'] ?? 0 );
         $new_status = sanitize_text_field( $_POST['new_status'] ?? '' );
@@ -2730,9 +2716,6 @@ class HearMed_Orders {
     // ═══════════════════════════════════════════════════════════════════════
     public static function ajax_prefit_cancel() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
-        if ( ! HearMed_Auth::can( 'manage_orders' ) && ! HearMed_Auth::can( 'create_orders' ) ) {
-            wp_send_json_error( [ 'msg' => 'Access denied.' ] );
-        }
 
         $order_id = intval( $_POST['order_id'] ?? 0 );
         $reason   = sanitize_textarea_field( $_POST['reason'] ?? '' );
