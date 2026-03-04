@@ -1677,7 +1677,9 @@ function hm_ajax_get_patient_returns() {
                         'N/A'
                     ) AS product_name,
                     o.grand_total AS order_grand_total,
-                    o.prsi_amount AS order_prsi_amount
+                    o.prsi_amount AS order_prsi_amount,
+                    o.order_number,
+                    o.invoice_id AS order_invoice_id
              FROM hearmed_core.returns ret
              LEFT JOIN hearmed_core.credit_notes cn ON cn.id = ret.credit_note_id
              LEFT JOIN hearmed_core.patient_devices d ON d.id = ret.device_id
@@ -1691,13 +1693,68 @@ function hm_ajax_get_patient_returns() {
         foreach ( ($rows ?: []) as $r ) {
             $has_cn = ! empty( $r->credit_note_id );
 
-            // For pending returns, calculate estimated refund from order
+            // For pending returns, calculate estimated refund from order line items
             $est_refund = 0;
-            if ( ! $has_cn && $r->order_grand_total ) {
-                $est = floatval( $r->order_grand_total );
+            $order_linked = ! empty( $r->ret_order_id ) || ! empty( $r->device_order_id );
+            if ( ! $has_cn && $order_linked ) {
+                $eff_order_id = $r->ret_order_id ?: $r->device_order_id;
+                $eff_inv_id   = $r->order_invoice_id ?? null;
                 $s = $r->side ?? 'both';
-                if ( $s === 'left' || $s === 'right' ) $est = $est / 2;
-                $est_refund = $est;
+
+                // Try invoice items first, then order items, for accurate per-item pricing
+                $line_rows = [];
+                if ( $eff_inv_id ) {
+                    $line_rows = $db->get_results(
+                        "SELECT ii.item_id, ii.ear_side, ii.line_total
+                         FROM hearmed_core.invoice_items ii
+                         WHERE ii.invoice_id = \$1 AND ii.item_type = 'product'",
+                        [ $eff_inv_id ]
+                    ) ?: [];
+                }
+                if ( empty( $line_rows ) && $eff_order_id ) {
+                    $line_rows = $db->get_results(
+                        "SELECT oi.item_id, oi.ear_side, oi.line_total
+                         FROM hearmed_core.order_items oi
+                         WHERE oi.order_id = \$1 AND oi.item_type = 'product'",
+                        [ $eff_order_id ]
+                    ) ?: [];
+                }
+
+                $target_pid = $r->device_product_id ? (int) $r->device_product_id : 0;
+                $device_lines = [];
+                foreach ( $line_rows as $li ) {
+                    if ( ! $target_pid || (int)($li->item_id ?? 0) === $target_pid ) {
+                        $device_lines[] = $li;
+                    }
+                }
+                if ( empty( $device_lines ) ) $device_lines = $line_rows;
+
+                if ( ! empty( $device_lines ) ) {
+                    if ( $s === 'both' ) {
+                        foreach ( $device_lines as $li ) {
+                            $est_refund += floatval( $li->line_total ?? 0 );
+                        }
+                    } else {
+                        $explicit = $binaural = $unknown = 0.0;
+                        foreach ( $device_lines as $li ) {
+                            $ear = strtolower( trim( (string)( $li->ear_side ?? '' ) ) );
+                            $val = floatval( $li->line_total ?? 0 );
+                            if ( $ear === $s ) $explicit += $val;
+                            elseif ( $ear === 'binaural' || $ear === 'both' ) $binaural += $val;
+                            elseif ( $ear === '' ) $unknown += $val;
+                        }
+                        if ( $explicit > 0 ) $est_refund = $explicit;
+                        elseif ( $binaural > 0 ) $est_refund = $binaural / 2;
+                        elseif ( $unknown > 0 ) $est_refund = $unknown / 2;
+                    }
+                }
+
+                // Fallback to grand_total if line items didn't produce a value
+                if ( $est_refund <= 0 && $r->order_grand_total ) {
+                    $est = floatval( $r->order_grand_total );
+                    if ( $s === 'left' || $s === 'right' ) $est = $est / 2;
+                    $est_refund = $est;
+                }
             }
 
             $out[] = [
@@ -1718,7 +1775,8 @@ function hm_ajax_get_patient_returns() {
                 'cheque_sent'          => $has_cn ? hm_pg_bool( $r->cheque_sent ) : false,
                 'cheque_sent_date'     => $r->cheque_sent_date,
                 'estimated_refund'     => $est_refund,
-                'has_order'            => ! empty( $r->ret_order_id ) || ! empty( $r->device_order_id ),
+                'has_order'            => $order_linked,
+                'order_number'         => $r->order_number ?? null,
             ];
         }
     } else {
@@ -2700,7 +2758,7 @@ function hm_ajax_create_return() {
     if ( ! $device ) { @ob_end_clean(); wp_send_json_error( 'Device not found' ); }
 
     // Resolve order_id — direct link first, then fallback via order_items
-    $resolved_order_id = property_exists( $device, 'order_id' ) ? $device->order_id : null;
+    $resolved_order_id = property_exists( $device, 'order_id' ) && $device->order_id ? (int) $device->order_id : null;
     if ( ! $resolved_order_id && ! empty( $device->product_id ) ) {
         $resolved_order_id = $db->get_var(
             "SELECT o.id FROM hearmed_core.orders o
@@ -2711,11 +2769,40 @@ function hm_ajax_create_return() {
         );
     }
 
-    // Just create the return record — nothing else
+    // Fallback #2 — search by product name match if product_id lookup failed
+    if ( ! $resolved_order_id && ! empty( $device->product_id ) ) {
+        $prod_name = $db->get_var(
+            "SELECT product_name FROM hearmed_reference.products WHERE id = \$1",
+            [ $device->product_id ]
+        );
+        if ( $prod_name ) {
+            $resolved_order_id = $db->get_var(
+                "SELECT o.id FROM hearmed_core.orders o
+                 JOIN hearmed_core.order_items oi ON oi.order_id = o.id
+                 JOIN hearmed_reference.products p ON p.id = oi.item_id
+                 WHERE o.patient_id = \$1 AND p.product_name = \$2 AND oi.item_type = 'product'
+                 ORDER BY o.created_at DESC LIMIT 1",
+                [ $pid, $prod_name ]
+            );
+        }
+    }
+
+    // Resolve invoice_id from the order
+    $resolved_invoice_id = null;
+    if ( $resolved_order_id ) {
+        $resolved_invoice_id = $db->get_var(
+            "SELECT invoice_id FROM hearmed_core.orders WHERE id = \$1",
+            [ $resolved_order_id ]
+        );
+    }
+
+    error_log( "[HearMed] Creating return: patient={$pid}, device={$device_id}, side={$side}, order_id=" . ($resolved_order_id ?: 'null') . ", invoice_id=" . ($resolved_invoice_id ?: 'null') );
+
+    // Create the return record
     $return_id = $db->insert( 'hearmed_core.returns', [
         'patient_id'  => $pid,
         'order_id'    => $resolved_order_id ?: null,
-        'invoice_id'  => null,
+        'invoice_id'  => $resolved_invoice_id ?: null,
         'credit_note_id'        => null,
         'device_id'             => $device_id,
         'return_date'           => date( 'Y-m-d' ),
@@ -2732,19 +2819,37 @@ function hm_ajax_create_return() {
         'created_by'            => $staff_id ?: null,
     ]);
 
-    if ( ! $return_id ) { @ob_end_clean(); wp_send_json_error( 'Failed to create return record' ); }
+    if ( ! $return_id ) {
+        error_log( '[HearMed] Return insert failed: ' . HearMed_DB::last_error() );
+        @ob_end_clean();
+        wp_send_json_error( 'Failed to create return record: ' . HearMed_DB::last_error() );
+    }
+
+    // Mark device as "Pending Return" so the hearing aids tab shows the return status
+    $device_upd = [
+        'inactive_reason'=> ( $device->inactive_reason ? $device->inactive_reason . '; ' : '' ) . 'Pending return (' . ucfirst($side) . '): ' . $reason,
+        'updated_at'     => date( 'c' ),
+    ];
+    if ( $side === 'both' ) {
+        $device_upd['device_status'] = 'Pending Return';
+    } else {
+        // For single-side, keep Active but note the pending return
+        $device_upd['device_status'] = 'Pending Return';
+    }
+    $db->update( 'hearmed_core.patient_devices', $device_upd, [ 'id' => $device_id ] );
 
     hm_patient_audit( 'CREATE_RETURN', 'return', $return_id, [
         'patient_id' => $pid,
         'device_id'  => $device_id,
         'side'       => $side,
         'reason'     => $reason,
+        'order_id'   => $resolved_order_id,
     ]);
 
     @ob_end_clean();
     wp_send_json_success( [
         'return_id' => $return_id,
-        'message'   => 'Return recorded. You can now create a credit note.',
+        'message'   => 'Return recorded. You can now create a credit note from the Returns tab.',
     ] );
 }
 
@@ -2931,6 +3036,24 @@ function hm_ajax_create_return_credit_note() {
     // ── Ensure stock tables BEFORE transaction (DDL must not run inside txn) ──
     hm_ensure_stock_tables_for_return();
 
+    // ── Ensure QBO batch queue table exists (DDL outside txn) ──
+    $db->query(
+        "CREATE TABLE IF NOT EXISTS hearmed_admin.qbo_batch_queue (
+            id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+            entity_type VARCHAR(50) NOT NULL,
+            entity_id BIGINT NOT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            queued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            synced_at TIMESTAMP,
+            error_message TEXT,
+            created_by BIGINT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )"
+    );
+
+    error_log( "[HearMed] Creating credit note for return #{$return_id}, device #{$device_id}, order #{$ord_id}, patient #{$pid}, side={$side}" );
+    error_log( "[HearMed] Calculated amounts: total={$total_amount}, prsi={$prsi_amount}, patient_refund={$patient_refund}" );
+
     $db->begin_transaction();
 
     try {
@@ -2969,6 +3092,7 @@ function hm_ajax_create_return_credit_note() {
              WHERE credit_note_number LIKE \$1",
             [ $cn_like ]
         );
+        if ( ! $next_seq ) $next_seq = 1;
         $cn_number = $cn_prefix . '-' . $cn_year . '-' . str_pad( $next_seq, 4, '0', STR_PAD_LEFT );
 
         // 3. Create credit note
@@ -2990,11 +3114,12 @@ function hm_ajax_create_return_credit_note() {
             'created_at'            => date( 'Y-m-d H:i:s' ),
         ]);
         if ( ! $cn_id ) {
-            throw new \Exception( 'Failed to create credit note record.' );
+            throw new \Exception( 'Failed to insert credit note: ' . HearMed_DB::last_error() );
         }
+        error_log( "[HearMed] Credit note {$cn_number} created with id={$cn_id}" );
 
         // 4. Update the return record with credit note + amounts
-        $db->update( 'hearmed_core.returns', [
+        $upd_ok = $db->update( 'hearmed_core.returns', [
             'credit_note_id'        => $cn_id,
             'invoice_id'            => $inv_id,
             'total_refund_amount'   => $patient_refund + $prsi_amount,
@@ -3002,22 +3127,13 @@ function hm_ajax_create_return_credit_note() {
             'prsi_refund_amount'    => $prsi_amount,
             'refund_status'         => 'completed',
         ], [ 'id' => $return_id ] );
-
-        // 5. Return hearing aid(s) to stock (non-fatal — credit note is priority)
-        $stock_ok = false;
-        try {
-            $returned_count = hm_return_device_to_stock( $device, $side, 'Return', $staff_id, $inv_id, $ord_id );
-            $stock_ok = ( $returned_count >= 1 );
-            if ( ! $stock_ok ) {
-                error_log( '[HearMed] Stock return inserted 0 rows for device #' . $device_id . ' (return #' . $return_id . '). DB error: ' . HearMed_DB::last_error() );
-            }
-        } catch ( \Throwable $stock_err ) {
-            error_log( '[HearMed] Stock return exception for device #' . $device_id . ': ' . $stock_err->getMessage() );
+        if ( $upd_ok === false ) {
+            throw new \Exception( 'Failed to update return record: ' . HearMed_DB::last_error() );
         }
 
-        // 6. Create patient credit (spendable on future orders / refundable)
+        // 5. Create patient credit (spendable on future orders / refundable)
         if ( $patient_refund > 0 ) {
-            $db->insert( 'hearmed_core.patient_credits', [
+            $pc_id = $db->insert( 'hearmed_core.patient_credits', [
                 'patient_id'          => $pid,
                 'credit_note_id'      => $cn_id,
                 'original_invoice_id' => $inv_id,
@@ -3028,9 +3144,43 @@ function hm_ajax_create_return_credit_note() {
                 'notes'               => "Return ({$side}): {$reason}. Credit note {$cn_number}.",
                 'created_by'          => $staff_id ?: null,
             ]);
+            if ( ! $pc_id ) {
+                throw new \Exception( 'Failed to create patient credit: ' . HearMed_DB::last_error() );
+            }
         }
 
-        // 7. Queue credit note for QBO
+        // ── COMMIT the critical data first ──
+        $committed = $db->commit();
+        if ( $committed === false ) {
+            throw new \Exception( 'Transaction commit failed: ' . HearMed_DB::last_error() );
+        }
+        error_log( "[HearMed] Credit note {$cn_number} transaction committed successfully" );
+
+    } catch ( \Throwable $e ) {
+        $db->rollback();
+        @ob_end_clean();
+        error_log( '[HearMed] Credit note from return FAILED: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() );
+        error_log( '[HearMed] Last DB error: ' . HearMed_DB::last_error() );
+        wp_send_json_error( 'Credit note creation failed: ' . $e->getMessage() );
+        return; // safety
+    }
+
+    // ═══ POST-COMMIT: non-critical operations (outside transaction) ═══
+
+    // 6. Return hearing aid(s) to stock
+    $stock_ok = false;
+    try {
+        $returned_count = hm_return_device_to_stock( $device, $side, 'Return', $staff_id, $inv_id, $ord_id );
+        $stock_ok = ( $returned_count >= 1 );
+        if ( ! $stock_ok ) {
+            error_log( '[HearMed] Stock return inserted 0 rows for device #' . $device_id . ' (return #' . $return_id . '). DB error: ' . HearMed_DB::last_error() );
+        }
+    } catch ( \Throwable $stock_err ) {
+        error_log( '[HearMed] Stock return exception for device #' . $device_id . ': ' . $stock_err->getMessage() );
+    }
+
+    // 7. Queue credit note for QBO (non-fatal)
+    try {
         $db->insert( 'hearmed_admin.qbo_batch_queue', [
             'entity_type' => 'credit_note',
             'entity_id'   => $cn_id,
@@ -3038,10 +3188,14 @@ function hm_ajax_create_return_credit_note() {
             'queued_at'   => date('Y-m-d H:i:s'),
             'created_by'  => $staff_id ?: null,
         ]);
+    } catch ( \Throwable $qbo_err ) {
+        error_log( '[HearMed] QBO queue insert failed (non-fatal): ' . $qbo_err->getMessage() );
+    }
 
-        // 8. Timeline entry
-        $side_label = $side === 'both' ? 'both sides' : $side . ' side';
-        $stock_note = $stock_ok ? 'Device returned to stock.' : 'Stock return pending (manual check needed).';
+    // 8. Timeline entry (non-fatal)
+    $side_label = $side === 'both' ? 'both sides' : $side . ' side';
+    $stock_note = $stock_ok ? 'Device returned to stock.' : 'Stock return pending (manual check needed).';
+    try {
         $db->insert( 'hearmed_core.patient_timeline', [
             'patient_id'  => $pid,
             'event_type'  => 'credit_note_created',
@@ -3049,50 +3203,51 @@ function hm_ajax_create_return_credit_note() {
             'staff_id'    => $staff_id ?: null,
             'description' => "Credit note {$cn_number} created for return ({$side_label}). Patient refund: \xe2\x82\xac" . number_format($patient_refund, 2) . ($prsi_amount > 0 ? ". PRSI reclaim: \xe2\x82\xac" . number_format($prsi_amount, 2) : '') . ". Reason: {$reason}. {$stock_note}",
         ]);
+    } catch ( \Throwable $tl_err ) {
+        error_log( '[HearMed] Timeline insert failed (non-fatal): ' . $tl_err->getMessage() );
+    }
 
-        // 9. Auto-save credit note PDF to patient documents
-        try {
-            // Build the same template data that ajax_print_credit_note uses
-            $cn_row = $db->get_row(
-                "SELECT cn.*,
-                        p.first_name AS p_first, p.last_name AS p_last, p.patient_number,
-                        p.address_line1, p.address_line2, p.city, p.county, p.eircode,
-                        c.clinic_name
-                 FROM hearmed_core.credit_notes cn
-                 JOIN hearmed_core.patients p ON p.id = cn.patient_id
-                 LEFT JOIN hearmed_core.orders o ON o.id = cn.order_id
-                 LEFT JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
-                 WHERE cn.id = \$1",
-                [ $cn_id ]
-            );
-            if ( $cn_row && class_exists( 'HearMed_Print_Templates' ) ) {
-                $tpl = clone $cn_row;
-                $tpl->items                   = [];
-                $tpl->original_invoice_number = '';
-                $tpl->subtotal                = $cn_row->amount ?? 0;
-                $tpl->vat_total               = 0;
-                $tpl->grand_total             = $cn_row->amount ?? 0;
-                $tpl->prsi_amount             = (float) ($cn_row->prsi_amount ?? 0);
-                $tpl->patient_refund_amount   = (float) ($cn_row->patient_refund_amount ?? $cn_row->amount ?? 0);
-                $tpl->return_side             = $side;
-                $tpl->serial_left             = $ret->serial_left ?? '';
-                $tpl->serial_right            = $ret->serial_right ?? '';
+    // 9. Auto-save credit note PDF to patient documents (non-fatal)
+    try {
+        $cn_row = $db->get_row(
+            "SELECT cn.*,
+                    p.first_name AS p_first, p.last_name AS p_last, p.patient_number,
+                    p.address_line1, p.address_line2, p.city, p.county, p.eircode,
+                    c.clinic_name
+             FROM hearmed_core.credit_notes cn
+             JOIN hearmed_core.patients p ON p.id = cn.patient_id
+             LEFT JOIN hearmed_core.orders o ON o.id = cn.order_id
+             LEFT JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
+             WHERE cn.id = \$1",
+            [ $cn_id ]
+        );
+        if ( $cn_row && class_exists( 'HearMed_Print_Templates' ) ) {
+            $tpl = clone $cn_row;
+            $tpl->items                   = [];
+            $tpl->original_invoice_number = '';
+            $tpl->subtotal                = $cn_row->amount ?? 0;
+            $tpl->vat_total               = 0;
+            $tpl->grand_total             = $cn_row->amount ?? 0;
+            $tpl->prsi_amount             = (float) ($cn_row->prsi_amount ?? 0);
+            $tpl->patient_refund_amount   = (float) ($cn_row->patient_refund_amount ?? $cn_row->amount ?? 0);
+            $tpl->return_side             = $side;
+            $tpl->serial_left             = $ret->serial_left ?? '';
+            $tpl->serial_right            = $ret->serial_right ?? '';
 
-                if ( $inv_id ) {
-                    $inv_row = $db->get_row( "SELECT invoice_number FROM hearmed_core.invoices WHERE id = \$1", [ $inv_id ] );
-                    $tpl->original_invoice_number = $inv_row ? $inv_row->invoice_number : '';
-                }
-
-                $html = HearMed_Print_Templates::render( 'creditnote', $tpl );
-                HearMed_Utils::auto_save_document( $pid, 'Credit Note', $cn_number, $html, $staff_id );
+            if ( $inv_id ) {
+                $inv_row = $db->get_row( "SELECT invoice_number FROM hearmed_core.invoices WHERE id = \$1", [ $inv_id ] );
+                $tpl->original_invoice_number = $inv_row ? $inv_row->invoice_number : '';
             }
-        } catch ( \Throwable $doc_err ) {
-            error_log( '[HearMed] Auto-save CN doc failed: ' . $doc_err->getMessage() );
-            // Non-fatal — continue
+
+            $html = HearMed_Print_Templates::render( 'creditnote', $tpl );
+            HearMed_Utils::auto_save_document( $pid, 'Credit Note', $cn_number, $html, $staff_id );
         }
+    } catch ( \Throwable $doc_err ) {
+        error_log( '[HearMed] Auto-save CN doc failed (non-fatal): ' . $doc_err->getMessage() );
+    }
 
-        $db->commit();
-
+    // 10. Audit log (non-fatal)
+    try {
         hm_patient_audit( 'CREATE_CREDIT_NOTE', 'credit_note', $cn_id, [
             'return_id'       => $return_id,
             'patient_id'      => $pid,
@@ -3102,24 +3257,21 @@ function hm_ajax_create_return_credit_note() {
             'patient_refund'  => $patient_refund,
             'prsi_amount'     => $prsi_amount,
         ]);
-
-        @ob_end_clean();
-        wp_send_json_success( [
-            'return_id'          => $return_id,
-            'credit_note_id'     => $cn_id,
-            'credit_note_number' => $cn_number,
-            'patient_refund'     => $patient_refund,
-            'prsi_amount'        => $prsi_amount,
-            'side'               => $side,
-            'stock_returned'     => $stock_ok,
-            'message'            => "Credit note {$cn_number} created. PDF saved to patient documents." . ( $stock_ok ? ' Device returned to stock.' : ' Stock return pending — please check manually.' ),
-        ] );
-    } catch ( \Throwable $e ) {
-        $db->rollback();
-        @ob_end_clean();
-        error_log( '[HearMed] Credit note from return failed: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() );
-        wp_send_json_error( 'Credit note creation failed: ' . $e->getMessage() );
+    } catch ( \Throwable $audit_err ) {
+        error_log( '[HearMed] Audit log failed (non-fatal): ' . $audit_err->getMessage() );
     }
+
+    @ob_end_clean();
+    wp_send_json_success( [
+        'return_id'          => $return_id,
+        'credit_note_id'     => $cn_id,
+        'credit_note_number' => $cn_number,
+        'patient_refund'     => $patient_refund,
+        'prsi_amount'        => $prsi_amount,
+        'side'               => $side,
+        'stock_returned'     => $stock_ok,
+        'message'            => "Credit note {$cn_number} created. PDF saved to patient documents." . ( $stock_ok ? ' Device returned to stock.' : ' Stock return pending — please check manually.' ),
+    ] );
 }
 
 

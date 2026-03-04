@@ -775,7 +775,7 @@ function initProfile(){
     function loadHearingAids($c){
         $.post(_hm.ajax,{action:'hm_get_patient_products',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
-            var prods=r.data,act=prods.filter(function(p){return p.status==='Active';}),inact=prods.filter(function(p){return p.status!=='Active';});
+            var prods=r.data,act=prods.filter(function(p){return p.status==='Active'||p.status==='Pending Return';}),inact=prods.filter(function(p){return p.status!=='Active'&&p.status!=='Pending Return';});
 
             var h='<div class="hm-tab-section">';
             h+='<div class="hm-section-header" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><h3 style="margin:0;">Hearing Aids</h3>';
@@ -799,7 +799,7 @@ function initProfile(){
         });
 
         function buildDeviceCard(pr,isAct){
-            var sc={Active:'hm-badge--green',Inactive:'hm-badge--red',Lost:'hm-badge--red',Replaced:'hm-badge--amber'}[pr.status]||'hm-badge--grey';
+            var sc={Active:'hm-badge--green','Pending Return':'hm-badge--amber',Inactive:'hm-badge--red',Returned:'hm-badge--red',Lost:'hm-badge--red',Replaced:'hm-badge--amber'}[pr.status]||'hm-badge--grey';
             // Warranty badge
             var wbadge='';
             if(pr.warranty_expiry){
@@ -809,7 +809,12 @@ function initProfile(){
                 else wbadge='<span class="hm-badge hm-badge--sm hm-badge--green"><span class="hm-dot-green"></span> In Warranty ('+fmtDaysRemaining(wdays)+')</span>';
             }
             var inactiveDot=sc==='hm-badge--red'?'<span class="hm-dot-red"></span> ':'<span class="hm-dot-amber"></span> ';
-            var activeBadge=isAct?'<span class="hm-badge hm-badge--sm hm-badge--green"><span class="hm-dot-green"></span> Active</span>':'<span class="hm-badge hm-badge--sm '+sc+'">'+inactiveDot+esc(pr.status)+'</span>';
+            var isPendingReturn = pr.status==='Pending Return';
+            var activeBadge = isAct
+                ? (isPendingReturn
+                    ? '<span class="hm-badge hm-badge--sm hm-badge--amber"><span class="hm-dot-amber"></span> Pending Return</span>'
+                    : '<span class="hm-badge hm-badge--sm hm-badge--green"><span class="hm-dot-green"></span> Active</span>')
+                : '<span class="hm-badge hm-badge--sm '+sc+'">'+inactiveDot+esc(pr.status)+'</span>';
 
             var card='<div class="hm-ha-card'+(isAct?' hm-ha-card-active':'')+'" data-device-id="'+pr._ID+'">';
 
@@ -1104,10 +1109,11 @@ function initProfile(){
             var ret=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Returns / Credit Notes ('+ret.length+')</h3><button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-create-return-btn">+ Create Return</button></div>';
             if(!ret.length) h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.returns+'</div><div class="hm-empty-text">No returns</div></div>';
             else{
-                h+='<table class="hm-table"><thead><tr><th>Date</th><th>Hearing Aid</th><th>Side</th><th>Reason</th><th>Status</th><th>Credit Note</th><th>Refund</th><th>Cheque</th><th></th></tr></thead><tbody>';
+                h+='<table class="hm-table"><thead><tr><th>Date</th><th>Hearing Aid</th><th>Side</th><th>Order</th><th>Reason</th><th>Status</th><th>Credit Note</th><th>Refund</th><th>Cheque</th><th></th></tr></thead><tbody>';
                 ret.forEach(function(x){
                     var sideLabel=(x.return_side||'both')==='both'?'Both':x.return_side.charAt(0).toUpperCase()+x.return_side.slice(1);
                     var statusBadge, cnCol, refundCol, chequeCol, actions='';
+                    var orderCol = x.order_number ? '<code style="font-size:11px;">'+esc(x.order_number)+'</code>' : '<span style="color:#dc2626;font-size:11px;">Not linked</span>';
 
                     if(x.has_credit_note){
                         // If credit note has €0 refund, mark as needing redo
@@ -1129,12 +1135,12 @@ function initProfile(){
                         cnCol='<span style="color:#94a3b8;">—</span>';
                         refundCol = x.estimated_refund > 0
                             ? '<span style="color:#0369a1;font-size:12px;">Est: '+euro(x.estimated_refund)+'</span>'
-                            : (x.has_order ? '<span style="color:#94a3b8;">—</span>' : '<span style="color:#dc2626;font-size:11px;">No order linked</span>');
+                            : (x.has_order ? '<span style="color:#94a3b8;">Calculating…</span>' : '<span style="color:#dc2626;font-size:11px;">No order linked</span>');
                         chequeCol='<span style="color:#94a3b8;">—</span>';
                         actions='<button class="hm-btn hm-btn--primary hm-btn--sm hm-create-cn" data-return-id="'+x.return_id+'">Create Credit Note</button>';
                     }
 
-                    h+='<tr><td>'+fmtDate(x.return_date)+'</td><td>'+esc(x.product_name)+'</td><td>'+sideLabel+'</td><td style="font-size:13px;">'+esc(x.reason)+'</td><td>'+statusBadge+'</td><td>'+cnCol+'</td><td>'+refundCol+'</td><td>'+chequeCol+'</td><td style="white-space:nowrap;">'+actions+'</td></tr>';
+                    h+='<tr><td>'+fmtDate(x.return_date)+'</td><td>'+esc(x.product_name)+'</td><td>'+sideLabel+'</td><td>'+orderCol+'</td><td style="font-size:13px;">'+esc(x.reason)+'</td><td>'+statusBadge+'</td><td>'+cnCol+'</td><td>'+refundCol+'</td><td>'+chequeCol+'</td><td style="white-space:nowrap;">'+actions+'</td></tr>';
                 });
                 h+='</tbody></table>';
             }
@@ -1163,7 +1169,7 @@ function initProfile(){
     /* Create Credit Note from a pending return (or redo a €0 one) */
     function showCreateCreditNoteModal(returnId,oldCnId,cb){
         if($('#hm-modal-overlay').length) $('#hm-modal-overlay').remove();
-        if(!returnId){ toast('Missing return reference.','error'); return; }
+        if(!returnId){ toast('Missing return reference (return_id='+returnId+'). Please refresh and try again.','error'); return; }
         var isRedo = !!oldCnId;
         var title = isRedo ? 'Redo Credit Note' : 'Create Credit Note';
         var infoBox = isRedo
@@ -1182,12 +1188,16 @@ function initProfile(){
         );
         $('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#cn-save').on('click',function(){
-            $(this).prop('disabled',true).text('Creating…');
+            var $btn=$(this);
+            $btn.prop('disabled',true).text('Creating…');
+            $('#cn-error').hide();
             var data={action:'hm_create_return_credit_note',nonce:_hm.nonce,return_id:returnId};
             if(isRedo) data.redo_cn_id=oldCnId;
             var amt=$('#cn-refund-amt').val();
             if(amt) data.refund_amount=parseFloat(amt);
+            console.log('[HearMed] Creating credit note for return_id='+returnId, data);
             $.post(_hm.ajax,data,function(r){
+                console.log('[HearMed] Credit note response:', r);
                 if(r.success){
                     closeModal();
                     var cn = r.data.credit_note_number || 'unknown';
@@ -1195,11 +1205,26 @@ function initProfile(){
                     toast('Credit note '+cn+' created'+(refund ? ' — refund: '+refund : '')+'. PDF saved.');
                     if(cb)cb();
                 } else {
-                    $('#cn-save').prop('disabled',false).text(title);
+                    $btn.prop('disabled',false).text(title);
                     var msg = (typeof r.data === 'string') ? r.data : (r.data && r.data.message ? r.data.message : 'Failed to create credit note');
+                    console.error('[HearMed] Credit note error:', msg);
                     $('#cn-error').show().text(msg);
                 }
-            }).fail(function(){closeModal();toast('Request failed — please try again','error');});
+            }).fail(function(xhr, status, err){
+                console.error('[HearMed] Credit note AJAX failed:', status, err, xhr.responseText);
+                $btn.prop('disabled',false).text(title);
+                var errMsg = 'Request failed';
+                try {
+                    var resp = JSON.parse(xhr.responseText);
+                    if(resp && resp.data) errMsg = typeof resp.data === 'string' ? resp.data : resp.data.message || errMsg;
+                } catch(e) {
+                    if(xhr.status === 0) errMsg = 'Network error — check your connection';
+                    else if(xhr.status === 403) errMsg = 'Session expired — please reload the page';
+                    else if(xhr.status >= 500) errMsg = 'Server error ('+xhr.status+') — check error logs';
+                    else errMsg = 'Request failed (HTTP '+xhr.status+')';
+                }
+                $('#cn-error').show().text(errMsg);
+            });
         });
     }
 
