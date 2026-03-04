@@ -1145,6 +1145,7 @@ function initProfile(){
         // Create Credit Note from pending return
         $c.off('click','.hm-create-cn').on('click','.hm-create-cn',function(){
             var returnId=$(this).data('return-id');
+            if(!returnId){ toast('Missing return reference. Please refresh and try again.','error'); return; }
             showCreateCreditNoteModal(returnId,false,function(){loadReturns($c);});
         });
         // Redo Credit Note (for €0 credit notes)
@@ -1159,7 +1160,8 @@ function initProfile(){
 
     /* Create Credit Note from a pending return (or redo a €0 one) */
     function showCreateCreditNoteModal(returnId,oldCnId,cb){
-        if($('#hm-modal-overlay').length)return;
+        if($('#hm-modal-overlay').length) $('#hm-modal-overlay').remove();
+        if(!returnId){ toast('Missing return reference.','error'); return; }
         var isRedo = !!oldCnId;
         var title = isRedo ? 'Redo Credit Note' : 'Create Credit Note';
         var infoBox = isRedo

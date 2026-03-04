@@ -1130,7 +1130,8 @@ function hm_ajax_get_patient_products() {
          FROM hearmed_core.patient_devices pd
          LEFT JOIN hearmed_reference.products pr ON pr.id = pd.product_id
          LEFT JOIN hearmed_reference.manufacturers m ON m.id = pr.manufacturer_id
-         WHERE pd.patient_id = \$1
+                 WHERE pd.patient_id = \$1
+                     AND COALESCE(pd.device_status, 'Active') <> 'Returned'
          ORDER BY pd.fitting_date DESC NULLS LAST",
         [ $pid ]
     );
@@ -2795,22 +2796,89 @@ function hm_ajax_create_return_credit_note() {
             [ $ord_id ]
         );
         if ( $order ) {
-            $total_amount = floatval( $order->grand_total ?? 0 );
-            $patient_paid = $total_amount;
-            $inv_id       = $order->inv_id ?? null;
+            $inv_id = $order->inv_id ?? null;
+
+            // Price source: invoice_items (preferred) or order_items fallback.
+            // Use hearing-aid line totals for this device product + returned side.
+            $item_rows = [];
+            if ( $inv_id ) {
+                $item_rows = $db->get_results(
+                    "SELECT ii.item_id, ii.ear_side, ii.line_total
+                     FROM hearmed_core.invoice_items ii
+                     WHERE ii.invoice_id = \$1 AND ii.item_type = 'product'",
+                    [ $inv_id ]
+                ) ?: [];
+            }
+            if ( empty( $item_rows ) ) {
+                $item_rows = $db->get_results(
+                    "SELECT oi.item_id, oi.ear_side, oi.line_total
+                     FROM hearmed_core.order_items oi
+                     WHERE oi.order_id = \$1 AND oi.item_type = 'product'",
+                    [ $ord_id ]
+                ) ?: [];
+            }
+
+            $target_product_id = ! empty( $device->product_id ) ? intval( $device->product_id ) : 0;
+            $rows_for_device   = [];
+            foreach ( $item_rows as $it ) {
+                if ( ! $target_product_id || intval( $it->item_id ?? 0 ) === $target_product_id ) {
+                    $rows_for_device[] = $it;
+                }
+            }
+            if ( empty( $rows_for_device ) ) {
+                $rows_for_device = $item_rows; // fallback if product linkage is missing
+            }
+
+            $side_norm = strtolower( trim( (string) $side ) );
+            if ( $side_norm === 'both' ) {
+                foreach ( $rows_for_device as $it ) {
+                    $total_amount += floatval( $it->line_total ?? 0 );
+                }
+            } else {
+                $explicit = 0.0;
+                $binaural = 0.0;
+                $unknown  = 0.0;
+                foreach ( $rows_for_device as $it ) {
+                    $ear = strtolower( trim( (string) ( $it->ear_side ?? '' ) ) );
+                    $val = floatval( $it->line_total ?? 0 );
+                    if ( $ear === $side_norm ) {
+                        $explicit += $val;
+                    } elseif ( $ear === 'binaural' || $ear === 'both' ) {
+                        $binaural += $val;
+                    } elseif ( $ear === '' ) {
+                        $unknown += $val;
+                    }
+                }
+                if ( $explicit > 0 ) {
+                    $total_amount = $explicit;
+                } elseif ( $binaural > 0 ) {
+                    $total_amount = $binaural / 2;
+                } elseif ( $unknown > 0 ) {
+                    $total_amount = $unknown / 2;
+                }
+            }
+
+            // Last fallback for legacy/missing line totals
+            if ( $total_amount <= 0 ) {
+                $total_amount = floatval( $order->grand_total ?? 0 );
+                if ( $side === 'left' || $side === 'right' ) {
+                    $total_amount = $total_amount / 2;
+                }
+            }
 
             $prsi_left  = hm_pg_bool( $order->prsi_left ?? false );
             $prsi_right = hm_pg_bool( $order->prsi_right ?? false );
 
             if ( $side === 'left' ) {
-                $prsi_amount  = $prsi_left ? $per_ear : 0;
-                $patient_paid = $patient_paid / 2;
+                $prsi_amount = $prsi_left ? $per_ear : 0;
             } elseif ( $side === 'right' ) {
-                $prsi_amount  = $prsi_right ? $per_ear : 0;
-                $patient_paid = $patient_paid / 2;
+                $prsi_amount = $prsi_right ? $per_ear : 0;
             } else {
                 $prsi_amount = floatval( $order->prsi_amount ?? 0 );
             }
+
+            // Patient refund excludes PRSI component.
+            $patient_paid = max( 0, $total_amount - $prsi_amount );
         } else {
             error_log( "[HearMed] Credit note: order #{$ord_id} not found for return #{$return_id}, device #{$device_id}" );
         }
@@ -2855,7 +2923,7 @@ function hm_ajax_create_return_credit_note() {
         $cn_year   = date('Y');
         $cn_like   = $cn_prefix . '-' . $cn_year . '-%';
         $next_seq  = (int) $db->get_var(
-            "SELECT COALESCE(MAX(CAST(SUBSTRING(credit_note_number FROM '[0-9]+\$') AS INTEGER)), 0) + 1
+            "SELECT COALESCE(MAX(CAST(SUBSTRING(credit_note_number FROM '[0-9]+$') AS INTEGER)), 0) + 1
              FROM hearmed_core.credit_notes
              WHERE credit_note_number LIKE \$1",
             [ $cn_like ]
@@ -2880,6 +2948,9 @@ function hm_ajax_create_return_credit_note() {
             'created_by'            => $staff_id ?: null,
             'created_at'            => date( 'Y-m-d H:i:s' ),
         ]);
+        if ( ! $cn_id ) {
+            throw new \Exception( 'Failed to create credit note record.' );
+        }
 
         // 4. Update the return record with credit note + amounts
         $db->update( 'hearmed_core.returns', [
@@ -2892,7 +2963,10 @@ function hm_ajax_create_return_credit_note() {
         ], [ 'id' => $return_id ] );
 
         // 5. Return hearing aid(s) to stock
-        hm_return_device_to_stock( $device, $side, 'Return', $staff_id );
+        $returned_count = hm_return_device_to_stock( $device, $side, 'Return', $staff_id );
+        if ( $returned_count < 1 ) {
+            throw new \Exception( 'Failed to return hearing aid to stock.' );
+        }
 
         // 6. Create patient credit (spendable on future orders / refundable)
         if ( $patient_refund > 0 ) {
@@ -3142,6 +3216,7 @@ function hm_ajax_apply_credit_to_invoice() {
  */
 function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null ) {
     $db = HearMed_DB::instance();
+    $returned_count = 0;
 
     // Ensure stock tables exist before inserting
     if ( class_exists( 'HearMed_Stock' ) ) {
@@ -3246,8 +3321,11 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null ) 
                 'created_by'     => $staff_name ?: null,
                 'created_at'     => $today,
             ]);
+            $returned_count++;
         }
     }
+
+    return $returned_count;
 }
 
 
