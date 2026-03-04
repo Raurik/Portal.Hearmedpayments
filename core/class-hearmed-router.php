@@ -74,7 +74,9 @@ class HearMed_Router {
         // Used inside Elementor HTML widgets (e.g. "Welcome, [hearmed_username]").
         add_shortcode( 'hearmed_username', [ $this, 'shortcode_username' ] );
 
-        add_action( 'template_redirect', [ $this, 'auth_redirect' ] );
+        // Priority 1: run BEFORE WordPress redirect_canonical (priority 10)
+        // so we handle auth redirects before WP can 301 missing pages to root.
+        add_action( 'template_redirect', [ $this, 'auth_redirect' ], 1 );
         add_filter( 'template_include',  [ $this, 'login_template' ], 999 );
 
         // Tell SiteGround (and any reverse-proxy cache) NOT to cache portal
@@ -82,8 +84,9 @@ class HearMed_Router {
         // so a cached response leaks one user's session into another's view.
         add_action( 'template_redirect', [ $this, 'disable_page_cache' ], 0 );
 
-        // Prevent WordPress canonical redirect from sending /login to wp-login.php
-        add_filter( 'redirect_canonical', [ $this, 'block_login_canonical' ], 10, 2 );
+        // Prevent WordPress canonical redirect from sending portal pages
+        // to wp-login.php or root. Covers /login AND all portal page slugs.
+        add_filter( 'redirect_canonical', [ $this, 'block_portal_canonical' ], 10, 2 );
 
         // Remove WordPress built-in /login → wp-login.php redirect.
         remove_action( 'template_redirect', 'wp_redirect_admin_locations', 1000 );
@@ -107,9 +110,20 @@ class HearMed_Router {
      *
      * Returning false cancels the redirect entirely for /login requests.
      */
-    public function block_login_canonical( $redirect_url, $requested_url ) {
+    /**
+     * Known portal page slugs. Used to block canonical redirects
+     * and to verify/create pages on the fly.
+     */
+    private static $portal_slugs = [
+        'login', 'calendar', 'patients', 'orders', 'order-status',
+        'accounting', 'repairs', 'refunds', 'stock', 'reporting',
+        'notifications', 'kpi', 'clinical-review',
+    ];
+
+    public function block_portal_canonical( $redirect_url, $requested_url ) {
         $path = trim( parse_url( $requested_url, PHP_URL_PATH ), '/' );
-        if ( basename( $path ) === 'login' ) {
+        $slug = basename( $path );
+        if ( in_array( $slug, self::$portal_slugs, true ) ) {
             return false;
         }
         return $redirect_url;
@@ -259,9 +273,61 @@ class HearMed_Router {
 
         // Logged-in user hitting root URL → send to calendar
         if ( $uri === '' ) {
+            $this->ensure_page_exists( 'calendar', 'Calendar', '[hearmed_calendar]' );
             wp_redirect( home_url( '/calendar/' ) );
             exit;
         }
+
+        // Logged-in user hitting a known portal slug that is a 404 →
+        // the page was probably deleted. Recreate it on the fly and
+        // reload so WP resolves it correctly.
+        if ( is_404() && in_array( $uri, self::$portal_slugs, true ) ) {
+            $this->ensure_page_exists( $uri, ucfirst( str_replace( '-', ' ', $uri ) ), '' );
+            // Reload the same URL so WP picks up the new page.
+            wp_redirect( home_url( '/' . $uri . '/' ) );
+            exit;
+        }
+    }
+
+    /**
+     * Ensure a WordPress page with the given slug exists.
+     * Creates it if missing. Idempotent.
+     */
+    private function ensure_page_exists( $slug, $title, $shortcode ) {
+        $existing = get_posts( [
+            'name'        => $slug,
+            'post_type'   => 'page',
+            'post_status' => [ 'publish', 'draft', 'trash', 'private' ],
+            'numberposts' => 1,
+        ] );
+        if ( $existing ) {
+            // Republish if trashed/drafted
+            if ( $existing[0]->post_status !== 'publish' ) {
+                wp_update_post( [ 'ID' => $existing[0]->ID, 'post_status' => 'publish', 'post_name' => $slug ] );
+            }
+            return;
+        }
+        // Page doesn't exist at all — create it
+        if ( ! $shortcode ) {
+            // Look up the correct shortcode from ensure_portal_pages mapping
+            $map = [
+                'calendar' => '[hearmed_calendar]', 'patients' => '[hearmed_patients]',
+                'orders' => '[hearmed_orders]', 'order-status' => '[hearmed_orders]',
+                'accounting' => '[hearmed_accounting]', 'repairs' => '[hearmed_repairs]',
+                'refunds' => '[hearmed_refunds]', 'stock' => '[hearmed_stock]',
+                'reporting' => '[hearmed_reporting]', 'notifications' => '[hearmed_notifications]',
+                'kpi' => '[hearmed_kpi]', 'clinical-review' => '[hearmed_clinical_review]',
+            ];
+            $shortcode = $map[ $slug ] ?? '';
+        }
+        wp_insert_post( [
+            'post_title'   => $title,
+            'post_name'    => $slug,
+            'post_content' => $shortcode,
+            'post_status'  => 'publish',
+            'post_type'    => 'page',
+        ] );
+        error_log( '[HM Router] Created missing portal page: ' . $slug );
     }
     
     /**
