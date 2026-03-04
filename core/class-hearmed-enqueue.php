@@ -542,6 +542,17 @@ class HearMed_Enqueue {
 
             // Patients page no longer needs calendar JS — order creation
             // navigates to the dedicated /orders/ page instead of loading inline.
+
+            // Orders "create" page needs calendar JS for the full-screen order form
+            if ( $module === 'orders' && ( sanitize_key( $_GET['hm_action'] ?? '' ) === 'create' ) ) {
+                wp_enqueue_script(
+                    'hearmed-calendar',
+                    HEARMED_URL . 'assets/js/hearmed-calendar.js',
+                    [ 'hearmed-core' ],
+                    $this->get_file_version( 'assets/js/hearmed-calendar.js' ),
+                    true
+                );
+            }
             
             wp_enqueue_script(
                 "hearmed-{$module}",
@@ -565,7 +576,7 @@ class HearMed_Enqueue {
         $full_path = HEARMED_PATH . $file;
         // Use filemtime + a hard bump suffix to defeat CDN/server caches
         $v = file_exists( $full_path ) ? filemtime( $full_path ) : HEARMED_VERSION;
-        return $v . '.8';
+        return $v . '.9';
     }
     
     /**

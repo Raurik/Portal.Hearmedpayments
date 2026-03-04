@@ -392,234 +392,134 @@ class HearMed_Orders {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // CREATE ORDER — Status: 'Awaiting Approval'
+    // CREATE ORDER — Reuses the calendar-style order page (HM_openOrderPage)
     // ═══════════════════════════════════════════════════════════════════════
     public static function render_create() {
-        // RBAC: role restrictions removed — will be reimplemented via RBAC later
+        $pid  = intval( $_GET['patient_id'] ?? 0 );
+        $base = HearMed_Utils::page_url( 'orders' );
 
-        $db = HearMed_DB::instance();
-
-        $products = $db->get_results(
-            "SELECT p.id,
-                p.manufacturer_id,
-                m.name AS manufacturer_name,
-                p.product_name,
-                p.style,
-                p.tech_level,
-                COALESCE(p.cost_price, 0) AS cost_price,
-                COALESCE(p.retail_price, hr.price_total::numeric, 0) AS retail_price
-             FROM hearmed_reference.products p
-             LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
-             LEFT JOIN hearmed_reference.hearmed_range hr ON hr.id = p.hearmed_range_id
-             WHERE p.is_active = true
-             ORDER BY m.name, p.product_name", []
-        );
-
-        $services = $db->get_results(
-            "SELECT id, service_name, retail_price AS default_price
-             FROM hearmed_reference.services
-             WHERE is_active = true
-             ORDER BY service_name", []
-        );
-
-        $base  = HearMed_Utils::page_url('orders');
-        $nonce = wp_create_nonce('hm_nonce');
-
-        ob_start(); ?>
-        <div class="hm-content hm-orders-create">
-
-            <div class="hm-page-header">
-                <a href="<?php echo esc_url($base); ?>" class="hm-back">← Orders</a>
-                <h1 class="hm-page-title">New Order</h1>
-                <span class="hm-workflow-hint">Will be sent to C-Level for approval before supplier is contacted.</span>
-            </div>
-
-            <form id="hm-order-form" class="hm-form hm-card">
-                <input type="hidden" name="nonce"  value="<?php echo esc_attr($nonce); ?>">
-                <input type="hidden" name="action" value="hm_create_order">
-
-                <!-- PATIENT -->
-                <div class="hm-form__section">
-                    <h2 class="hm-form__section-title">Patient</h2>
-                    <div class="hm-form-group hm-form-group--wide">
-                        <label class="hm-label">Search Patient <span class="hm-required">*</span></label>
-                        <input type="text" id="hm-patient-search" class="hm-input"
-                               placeholder="Type patient name..." autocomplete="off">
-                        <div id="hm-patient-results" class="hm-autocomplete" style="display:none;"></div>
-                        <input type="hidden" name="patient_id" id="hm-patient-id">
-                        <div id="hm-patient-selected" class="hm-patient-chip" style="display:none;"></div>
-                    </div>
-                </div>
-
-                <!-- LINE ITEMS -->
-                <div class="hm-form__section">
-                    <h2 class="hm-form__section-title">Items</h2>
-                    <div id="hm-items-empty" class="hm-empty hm-empty-text">No items added yet.</div>
-                    <table class="hm-table hm-order-items__table" id="hm-items-table" style="display:none;">
-                        <thead>
-                            <tr>
-                                <th>Item</th><th>Ear</th><th>Qty</th>
-                                <th>Speaker Size</th><th>Charger?</th>
-                                <th>Unit Price</th><th>VAT</th><th>Total</th><th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="hm-items-body"></tbody>
-                    </table>
-
-                    <div class="hm-order-items__actions">
-                        <div class="hm-item-adder">
-                            <select id="hm-product-select" class="hm-input hm-input--sm">
-                                <option value="">— Add a Hearing Aid / Product —</option>
-                                <?php foreach ($products as $p) : ?>
-                                <option value="<?php echo esc_attr($p->id); ?>"
-                                        data-name="<?php echo esc_attr($p->manufacturer_name.' '.$p->product_name.' '.$p->style); ?>"
-                                        data-manufacturer-id="<?php echo esc_attr($p->manufacturer_id ?? ''); ?>"
-                                        data-manufacturer="<?php echo esc_attr($p->manufacturer_name); ?>"
-                                        data-product-name="<?php echo esc_attr($p->product_name); ?>"
-                                        data-style="<?php echo esc_attr($p->style); ?>"
-                                        data-tech="<?php echo esc_attr($p->tech_level); ?>"
-                                        data-cost="<?php echo esc_attr($p->cost_price ?? 0); ?>"
-                                        data-price="<?php echo esc_attr($p->retail_price ?? 0); ?>"
-                                        data-vat="23">
-                                    <?php echo esc_html($p->manufacturer_name.' — '.$p->product_name.' '.$p->style.' ('.$p->tech_level.')'); ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <select id="hm-ear-select" class="hm-input hm-input--sm">
-                                <option value="">— Ear —</option>
-                                <option value="Left">Left</option>
-                                <option value="Right">Right</option>
-                                <option value="Binaural">Binaural (both)</option>
-                            </select>
-                            <button type="button" id="hm-add-product" class="hm-btn hm-btn--secondary hm-btn--sm">
-                                + Add Product
-                            </button>
-                        </div>
-                        <div class="hm-item-adder">
-                            <select id="hm-service-select" class="hm-input hm-input--sm">
-                                <option value="">— Add a Service —</option>
-                                <?php foreach ($services as $s) : ?>
-                                <option value="<?php echo esc_attr($s->id); ?>"
-                                        data-name="<?php echo esc_attr($s->service_name); ?>"
-                                        data-price="<?php echo esc_attr($s->default_price ?? 0); ?>"
-                                        data-vat="23">
-                                    <?php echo esc_html($s->service_name.' — €'.number_format($s->default_price,2)); ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button type="button" id="hm-add-service" class="hm-btn hm-btn--secondary hm-btn--sm">
-                                + Add Service
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- PRSI -->
-                <div class="hm-form__section">
-                    <h2 class="hm-form__section-title">PRSI Grant</h2>
-                    <p class="hm-form__hint">Deducted from patient invoice. HearMed claims from DSP.</p>
-                    <div class="hm-prsi-row">
-                        <label class="hm-checkbox-label">
-                            <input type="checkbox" name="prsi_left"  id="prsi_left"  value="1"> Left ear — €500
-                        </label>
-                        <label class="hm-checkbox-label">
-                            <input type="checkbox" name="prsi_right" id="prsi_right" value="1"> Right ear — €500
-                        </label>
-                        <div class="hm-prsi-total">PRSI deduction: <strong id="hm-prsi-display">€0.00</strong></div>
-                    </div>
-                </div>
-
-                <!-- PAYMENT METHOD (expected — collected at fitting) -->
-                <div class="hm-form__section">
-                    <h2 class="hm-form__section-title">Expected Payment Method</h2>
-                    <p class="hm-form__hint">Collected at fitting. Recorded now for planning purposes.</p>
-                    <select name="payment_method" class="hm-input" required>
-                        <option value="">— Select —</option>
-                        <option value="Card">Card</option>
-                        <option value="Cash">Cash</option>
-                        <option value="Bank Transfer">Bank Transfer</option>
-                        <option value="Cheque">Cheque</option>
-                        <option value="PRSI">PRSI Grant only</option>
-                    </select>
-                </div>
-
-                <!-- DEPOSIT (optional — paid at order stage) -->
-                <div class="hm-form__section">
-                    <h2 class="hm-form__section-title">Deposit <span class="hm-form__section-optional">— Optional</span></h2>
-                    <p class="hm-form__hint">If the patient pays a deposit today, record it here. Balance will be collected at fitting.</p>
-                    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-                        <div class="hm-form-group" style="flex:0 0 160px;">
-                            <label class="hm-label">Deposit Amount (€)</label>
-                            <input type="number" name="deposit_amount" id="hm-deposit-amount"
-                                   class="hm-input" step="0.01" min="0" value="0"
-                                   placeholder="0.00" oninput="hmUpdateDepositBalance()">
-                        </div>
-                        <div class="hm-form-group" style="flex:0 0 180px;">
-                            <label class="hm-label">Deposit Method</label>
-                            <select name="deposit_method" id="hm-deposit-method" class="hm-input">
-                                <option value="">— None —</option>
-                                <option value="Card">Card</option>
-                                <option value="Cash">Cash</option>
-                                <option value="Bank Transfer">Bank Transfer</option>
-                                <option value="Cheque">Cheque</option>
-                            </select>
-                        </div>
-                        <div class="hm-form-group" style="flex:0 0 160px;">
-                            <label class="hm-label">Date Paid</label>
-                            <input type="date" name="deposit_paid_at" id="hm-deposit-date"
-                                   class="hm-input" value="<?php echo date('Y-m-d'); ?>">
-                        </div>
-                    </div>
-                    <div id="hm-deposit-balance-row" style="display:none;margin-top:10px;padding:10px 14px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px;font-size:13px;color:#0e7490;">
-                        Balance due at fitting: <strong id="hm-deposit-balance">€0.00</strong>
-                    </div>
-                </div>
-
-                <!-- NOTES -->
-                <div class="hm-form__section">
-                    <h2 class="hm-form__section-title">Clinical Notes for Order</h2>
-                    <textarea name="notes" class="hm-input hm-input--textarea" rows="3"
-                              placeholder="Dome size, speaker requirements, any notes for the admin ordering..."></textarea>
-                </div>
-
-                <!-- TOTALS -->
-                <div class="hm-order-totals hm-card hm-card--inset">
-                    <div class="hm-order-totals__row"><span>Subtotal</span><span id="hm-subtotal">€0.00</span></div>
-                    <div class="hm-order-totals__row"><span>VAT</span><span id="hm-vat-total">€0.00</span></div>
-                    <div class="hm-order-totals__row hm-text--green"><span>PRSI Grant Deduction</span><span id="hm-prsi-deduction">−€0.00</span></div>
-                    <div class="hm-order-totals__row hm-order-totals__row--total"><span>Patient Pays</span><span id="hm-grand-total">€0.00</span></div>
-                    <div class="hm-order-totals__row hm-text--teal" id="hm-deposit-row" style="display:none;"><span>Deposit Paid Today</span><span id="hm-deposit-display">−€0.00</span></div>
-                    <div class="hm-order-totals__row hm-order-totals__row--total" id="hm-balance-row" style="display:none;"><span>Balance at Fitting</span><span id="hm-balance-display">€0.00</span></div>
-                </div>
-
-                <script>
-                function hmUpdateDepositBalance() {
-                    var dep = parseFloat(document.getElementById('hm-deposit-amount').value) || 0;
-                    var grand = parseFloat(document.getElementById('hm-grand-total').textContent.replace(/[^0-9.]/g,'')) || 0;
-                    var bal = Math.max(0, grand - dep);
-                    document.getElementById('hm-deposit-row').style.display  = dep > 0 ? '' : 'none';
-                    document.getElementById('hm-balance-row').style.display  = dep > 0 ? '' : 'none';
-                    document.getElementById('hm-deposit-balance-row').style.display = dep > 0 ? '' : 'none';
-                    document.getElementById('hm-deposit-display').textContent  = '−€' + dep.toFixed(2);
-                    document.getElementById('hm-deposit-balance').textContent  = '€' + bal.toFixed(2);
-                    document.getElementById('hm-balance-display').textContent  = '€' + bal.toFixed(2);
+        // Resolve patient name if patient_id was supplied
+        $patient_name = '';
+        if ( $pid ) {
+            $db = HearMed_DB::instance();
+            $p  = $db->get_row(
+                "SELECT first_name, last_name, patient_number
+                 FROM hearmed_core.patients WHERE id = \$1",
+                [ $pid ]
+            );
+            if ( $p ) {
+                $patient_name = trim( $p->first_name . ' ' . $p->last_name );
+                if ( $p->patient_number ) {
+                    $patient_name .= ' (' . $p->patient_number . ')';
                 }
-                </script>
+            }
+        }
 
-                <input type="hidden" name="items_json" id="hm-items-json" value="[]">
-
-                <div class="hm-form__actions">
-                    <a href="<?php echo esc_url($base); ?>" class="hm-btn hm-btn--ghost">Cancel</a>
-                    <button type="submit" id="hm-submit-order" class="hm-btn hm-btn--primary" disabled>
-                        Submit for Approval →
-                    </button>
+        ob_start();
+        ?>
+        <?php if ( ! $pid ) : ?>
+        <!-- Patient search step — shown when no patient_id in URL -->
+        <div class="hm-content hm-orders-create" id="hm-orders-patient-search"
+             style="max-width:520px;margin:40px auto;font-family:var(--hm-font,'Source Sans 3',sans-serif)">
+            <a href="<?php echo esc_url( $base ); ?>" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--hm-teal,#0BB4C4);text-decoration:none;margin-bottom:20px">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8H1M8 15L1 8l7-7"/></svg> Orders
+            </a>
+            <div style="background:#fff;border-radius:12px;border:1.5px solid var(--hm-border,#e2e8f0);padding:32px;text-align:center">
+                <div style="font-family:var(--hm-font-title,'Cormorant Garamond',serif);font-size:22px;font-weight:700;color:var(--hm-navy,#151B33);margin-bottom:4px">New Order</div>
+                <div style="font-size:13px;color:var(--hm-text-light,#64748b);margin-bottom:24px">Search for a patient to begin</div>
+                <div style="position:relative">
+                    <input type="text" id="hm-op-patient-q" autofocus
+                           placeholder="Type patient name…"
+                           style="width:100%;font-size:14px;padding:12px 16px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);box-sizing:border-box;font-family:var(--hm-font);transition:border-color .15s">
+                    <div id="hm-op-patient-results" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1.5px solid var(--hm-border,#e2e8f0);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);max-height:260px;overflow-y:auto;z-index:10"></div>
                 </div>
-                <div id="hm-order-msg" class="hm-notice" style="display:none;"></div>
-            </form>
+            </div>
         </div>
-        <?php echo self::create_form_js(); ?>
-        <?php echo self::maybe_prefill_patient_js(); ?>
-        <?php return ob_get_clean();
+        <script>
+        (function(){
+            var timer,q=document.getElementById('hm-op-patient-q'),box=document.getElementById('hm-op-patient-results');
+            q.addEventListener('input',function(){
+                clearTimeout(timer);
+                if(q.value.length<2){box.style.display='none';return;}
+                timer=setTimeout(function(){
+                    var fd=new FormData();fd.append('action','hm_patient_search');fd.append('nonce',HM.nonce);fd.append('q',q.value);
+                    fetch(HM.ajax_url,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){
+                        if(!d.success||!d.data.length){box.style.display='none';return;}
+                        box.innerHTML='';
+                        d.data.forEach(function(p){
+                            var d2=document.createElement('div');
+                            d2.textContent=p.label;
+                            d2.style.cssText='padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid #f1f5f9;transition:background .1s';
+                            d2.addEventListener('mouseenter',function(){d2.style.background='#f0fdfa';});
+                            d2.addEventListener('mouseleave',function(){d2.style.background='';});
+                            d2.addEventListener('click',function(){
+                                window.location='<?php echo esc_url( $base ); ?>?hm_action=create&patient_id='+encodeURIComponent(p.id);
+                            });
+                            box.appendChild(d2);
+                        });
+                        box.style.display='block';
+                    });
+                },300);
+            });
+            document.addEventListener('click',function(e){if(!q.contains(e.target)&&!box.contains(e.target))box.style.display='none';});
+        })();
+        </script>
+        <?php else : ?>
+        <!-- Minimal container — the calendar-style order page takes over .hm-main -->
+        <div class="hm-content hm-orders-create" id="hm-orders-create-placeholder"
+             style="display:flex;align-items:center;justify-content:center;min-height:400px;color:var(--hm-text-muted,#94a3b8);font-family:var(--hm-font,'Source Sans 3',sans-serif)">
+            <div style="text-align:center">
+                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Loading Order Page…</div>
+                <div style="font-size:13px;opacity:.6"><?php echo esc_html( $patient_name ?: 'Preparing' ); ?></div>
+            </div>
+        </div>
+        <script>
+        (function(){
+            /* Wait for HM_openOrderPage (from hearmed-calendar.js) to be available */
+            var _waitCount = 0;
+            function boot(){
+                if(typeof window.HM_openOrderPage==='function'){launch();return;}
+                if(++_waitCount>80){
+                    /* Fallback after ~4 s — show error */
+                    var ph=document.getElementById('hm-orders-create-placeholder');
+                    if(ph)ph.innerHTML='<div style="text-align:center;color:#ef4444;font-size:14px;font-weight:600">Order page failed to load.<br><a href="<?php echo esc_url( $base ); ?>" style="color:#0BB4C4;text-decoration:underline;font-size:13px">← Back to Orders</a></div>';
+                    return;
+                }
+                setTimeout(boot,50);
+            }
+            function launch(){
+                /* Remove the placeholder immediately — the order page renders into .hm-main */
+                var ph=document.getElementById('hm-orders-create-placeholder');
+                if(ph)ph.remove();
+
+                window.HM_openOrderPage({
+                    patient_id:    <?php echo (int) $pid; ?>,
+                    patient_name:  <?php echo json_encode( $patient_name ); ?>,
+                    appointment_id: 0,
+                    outcome:       {name:'', color:'#3B82F6'},
+                    service_colour:'#3B82F6',
+                    service_name:  '',
+                    clinic_id:     '',
+                    dispenser_id:  0,
+                    backLabel:     'Orders',
+                    onDone: function(){
+                        window.location = <?php echo json_encode( $base ); ?>;
+                    }
+                });
+
+                /* Override the back button to navigate instead of just cleaning up */
+                setTimeout(function(){
+                    jQuery(document).off('click.opback').on('click.opback','#hm-op-back',function(){
+                        window.location = <?php echo json_encode( $base ); ?>;
+                    });
+                }, 100);
+            }
+            boot();
+        })();
+        </script>
+        <?php endif; ?>
+        <?php
+        return ob_get_clean();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
