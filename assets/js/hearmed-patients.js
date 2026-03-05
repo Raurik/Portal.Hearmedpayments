@@ -1624,17 +1624,20 @@ function initProfile(){
             var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Invoices ('+d.length+')</h3></div>';
             if(!d.length){h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.invoice+'</div><div class="hm-empty-text">No invoices for this patient</div></div>';}
             else{
-                var sc={Paid:'hm-badge--green',Part:'hm-badge--amber',Unpaid:'hm-badge--red',Cancelled:'hm-badge--grey',Void:'hm-badge--grey'};
                 var showAmts=patient.has_finance;
                 h+='<table class="hm-table"><thead><tr><th>Invoice #</th><th>Date</th><th>Status</th>';
                 if(showAmts)h+='<th>Total</th><th>Balance</th>';
                 h+='<th></th></tr></thead><tbody>';
                 d.forEach(function(inv){
-                    var bc=sc[inv.status]||'hm-badge--grey';
+                    var bal=parseFloat(inv.balance||0);
+                    if(!isFinite(bal)) bal=0;
+                    var paidInFull=bal<=0.009;
+                    var statusText=paidInFull?'Paid in Full':'Balance Outstanding';
+                    var bc=paidInFull?'hm-badge--green':'hm-badge--amber';
                     h+='<tr>'+
                         '<td><code class="hm-pt-hnum">'+esc(inv.invoice_number)+'</code></td>'+
                         '<td>'+fmtDate((inv.created_at||'').split(' ')[0])+'</td>'+
-                        '<td><span class="hm-badge hm-badge--sm '+bc+'">'+esc(inv.status)+'</span></td>';
+                        '<td><span class="hm-badge hm-badge--sm '+bc+'">'+statusText+'</span></td>';
                     if(showAmts)h+='<td style="font-weight:500;">'+euro(inv.grand_total)+'</td><td style="color:'+(parseFloat(inv.balance||0)>0?'#e53e3e':'#10b981')+';font-weight:500;">'+euro(inv.balance)+'</td>';
                     h+='<td><a href="#" class="hm-dl-invoice hm-btn hm-btn--secondary hm-btn--sm" data-id="'+inv._ID+'" data-num="'+esc(inv.invoice_number)+'">Download</a></td></tr>';
                 });
