@@ -86,14 +86,34 @@ class HearMed_Invoice {
             return false;
         }
 
-        // If invoice already exists for this order, just mark it paid
+        // If invoice already exists for this order, record payment and update balance
         if ( $order->invoice_id ) {
-            $db->update( 'invoices', [
-                'payment_status'   => 'Paid',
-                'balance_remaining'=> 0,
-                'updated_at'       => date( 'Y-m-d H:i:s' ),
-            ], [ 'id' => $order->invoice_id ] );
+            // Record payment, then calculate actual balance from all payments
             self::record_payment( $order->invoice_id, $order, $payment_data );
+
+            $inv = $db->get_row(
+                "SELECT grand_total FROM hearmed_core.invoices WHERE id = \$1",
+                [ $order->invoice_id ]
+            );
+            $total_paid = (float) $db->get_var(
+                "SELECT COALESCE(SUM(amount), 0) FROM hearmed_core.payments
+                 WHERE invoice_id = \$1 AND is_refund = false",
+                [ $order->invoice_id ]
+            );
+            $credit_applied = (float) $db->get_var(
+                "SELECT COALESCE(credit_applied, 0) FROM hearmed_core.invoices WHERE id = \$1",
+                [ $order->invoice_id ]
+            );
+            $grand = (float) ( $inv->grand_total ?? $order->grand_total );
+            $new_balance = max( 0, $grand - $total_paid - $credit_applied );
+            $status = $new_balance <= 0.009 ? 'Paid' : 'Partial';
+
+            $db->update( 'invoices', [
+                'payment_status'    => $status,
+                'balance_remaining' => round( $new_balance, 2 ),
+                'updated_at'        => date( 'Y-m-d H:i:s' ),
+            ], [ 'id' => $order->invoice_id ] );
+
             return $order->invoice_id;
         }
 
@@ -148,8 +168,8 @@ class HearMed_Invoice {
             'vat_total'         => $vat_breakdown['vat_total'],
             'vat_breakdown'     => json_encode( $vat_breakdown['by_rate'] ),
             'grand_total'       => $order->grand_total,
-            'balance_remaining' => 0,
-            'payment_status'    => 'Paid',
+            'balance_remaining' => max( 0, (float) $order->grand_total - (float) ( $payment_data['amount'] ?? 0 ) ),
+            'payment_status'    => ( (float) ( $payment_data['amount'] ?? 0 ) >= (float) $order->grand_total - 0.009 ) ? 'Paid' : 'Partial',
             'prsi_applicable'   => $order->prsi_applicable,
             'prsi_amount'       => $order->prsi_amount ?? 0,
             'created_by'        => $payment_data['received_by'] ?? null,
@@ -200,6 +220,17 @@ class HearMed_Invoice {
         }
 
         HearMed_DB::commit();
+
+        // Auto-save invoice to patient documents
+        if ( class_exists( 'HearMed_Utils' ) && method_exists( 'HearMed_Utils', 'auto_save_document' ) ) {
+            HearMed_Utils::auto_save_document(
+                $order->patient_id,
+                'Invoice',
+                $invoice_number,
+                '',
+                $payment_data['received_by'] ?? null
+            );
+        }
 
         // Fire notification to finance team
         if ( class_exists( 'HearMed_Notifications' ) && method_exists( 'HearMed_Notifications', 'create_for_role' ) ) {

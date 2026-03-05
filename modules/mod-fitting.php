@@ -1248,9 +1248,6 @@ function hm_ajax_fitting_load_invoice() {
     check_ajax_referer('hm_nonce', 'nonce');
     if (!PortalAuth::is_logged_in()) { wp_send_json_error(['msg' => 'Access denied']); return; }
 
-    wp_send_json_error(['msg' => 'Use Appointment close-off to complete payment and close this order.']);
-    return;
-
     $db       = HearMed_DB::instance();
     $order_id = intval($_POST['order_id'] ?? 0);
 
@@ -1366,9 +1363,6 @@ add_action('wp_ajax_hm_fitting_record_payment', 'hm_ajax_fitting_record_payment'
 function hm_ajax_fitting_record_payment() {
     check_ajax_referer('hm_nonce', 'nonce');
     if (!PortalAuth::is_logged_in()) { wp_send_json_error(['msg' => 'Access denied']); return; }
-
-    wp_send_json_error(['msg' => 'Use Appointment close-off to complete payment and close this order.']);
-    return;
 
     $db         = HearMed_DB::instance();
     $order_id   = intval($_POST['order_id'] ?? 0);

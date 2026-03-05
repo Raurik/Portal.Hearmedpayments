@@ -2068,6 +2068,25 @@ class HearMed_Orders {
             return '<div class="hm-notice hm-notice--error">Order not ready for fitting yet.</div>';
         }
 
+        // Pre-create invoice so we have a proper invoice number and can preview
+        $invoice_id_for_preview = null;
+        if ( empty( $order->invoice_number ) && class_exists( 'HearMed_Invoice' ) ) {
+            $uid = HearMed_Auth::current_user();
+            $invoice_id_for_preview = HearMed_Invoice::ensure_invoice_for_order( $order_id, $uid->id ?? null );
+            if ( $invoice_id_for_preview ) {
+                // Re-fetch order to get updated invoice data
+                $order = $db->get_row(
+                    "SELECT o.*, p.first_name, p.last_name,
+                            inv.invoice_number, inv.grand_total AS invoice_total
+                     FROM hearmed_core.orders o
+                     JOIN hearmed_core.patients p ON p.id = o.patient_id
+                     LEFT JOIN hearmed_core.invoices inv ON inv.id = o.invoice_id
+                     WHERE o.id = \$1", [$order_id]
+                );
+            }
+        }
+        $invoice_id_for_preview = $invoice_id_for_preview ?: ( $order->invoice_id ?? null );
+
         // ── Check for hearing-aid products that still have NO serial numbers ──
         $missing_serials = $db->get_results(
             "SELECT oi.id AS order_item_id, oi.item_id AS product_id, oi.ear_side,
@@ -2090,21 +2109,8 @@ class HearMed_Orders {
         $deposit_already_paid = floatval( $order->deposit_amount ?? 0 );
         $amount_due = max( 0, ( $order->invoice_total ?? $order->grand_total ) - $deposit_already_paid );
 
-        // S6-FIX: INVOICE TRIGGER — fetch line items for invoice preview panel
-        $items = $db->get_results(
-            "SELECT oi.*,
-                    CASE WHEN oi.item_type = 'product'
-                         THEN CONCAT(m.name,' ',p.product_name,' ',p.style)
-                         ELSE s.service_name END AS item_name,
-                    p.tech_level
-             FROM hearmed_core.order_items oi
-             LEFT JOIN hearmed_reference.products p      ON p.id = oi.item_id AND oi.item_type = 'product'
-             LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
-             LEFT JOIN hearmed_reference.services s      ON s.id = oi.item_id AND oi.item_type = 'service'
-             WHERE oi.order_id = \$1 ORDER BY oi.line_number", [$order_id]
-        );
-
         $patient_name = trim( $order->first_name . ' ' . $order->last_name );
+        $invoice_number_display = $order->invoice_number ?: $order->order_number;
 
         ob_start(); ?>
         <!-- S6-FIX: INVOICE TRIGGER — Two-panel completion form matching order creation layout -->
@@ -2118,7 +2124,7 @@ class HearMed_Orders {
                 </a>
                 <div style="text-align:center">
                     <div style="font-family:var(--hm-font-title,'Cormorant Garamond',serif);font-size:20px;font-weight:700;letter-spacing:-.3px">Record Fitting + Payment</div>
-                    <div style="font-size:11px;opacity:.7;margin-top:1px"><?php echo esc_html($patient_name); ?> — <?php echo esc_html($order->order_number ?? ''); ?></div>
+                    <div style="font-size:11px;opacity:.7;margin-top:1px"><?php echo esc_html($patient_name); ?> — <?php echo esc_html($invoice_number_display); ?></div>
                 </div>
                 <div style="min-width:90px"></div>
             </div>
@@ -2243,81 +2249,36 @@ class HearMed_Orders {
                     <div id="hm-complete-msg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px"></div>
                 </div>
 
-                <!-- ═════ RIGHT PANEL — Invoice preview ═════ -->
-                <div style="flex:0 0 60%;max-width:60%;display:flex;flex-direction:column;padding:28px 32px;background:#fff">
+                <!-- ═════ RIGHT PANEL — Invoice preview (Form Builder template) ═════ -->
+                <div style="flex:0 0 60%;max-width:60%;display:flex;flex-direction:column;background:#fff;overflow:hidden">
 
-                    <!-- Invoice header -->
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+                    <!-- Invoice toolbar -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 24px;border-bottom:1px solid var(--hm-border,#e2e8f0);background:var(--hm-bg-alt,#f8fafc)">
                         <div>
-                            <div style="font-size:22px;font-weight:700;font-family:var(--hm-font-title,'Cormorant Garamond',serif);color:var(--hm-navy,#151B33);letter-spacing:1px">INVOICE</div>
-                            <div style="font-size:11px;color:var(--hm-text-muted,#94a3b8);margin-top:2px"><?php echo esc_html($order->order_number ?? ''); ?> &bull; <?php echo date('j M Y'); ?></div>
+                            <span style="font-size:14px;font-weight:700;color:var(--hm-navy,#151B33)"><?php echo esc_html($order->invoice_number ?: 'Invoice'); ?></span>
+                            <span style="font-size:12px;color:var(--hm-text-muted,#94a3b8);margin-left:8px"><?php echo esc_html($order->order_number ?? ''); ?></span>
                         </div>
-                        <div style="text-align:right">
-                            <div style="font-size:12px;font-weight:600;color:var(--hm-navy,#151B33)"><?php echo esc_html($patient_name); ?></div>
-                            <div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:#f5f3ff;color:#6d28d9;text-transform:uppercase;letter-spacing:.3px;display:inline-block;margin-top:4px">Awaiting Fitting</div>
+                        <div style="display:flex;gap:8px">
+                            <?php if ($invoice_id_for_preview) : ?>
+                            <a href="<?php echo esc_url(admin_url('admin-ajax.php').'?action=hm_download_invoice&nonce='.$nonce.'&_ID='.(int)$invoice_id_for_preview); ?>" target="_blank"
+                               style="font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;border:1px solid var(--hm-border,#e2e8f0);background:#fff;color:var(--hm-navy,#151B33);text-decoration:none;display:flex;align-items:center;gap:4px;cursor:pointer">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6M7 10l5 5 5-5M12 15V3"/></svg>
+                                Open Full Invoice
+                            </a>
+                            <?php endif; ?>
                         </div>
                     </div>
 
-                    <!-- Line items table -->
-                    <div style="flex:1;overflow-y:auto;margin-bottom:16px">
-                        <table style="width:100%;border-collapse:collapse">
-                            <thead><tr style="border-bottom:2px solid var(--hm-navy,#151B33)">
-                                <th style="text-align:left;padding:6px 0;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px">Item</th>
-                                <th style="text-align:center;padding:6px 8px;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:50px">Ear</th>
-                                <th style="text-align:center;padding:6px 8px;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:40px">Qty</th>
-                                <th style="text-align:right;padding:6px 8px;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:80px">Price</th>
-                                <th style="text-align:right;padding:6px 8px;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:60px">VAT</th>
-                                <th style="text-align:right;padding:6px 0;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:80px">Total</th>
-                            </tr></thead>
-                            <tbody>
-                            <?php if (empty($items)) : ?>
-                            <tr><td colspan="6" style="text-align:center;padding:24px 0;color:var(--hm-text-muted,#94a3b8);font-size:13px;font-style:italic">No line items</td></tr>
-                            <?php else : foreach ($items as $item) : ?>
-                            <tr style="border-bottom:1px solid #f1f5f9">
-                                <td style="padding:10px 0;font-size:13px"><?php echo esc_html($item->item_name); ?></td>
-                                <td style="text-align:center;font-size:12px;color:var(--hm-text-light,#64748b)"><?php echo esc_html($item->ear_side ?: '—'); ?></td>
-                                <td style="text-align:center;font-size:13px"><?php echo esc_html($item->quantity); ?></td>
-                                <td style="text-align:right;font-size:13px">€<?php echo number_format($item->unit_retail_price,2); ?></td>
-                                <td style="text-align:right;font-size:12px;color:var(--hm-text-light,#64748b)">€<?php echo number_format($item->vat_amount ?? 0,2); ?></td>
-                                <td style="text-align:right;font-size:13px;font-weight:600">€<?php echo number_format($item->line_total,2); ?></td>
-                            </tr>
-                            <?php endforeach; endif; ?>
-                            </tbody>
-                        </table>
+                    <!-- Invoice preview iframe (uses Form Builder template) -->
+                    <?php if ($invoice_id_for_preview) : ?>
+                    <iframe src="<?php echo esc_url(admin_url('admin-ajax.php').'?action=hm_download_invoice&nonce='.$nonce.'&_ID='.(int)$invoice_id_for_preview); ?>"
+                            style="flex:1;width:100%;border:none;min-height:580px"
+                            title="Invoice Preview"></iframe>
+                    <?php else : ?>
+                    <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--hm-text-muted,#94a3b8);font-size:14px;font-style:italic">
+                        Invoice preview unavailable — invoice will be created on finalise.
                     </div>
-
-                    <!-- Totals block -->
-                    <div style="border-top:1px solid var(--hm-border,#e2e8f0);padding-top:12px">
-                        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:var(--hm-text-light,#64748b)"><span>Subtotal</span><span>€<?php echo number_format($order->subtotal ?? 0,2); ?></span></div>
-                        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:var(--hm-text-light,#64748b)"><span>Discount</span><span style="color:#dc2626">−€<?php echo number_format($order->discount_total ?? 0,2); ?></span></div>
-                        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:var(--hm-text-light,#64748b)"><span>VAT</span><span>€<?php echo number_format($order->vat_total ?? 0,2); ?></span></div>
-                        <?php if ($order->prsi_applicable) : ?>
-                        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:#059669"><span>PRSI Grant</span><span>−€<?php echo number_format($order->prsi_amount,2); ?></span></div>
-                        <?php endif; ?>
-
-                        <!-- Grand total -->
-                        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding-top:10px;border-top:2px solid var(--hm-navy,#151B33)">
-                            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--hm-navy,#151B33)">Patient Pays</span>
-                            <span style="font-size:22px;font-weight:700;color:var(--hm-navy,#151B33)">€<?php echo number_format($order->grand_total,2); ?></span>
-                        </div>
-
-                        <?php if ($deposit_already_paid > 0) : ?>
-                        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;color:#059669;margin-top:4px"><span>Deposit Paid</span><span>−€<?php echo number_format($deposit_already_paid,2); ?></span></div>
-                        <div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:6px;border-top:1px dashed var(--hm-border-light,#e2e8f0)">
-                            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--hm-teal,#0BB4C4)">Balance Due</span>
-                            <span style="font-size:18px;font-weight:700;color:var(--hm-teal,#0BB4C4)">€<?php echo number_format($amount_due,2); ?></span>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-
-                    <?php if ($order->notes) : ?>
-                    <div style="margin-top:14px"><div style="font-size:12px;color:var(--hm-text-muted,#94a3b8)"><strong>Notes:</strong> <?php echo esc_html($order->notes); ?></div></div>
                     <?php endif; ?>
-
-                    <!-- Payment method -->
-                    <div style="margin-top:14px;padding:12px 16px;background:var(--hm-bg-alt,#f8fafc);border:1px solid var(--hm-border,#e2e8f0);border-radius:8px;font-size:12px;color:var(--hm-text-light,#64748b)">
-                        <strong style="color:var(--hm-navy,#151B33)">Payment Method:</strong> <?php echo esc_html($order->payment_method ?? '—'); ?>
-                    </div>
                 </div>
             </div>
         </div>
@@ -3126,29 +3087,9 @@ class HearMed_Orders {
             $fitting_invoice_id = HearMed_Invoice::create_from_order( $order_id, $payment_data );
         }
 
-        // 6. If create_from_order didn't already mark invoice Paid, do it here
-        if ( $order->invoice_id && ! $fitting_invoice_id ) {
-            $db->update( 'hearmed_core.invoices', [
-                'payment_status'    => 'Paid',
-                'balance_remaining' => 0,
-            ], [ 'id' => $order->invoice_id ] );
-        }
         $effective_invoice_id = $fitting_invoice_id ?: ( $order->invoice_id ?: null );
 
-        // 7. Create payment record for fitting balance (deposit was already recorded at order creation)
-        $db->insert( 'hearmed_core.payments', [
-            'invoice_id'     => $effective_invoice_id,
-            'patient_id'     => $order->patient_id,
-            'amount'         => $balance_paid,
-            'payment_date'   => $fit_date,
-            'payment_method' => $order->payment_method ?? 'Card',
-            'received_by'    => $user->id ?? null,
-            'clinic_id'      => $order->clinic_id,
-            'created_by'     => $user->id ?? null,
-            'is_refund'      => false,
-        ] );
-
-        // 8. Record fitting payment in financial_transactions
+        // 6. Record fitting payment in financial_transactions
         if ( class_exists( 'HearMed_Finance' ) && $balance_paid > 0 ) {
             HearMed_Finance::record( 'payment', $balance_paid, [
                 'patient_id'       => (int) $order->patient_id,
@@ -3163,7 +3104,7 @@ class HearMed_Orders {
             ] );
         }
 
-        // 8b. Record deposit portion applied at fitting
+        // 7. Record deposit portion applied at fitting
         if ( $deposit_paid > 0 && class_exists( 'HearMed_Finance' ) ) {
             HearMed_Finance::record( 'payment', $deposit_paid, [
                 'patient_id'       => (int) $order->patient_id,
@@ -3178,7 +3119,7 @@ class HearMed_Orders {
             ] );
         }
 
-        // 9. Log in patient timeline
+        // 8. Log in patient timeline
         $db->insert( 'hearmed_core.patient_timeline', [
             'patient_id'  => $order->patient_id,
             'event_type'  => 'fitting_complete',
@@ -3191,10 +3132,10 @@ class HearMed_Orders {
             'order_id'    => $order_id,
         ] );
 
-        // 10. Status history log
+        // 9. Status history log
         self::log_status_change( $order_id, 'Awaiting Fitting', 'Complete', $user->id ?? null, 'Fitted and paid' );
 
-        // ── 11. Apply patient credit if requested ─────────────────────────
+        // ── 10. Apply patient credit if requested ─────────────────────────
         $credit_actually_applied = 0;
         if ( $apply_credit && $credit_apply_amount > 0 && $effective_invoice_id && class_exists( 'HearMed_Finance' ) ) {
             $credit_balance = HearMed_Finance::get_patient_credit_balance( (int) $order->patient_id );
