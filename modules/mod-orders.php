@@ -1,4 +1,5 @@
 <?php
+// THIS IS A TESTY TEST — checking GitHub Actions deploy pipeline
 /**
  * HearMed Orders Module — v3.0 (real DB schema)
  *
