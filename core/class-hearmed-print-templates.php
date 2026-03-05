@@ -501,8 +501,18 @@ tfoot td { font-weight: 600; border-bottom: none; }
         $invoice = $d->invoice ?? null;
         $order   = $d;
         $grand_total = (float) ( $invoice ? $invoice->grand_total : ( $order->grand_total ?? 0 ) );
-        $balance_remaining = max( 0, (float) ( $invoice ? ( $invoice->balance_remaining ?? 0 ) : 0 ) );
-        $amount_paid = max( 0, $grand_total - $balance_remaining );
+        $payments_total = 0.0;
+        foreach ( (array) ( $d->payments ?? [] ) as $pm ) {
+            $payments_total += (float) ( $pm->amount ?? 0 );
+        }
+        // Prefer rendered payment rows so totals always match Payment Details.
+        if ( $payments_total > 0 ) {
+            $amount_paid = round( $payments_total, 2 );
+            $balance_remaining = max( 0, round( $grand_total - $amount_paid, 2 ) );
+        } else {
+            $balance_remaining = max( 0, (float) ( $invoice ? ( $invoice->balance_remaining ?? 0 ) : 0 ) );
+            $amount_paid = max( 0, $grand_total - $balance_remaining );
+        }
         $is_paid_in_full = $balance_remaining <= 0.009;
         ob_start(); ?>
         <div class="hm-print-section-title">Items</div>
@@ -534,8 +544,8 @@ tfoot td { font-weight: 600; border-bottom: none; }
                 <?php if (($s['prsi'] ?? true) && !empty($order->prsi_applicable)): ?>
                 <tr><td colspan="6" class="money" style="color:var(--hm-accent);">PRSI Grant</td><td class="money" style="color:var(--hm-accent);">-€<?php echo number_format((float)($order->prsi_amount ?? 0), 2); ?></td></tr>
                 <?php endif; ?>
-                <?php if ((float)($invoice->credit_applied ?? 0) > 0): ?>
-                <tr><td colspan="6" class="money" style="color:#059669;">Credit Applied</td><td class="money" style="color:#059669;">-€<?php echo number_format((float)($invoice->credit_applied ?? 0), 2); ?></td></tr>
+                <?php if ((float)($invoice ? ($invoice->credit_applied ?? 0) : 0) > 0): ?>
+                <tr><td colspan="6" class="money" style="color:#059669;">Credit Applied</td><td class="money" style="color:#059669;">-€<?php echo number_format((float)($invoice ? ($invoice->credit_applied ?? 0) : 0), 2); ?></td></tr>
                 <?php endif; ?>
                 <tr class="total-row"><td colspan="6" class="money">Invoice Total</td><td class="money">€<?php echo number_format( $grand_total, 2 ); ?></td></tr>
                 <tr><td colspan="6" class="money">Amount Paid</td><td class="money">€<?php echo number_format( $amount_paid, 2 ); ?></td></tr>
