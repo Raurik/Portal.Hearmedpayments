@@ -638,7 +638,7 @@ class HearMed_Orders {
         <script>
         (function(){
             var $=jQuery;
-            var ajaxUrl=HM.ajax_url, nonce=HM.nonce;
+            var ajaxUrl='<?php echo esc_js(admin_url('admin-ajax.php')); ?>', nonce='<?php echo esc_js(wp_create_nonce('hm_nonce')); ?>';
             var pid=<?php echo (int) $pid; ?>;
             var patientName=<?php echo json_encode( $patient_name ); ?>;
             var ordersBase=<?php echo json_encode( $base ); ?>;
@@ -3303,37 +3303,70 @@ class HearMed_Orders {
     }
 
     public static function ajax_get_order_products() {
-        check_ajax_referer( 'hm_orders_nonce', 'nonce' );
+        check_ajax_referer( 'hm_nonce', 'nonce' );
 
         $db = HearMed_DB::instance();
 
-        // Products (hearing aids, accessories, consumables, bundled)
-        $products = $db->get_results(
-            "SELECT p.id, p.product_name, p.item_type,
-                    p.manufacturer_id, m.name AS manufacturer_name,
-                    p.style, p.tech_level,
-                    p.retail_price, p.cost_price,
-                    p.vat_category, p.is_active
-             FROM hearmed_reference.products p
-             LEFT JOIN hearmed_reference.manufacturers m 
-                    ON m.id = p.manufacturer_id
-             WHERE p.is_active = true
-             ORDER BY m.name, p.product_name"
+        // Test 1: can we connect at all?
+        $test = $db->get_var( "SELECT 1" );
+        if ( ! $test ) {
+            wp_send_json_error( 'DB connection failed' );
+        }
+
+        // Test 2: does hearmed_reference.products exist?
+        $tbl = $db->get_var(
+            "SELECT COUNT(*) FROM information_schema.tables 
+             WHERE table_schema = 'hearmed_reference' 
+             AND table_name = 'products'"
         );
 
-        // Services
-        $services = $db->get_results(
-            "SELECT id, service_name, default_price,
-                    service_code, is_invoiceable
-             FROM hearmed_reference.services
-             WHERE is_active = true
-             ORDER BY service_name"
+        // Test 3: how many products rows exist?
+        $count = 0;
+        $cols  = [];
+        if ( $tbl > 0 ) {
+            $count = $db->get_var( 
+                "SELECT COUNT(*) FROM hearmed_reference.products" 
+            );
+            // Get actual column names
+            $cols = $db->get_results(
+                "SELECT column_name 
+                 FROM information_schema.columns 
+                 WHERE table_schema = 'hearmed_reference' 
+                 AND table_name = 'products'
+                 ORDER BY ordinal_position"
+            );
+        }
+
+        // Test 4: does hearmed_reference.services exist?
+        $svc_tbl = $db->get_var(
+            "SELECT COUNT(*) FROM information_schema.tables 
+             WHERE table_schema = 'hearmed_reference' 
+             AND table_name = 'services'"
         );
+        $svc_count = 0;
+        $svc_cols  = [];
+        if ( $svc_tbl > 0 ) {
+            $svc_count = $db->get_var(
+                "SELECT COUNT(*) FROM hearmed_reference.services"
+            );
+            $svc_cols = $db->get_results(
+                "SELECT column_name 
+                 FROM information_schema.columns 
+                 WHERE table_schema = 'hearmed_reference' 
+                 AND table_name = 'services'
+                 ORDER BY ordinal_position"
+            );
+        }
 
         wp_send_json_success([
-            'products' => $products ?: [],
-            'services' => $services ?: [],
-            'ranges'   => [],
+            'debug'         => true,
+            'db_ok'         => $test,
+            'products_table_exists' => (int) $tbl,
+            'products_count'        => (int) $count,
+            'products_columns'      => $cols,
+            'services_table_exists' => (int) $svc_tbl,
+            'services_count'        => (int) $svc_count,
+            'services_columns'      => $svc_cols,
         ]);
     }
 }
