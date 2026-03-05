@@ -39,7 +39,12 @@ jobs:
           passphrase: ${{ secrets.SG_SSH_PASSPHRASE }}
           script: |
             cd ~/www/portal.hearmedpayments.net/public_html/wp-content/plugins/hearmed-calendar
-            git pull origin main
+            echo "[deploy] Before sync: $(git rev-parse --short HEAD 2>/dev/null || echo 'no-git')"
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            echo "[deploy] After sync:  $(git rev-parse --short HEAD)"
+            echo "[deploy] Commit:      $(git log -1 --oneline)"
             # Deploy MU-plugins
             mkdir -p ~/www/portal.hearmedpayments.net/public_html/wp-content/mu-plugins
             cp -f mu-plugins/disable-wp-login.php ~/www/portal.hearmedpayments.net/public_html/wp-content/mu-plugins/disable-wp-login.php
