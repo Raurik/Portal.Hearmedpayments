@@ -474,6 +474,17 @@
   text-align: right;
 }
 
+/* Lock transaction Amount column directly under its heading. */
+.hm-account-table col.hm-col-amount,
+.hm-account-table th.hm-col-amount,
+.hm-account-table td.hm-col-amount {
+  width: 132px !important;
+  min-width: 132px;
+  max-width: 132px;
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
 .hm-account-table th.hm-col-status,
 .hm-account-table td.hm-col-status { width: 12%; }
 
