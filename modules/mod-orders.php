@@ -821,7 +821,7 @@ class HearMed_Orders {
                 $('#hm-oc-vat').text('€'+vat.toFixed(2));
                 $('#hm-oc-disc-amt').text('−€'+discAmt.toFixed(2));
                 $('#hm-oc-total').text('€'+total.toFixed(2));
-                updateDepositBalance();
+                updateDepBalance();
             }
 
             /* ── Pick from Stock ── */
