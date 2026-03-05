@@ -2351,18 +2351,64 @@ class HearMed_Orders {
                             document.getElementById('hm-credit-apply-value').value = '0';
                             amtEl.value = hmBalanceDue.toFixed(2);
                         }
+                        if (document.getElementById('hm-fit-split').checked) {
+                            hmRebalanceSplitAmounts('first');
+                        }
                     });
                 });
             }
         })();
 
+        function hmCurrentCollectTotal() {
+            var creditApplied = parseFloat(document.getElementById('hm-credit-apply-value').value || 0);
+            return Math.max(0, hmBalanceDue - creditApplied);
+        }
+
+        function hmRebalanceSplitAmounts(changed) {
+            var amount1El = document.getElementById('hm-fit-amount');
+            var amount2El = document.getElementById('hm-fit-amount-2');
+            var totalDue  = hmCurrentCollectTotal();
+
+            var a1 = parseFloat(amount1El.value || 0);
+            var a2 = parseFloat(amount2El.value || 0);
+            if (!isFinite(a1) || a1 < 0) a1 = 0;
+            if (!isFinite(a2) || a2 < 0) a2 = 0;
+
+            if (changed === 'first') {
+                a1 = Math.min(a1, totalDue);
+                a2 = Math.max(0, totalDue - a1);
+            } else if (changed === 'second') {
+                a2 = Math.min(a2, totalDue);
+                a1 = Math.max(0, totalDue - a2);
+            } else {
+                // Default on toggle/open: keep first amount, derive second.
+                a1 = Math.min(a1, totalDue);
+                a2 = Math.max(0, totalDue - a1);
+            }
+
+            amount1El.value = a1.toFixed(2);
+            amount2El.value = a2.toFixed(2);
+        }
+
         // ── Split payment toggle ──
         document.getElementById('hm-fit-split').addEventListener('change', function() {
             document.getElementById('hm-fit-split-row').style.display = this.checked ? '' : 'none';
-            if (!this.checked) {
+            if (this.checked) {
+                hmRebalanceSplitAmounts('init');
+            } else {
                 document.getElementById('hm-fit-method-2').value = '';
                 document.getElementById('hm-fit-amount-2').value = '';
             }
+        });
+
+        document.getElementById('hm-fit-amount').addEventListener('input', function() {
+            if (!document.getElementById('hm-fit-split').checked) return;
+            hmRebalanceSplitAmounts('first');
+        });
+
+        document.getElementById('hm-fit-amount-2').addEventListener('input', function() {
+            if (!document.getElementById('hm-fit-split').checked) return;
+            hmRebalanceSplitAmounts('second');
         });
 
         document.getElementById('hm-confirm-complete').addEventListener('click', function() {
