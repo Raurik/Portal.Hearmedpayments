@@ -82,6 +82,7 @@ add_action( 'wp_ajax_hm_get_awaiting_fitting',        [ 'HearMed_Orders', 'ajax_
 add_action( 'wp_ajax_hm_prefit_cancel',               [ 'HearMed_Orders', 'ajax_prefit_cancel' ] );
 add_action( 'wp_ajax_hm_get_patient_credit_balance',  [ 'HearMed_Orders', 'ajax_get_patient_credit_balance' ] );
 add_action( 'wp_ajax_hm_record_order_deposit',        [ 'HearMed_Orders', 'ajax_record_order_deposit' ] );
+add_action( 'wp_ajax_hm_get_order_stock',             [ 'HearMed_Orders', 'ajax_get_order_stock' ] );
 
 // ---------------------------------------------------------------------------
 // Main class
@@ -526,6 +527,19 @@ class HearMed_Orders {
                             <button type="button" id="hm-oc-add-item" style="font-size:13px;font-weight:600;padding:8px 20px;border-radius:8px;border:none;background:var(--hm-teal,#0BB4C4);color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">+ Add to Order</button>
                         </div>
                     </div>
+
+                    <!-- ─── Pick from Stock ─── -->
+                    <div style="border-top:1px dashed var(--hm-border-light,#e2e8f0);padding-top:14px;margin-top:4px">
+                        <button type="button" id="hm-oc-stock-toggle" style="width:100%;padding:8px 14px;font-size:13px;font-weight:600;border-radius:8px;border:1.5px solid var(--hm-navy,#151B33);background:#fff;color:var(--hm-navy,#151B33);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:var(--hm-font-btn)">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="12" height="9" rx="1"/><path d="M8 3V2a2 2 0 00-4 0v1"/></svg>
+                            Pick from Stock
+                        </button>
+                        <div id="hm-oc-stock-panel" style="display:none;margin-top:12px">
+                            <input type="search" id="hm-oc-stock-search" placeholder="Search model, serial, manufacturer…" class="hm-oc-inp" style="margin-bottom:10px">
+                            <div id="hm-oc-stock-loading" style="text-align:center;padding:20px 0;color:var(--hm-text-muted,#94a3b8);font-size:12px">Loading stock…</div>
+                            <div id="hm-oc-stock-list" style="max-height:260px;overflow-y:auto;display:none"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ═════ RIGHT PANEL — Invoice preview ═════ -->
@@ -810,6 +824,78 @@ class HearMed_Orders {
                 updateDepositBalance();
             }
 
+            /* ── Pick from Stock ── */
+            var stockItems=[], stockLoaded=false;
+
+            $('#hm-oc-stock-toggle').on('click',function(){
+                var $panel=$('#hm-oc-stock-panel');
+                if($panel.is(':visible')){$panel.hide();return;}
+                $panel.show();
+                if(stockLoaded){renderStockList();return;}
+                $.post(ajaxUrl,{action:'hm_get_order_stock',nonce:nonce},function(r){
+                    $('#hm-oc-stock-loading').hide();
+                    if(!r||!r.success){$('#hm-oc-stock-list').html('<p style="font-size:12px;color:#dc2626;padding:8px 0">Failed to load stock.</p>').show();return;}
+                    stockItems=r.data.items||[];
+                    stockLoaded=true;
+                    renderStockList();
+                });
+            });
+
+            $('#hm-oc-stock-search').on('input',function(){renderStockList();});
+
+            function renderStockList(){
+                var q=$('#hm-oc-stock-search').val().toLowerCase();
+                var filtered=stockItems.filter(function(s){
+                    return !q||(s.manufacturer_name+' '+s.model_name+' '+s.serial_number).toLowerCase().indexOf(q)>=0;
+                });
+                if(!filtered.length){
+                    $('#hm-oc-stock-list').html('<p style="font-size:12px;color:var(--hm-text-muted,#94a3b8);padding:8px 0;text-align:center">No available stock items found.</p>').show();
+                    return;
+                }
+                var h='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+                h+='<thead><tr style="border-bottom:1.5px solid var(--hm-navy,#151B33)">';
+                h+='<th style="text-align:left;padding:4px 4px 6px;color:var(--hm-text-light,#64748b);font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:10px">Model</th>';
+                h+='<th style="text-align:left;padding:4px 4px 6px;color:var(--hm-text-light,#64748b);font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:10px">Serial</th>';
+                h+='<th style="text-align:right;padding:4px 4px 6px;color:var(--hm-text-light,#64748b);font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:10px">Price</th>';
+                h+='<th style="padding:4px 4px 6px;color:var(--hm-text-light,#64748b);font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:10px">Ear</th>';
+                h+='<th></th></tr></thead><tbody>';
+                filtered.forEach(function(s){
+                    var label=esc(s.manufacturer_name?s.manufacturer_name+' ':'')+esc(s.model_name||'Unknown');
+                    h+='<tr style="border-bottom:1px solid var(--hm-border-light,#f1f5f9)" data-sid="'+s.id+'">';
+                    h+='<td style="padding:6px 4px">'+label+(s.style?'<br><span style="font-size:10px;color:#94a3b8">'+esc(s.style)+'</span>':'')+'</td>';
+                    h+='<td style="padding:6px 4px;color:var(--hm-text-muted,#94a3b8)">'+esc(s.serial_number||'—')+'</td>';
+                    h+='<td style="text-align:right;padding:6px 4px">€'+parseFloat(s.retail_price||0).toFixed(2)+'</td>';
+                    h+='<td style="padding:6px 4px"><select class="hm-stock-ear" style="font-size:11px;padding:3px 6px;border:1px solid var(--hm-border,#e2e8f0);border-radius:5px">';
+                    h+='<option value="Left">Left</option><option value="Right">Right</option><option value="Binaural">Binaural</option></select></td>';
+                    h+='<td style="padding:6px 4px;text-align:right"><button type="button" class="hm-stock-add" data-sid="'+s.id+'" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;border:none;background:var(--hm-teal,#0BB4C4);color:#fff;cursor:pointer">Add</button></td>';
+                    h+='</tr>';
+                });
+                h+='</tbody></table>';
+                $('#hm-oc-stock-list').html(h).show();
+            }
+
+            $(document).on('click','.hm-stock-add',function(){
+                var sid=$(this).data('sid');
+                var $row=$(this).closest('tr');
+                var ear=$row.find('.hm-stock-ear').val();
+                var s=stockItems.find(function(x){return x.id==sid;});
+                if(!s)return;
+                var price=parseFloat(s.retail_price||0);
+                var vatRate=parseFloat(s.vat_rate||0);
+                var qty=ear==='Binaural'?2:1;
+                var gross=price*qty;
+                var vatAmt=vatRate>0?Math.round((gross-gross/(1+vatRate/100))*100)/100:0;
+                var label=(s.manufacturer_name?s.manufacturer_name+' ':'')+( s.model_name||'Stock Item');
+                if(s.serial_number)label+=' (S/N: '+s.serial_number+')';
+                orderItems.push({id:s.product_id||0,type:'product',name:label,unit_price:price,qty:qty,ear:ear,vat_rate:vatRate,vat_amount:vatAmt,line_total:gross,from_stock:true,stock_id:sid});
+                renderItems();
+                updateTotals();
+                $('#hm-oc-err').text('');
+                // Remove this row from the available list
+                stockItems=stockItems.filter(function(x){return x.id!=sid;});
+                renderStockList();
+            });
+
             /* ── Discount mode toggle ── */
             $(document).on('click','.hm-oc-disc-mode',function(){
                 discountMode=$(this).data('mode');
@@ -913,6 +999,7 @@ class HearMed_Orders {
                     deposit_method:firstMethod,
                     deposit_paid_at:firstDate,
                     payments_json:JSON.stringify(paymentRows),
+                    stock_items_json:JSON.stringify(orderItems.filter(function(it){return it.from_stock;})),
                     payment_method:''
                 },function(r){
                     if(r&&r.success){
@@ -3373,5 +3460,81 @@ class HearMed_Orders {
             'services' => $services ?: [],
             'ranges'   => [],
         ]);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AJAX: Get available stock items for order creation
+    // ═══════════════════════════════════════════════════════════════════════
+    public static function ajax_get_order_stock() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+        $db      = HearMed_DB::instance();
+        $clinic  = HearMed_Auth::current_clinic();
+
+        $params = [ 'Available' ];
+        $clinic_filter = $clinic ? " AND s.clinic_id = \$2" : '';
+        if ( $clinic ) $params[] = $clinic;
+
+        $rows = $db->get_results(
+            "SELECT s.id,
+                    s.model_name,
+                    s.style,
+                    s.technology_level,
+                    s.serial_number,
+                    s.status,
+                    COALESCE(m.name, '') AS manufacturer_name,
+                    s.manufacturer_id,
+                    -- best-effort price match from products catalogue
+                    COALESCE(
+                        (SELECT p.retail_price
+                         FROM hearmed_reference.products p
+                         WHERE p.manufacturer_id = s.manufacturer_id
+                           AND LOWER(p.product_name) = LOWER(s.model_name)
+                           AND p.is_active = true
+                         LIMIT 1),
+                        0
+                    ) AS retail_price,
+                    COALESCE(
+                        (SELECT p.id
+                         FROM hearmed_reference.products p
+                         WHERE p.manufacturer_id = s.manufacturer_id
+                           AND LOWER(p.product_name) = LOWER(s.model_name)
+                           AND p.is_active = true
+                         LIMIT 1),
+                        0
+                    ) AS product_id,
+                    COALESCE(
+                        (SELECT p.vat_category
+                         FROM hearmed_reference.products p
+                         WHERE p.manufacturer_id = s.manufacturer_id
+                           AND LOWER(p.product_name) = LOWER(s.model_name)
+                           AND p.is_active = true
+                         LIMIT 1),
+                        'exempt'
+                    ) AS vat_category
+             FROM hearmed_reference.inventory_stock s
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = s.manufacturer_id
+             WHERE s.status = \$1
+               AND s.item_category = 'hearing_aid'{$clinic_filter}
+             ORDER BY m.name, s.model_name, s.serial_number",
+            $params
+        );
+
+        $items = [];
+        foreach ( $rows ?: [] as $r ) {
+            $items[] = [
+                'id'               => (int) $r->id,
+                'manufacturer_name'=> $r->manufacturer_name ?? '',
+                'manufacturer_id'  => (int) ( $r->manufacturer_id ?? 0 ),
+                'model_name'       => $r->model_name ?? '',
+                'style'            => $r->style ?? '',
+                'technology_level' => $r->technology_level ?? '',
+                'serial_number'    => $r->serial_number ?? '',
+                'retail_price'     => (float) ( $r->retail_price ?? 0 ),
+                'product_id'       => (int) ( $r->product_id ?? 0 ),
+                'vat_rate'         => ( $r->vat_category === 'standard' ) ? 23 : 0,
+            ];
+        }
+
+        wp_send_json_success( [ 'items' => $items ] );
     }
 }
