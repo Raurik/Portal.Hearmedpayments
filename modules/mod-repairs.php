@@ -101,6 +101,7 @@ class HearMed_Repairs {
              LEFT JOIN hearmed_core.patients p ON p.id = r.patient_id
              LEFT JOIN hearmed_reference.clinics c ON c.id = COALESCE(r.clinic_id, p.assigned_clinic_id)
              LEFT JOIN hearmed_reference.staff s ON s.id = COALESCE(r.staff_id, p.assigned_dispenser_id)
+             WHERE COALESCE(r.repair_status, 'Booked') IN ('Booked','Sent','Received')
              ORDER BY
                 CASE r.repair_status
                     WHEN 'Booked' THEN 1
@@ -132,6 +133,7 @@ class HearMed_Repairs {
                  LEFT JOIN hearmed_reference.manufacturers m ON m.id = COALESCE(r.manufacturer_id, pr.manufacturer_id)
                  LEFT JOIN hearmed_core.patients p ON p.id = r.patient_id
                  LEFT JOIN hearmed_reference.clinics c ON c.id = p.assigned_clinic_id
+                 WHERE COALESCE(r.repair_status, 'Booked') IN ('Booked','Sent','Received')
                  ORDER BY
                     CASE r.repair_status
                         WHEN 'Booked' THEN 1
@@ -299,6 +301,23 @@ class HearMed_Repairs {
             );
             if ( $has_completed ) {
                 $fields['completed_date'] = date('Y-m-d');
+            }
+
+            // Add a dated patient-file note when repair is completed.
+            $repair_note = $db->get_row(
+                "SELECT patient_id, repair_number, COALESCE(date_received::text, '') AS date_received
+                 FROM hearmed_core.repairs WHERE id = \$1",
+                [ $rid ]
+            );
+            if ( $repair_note && ! empty( $repair_note->patient_id ) ) {
+                $returned_on = ! empty( $repair_note->date_received ) ? substr( (string) $repair_note->date_received, 0, 10 ) : date('Y-m-d');
+                $note_text = 'Repair ' . ( $repair_note->repair_number ?: ( '#' . $rid ) ) . ' returned on ' . $returned_on . ' and marked complete.';
+                $db->insert( 'hearmed_core.patient_notes', [
+                    'patient_id' => (int) $repair_note->patient_id,
+                    'note_type'  => 'General',
+                    'note_text'  => $note_text,
+                    'created_by' => $user_id ?: null,
+                ] );
             }
         }
 

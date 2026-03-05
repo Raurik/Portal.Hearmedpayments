@@ -184,7 +184,7 @@
         $b.prop('disabled', true).text('…');
         $.post(ajaxUrl, { action: 'hm_update_repair_status', nonce: nonce, _ID: rid, status: 'Sent', sent_to: sentTo }, function(r) {
             if (r.success) loadRepairs();
-            else { alert('Error updating status'); $b.prop('disabled', false).text('Mark Sent'); }
+            else { alert((r&&r.data)?r.data:'Error updating status'); $b.prop('disabled', false).text('Mark Sent'); }
         });
     });
 
@@ -194,7 +194,7 @@
         $b.prop('disabled', true).text('…');
         $.post(ajaxUrl, { action: 'hm_update_repair_status', nonce: nonce, _ID: rid, status: 'Received' }, function(r) {
             if (r.success) loadRepairs();
-            else { alert('Error updating status'); $b.prop('disabled', false).text('Received'); }
+            else { alert((r&&r.data)?r.data:'Error updating status'); $b.prop('disabled', false).text('Received'); }
         });
     });
 
@@ -205,7 +205,7 @@
         $b.prop('disabled', true).text('…');
         $.post(ajaxUrl, { action: 'hm_update_repair_status', nonce: nonce, _ID: rid, status: 'Complete' }, function(r) {
             if (r.success) loadRepairs();
-            else { alert('Error updating status'); $b.prop('disabled', false).text('Complete'); }
+            else { alert((r&&r.data)?r.data:'Error updating status'); $b.prop('disabled', false).text('Complete'); }
         });
     });
 

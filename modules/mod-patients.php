@@ -1686,6 +1686,41 @@ function hm_ajax_create_patient_repair() {
     // Try to update repair_number — may fail if column doesn't exist yet
     $db->update( 'hearmed_core.repairs', [ 'repair_number' => $repair_number ], [ 'id' => $id ] );
 
+    // Always auto-save repair docket to patient documents at creation time.
+    try {
+        $repair_row = $db->get_row(
+            "SELECT r.id, r.repair_number, r.serial_number, r.date_booked,
+                    r.date_sent, r.date_received,
+                    r.repair_status, r.warranty_status, r.under_warranty,
+                    r.repair_reason, r.repair_notes, r.sent_to,
+                    COALESCE(pr.product_name, 'Unknown') AS product_name,
+                    COALESCE(m.name, '') AS manufacturer_name,
+                    m.warranty_terms,
+                    CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
+                    p.date_of_birth, p.phone, p.mobile,
+                    p.address_line1 AS patient_address,
+                    c.clinic_name,
+                    CONCAT_WS(', ', c.address_line1, c.city, c.county, c.postcode) AS clinic_address,
+                    CONCAT(s.first_name, ' ', s.last_name) AS dispenser_name
+             FROM hearmed_core.repairs r
+             LEFT JOIN hearmed_core.patient_devices pd ON pd.id = r.patient_device_id
+             LEFT JOIN hearmed_reference.products pr ON pr.id = COALESCE(r.product_id, pd.product_id)
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = COALESCE(r.manufacturer_id, pr.manufacturer_id)
+             LEFT JOIN hearmed_core.patients p ON p.id = r.patient_id
+             LEFT JOIN hearmed_reference.clinics c ON c.id = p.assigned_clinic_id
+             LEFT JOIN hearmed_reference.staff s ON s.id = COALESCE(r.staff_id, p.assigned_dispenser_id)
+             WHERE r.id = \$1",
+            [ $id ]
+        );
+
+        if ( $repair_row && class_exists( 'HearMed_Print_Templates' ) ) {
+            $repair_html = HearMed_Print_Templates::render( 'repair', $repair_row );
+            HearMed_Utils::auto_save_document( $pid, 'Repair Docket', $repair_number, $repair_html, $staff_id );
+        }
+    } catch ( \Throwable $e ) {
+        error_log( '[HM Repairs] Auto-save repair docket failed: ' . $e->getMessage() );
+    }
+
     hm_patient_audit( 'CREATE_REPAIR', 'repair', $id, [ 'patient_id' => $pid, 'repair_number' => $repair_number ] );
     wp_send_json_success( [ 'id' => $id, 'repair_number' => $repair_number ] );
 }
@@ -2827,9 +2862,40 @@ function hm_ajax_update_repair_status() {
     } elseif ( $status === 'Received' ) {
         $update['date_received'] = sanitize_text_field( $_POST['date_received'] ?? date( 'Y-m-d' ) );
         $update['received_by']   = $staff_id ?: null;
+    } elseif ( $status === 'Complete' ) {
+        // If complete is clicked directly after Received, preserve return date if already set.
+        $update['date_received'] = sanitize_text_field( $_POST['date_received'] ?? date( 'Y-m-d' ) );
+
+        // Set completed_date when schema supports it.
+        $has_completed = $db->get_var(
+            "SELECT 1 FROM information_schema.columns
+             WHERE table_schema='hearmed_core' AND table_name='repairs' AND column_name='completed_date'"
+        );
+        if ( $has_completed ) {
+            $update['completed_date'] = date( 'Y-m-d' );
+        }
     }
 
     $db->update( 'hearmed_core.repairs', $update, [ 'id' => $id ] );
+
+    if ( $status === 'Complete' ) {
+        $repair = $db->get_row(
+            "SELECT id, patient_id, repair_number, COALESCE(date_received::text, '') AS date_received
+             FROM hearmed_core.repairs
+             WHERE id = \$1",
+            [ $id ]
+        );
+        if ( $repair && ! empty( $repair->patient_id ) ) {
+            $returned_on = ! empty( $repair->date_received ) ? substr( (string) $repair->date_received, 0, 10 ) : date( 'Y-m-d' );
+            $note_text = 'Repair ' . ( $repair->repair_number ?: ( '#' . $id ) ) . ' returned on ' . $returned_on . ' and marked complete.';
+            $db->insert( 'hearmed_core.patient_notes', [
+                'patient_id' => (int) $repair->patient_id,
+                'note_type'  => 'General',
+                'note_text'  => $note_text,
+                'created_by' => $staff_id ?: null,
+            ] );
+        }
+    }
 
     // Notify dispenser when repair received back
     if ( $status === 'Received' ) {
