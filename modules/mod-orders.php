@@ -122,8 +122,8 @@ class HearMed_Orders {
                     COALESCE(pr.display_name, pr.product_name, oi.item_description) AS product_name,
                     COALESCE(pr.hearing_aid_class,'') AS hearing_aid_class
              FROM hearmed_core.orders o
-             JOIN hearmed_core.patients p ON p.id = o.patient_id
-             JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
+             LEFT JOIN hearmed_core.patients p ON p.id = o.patient_id
+             LEFT JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
              LEFT JOIN hearmed_reference.staff s ON s.id = o.staff_id
              LEFT JOIN hearmed_core.order_items oi ON oi.order_id = o.id AND oi.item_type = 'product'
              LEFT JOIN hearmed_reference.products pr ON pr.id = oi.item_id
@@ -156,8 +156,8 @@ class HearMed_Orders {
                     COALESCE(pr.hearing_aid_class,'') AS hearing_aid_class,
                     osh.changed_at AS ordered_at
              FROM hearmed_core.orders o
-             JOIN hearmed_core.patients p ON p.id = o.patient_id
-             JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
+             LEFT JOIN hearmed_core.patients p ON p.id = o.patient_id
+             LEFT JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
              LEFT JOIN hearmed_reference.staff s ON s.id = o.staff_id
              LEFT JOIN hearmed_core.order_items oi ON oi.order_id = o.id AND oi.item_type = 'product'
              LEFT JOIN hearmed_reference.products pr ON pr.id = oi.item_id
@@ -1144,6 +1144,16 @@ class HearMed_Orders {
                                 <td colspan="7" class="hm-text-right"><strong>Patient Pays</strong></td>
                                 <td class="hm-money"><strong>€<?php echo number_format($order->grand_total,2); ?></strong></td>
                             </tr>
+                            <?php if (($order->deposit_amount ?? 0) > 0) : ?>
+                            <tr class="hm-text--green">
+                                <td colspan="7" class="hm-text-right">Deposit Paid</td>
+                                <td class="hm-money" style="color:#059669;">−€<?php echo number_format($order->deposit_amount,2); ?></td>
+                            </tr>
+                            <tr class="hm-invoice__total-row">
+                                <td colspan="7" class="hm-text-right"><strong>Balance Due at Fitting</strong></td>
+                                <td class="hm-money"><strong>€<?php echo number_format(max(0,$order->grand_total - $order->deposit_amount),2); ?></strong></td>
+                            </tr>
+                            <?php endif; ?>
                         </tfoot>
                     </table>
 
@@ -1527,7 +1537,8 @@ class HearMed_Orders {
         );
         $has_missing_serials = !empty($missing_serials);
 
-        $amount_due = $order->invoice_total ?? $order->grand_total;
+        $deposit_already_paid = floatval( $order->deposit_amount ?? 0 );
+        $amount_due = max( 0, ( $order->invoice_total ?? $order->grand_total ) - $deposit_already_paid );
 
         ob_start(); ?>
         <div class="hm-content hm-complete-form">
@@ -1658,7 +1669,7 @@ class HearMed_Orders {
             var hmPatientId  = <?php echo (int) $order->patient_id; ?>;
             var hmGrandTotal = <?php echo (float) $amount_due; ?>;
             var hmDeposit    = <?php echo (float) ($order->deposit_amount ?? 0); ?>;
-            var hmBalanceDue = hmGrandTotal;
+            var hmBalanceDue = Math.max(0, hmGrandTotal - hmDeposit);
 
             if (hmBalanceDue > 0) {
                 var fd = new URLSearchParams({action:'hm_get_patient_credit_balance', nonce:'<?php echo $nonce; ?>', patient_id:hmPatientId});
@@ -2031,6 +2042,16 @@ class HearMed_Orders {
                     'transaction_date' => $deposit_paid_at ?: date('Y-m-d'),
                 ] );
             }
+
+            // Hold deposit as patient credit so it shows in patient account and can be applied at fitting
+            $db->insert( 'hearmed_core.patient_credits', [
+                'patient_id' => $patient_id,
+                'order_id'   => $order_id,
+                'amount'     => $deposit_amount,
+                'status'     => 'active',
+                'notes'      => 'Deposit at order creation — order ' . $order_num,
+                'created_by' => $user->id ?? null,
+            ] );
         }
 
         // ── Quickpay: auto-create invoice for service-only orders ──
