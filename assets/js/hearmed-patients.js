@@ -787,7 +787,8 @@ function initProfile(){
             h+='</div>';
 
             if(!act.length&&!inact.length){
-                h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.hearing+'</div><div class="hm-empty-text">No hearing aids on file</div></div>';
+                $c.html(h+'</div>');
+                return;
             }
 
             // Active devices — big L/R split cards
@@ -839,9 +840,13 @@ function initProfile(){
             // Left device
             card+='<div class="hm-ha-side">';
             card+='<div class="hm-ha-side-label">LEFT</div>';
-            card+='<div class="hm-ha-side-img">'+HA_IMG_L+'</div>';
-            card+='<div class="hm-ha-side-serial">'+(pr.serial_left?'<span class="hm-serial">'+esc(pr.serial_left)+'</span>':'<span style="color:#cbd5e1;font-size:12px;">No serial</span>')+'</div>';
-            if(isAct){
+            if(pr.serial_left){
+                card+='<div class="hm-ha-side-img">'+HA_IMG_L+'</div>';
+                card+='<div class="hm-ha-side-serial"><span class="hm-serial">'+esc(pr.serial_left)+'</span></div>';
+            }else{
+                card+='<div class="hm-ha-no-device-wrap"><span class="hm-ha-no-device-pill"><span class="hm-ha-no-device-icon" aria-hidden="true"></span>No active device</span></div>';
+            }
+            if(isAct && pr.serial_left){
                 card+='<div class="hm-ha-side-actions">';
                 card+='<button class="hm-link-btn hm-link-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_left||'')+'">Repair</button>';
                 card+='<button class="hm-link-btn hm-link-red hm-return-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+' (Left)">Return</button>';
@@ -853,9 +858,13 @@ function initProfile(){
             // Right device
             card+='<div class="hm-ha-side">';
             card+='<div class="hm-ha-side-label">RIGHT</div>';
-            card+='<div class="hm-ha-side-img">'+HA_IMG_R+'</div>';
-            card+='<div class="hm-ha-side-serial">'+(pr.serial_right?'<span class="hm-serial">'+esc(pr.serial_right)+'</span>':'<span style="color:#cbd5e1;font-size:12px;">No serial</span>')+'</div>';
-            if(isAct){
+            if(pr.serial_right){
+                card+='<div class="hm-ha-side-img">'+HA_IMG_R+'</div>';
+                card+='<div class="hm-ha-side-serial"><span class="hm-serial">'+esc(pr.serial_right)+'</span></div>';
+            }else{
+                card+='<div class="hm-ha-no-device-wrap"><span class="hm-ha-no-device-pill"><span class="hm-ha-no-device-icon" aria-hidden="true"></span>No active device</span></div>';
+            }
+            if(isAct && pr.serial_right){
                 card+='<div class="hm-ha-side-actions">';
                 card+='<button class="hm-link-btn hm-link-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_right||'')+'">Repair</button>';
                 card+='<button class="hm-link-btn hm-link-red hm-return-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+' (Right)">Return</button>';
