@@ -311,8 +311,8 @@ function hm_ajax_approvals_load() {
                 c.clinic_name,
                 CONCAT(s.first_name, ' ', s.last_name) AS dispenser_name
          FROM hearmed_core.orders o
-         JOIN hearmed_core.patients p ON p.id = o.patient_id
-         JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
+         LEFT JOIN hearmed_core.patients p ON p.id = o.patient_id
+         LEFT JOIN hearmed_reference.clinics c ON c.id = o.clinic_id
          LEFT JOIN hearmed_reference.staff s ON s.id = o.staff_id
          WHERE o.current_status = 'Awaiting Approval'
          ORDER BY o.created_at ASC"
