@@ -759,12 +759,12 @@
   height: 2px;
   z-index: 5;
   pointer-events: none;
-  opacity: 0.6;
+  opacity: 0.75;
   animation: hm-now-pulse 2s ease-in-out infinite;
 }
 
 @keyframes hm-now-pulse {
-  0%, 100% { opacity: 0.6; }
+  0%, 100% { opacity: 0.75; }
   50% { opacity: 1; }
 }
 
