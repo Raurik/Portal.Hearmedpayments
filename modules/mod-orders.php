@@ -503,28 +503,48 @@ class HearMed_Orders {
 
                     <!-- Dropdowns populated by JS -->
                     <div id="hm-oc-selectors" style="display:none">
-                        <div style="margin-bottom:14px"><label class="hm-oc-lbl">Product Type</label>
-                        <select id="hm-oc-cat" class="hm-oc-inp"><option value="">— Select Category —</option></select></div>
+                        <div style="margin-bottom:14px">
+                            <label class="hm-oc-lbl">Product Type</label>
+                            <select id="hm-oc-cat" class="hm-oc-inp"><option value="">— Select Category —</option></select>
+                        </div>
 
-                        <div id="hm-oc-mfr-wrap" style="display:none;margin-bottom:14px"><label class="hm-oc-lbl">Manufacturer</label>
-                        <select id="hm-oc-mfr" class="hm-oc-inp"><option value="">— Select —</option></select></div>
+                        <div id="hm-oc-filters" style="display:none">
+                            <div style="margin-bottom:14px">
+                                <label class="hm-oc-lbl">Manufacturer</label>
+                                <select id="hm-oc-mfr" class="hm-oc-inp"><option value="">— All Manufacturers —</option></select>
+                            </div>
+                            <div style="margin-bottom:14px">
+                                <label class="hm-oc-lbl">Style</label>
+                                <select id="hm-oc-style" class="hm-oc-inp"><option value="">— All Styles —</option></select>
+                            </div>
+                            <div style="margin-bottom:14px">
+                                <label class="hm-oc-lbl">Range / Tech Level</label>
+                                <select id="hm-oc-range" class="hm-oc-inp"><option value="">— All Ranges —</option></select>
+                            </div>
+                            <div style="margin-bottom:14px">
+                                <label class="hm-oc-lbl">Product</label>
+                                <select id="hm-oc-prod" class="hm-oc-inp"><option value="">— Select Product —</option></select>
+                            </div>
+                            <div id="hm-oc-ear-wrap" style="display:none;margin-bottom:14px">
+                                <label class="hm-oc-lbl">Ear</label>
+                                <select id="hm-oc-ear" class="hm-oc-inp">
+                                    <option value="">— Select —</option>
+                                    <option value="Left">Left</option>
+                                    <option value="Right">Right</option>
+                                    <option value="Binaural">Binaural (both)</option>
+                                </select>
+                            </div>
+                            <div id="hm-oc-add-wrap" style="display:none;margin-bottom:14px;text-align:right">
+                                <button type="button" id="hm-oc-add-item" style="font-size:13px;font-weight:600;padding:8px 20px;border-radius:8px;border:none;background:var(--hm-teal,#0BB4C4);color:#fff;cursor:pointer">+ Add to Order</button>
+                            </div>
+                        </div>
 
-                        <div id="hm-oc-style-wrap" style="display:none;margin-bottom:14px"><label class="hm-oc-lbl">Style</label>
-                        <select id="hm-oc-style" class="hm-oc-inp"><option value="">— Select —</option></select></div>
-
-                        <div id="hm-oc-prod-wrap" style="display:none;margin-bottom:14px"><label class="hm-oc-lbl">Product</label>
-                        <select id="hm-oc-prod" class="hm-oc-inp"><option value="">— Select —</option></select></div>
-
-                        <div id="hm-oc-ear-wrap" style="display:none;margin-bottom:14px"><label class="hm-oc-lbl">Ear</label>
-                        <select id="hm-oc-ear" class="hm-oc-inp">
-                            <option value="">— Select —</option><option value="Left">Left</option><option value="Right">Right</option><option value="Binaural">Binaural (both)</option>
-                        </select></div>
-
-                        <div id="hm-oc-svc-wrap" style="display:none;margin-bottom:14px"><label class="hm-oc-lbl">Service</label>
-                        <select id="hm-oc-svc" class="hm-oc-inp"><option value="">— Select —</option></select></div>
-
-                        <div id="hm-oc-add-wrap" style="display:none;margin-bottom:14px;text-align:right">
-                            <button type="button" id="hm-oc-add-item" style="font-size:13px;font-weight:600;padding:8px 20px;border-radius:8px;border:none;background:var(--hm-teal,#0BB4C4);color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">+ Add to Order</button>
+                        <div id="hm-oc-svc-wrap" style="display:none;margin-bottom:14px">
+                            <label class="hm-oc-lbl">Service</label>
+                            <select id="hm-oc-svc" class="hm-oc-inp"><option value="">— Select Service —</option></select>
+                            <div style="margin-top:10px;text-align:right">
+                                <button type="button" id="hm-oc-add-svc" style="font-size:13px;font-weight:600;padding:8px 20px;border-radius:8px;border:none;background:var(--hm-teal,#0BB4C4);color:#fff;cursor:pointer">+ Add to Order</button>
+                            </div>
                         </div>
                     </div>
 
@@ -649,184 +669,240 @@ class HearMed_Orders {
         <script>
         (function(){
             var $=jQuery;
-            var ajaxUrl='<?php echo esc_js(admin_url('admin-ajax.php')); ?>', nonce='<?php echo esc_js(wp_create_nonce('hm_nonce')); ?>';
-            var pid=<?php echo (int) $pid; ?>;
-            var patientName=<?php echo json_encode( $patient_name ); ?>;
-            var ordersBase=<?php echo json_encode( $base ); ?>;
+            var ajaxUrl='<?php echo esc_js(admin_url("admin-ajax.php")); ?>';
+            var nonce='<?php echo esc_js(wp_create_nonce("hm_nonce")); ?>';
+            var pid=<?php echo (int)$pid; ?>;
+            var ordersBase=<?php echo json_encode($base); ?>;
 
-            /* ── State ── */
             var orderItems=[];
-            var allProducts=[], allSvcs=[], allRanges=[];
+            var allProducts=[], allSvcs=[];
             var discountMode='pct';
+            var paymentRows=[];
+            var stockItems=[], stockLoaded=false;
+
+            function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+            function fmt(n){return '€'+(parseFloat(n)||0).toFixed(2);}
 
             /* ── Load products ── */
             $.post(ajaxUrl,{action:'hm_get_order_products',nonce:nonce},function(r){
                 if(!r||!r.success){$('#hm-oc-loading').text('Failed to load products.');return;}
                 allProducts=r.data.products||[];
                 allSvcs=r.data.services||[];
-                allRanges=r.data.ranges||[];
-                populateCategories();
+                buildCategoryDropdown();
                 $('#hm-oc-loading').hide();
                 $('#hm-oc-selectors').show();
             });
 
-            function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-
-            /* ── Populate category dropdown ── */
-            function populateCategories(){
-                var cats={};
-                var catMap={product:'Hearing Aid',service:'Service',accessory:'Accessory',consumable:'Consumable',bundled:'Bundled Item'};
-                allProducts.forEach(function(p){var c=p.item_type||'product';if(!cats[c])cats[c]=catMap[c]||c;});
-                if(allSvcs.length)cats['service']='Service';
-                var $cat=$('#hm-oc-cat');
-                Object.keys(cats).forEach(function(k){$cat.append('<option value="'+k+'">'+esc(cats[k])+'</option>');});
+            function buildCategoryDropdown(){
+                var seen={};
+                var labels={product:'Hearing Aid',service:'Service',accessory:'Accessory',consumable:'Consumable',bundled:'Bundled Item'};
+                allProducts.forEach(function(p){seen[p.item_type||'product']=labels[p.item_type||'product']||p.item_type;});
+                if(allSvcs.length) seen['service']='Service';
+                var $c=$('#hm-oc-cat').empty().append('<option value="">— Select Category —</option>');
+                Object.keys(seen).forEach(function(k){$c.append('<option value="'+k+'">'+esc(seen[k])+'</option>');});
             }
 
-            /* ── Category change ── */
+            /* ── Faceted filter system ── */
+            function getFilters(){
+                return {
+                    cat:   $('#hm-oc-cat').val()||'',
+                    mfr:   $('#hm-oc-mfr').val()||'',
+                    style: $('#hm-oc-style').val()||'',
+                    range: $('#hm-oc-range').val()||''
+                };
+            }
+
+            function applyFilters(prods,f,exclude){
+                return prods.filter(function(p){
+                    if(exclude!=='cat'   && f.cat   && p.item_type!==f.cat)                       return false;
+                    if(exclude!=='mfr'   && f.mfr   && String(p.manufacturer_id)!==String(f.mfr)) return false;
+                    if(exclude!=='style' && f.style  && p.style!==f.style)                         return false;
+                    if(exclude!=='range' && f.range  && p.tech_level!==f.range)                    return false;
+                    return true;
+                });
+            }
+
+            function refreshAllFilters(){
+                var f=getFilters();
+                if(!f.cat||f.cat==='service') return;
+
+                var mfrs={};
+                applyFilters(allProducts,f,'mfr').forEach(function(p){if(p.manufacturer_id&&p.manufacturer_name)mfrs[p.manufacturer_id]=p.manufacturer_name;});
+                repopulate('#hm-oc-mfr',mfrs,f.mfr,'— All Manufacturers —');
+
+                var styles={};
+                applyFilters(allProducts,f,'style').forEach(function(p){if(p.style)styles[p.style]=p.style;});
+                repopulate('#hm-oc-style',styles,f.style,'— All Styles —');
+
+                var ranges={};
+                applyFilters(allProducts,f,'range').forEach(function(p){if(p.tech_level)ranges[p.tech_level]=p.tech_level;});
+                repopulate('#hm-oc-range',ranges,f.range,'— All Ranges —');
+
+                var $p=$('#hm-oc-prod');
+                var curProd=$p.val();
+                $p.empty().append('<option value="">— Select Product —</option>');
+                applyFilters(allProducts,f,'').forEach(function(p){
+                    var price=parseFloat(p.retail_price||0);
+                    var vat=p.vat_category==='standard'?23:0;
+                    $p.append('<option value="'+p.id+'"'+(String(p.id)===curProd?' selected':'')+
+                        ' data-price="'+price+'" data-vat="'+vat+'" data-name="'+esc(p.product_name)+'">'+
+                        esc(p.product_name)+' — €'+price.toFixed(2)+'</option>');
+                });
+
+                if($('#hm-oc-prod').val()){$('#hm-oc-ear-wrap,#hm-oc-add-wrap').show();}
+                else{$('#hm-oc-ear-wrap,#hm-oc-add-wrap').hide();$('#hm-oc-ear').val('');}
+            }
+
+            function repopulate(sel,map,curVal,allLabel){
+                var $el=$(sel);
+                $el.empty().append('<option value="">'+allLabel+'</option>');
+                Object.keys(map).sort(function(a,b){return map[a].localeCompare(map[b]);}).forEach(function(k){
+                    $el.append('<option value="'+k+'"'+(k===curVal?' selected':'')+'>'+esc(map[k])+'</option>');
+                });
+            }
+
             $('#hm-oc-cat').on('change',function(){
                 var cat=$(this).val();
-                $('#hm-oc-mfr-wrap,#hm-oc-style-wrap,#hm-oc-prod-wrap,#hm-oc-ear-wrap,#hm-oc-svc-wrap,#hm-oc-add-wrap').hide();
-                $('#hm-oc-mfr,#hm-oc-style,#hm-oc-prod,#hm-oc-svc,#hm-oc-ear').val('');
-                if(!cat)return;
+                $('#hm-oc-filters,#hm-oc-svc-wrap').hide();
+                $('#hm-oc-ear-wrap,#hm-oc-add-wrap').hide();
+                $('#hm-oc-mfr,#hm-oc-style,#hm-oc-range,#hm-oc-prod,#hm-oc-ear,#hm-oc-svc').val('');
+                if(!cat) return;
                 if(cat==='service'){
-                    var $s=$('#hm-oc-svc').empty().append('<option value="">— Select —</option>');
-                    allSvcs.forEach(function(s){$s.append('<option value="'+s.id+'" data-price="'+parseFloat(s.default_price||0)+'">'+esc(s.service_name)+' — €'+parseFloat(s.default_price||0).toFixed(2)+'</option>');});
+                    var $sv=$('#hm-oc-svc').empty().append('<option value="">— Select Service —</option>');
+                    allSvcs.forEach(function(s){
+                        $sv.append('<option value="'+s.id+'" data-price="'+parseFloat(s.default_price||0)+'">'+esc(s.service_name)+' — €'+parseFloat(s.default_price||0).toFixed(2)+'</option>');
+                    });
                     $('#hm-oc-svc-wrap').show();
                 } else {
-                    var mfrs={};
-                    allProducts.filter(function(p){return p.item_type===cat;}).forEach(function(p){if(p.manufacturer_name)mfrs[p.manufacturer_id]=p.manufacturer_name;});
-                    var $m=$('#hm-oc-mfr').empty().append('<option value="">— Select —</option>');
-                    Object.keys(mfrs).forEach(function(k){$m.append('<option value="'+k+'">'+esc(mfrs[k])+'</option>');});
-                    $('#hm-oc-mfr-wrap').show();
+                    $('#hm-oc-filters').show();
+                    refreshAllFilters();
                 }
             });
 
-            /* ── Manufacturer change ── */
-            $('#hm-oc-mfr').on('change',function(){
-                var cat=$('#hm-oc-cat').val(), mfr=$(this).val();
-                $('#hm-oc-style-wrap,#hm-oc-prod-wrap,#hm-oc-ear-wrap,#hm-oc-add-wrap').hide();
-                if(!mfr)return;
-                var styles={};
-                allProducts.filter(function(p){return p.item_type===cat&&String(p.manufacturer_id)===mfr;}).forEach(function(p){if(p.style)styles[p.style]=1;});
-                var keys=Object.keys(styles);
-                if(keys.length>1){
-                    var $s=$('#hm-oc-style').empty().append('<option value="">— Select —</option>');
-                    keys.sort().forEach(function(k){$s.append('<option value="'+k+'">'+esc(k)+'</option>');});
-                    $('#hm-oc-style-wrap').show();
-                } else {
-                    populateProducts(cat,mfr,keys[0]||'');
-                }
-            });
-
-            /* ── Style change ── */
-            $('#hm-oc-style').on('change',function(){
-                var cat=$('#hm-oc-cat').val(), mfr=$('#hm-oc-mfr').val(), style=$(this).val();
-                if(!style)return;
-                populateProducts(cat,mfr,style);
-            });
-
-            function populateProducts(cat,mfr,style){
-                var prods=allProducts.filter(function(p){
-                    return p.item_type===cat&&String(p.manufacturer_id)===mfr&&(!style||p.style===style);
-                });
-                var $p=$('#hm-oc-prod').empty().append('<option value="">— Select —</option>');
-                prods.forEach(function(p){
-                    var price=parseFloat(p.retail_price||0);
-                    $p.append('<option value="'+p.id+'" data-price="'+price+'" data-vat="'+(p.vat_category==='standard'?23:0)+'" data-name="'+esc(p.product_name)+'" data-type="product">'+esc(p.product_name)+' — €'+price.toFixed(2)+'</option>');
-                });
-                $('#hm-oc-prod-wrap').show();
-            }
-
-            /* ── Product change → show ear picker ── */
+            $('#hm-oc-mfr,#hm-oc-style,#hm-oc-range').on('change',function(){refreshAllFilters();});
             $('#hm-oc-prod').on('change',function(){
-                if(!$(this).val()){$('#hm-oc-ear-wrap,#hm-oc-add-wrap').hide();return;}
-                $('#hm-oc-ear-wrap,#hm-oc-add-wrap').show();
+                if($(this).val()){$('#hm-oc-ear-wrap,#hm-oc-add-wrap').show();}
+                else{$('#hm-oc-ear-wrap,#hm-oc-add-wrap').hide();$('#hm-oc-ear').val('');}
             });
 
-            /* ── Service change → show add button ── */
-            $('#hm-oc-svc').on('change',function(){
-                if(!$(this).val()){$('#hm-oc-add-wrap').hide();return;}
-                $('#hm-oc-ear-wrap').hide();
-                $('#hm-oc-add-wrap').show();
-            });
-
-            /* ── ADD ITEM ── */
+            /* ── Add items ── */
             $('#hm-oc-add-item').on('click',function(){
-                var cat=$('#hm-oc-cat').val();
-                var item={};
-                if(cat==='service'){
-                    var $opt=$('#hm-oc-svc option:selected');
-                    if(!$opt.val())return;
-                    item={id:parseInt($opt.val()),type:'service',name:$opt.text().split(' — ')[0],unit_price:parseFloat($opt.data('price'))||0,qty:1,ear:'',vat_rate:0,vat_amount:0,line_total:parseFloat($opt.data('price'))||0};
-                } else {
-                    var $opt=$('#hm-oc-prod option:selected');
-                    if(!$opt.val())return;
-                    var ear=$('#hm-oc-ear').val();
-                    if(!ear){$('#hm-oc-err').text('Please select an ear.');return;}
-                    var price=parseFloat($opt.data('price'))||0;
-                    var vatRate=parseFloat($opt.data('vat'))||0;
-                    var qty=ear==='Binaural'?2:1;
-                    var gross=price*qty;
-                    var vatAmt=vatRate>0?Math.round((gross-gross/(1+vatRate/100))*100)/100:0;
-                    item={id:parseInt($opt.val()),type:$opt.data('type')||'product',name:$opt.data('name'),unit_price:price,qty:qty,ear:ear,vat_rate:vatRate,vat_amount:vatAmt,line_total:gross};
-                }
-                orderItems.push(item);
-                renderItems();
-                updateTotals();
-                $('#hm-oc-err').text('');
-                // Reset selectors
+                var $opt=$('#hm-oc-prod option:selected');
+                if(!$opt.val()){$('#hm-oc-err').text('Please select a product.');return;}
+                var ear=$('#hm-oc-ear').val();
+                if(!ear){$('#hm-oc-err').text('Please select an ear.');return;}
+                var price=parseFloat($opt.data('price'))||0;
+                var vatRate=parseFloat($opt.data('vat'))||0;
+                var qty=ear==='Binaural'?2:1;
+                var gross=price*qty;
+                var vatAmt=vatRate>0?Math.round((gross-gross/(1+vatRate/100))*100)/100:0;
+                orderItems.push({id:parseInt($opt.val()),type:'product',name:$opt.data('name'),unit_price:price,qty:qty,ear:ear,vat_rate:vatRate,vat_amount:vatAmt,line_total:gross});
+                renderItems();updateTotals();$('#hm-oc-err').text('');
                 $('#hm-oc-cat').val('').trigger('change');
             });
 
-            /* ── Render items table ── */
+            $('#hm-oc-add-svc').on('click',function(){
+                var $opt=$('#hm-oc-svc option:selected');
+                if(!$opt.val()){$('#hm-oc-err').text('Please select a service.');return;}
+                var price=parseFloat($opt.data('price'))||0;
+                orderItems.push({id:parseInt($opt.val()),type:'service',name:$opt.text().split(' — ')[0],unit_price:price,qty:1,ear:'',vat_rate:0,vat_amount:0,line_total:price});
+                renderItems();updateTotals();$('#hm-oc-err').text('');
+                $('#hm-oc-cat').val('').trigger('change');
+            });
+
+            /* ── Render items ── */
             function renderItems(){
                 var $tb=$('#hm-oc-items');
-                if(!orderItems.length){$tb.html('<tr><td colspan="5" style="text-align:center;padding:24px 0;color:var(--hm-text-muted,#94a3b8);font-size:13px;font-style:italic">No items added yet</td></tr>');return;}
+                if(!orderItems.length){$tb.html('<tr><td colspan="5" style="text-align:center;padding:24px 0;color:#94a3b8;font-size:13px;font-style:italic">No items added yet</td></tr>');return;}
                 var h='';
                 orderItems.forEach(function(it,i){
-                    var total=it.unit_price*it.qty;
-                    h+='<tr style="border-bottom:1px solid var(--hm-border-light,#f1f5f9)">';
-                    h+='<td style="padding:10px 0;font-size:13px">'+esc(it.name)+(it.ear?' <span style="font-size:11px;color:var(--hm-text-light,#64748b)">('+esc(it.ear)+')</span>':'')+'</td>';
+                    h+='<tr style="border-bottom:1px solid #f1f5f9">';
+                    h+='<td style="padding:10px 0;font-size:13px">'+esc(it.name)+(it.ear?' <span style="font-size:11px;color:#64748b">('+esc(it.ear)+')</span>':'')+'</td>';
                     h+='<td style="text-align:center;font-size:13px">'+it.qty+'</td>';
-                    h+='<td style="text-align:right;font-size:13px">€'+it.unit_price.toFixed(2)+'</td>';
-                    h+='<td style="text-align:right;font-size:13px;font-weight:600">€'+total.toFixed(2)+'</td>';
-                    h+='<td><button class="hm-oc-rem" data-idx="'+i+'" style="border:none;background:none;color:#b91c1c;font-size:15px;cursor:pointer;padding:2px 6px;opacity:.5" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.5">×</button></td>';
+                    h+='<td style="text-align:right;font-size:13px">'+fmt(it.unit_price)+'</td>';
+                    h+='<td style="text-align:right;font-size:13px;font-weight:600">'+fmt(it.unit_price*it.qty)+'</td>';
+                    h+='<td><button class="hm-oc-rem" data-idx="'+i+'" style="border:none;background:none;color:#b91c1c;font-size:15px;cursor:pointer;padding:2px 6px">×</button></td>';
                     h+='</tr>';
                 });
                 $tb.html(h);
             }
 
-            /* ── Remove item ── */
             $(document).on('click','.hm-oc-rem',function(){
                 orderItems.splice(parseInt($(this).data('idx')),1);
                 renderItems();updateTotals();
             });
 
-            /* ── Update totals ── */
+            /* ── Totals ── */
             function updateTotals(){
                 var sub=0,vat=0;
-                orderItems.forEach(function(it){
-                    var gross=it.unit_price*it.qty;
-                    vat+=it.vat_amount;
-                    sub+=gross-it.vat_amount;
-                });
+                orderItems.forEach(function(it){vat+=it.vat_amount;sub+=it.unit_price*it.qty-it.vat_amount;});
                 var discVal=parseFloat($('#hm-oc-disc').val())||0;
                 var discAmt=0;
-                if(discountMode==='pct'&&discVal>0)discAmt=Math.round(sub*(discVal/100)*100)/100;
-                else if(discountMode==='eur'&&discVal>0)discAmt=Math.min(discVal,sub+vat);
+                if(discountMode==='pct'&&discVal>0) discAmt=Math.round(sub*(discVal/100)*100)/100;
+                else if(discountMode==='eur'&&discVal>0) discAmt=Math.min(discVal,sub+vat);
                 var prsiL=$('#hm-oc-prsi-l').is(':checked')?500:0;
                 var prsiR=$('#hm-oc-prsi-r').is(':checked')?500:0;
                 var total=Math.max(0,sub+vat-discAmt-prsiL-prsiR);
-                $('#hm-oc-sub').text('€'+sub.toFixed(2));
-                $('#hm-oc-vat').text('€'+vat.toFixed(2));
-                $('#hm-oc-disc-amt').text('−€'+discAmt.toFixed(2));
-                $('#hm-oc-total').text('€'+total.toFixed(2));
+                $('#hm-oc-sub').text(fmt(sub));
+                $('#hm-oc-vat').text(fmt(vat));
+                $('#hm-oc-disc-amt').text('−'+fmt(discAmt));
+                $('#hm-oc-total').text(fmt(total));
                 updateDepBalance();
             }
 
-            /* ── Pick from Stock ── */
-            var stockItems=[], stockLoaded=false;
+            $(document).on('click','.hm-oc-disc-mode',function(){
+                discountMode=$(this).data('mode');
+                $('.hm-oc-disc-mode').css({background:'#fff',color:'#334155'});
+                $(this).css({background:'#151B33',color:'#fff'});
+                $('#hm-oc-disc-unit').text(discountMode==='pct'?'%':'€');
+                $('#hm-oc-disc').attr(discountMode==='pct'?{max:100,step:1}:{max:99999,step:10}).val(0);
+                updateTotals();
+            });
+            $('#hm-oc-disc').on('input',function(){updateTotals();});
+            $('#hm-oc-prsi-l,#hm-oc-prsi-r').on('change',function(){updateTotals();});
 
+            /* ── Deposit / split payments ── */
+            function updateDepBalance(){
+                var total=parseFloat($('#hm-oc-total').text().replace(/[^0-9.]/g,''))||0;
+                var paid=0;
+                paymentRows.forEach(function(p){paid+=parseFloat(p.amount)||0;});
+                if(paid>0){$('#hm-oc-dep-bal-val').text(fmt(Math.max(0,total-paid)));$('#hm-oc-dep-balance').show();}
+                else{$('#hm-oc-dep-balance').hide();}
+            }
+
+            function renderPaymentRows(){
+                var h='';
+                paymentRows.forEach(function(p,i){
+                    h+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+                    h+='<input type="number" class="hm-oc-inp hm-pay-amt" data-idx="'+i+'" step="0.01" min="0" value="'+p.amount+'" placeholder="€0.00" style="flex:1;min-width:80px">';
+                    h+='<select class="hm-oc-inp hm-pay-method" data-idx="'+i+'" style="flex:1;min-width:110px">';
+                    ['Card','Cash','Cheque','Bank Transfer'].forEach(function(m){h+='<option value="'+m+'"'+(p.method===m?' selected':'')+'>'+m+'</option>';});
+                    h+='</select>';
+                    h+='<input type="date" class="hm-oc-inp hm-pay-date" data-idx="'+i+'" value="'+p.date+'" style="flex:1;min-width:120px">';
+                    h+='<button type="button" class="hm-pay-del" data-idx="'+i+'" style="border:none;background:none;color:#dc2626;font-size:18px;cursor:pointer;padding:0 6px">×</button>';
+                    h+='</div>';
+                });
+                $('#hm-oc-payments-list').html(h);
+                updateDepBalance();
+            }
+
+            $('#hm-oc-add-payment').on('click',function(){
+                paymentRows.push({amount:'',method:'Card',date:new Date().toISOString().split('T')[0]});
+                renderPaymentRows();
+            });
+            $(document).on('input change','.hm-pay-amt,.hm-pay-method,.hm-pay-date',function(){
+                var i=parseInt($(this).data('idx'));
+                if($(this).hasClass('hm-pay-amt'))    paymentRows[i].amount=$(this).val();
+                if($(this).hasClass('hm-pay-method')) paymentRows[i].method=$(this).val();
+                if($(this).hasClass('hm-pay-date'))   paymentRows[i].date=$(this).val();
+                updateDepBalance();
+            });
+            $(document).on('click','.hm-pay-del',function(){
+                paymentRows.splice(parseInt($(this).data('idx')),1);
+                renderPaymentRows();
+            });
+
+            /* ── Pick from stock ── */
             $('#hm-oc-stock-toggle').on('click',function(){
                 var $panel=$('#hm-oc-stock-panel');
                 if($panel.is(':visible')){$panel.hide();return;}
@@ -834,192 +910,80 @@ class HearMed_Orders {
                 if(stockLoaded){renderStockList();return;}
                 $.post(ajaxUrl,{action:'hm_get_order_stock',nonce:nonce},function(r){
                     $('#hm-oc-stock-loading').hide();
-                    if(!r||!r.success){$('#hm-oc-stock-list').html('<p style="font-size:12px;color:#dc2626;padding:8px 0">Failed to load stock.</p>').show();return;}
-                    stockItems=r.data.items||[];
-                    stockLoaded=true;
-                    renderStockList();
+                    if(!r||!r.success){$('#hm-oc-stock-list').html('<p style="font-size:12px;color:#dc2626">Failed to load stock.</p>').show();return;}
+                    stockItems=r.data.items||[];stockLoaded=true;renderStockList();
                 });
             });
-
             $('#hm-oc-stock-search').on('input',function(){renderStockList();});
-
             function renderStockList(){
                 var q=$('#hm-oc-stock-search').val().toLowerCase();
-                var filtered=stockItems.filter(function(s){
-                    return !q||(s.manufacturer_name+' '+s.model_name+' '+s.serial_number).toLowerCase().indexOf(q)>=0;
-                });
-                if(!filtered.length){
-                    $('#hm-oc-stock-list').html('<p style="font-size:12px;color:var(--hm-text-muted,#94a3b8);padding:8px 0;text-align:center">No available stock items found.</p>').show();
-                    return;
-                }
-                var h='<table style="width:100%;border-collapse:collapse;font-size:12px">';
-                h+='<thead><tr style="border-bottom:1.5px solid var(--hm-navy,#151B33)">';
-                h+='<th style="text-align:left;padding:4px 4px 6px;color:var(--hm-text-light,#64748b);font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:10px">Model</th>';
-                h+='<th style="text-align:left;padding:4px 4px 6px;color:var(--hm-text-light,#64748b);font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:10px">Serial</th>';
-                h+='<th style="text-align:right;padding:4px 4px 6px;color:var(--hm-text-light,#64748b);font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:10px">Price</th>';
-                h+='<th style="padding:4px 4px 6px;color:var(--hm-text-light,#64748b);font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:10px">Ear</th>';
-                h+='<th></th></tr></thead><tbody>';
+                var filtered=stockItems.filter(function(s){return !q||(s.manufacturer_name+' '+s.model_name+' '+(s.serial_number||'')).toLowerCase().indexOf(q)>=0;});
+                if(!filtered.length){$('#hm-oc-stock-list').html('<p style="font-size:12px;color:#94a3b8;text-align:center;padding:8px 0">No stock found.</p>').show();return;}
+                var h='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:1.5px solid #151B33">';
+                ['Model','Serial','Price','Ear',''].forEach(function(t){h+='<th style="text-align:left;padding:4px;font-size:10px;font-weight:700;text-transform:uppercase;color:#64748b">'+t+'</th>';});
+                h+='</tr></thead><tbody>';
                 filtered.forEach(function(s){
-                    var label=esc(s.manufacturer_name?s.manufacturer_name+' ':'')+esc(s.model_name||'Unknown');
-                    h+='<tr style="border-bottom:1px solid var(--hm-border-light,#f1f5f9)" data-sid="'+s.id+'">';
-                    h+='<td style="padding:6px 4px">'+label+(s.style?'<br><span style="font-size:10px;color:#94a3b8">'+esc(s.style)+'</span>':'')+'</td>';
-                    h+='<td style="padding:6px 4px;color:var(--hm-text-muted,#94a3b8)">'+esc(s.serial_number||'—')+'</td>';
-                    h+='<td style="text-align:right;padding:6px 4px">€'+parseFloat(s.retail_price||0).toFixed(2)+'</td>';
-                    h+='<td style="padding:6px 4px"><select class="hm-stock-ear" style="font-size:11px;padding:3px 6px;border:1px solid var(--hm-border,#e2e8f0);border-radius:5px">';
-                    h+='<option value="Left">Left</option><option value="Right">Right</option><option value="Binaural">Binaural</option></select></td>';
-                    h+='<td style="padding:6px 4px;text-align:right"><button type="button" class="hm-stock-add" data-sid="'+s.id+'" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;border:none;background:var(--hm-teal,#0BB4C4);color:#fff;cursor:pointer">Add</button></td>';
+                    h+='<tr style="border-bottom:1px solid #f1f5f9">';
+                    h+='<td style="padding:6px 4px">'+esc((s.manufacturer_name?s.manufacturer_name+' ':'')+s.model_name)+'</td>';
+                    h+='<td style="padding:6px 4px;color:#94a3b8">'+esc(s.serial_number||'—')+'</td>';
+                    h+='<td style="padding:6px 4px;text-align:right">'+fmt(s.retail_price)+'</td>';
+                    h+='<td style="padding:6px 4px"><select class="hm-stock-ear" style="font-size:11px;padding:3px 6px;border:1px solid #e2e8f0;border-radius:5px"><option value="Left">Left</option><option value="Right">Right</option><option value="Binaural">Binaural</option></select></td>';
+                    h+='<td style="padding:6px 4px;text-align:right"><button type="button" class="hm-stock-add" data-sid="'+s.id+'" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;border:none;background:#0BB4C4;color:#fff;cursor:pointer">Add</button></td>';
                     h+='</tr>';
                 });
                 h+='</tbody></table>';
                 $('#hm-oc-stock-list').html(h).show();
             }
-
             $(document).on('click','.hm-stock-add',function(){
                 var sid=$(this).data('sid');
-                var $row=$(this).closest('tr');
-                var ear=$row.find('.hm-stock-ear').val();
                 var s=stockItems.find(function(x){return x.id==sid;});
-                if(!s)return;
+                if(!s) return;
+                var ear=$(this).closest('tr').find('.hm-stock-ear').val();
                 var price=parseFloat(s.retail_price||0);
-                var vatRate=parseFloat(s.vat_rate||0);
                 var qty=ear==='Binaural'?2:1;
                 var gross=price*qty;
-                var vatAmt=vatRate>0?Math.round((gross-gross/(1+vatRate/100))*100)/100:0;
-                var label=(s.manufacturer_name?s.manufacturer_name+' ':'')+( s.model_name||'Stock Item');
-                if(s.serial_number)label+=' (S/N: '+s.serial_number+')';
-                orderItems.push({id:s.product_id||0,type:'product',name:label,unit_price:price,qty:qty,ear:ear,vat_rate:vatRate,vat_amount:vatAmt,line_total:gross,from_stock:true,stock_id:sid});
-                renderItems();
-                updateTotals();
-                $('#hm-oc-err').text('');
-                // Remove this row from the available list
+                var vatAmt=s.vat_rate>0?Math.round((gross-gross/(1+s.vat_rate/100))*100)/100:0;
+                orderItems.push({id:s.product_id||0,type:'product',name:(s.manufacturer_name?s.manufacturer_name+' ':'')+s.model_name+(s.serial_number?' (S/N: '+s.serial_number+')':''),unit_price:price,qty:qty,ear:ear,vat_rate:s.vat_rate||0,vat_amount:vatAmt,line_total:gross,from_stock:true,stock_id:sid});
                 stockItems=stockItems.filter(function(x){return x.id!=sid;});
-                renderStockList();
+                renderItems();updateTotals();renderStockList();$('#hm-oc-err').text('');
             });
 
-            /* ── Discount mode toggle ── */
-            $(document).on('click','.hm-oc-disc-mode',function(){
-                discountMode=$(this).data('mode');
-                $('.hm-oc-disc-mode').css({background:'#fff',color:'var(--hm-text,#334155)'});
-                $(this).css({background:'var(--hm-navy,#151B33)',color:'#fff'});
-                if(discountMode==='pct'){$('#hm-oc-disc-unit').text('%');$('#hm-oc-disc').attr({max:100,step:1});}
-                else{$('#hm-oc-disc-unit').text('€');$('#hm-oc-disc').attr({max:99999,step:10});}
-                $('#hm-oc-disc').val(0);updateTotals();
-            });
-            $('#hm-oc-disc').on('input',function(){updateTotals();});
-            $('#hm-oc-prsi-l,#hm-oc-prsi-r').on('change',function(){updateTotals();});
-
-            /* ── Split Payment Logic ── */
-            var paymentRows=[];
-
-            function renderPaymentRows(){
-                var $list=$('#hm-oc-payments-list');
-                if(!paymentRows.length){$list.html('');updateDepBalance();return;}
-                var h='';
-                paymentRows.forEach(function(p,i){
-                    h+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
-                    h+='<input type="number" class="hm-oc-inp hm-pay-amt" data-idx="'+i+'" step="0.01" min="0" value="'+p.amount+'" placeholder="€0.00" style="flex:1;min-width:80px">';
-                    h+='<select class="hm-oc-inp hm-pay-method" data-idx="'+i+'" style="flex:1;min-width:100px">';
-                    ['Card','Cash','Cheque','Bank Transfer'].forEach(function(m){
-                        h+='<option value="'+m+'"'+(p.method===m?' selected':'')+'>'+m+'</option>';
-                    });
-                    h+='</select>';
-                    h+='<input type="date" class="hm-oc-inp hm-pay-date" data-idx="'+i+'" value="'+p.date+'" style="flex:1;min-width:120px">';
-                    h+='<button type="button" class="hm-pay-del" data-idx="'+i+'" style="border:none;background:none;color:#dc2626;font-size:18px;cursor:pointer;padding:0 4px">×</button>';
-                    h+='</div>';
-                });
-                $list.html(h);
-                updateDepBalance();
-            }
-
-            function updateDepBalance(){
-                var total=parseFloat($('#hm-oc-total').text().replace(/[^0-9.]/g,''))||0;
-                var paid=0;
-                paymentRows.forEach(function(p){paid+=parseFloat(p.amount)||0;});
-                if(paid>0){
-                    $('#hm-oc-dep-bal-val').text('€'+Math.max(0,total-paid).toFixed(2));
-                    $('#hm-oc-dep-balance').show();
-                } else {
-                    $('#hm-oc-dep-balance').hide();
-                }
-            }
-
-            $('#hm-oc-add-payment').on('click',function(){
-                var today=new Date().toISOString().split('T')[0];
-                paymentRows.push({amount:'',method:'Card',date:today});
-                renderPaymentRows();
-            });
-
-            $(document).on('input change','.hm-pay-amt,.hm-pay-method,.hm-pay-date',function(){
-                var i=parseInt($(this).data('idx'));
-                if($(this).hasClass('hm-pay-amt'))paymentRows[i].amount=$(this).val();
-                if($(this).hasClass('hm-pay-method'))paymentRows[i].method=$(this).val();
-                if($(this).hasClass('hm-pay-date'))paymentRows[i].date=$(this).val();
-                updateDepBalance();
-            });
-
-            $(document).on('click','.hm-pay-del',function(){
-                paymentRows.splice(parseInt($(this).data('idx')),1);
-                renderPaymentRows();
-            });
-
-            /* ══════════════════════════════════════
-               SUBMIT ORDER → hm_create_order
-               ══════════════════════════════════════ */
+            /* ── Submit ── */
             $('#hm-oc-submit').off('click').on('click',function(){
                 if(!orderItems.length){$('#hm-oc-err').text('Please add at least one item.');return;}
                 var total=parseFloat($('#hm-oc-total').text().replace(/[^0-9.]/g,''))||0;
                 var dep=0;
-                var firstMethod='';
-                var firstDate='';
                 paymentRows.forEach(function(p){dep+=parseFloat(p.amount)||0;});
-                if(paymentRows.length>0){
-                    firstMethod=paymentRows[0].method||'';
-                    firstDate=paymentRows[0].date||'';
-                }
-                if(dep>total+0.01){$('#hm-oc-err').text('Payments total (€'+dep.toFixed(2)+') cannot exceed order total (€'+total.toFixed(2)+').');return;}
+                if(dep>total+0.01){$('#hm-oc-err').text('Payments exceed order total.');return;}
+                var firstMethod=paymentRows.length?paymentRows[0].method:'';
+                var firstDate=paymentRows.length?paymentRows[0].date:'';
                 if(dep>0&&!firstMethod){$('#hm-oc-err').text('Please select a payment method.');return;}
-
                 var $btn=$(this);
                 $btn.prop('disabled',true).text('Submitting…');
                 $('#hm-oc-err').text('');
-
                 var discVal=parseFloat($('#hm-oc-disc').val())||0;
-
                 $.post(ajaxUrl,{
-                    action:'hm_create_order',
-                    nonce:nonce,
-                    patient_id:pid,
+                    action:'hm_create_order',nonce:nonce,patient_id:pid,
                     items_json:JSON.stringify(orderItems),
                     notes:$('#hm-oc-notes').val()||'',
                     prsi_left:$('#hm-oc-prsi-l').is(':checked')?1:0,
                     prsi_right:$('#hm-oc-prsi-r').is(':checked')?1:0,
                     discount_pct:discountMode==='pct'?discVal:0,
                     discount_euro:discountMode==='eur'?discVal:0,
-                    deposit_amount:dep,
-                    deposit_method:firstMethod,
-                    deposit_paid_at:firstDate,
+                    deposit_amount:dep,deposit_method:firstMethod,deposit_paid_at:firstDate,
                     payments_json:JSON.stringify(paymentRows),
-                    stock_items_json:JSON.stringify(orderItems.filter(function(it){return it.from_stock;})),
-                    payment_method:''
+                    payment_method:firstMethod
                 },function(r){
                     if(r&&r.success){
                         var d=r.data;
-                        /* Hide form controls, show success banner */
                         $('#hm-oc-actions').hide();
-
-                        var msg='<div style="background:#e8f8f0;border:1px solid #27AE60;border-left:4px solid #27AE60;padding:16px 20px;border-radius:6px;color:#1a4731;font-family:inherit">';
-                        msg+='<div style="font-size:14px;font-weight:700;margin-bottom:4px">✓ Order '+esc(d.order_number)+' submitted for C-Level approval.</div>';
-                        if(d.deposit_amount>0){
-                            msg+='<div style="font-size:13px;margin-bottom:6px">€'+parseFloat(d.deposit_amount).toFixed(2)+' deposit recorded on '+esc(d.patient_name)+'\'s account. Balance of €'+parseFloat(d.balance_due).toFixed(2)+' due at fitting.</div>';
-                        }
-                        if(d.duplicate_flag){
-                            msg+='<div style="font-size:13px;color:#c0392b;margin-bottom:6px">⚠ Possible duplicate: '+esc(d.duplicate_flag_reason)+'</div>';
-                        }
+                        var msg='<div style="background:#e8f8f0;border:1px solid #27AE60;border-left:4px solid #27AE60;padding:16px 20px;border-radius:6px;color:#1a4731">';
+                        msg+='<div style="font-size:14px;font-weight:700;margin-bottom:4px">✓ Order '+esc(d.order_number)+' submitted for approval.</div>';
+                        if(d.deposit_amount>0){msg+='<div style="font-size:13px;margin-bottom:6px">'+fmt(d.deposit_amount)+' deposit recorded. Balance '+fmt(d.balance_due)+' due at fitting.</div>';}
                         msg+='<div style="margin-top:10px;display:flex;gap:16px">';
                         msg+='<a href="'+esc(ordersBase)+'" style="font-size:13px;font-weight:600;color:#0BB4C4;text-decoration:none">← Back to Orders</a>';
                         msg+='<a href="'+esc(ordersBase)+'?hm_action=view&order_id='+d.order_id+'" style="font-size:13px;font-weight:600;color:#0BB4C4;text-decoration:none">View Order →</a>';
                         msg+='</div></div>';
-
                         $('#hm-oc-success').html(msg).show();
                     } else {
                         $btn.prop('disabled',false).text('Submit Order for Approval');
@@ -1030,6 +994,7 @@ class HearMed_Orders {
                     $('#hm-oc-err').text('Network error — please try again.');
                 });
             });
+
         })();
         </script>
         <?php endif; ?>
