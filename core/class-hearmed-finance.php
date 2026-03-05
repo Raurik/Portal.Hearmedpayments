@@ -193,10 +193,12 @@ class HearMed_Finance {
         return HearMed_DB::get_results(
             "SELECT ft.*,
                     s.first_name || ' ' || s.last_name AS staff_name,
-                    cl.clinic_name
+                    cl.clinic_name,
+                    inv.invoice_number
                FROM hearmed_core.financial_transactions ft
                LEFT JOIN hearmed_reference.staff s   ON s.id  = ft.staff_id
                LEFT JOIN hearmed_reference.clinics cl ON cl.id = ft.clinic_id
+               LEFT JOIN hearmed_core.invoices inv ON inv.id = ft.invoice_id
               WHERE ft.patient_id = $1
                             ORDER BY ft.transaction_date DESC, ft.created_at DESC
               LIMIT $2",

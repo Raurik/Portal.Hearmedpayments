@@ -1678,10 +1678,10 @@ function initProfile(){
                 '<h4 style="font-size:13px;font-weight:600;color:var(--hm-text);margin:20px 0 8px;">Transaction History</h4>'+
                 '<table class="hm-table hm-account-table" id="hm-transactions-table">'+
                 '<colgroup>'+
-                    '<col class="hm-col-date"><col class="hm-col-type"><col class="hm-col-money"><col class="hm-col-ref"><col class="hm-col-staff"><col class="hm-col-notes">'+
+                    '<col class="hm-col-date"><col class="hm-col-type"><col class="hm-col-money"><col class="hm-col-invoice"><col class="hm-col-staff"><col class="hm-col-notes">'+
                 '</colgroup>'+
                 '<thead><tr>'+
-                    '<th class="hm-col-date">Date</th><th class="hm-col-type">Type</th><th class="hm-col-money hm-col-amount hm-ta-right">Amount</th><th class="hm-col-ref">Reference</th><th class="hm-col-staff">Staff</th><th class="hm-col-notes">Notes</th>'+
+                    '<th class="hm-col-date">Date</th><th class="hm-col-type">Type</th><th class="hm-col-money hm-col-amount hm-ta-right">Amount</th><th class="hm-col-invoice">Invoice</th><th class="hm-col-staff">Staff</th><th class="hm-col-notes">Notes</th>'+
                 '</tr></thead><tbody id="hm-transactions-tbody">'+
                     '<tr><td colspan="6" class="hm-muted" style="text-align:center;padding:20px;">Loading\u2026</td></tr>'+
                 '</tbody></table>'+
@@ -1724,15 +1724,14 @@ function initProfile(){
                 var typeLabels={'deposit':'Deposit','payment':'Payment','credit_note':'Credit Note','refund':'Refund','credit_applied':'Credit Applied','prsi_claim':'PRSI Claim'};
                 d.transactions.forEach(function(t){
                     var typeLabel=typeLabels[t.transaction_type]||t.transaction_type;
-                    var refLabel='';
-                    if(t.reference_type&&t.reference_id){
-                        refLabel=t.reference_type.charAt(0).toUpperCase()+t.reference_type.slice(1).replace('_',' ')+' #'+t.reference_id;
-                    }
+                    var invLabel=t.invoice_number||'';
+                    if(!invLabel&&t.invoice_id){invLabel='Invoice #'+t.invoice_id;}
+                    if(!invLabel){invLabel='-';}
                     html+='<tr>'+
                         '<td class="hm-col-date">'+fmtDate((t.transaction_date||'').substring(0,10))+'</td>'+
                         '<td class="hm-col-type">'+esc(typeLabel)+'</td>'+
                         '<td class="hm-col-money hm-col-amount hm-ta-right" style="font-weight:600;">\u20ac'+parseFloat(t.amount).toFixed(2)+'</td>'+
-                        '<td class="hm-col-ref">'+esc(refLabel)+'</td>'+
+                        '<td class="hm-col-invoice">'+esc(invLabel)+'</td>'+
                         '<td class="hm-col-staff">'+esc(t.staff_name||'\u2014')+'</td>'+
                         '<td class="hm-col-notes" style="font-size:12px;color:#94a3b8;">'+esc(t.notes||'\u2014')+'</td>'+
                     '</tr>';

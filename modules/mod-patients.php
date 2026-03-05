@@ -571,11 +571,18 @@ function hm_ajax_get_patient() {
     // Patient stats — revenue, payments, balance (from invoices module)
     $stats = [ 'revenue' => 0, 'payments' => 0, 'balance' => 0, 'credit' => 0 ];
     $inv_row = $db->get_row(
-        "SELECT COALESCE(SUM(grand_total),0) AS revenue,
-                COALESCE(SUM(grand_total - balance_remaining),0) AS payments,
-                COALESCE(SUM(balance_remaining),0) AS balance
-         FROM hearmed_core.invoices
-         WHERE patient_id = \$1 AND payment_status != 'Void'",
+        "SELECT
+            COALESCE(SUM(i.grand_total), 0) AS revenue,
+            COALESCE(SUM(LEAST(i.grand_total, COALESCE(pay.total_paid,0) + COALESCE(i.credit_applied,0))), 0) AS payments,
+            COALESCE(SUM(GREATEST(i.grand_total - LEAST(i.grand_total, COALESCE(pay.total_paid,0) + COALESCE(i.credit_applied,0)), 0)), 0) AS balance
+         FROM hearmed_core.invoices i
+         LEFT JOIN (
+             SELECT invoice_id, COALESCE(SUM(amount),0) AS total_paid
+             FROM hearmed_core.payments
+             WHERE is_refund = false
+             GROUP BY invoice_id
+         ) pay ON pay.invoice_id = i.id
+         WHERE i.patient_id = \$1 AND i.payment_status != 'Void'",
         [ $pid ]
     );
     if ( $inv_row ) {
@@ -2483,6 +2490,69 @@ function hm_ajax_get_patient_account() {
     $transactions = class_exists( 'HearMed_Finance' )
         ? HearMed_Finance::get_patient_transactions( $patient_id )
         : [];
+
+    // Fallback source: ensure fitting/deposit payments appear even if a
+    // financial_transactions row was missed.
+    $payment_rows = $db->get_results(
+        "SELECT p.id, p.invoice_id, p.amount, p.payment_date, p.payment_method,
+                p.created_at,
+                CONCAT(s.first_name, ' ', s.last_name) AS staff_name,
+                inv.invoice_number
+         FROM hearmed_core.payments p
+         LEFT JOIN hearmed_reference.staff s ON s.id = COALESCE(p.received_by, p.created_by)
+         LEFT JOIN hearmed_core.invoices inv ON inv.id = p.invoice_id
+         WHERE p.patient_id = \$1 AND p.is_refund = false
+         ORDER BY p.payment_date DESC, p.created_at DESC
+         LIMIT 100",
+        [ $patient_id ]
+    );
+
+    $seen_payment_keys = [];
+    foreach ( ( $transactions ?: [] ) as $t ) {
+        if ( ( $t->transaction_type ?? '' ) !== 'payment' ) {
+            continue;
+        }
+        $k = implode( '|', [
+            (string) ( $t->invoice_id ?? 0 ),
+            number_format( (float) ( $t->amount ?? 0 ), 2, '.', '' ),
+            (string) ( $t->transaction_date ?? '' ),
+        ] );
+        $seen_payment_keys[ $k ] = true;
+    }
+
+    foreach ( ( $payment_rows ?: [] ) as $p ) {
+        $k = implode( '|', [
+            (string) ( $p->invoice_id ?? 0 ),
+            number_format( (float) ( $p->amount ?? 0 ), 2, '.', '' ),
+            (string) ( $p->payment_date ?? '' ),
+        ] );
+        if ( isset( $seen_payment_keys[ $k ] ) ) {
+            continue;
+        }
+
+        $row = (object) [
+            'transaction_type' => 'payment',
+            'amount'           => (float) $p->amount,
+            'transaction_date' => (string) $p->payment_date,
+            'created_at'       => (string) ( $p->created_at ?? '' ),
+            'payment_method'   => (string) ( $p->payment_method ?? '' ),
+            'invoice_id'       => (int) ( $p->invoice_id ?? 0 ),
+            'invoice_number'   => (string) ( $p->invoice_number ?? '' ),
+            'staff_name'       => (string) ( $p->staff_name ?? '' ),
+            'notes'            => 'Payment recorded',
+        ];
+        $transactions[] = $row;
+    }
+
+    usort( $transactions, static function( $a, $b ) {
+        $ad = strtotime( (string) ( $a->transaction_date ?? '' ) . ' ' . (string) ( $a->created_at ?? '' ) );
+        $bd = strtotime( (string) ( $b->transaction_date ?? '' ) . ' ' . (string) ( $b->created_at ?? '' ) );
+        return $bd <=> $ad;
+    } );
+
+    if ( count( $transactions ) > 100 ) {
+        $transactions = array_slice( $transactions, 0, 100 );
+    }
 
     // Available balance
     $balance = class_exists( 'HearMed_Finance' )

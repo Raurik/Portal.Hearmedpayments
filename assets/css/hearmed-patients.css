@@ -457,7 +457,7 @@
 .hm-account-table .hm-col-status { width: 12%; }
 
 .hm-account-table .hm-col-type { width: 12%; }
-.hm-account-table .hm-col-ref { width: 14%; }
+.hm-account-table .hm-col-invoice { width: 14%; }
 .hm-account-table .hm-col-staff { width: 15%; }
 .hm-account-table .hm-col-notes { width: 31%; }
 
@@ -491,8 +491,8 @@
 .hm-account-table th.hm-col-type,
 .hm-account-table td.hm-col-type { width: 12%; }
 
-.hm-account-table th.hm-col-ref,
-.hm-account-table td.hm-col-ref { width: 14%; }
+.hm-account-table th.hm-col-invoice,
+.hm-account-table td.hm-col-invoice { width: 14%; }
 
 .hm-account-table th.hm-col-staff,
 .hm-account-table td.hm-col-staff { width: 15%; }
