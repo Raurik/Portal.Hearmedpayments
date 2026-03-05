@@ -115,7 +115,13 @@ function hm_render_approvals_page() {
                 nonce: HM.nonce,
                 tab: 'pending'
             }, function(r) {
+                console.log('Approvals API raw response:', r);
                 if (r.success) {
+                    if (r.data.orders) {
+                        r.data.orders.forEach(function(o) {
+                            console.log('Order #'+o.order_number+' items_count:'+o.items_count, o.items);
+                        });
+                    }
                     self.render(r.data);
                 } else {
                     el.innerHTML = '<div class="hm-empty">Error loading data.</div>';

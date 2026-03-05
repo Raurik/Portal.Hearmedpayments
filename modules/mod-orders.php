@@ -2103,6 +2103,10 @@ class HearMed_Orders {
                 : 'Order '.$order_num.' submitted for C-Level approval.',
             'order_id'       => $order_id,
             'order_number'   => $order_num,
+            'debug_items_decoded' => count($items),
+            'debug_item_sample'   => !empty($items[0]) ? array_keys($items[0]) : [],
+            'debug_order_insert'  => $order_id ? 'ok' : 'FAILED',
+
             'is_quickpay'    => $is_quickpay,
             'invoice_id'     => $invoice_id,
             'duplicate_flag' => $duplicate_flag,
