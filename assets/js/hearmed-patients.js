@@ -1663,14 +1663,22 @@ function initProfile(){
                     '</div>'+
                 '</div>'+
                 '<h4 style="font-size:13px;font-weight:600;color:var(--hm-text);margin:20px 0 8px;">Credits</h4>'+
-                '<table class="hm-table" id="hm-credits-table"><thead><tr>'+
-                    '<th>Credit Note</th><th>Date</th><th>Original</th><th>Used</th><th>Remaining</th><th>Status</th>'+
+                '<table class="hm-table hm-account-table" id="hm-credits-table">'+
+                '<colgroup>'+
+                    '<col class="hm-col-note"><col class="hm-col-date"><col class="hm-col-money"><col class="hm-col-money"><col class="hm-col-money"><col class="hm-col-status">'+
+                '</colgroup>'+
+                '<thead><tr>'+
+                    '<th>Credit Note</th><th>Date</th><th class="hm-ta-right">Original</th><th class="hm-ta-right">Used</th><th class="hm-ta-right">Remaining</th><th>Status</th>'+
                 '</tr></thead><tbody id="hm-credits-tbody">'+
                     '<tr><td colspan="6" class="hm-muted" style="text-align:center;padding:20px;">Loading\u2026</td></tr>'+
                 '</tbody></table>'+
                 '<h4 style="font-size:13px;font-weight:600;color:var(--hm-text);margin:20px 0 8px;">Transaction History</h4>'+
-                '<table class="hm-table" id="hm-transactions-table"><thead><tr>'+
-                    '<th>Date</th><th>Type</th><th>Amount</th><th>Reference</th><th>Staff</th><th>Notes</th>'+
+                '<table class="hm-table hm-account-table" id="hm-transactions-table">'+
+                '<colgroup>'+
+                    '<col class="hm-col-date"><col class="hm-col-type"><col class="hm-col-money"><col class="hm-col-ref"><col class="hm-col-staff"><col class="hm-col-notes">'+
+                '</colgroup>'+
+                '<thead><tr>'+
+                    '<th>Date</th><th>Type</th><th class="hm-ta-right">Amount</th><th>Reference</th><th>Staff</th><th>Notes</th>'+
                 '</tr></thead><tbody id="hm-transactions-tbody">'+
                     '<tr><td colspan="6" class="hm-muted" style="text-align:center;padding:20px;">Loading\u2026</td></tr>'+
                 '</tbody></table>'+
@@ -1698,9 +1706,9 @@ function initProfile(){
                     html+='<tr>'+
                         '<td>'+esc(c.credit_note_number||'\u2014')+'</td>'+
                         '<td>'+fmtDate((c.created_at||'').substring(0,10))+'</td>'+
-                        '<td style="text-align:right;">\u20ac'+parseFloat(c.amount).toFixed(2)+'</td>'+
-                        '<td style="text-align:right;">\u20ac'+parseFloat(c.used_amount).toFixed(2)+'</td>'+
-                        '<td style="text-align:right;font-weight:600;">\u20ac'+remaining.toFixed(2)+'</td>'+
+                        '<td class="hm-ta-right">\u20ac'+parseFloat(c.amount).toFixed(2)+'</td>'+
+                        '<td class="hm-ta-right">\u20ac'+parseFloat(c.used_amount).toFixed(2)+'</td>'+
+                        '<td class="hm-ta-right" style="font-weight:600;">\u20ac'+remaining.toFixed(2)+'</td>'+
                         '<td><span class="hm-badge '+statusClass+'">'+esc(c.status)+'</span></td>'+
                     '</tr>';
                 });
@@ -1720,7 +1728,7 @@ function initProfile(){
                     html+='<tr>'+
                         '<td>'+fmtDate((t.transaction_date||'').substring(0,10))+'</td>'+
                         '<td>'+esc(typeLabel)+'</td>'+
-                        '<td style="text-align:right;font-weight:600;">\u20ac'+parseFloat(t.amount).toFixed(2)+'</td>'+
+                        '<td class="hm-ta-right" style="font-weight:600;">\u20ac'+parseFloat(t.amount).toFixed(2)+'</td>'+
                         '<td>'+esc(refLabel)+'</td>'+
                         '<td>'+esc(t.staff_name||'\u2014')+'</td>'+
                         '<td style="font-size:12px;color:#94a3b8;">'+esc(t.notes||'\u2014')+'</td>'+

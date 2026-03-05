@@ -442,6 +442,40 @@
 
 .hm-tab-section { padding: 4px 0; }
 
+/* Keep Patient Account table headers and body columns perfectly aligned. */
+.hm-account-table {
+  table-layout: fixed;
+}
+
+.hm-account-table .hm-ta-right {
+  text-align: right;
+}
+
+.hm-account-table .hm-col-note { width: 22%; }
+.hm-account-table .hm-col-date { width: 14%; }
+.hm-account-table .hm-col-money { width: 13%; }
+.hm-account-table .hm-col-status { width: 12%; }
+
+.hm-account-table .hm-col-type { width: 12%; }
+.hm-account-table .hm-col-ref { width: 14%; }
+.hm-account-table .hm-col-staff { width: 15%; }
+.hm-account-table .hm-col-notes { width: 31%; }
+
+.hm-account-table th,
+.hm-account-table td {
+  white-space: nowrap;
+}
+
+.hm-account-table td:last-child {
+  white-space: normal;
+}
+
+@media (max-width: 1200px) {
+  .hm-account-table {
+    table-layout: auto;
+  }
+}
+
 .hm-section-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 .hm-section-header h3 { font-size: 15px; font-weight: 600; color: #151B33; margin: 0; }
 
