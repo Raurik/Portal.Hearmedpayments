@@ -551,6 +551,10 @@ class HearMed_Enqueue {
 
             // Orders "create" page needs calendar JS for the full-screen order form
             if ( $module === 'orders' && ( sanitize_key( $_GET['hm_action'] ?? '' ) === 'create' ) ) {
+                if ( class_exists( '\\Elementor\\Plugin' ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) {
+                    return;
+                }
+
                 wp_enqueue_script(
                     'hearmed-calendar',
                     HEARMED_URL . 'assets/js/hearmed-calendar.js',
