@@ -967,16 +967,6 @@ class HearMed_Refunds {
         if (!$cn) wp_die('Credit note not found');
 
         $items = [];
-        if (!empty($cn->order_id)) {
-            $items = $db->get_results(
-                "SELECT oi.*, COALESCE(pr.product_name, oi.item_description) AS product_name
-                 FROM hearmed_core.order_items oi
-                 LEFT JOIN hearmed_reference.products pr ON pr.id = oi.item_id AND oi.item_type = 'product'
-                 WHERE oi.order_id = \$1
-                 ORDER BY oi.line_number",
-                [$cn->order_id]
-            );
-        }
 
         $orig_inv = '';
         if (!empty($cn->invoice_id)) {
@@ -1032,6 +1022,91 @@ class HearMed_Refunds {
         $tpl_data->prsi_amount           = $has_prsi_col ? (float) ($cn->prsi_amount ?? 0) : 0;
         $tpl_data->patient_refund_amount = $has_prsi_col ? (float) ($cn->patient_refund_amount ?? $cn->amount ?? 0) : (float) ($cn->amount ?? 0);
 
+        // Build cleaner credit-note lines (no bundled items)
+        $return_side = strtolower( (string) ( $tpl_data->return_side ?? 'both' ) );
+        $serial_returned = '';
+        $serial_remaining = '';
+        if ( $return_side === 'left' ) {
+            $serial_returned  = (string) ( $tpl_data->serial_left ?? '' );
+            $serial_remaining = (string) ( $tpl_data->serial_right ?? '' );
+        } elseif ( $return_side === 'right' ) {
+            $serial_returned  = (string) ( $tpl_data->serial_right ?? '' );
+            $serial_remaining = (string) ( $tpl_data->serial_left ?? '' );
+        } else {
+            $serial_returned = trim( implode( ' / ', array_filter( [
+                (string) ( $tpl_data->serial_left ?? '' ),
+                (string) ( $tpl_data->serial_right ?? '' ),
+            ] ) ) );
+        }
+
+        $device_product = null;
+        if ( ! empty( $cn->device_id ) ) {
+            $device_product = $db->get_row(
+                "SELECT pr.id AS product_id, pr.product_name, pr.tech_level
+                 FROM hearmed_core.patient_devices pd
+                 LEFT JOIN hearmed_reference.products pr ON pr.id = pd.product_id
+                 WHERE pd.id = \$1",
+                [ $cn->device_id ]
+            );
+        }
+
+        $product_id = (int) ( $device_product->product_id ?? 0 );
+        $product_name = (string) ( $device_product->product_name ?? 'Hearing Aid' );
+        $tech_level = trim( (string) ( $device_product->tech_level ?? '' ) );
+        $base_desc = $product_name . ( $tech_level !== '' ? ' (Tech: ' . $tech_level . ')' : '' );
+
+        $line_total_for_product = 0.0;
+        $line_qty_for_product = 1;
+        if ( ! empty( $cn->invoice_id ) ) {
+            $line = $db->get_row(
+                "SELECT ii.line_total, ii.quantity, ii.ear_side
+                 FROM hearmed_core.invoice_items ii
+                 WHERE ii.invoice_id = \$1 AND ii.item_type = 'product'
+                   AND (\$2 = 0 OR ii.item_id = \$2)
+                   AND COALESCE(ii.line_total,0) > 0
+                 ORDER BY ii.line_total DESC
+                 LIMIT 1",
+                [ $cn->invoice_id, $product_id ]
+            );
+            if ( $line ) {
+                $line_total_for_product = (float) ( $line->line_total ?? 0 );
+                $line_qty_for_product = max( 1, (int) ( $line->quantity ?? 1 ) );
+                $ear_side = strtolower( trim( (string) ( $line->ear_side ?? '' ) ) );
+                if ( ( $return_side === 'left' || $return_side === 'right' ) && ( $ear_side === 'binaural' || $ear_side === 'both' || $line_qty_for_product > 1 ) ) {
+                    $line_total_for_product = $line_total_for_product / 2;
+                }
+            }
+        }
+        if ( $line_total_for_product <= 0 ) {
+            $line_total_for_product = (float) ( $cn->amount ?? 0 );
+        }
+
+        $remaining_amt = 0.0;
+        if ( $return_side === 'left' || $return_side === 'right' ) {
+            $full_product_total = $line_total_for_product * 2;
+            $remaining_amt = max( 0, $full_product_total - $line_total_for_product );
+        }
+
+        $custom_rows = [];
+        $custom_rows[] = (object) [
+            'item_description' => $base_desc . ' — Original amount' . ( $serial_returned ? ' (Serial: ' . $serial_returned . ')' : '' ),
+            'quantity'         => 1,
+            'line_total'       => $line_total_for_product,
+        ];
+        $custom_rows[] = (object) [
+            'item_description' => 'Return line (' . ucfirst( $return_side ) . ')',
+            'quantity'         => 1,
+            'line_total'       => -abs( $line_total_for_product ),
+        ];
+        if ( $remaining_amt > 0.009 ) {
+            $custom_rows[] = (object) [
+                'item_description' => $base_desc . ' — Remaining on client account' . ( $serial_remaining ? ' (Serial: ' . $serial_remaining . ')' : '' ),
+                'quantity'         => 1,
+                'line_total'       => $remaining_amt,
+            ];
+        }
+        $items = $custom_rows;
+
         // Original payment method(s)
         $tpl_data->original_payment_method = '';
         if ( ! empty( $cn->invoice_id ) ) {
@@ -1042,7 +1117,7 @@ class HearMed_Refunds {
             if ( $payments ) {
                 $methods = [];
                 foreach ( $payments as $pm ) {
-                    $methods[] = $pm->payment_method . ' (\xe2\x82\xac' . number_format( (float) $pm->amount, 2 ) . ')';
+                    $methods[] = trim( (string) $pm->payment_method ) . ' ' . number_format( (float) $pm->amount, 2 );
                 }
                 $tpl_data->original_payment_method = implode( ', ', $methods );
             }

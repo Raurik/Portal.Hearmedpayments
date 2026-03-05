@@ -113,7 +113,7 @@ class HearMed_Print_Templates {
             'creditMeta'     => true,
             'originalInvoice'=> true,
             'patientAddress' => true,
-            'creditReason'   => true,
+            'creditReason'   => false,
             'vatLabel'       => 'VAT',
             'refundMethod'   => true,
             'exchangeDetails'=> false,
@@ -122,7 +122,7 @@ class HearMed_Print_Templates {
             'footerFont'     => 'Source Sans 3',
             'footerSize'     => 9,
             'footerColor'    => '#94a3b8',
-            'sections'       => ['companyHeader','patient','deviceSerials','creditReason','itemsTable','paymentBreakdown','refundMethod','exchangeDetails','footer'],
+            'sections'       => ['companyHeader','patient','deviceSerials','itemsTable','paymentBreakdown','refundMethod','exchangeDetails','footer'],
         ],
         'exchange' => [
             'companyName'    => 'HearMed Acoustic Health Care Ltd',
@@ -908,18 +908,12 @@ tfoot td { font-weight: 600; border-bottom: none; }
         if ( ! $sl && ! $sr ) return '';
         $side = $d->return_side ?? 'both';
         ob_start(); ?>
-        <div class="hm-print-row" style="margin-bottom:14px;">
+        <div style="margin-bottom:14px;font-size:12px;color:#475569;">
             <?php if ( $sl && ( $side === 'left' || $side === 'both' ) ): ?>
-            <div class="hm-print-box">
-                <div class="hm-print-box-label">Left Hearing Aid — Serial</div>
-                <strong style="font-size:13px;letter-spacing:.3px;"><?php echo esc_html( $sl ); ?></strong>
-            </div>
+            <div><strong>Left Serial:</strong> <?php echo esc_html( $sl ); ?></div>
             <?php endif; ?>
             <?php if ( $sr && ( $side === 'right' || $side === 'both' ) ): ?>
-            <div class="hm-print-box">
-                <div class="hm-print-box-label">Right Hearing Aid — Serial</div>
-                <strong style="font-size:13px;letter-spacing:.3px;"><?php echo esc_html( $sr ); ?></strong>
-            </div>
+            <div><strong>Right Serial:</strong> <?php echo esc_html( $sr ); ?></div>
             <?php endif; ?>
         </div>
         <?php return ob_get_clean();
@@ -972,10 +966,11 @@ tfoot td { font-weight: 600; border-bottom: none; }
             <thead><tr><th>Description</th><th>Qty</th><th class="money">Amount</th></tr></thead>
             <tbody>
             <?php foreach ($items as $it): ?>
+            <?php $amt = (float)($it->line_total ?? 0); ?>
             <tr>
                 <td><?php echo esc_html($it->product_name ?? $it->item_description ?? ''); ?></td>
                 <td><?php echo (int)($it->quantity ?? 1); ?></td>
-                <td class="money">€<?php echo number_format((float)($it->line_total ?? 0), 2); ?></td>
+                <td class="money"><?php echo $amt < 0 ? '-€' : '€'; ?><?php echo number_format(abs($amt), 2); ?></td>
             </tr>
             <?php endforeach; ?>
             </tbody>
