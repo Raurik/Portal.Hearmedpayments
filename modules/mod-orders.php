@@ -2322,9 +2322,7 @@ class HearMed_Orders {
         (function(){
             // ── Check patient credit balance on form load ──
             var hmPatientId  = <?php echo (int) $order->patient_id; ?>;
-            var hmGrandTotal = <?php echo (float) $amount_due; ?>;
-            var hmDeposit    = <?php echo (float) ($order->deposit_amount ?? 0); ?>;
-            var hmBalanceDue = Math.max(0, hmGrandTotal - hmDeposit);
+            var hmBalanceDue = <?php echo (float) $amount_due; ?>;
 
             if (hmBalanceDue > 0) {
                 var fd = new URLSearchParams({action:'hm_get_patient_credit_balance', nonce:'<?php echo $nonce; ?>', patient_id:hmPatientId});
@@ -3287,33 +3285,32 @@ class HearMed_Orders {
             if ( $max_apply > 0 ) {
                 $credit_actually_applied = HearMed_Finance::apply_credit(
                     (int) $order->patient_id,
-                    (int) $effective_invoice_id,
                     $max_apply,
-                    $user->id ?? 0
+                    (int) $effective_invoice_id,
+                    $order_id,
+                    $user->id ?? null,
+                    $fit_date
                 );
 
                 if ( $credit_actually_applied > 0 ) {
-                    // Update invoice to reflect credit applied
-                    $db->query(
-                        "UPDATE hearmed_core.invoices
-                         SET credit_applied = COALESCE(credit_applied, 0) + \$1,
-                             balance_remaining = GREATEST(0, COALESCE(balance_remaining, 0) - \$1),
-                             updated_at = NOW()
-                         WHERE id = \$2",
-                        [ $credit_actually_applied, $effective_invoice_id ]
+                    // Recalculate invoice status/balance from actual totals.
+                    $inv_row = $db->get_row(
+                        "SELECT grand_total, COALESCE(credit_applied, 0) AS credit_applied
+                         FROM hearmed_core.invoices WHERE id = \$1",
+                        [ $effective_invoice_id ]
                     );
-
-                    // Record as financial transaction
-                    HearMed_Finance::record( 'credit_applied', $credit_actually_applied, [
-                        'patient_id'       => (int) $order->patient_id,
-                        'order_id'         => $order_id,
-                        'invoice_id'       => (int) $effective_invoice_id,
-                        'staff_id'         => $user->id ?? null,
-                        'clinic_id'        => $order->clinic_id ? (int) $order->clinic_id : null,
-                        'notes'            => 'Patient credit applied to order ' . $order->order_number,
-                        'reference'        => $order->order_number ?? '',
-                        'transaction_date' => date('Y-m-d'),
-                    ] );
+                    $paid_total = (float) $db->get_var(
+                        "SELECT COALESCE(SUM(amount), 0)
+                         FROM hearmed_core.payments
+                         WHERE invoice_id = \$1 AND is_refund = false",
+                        [ $effective_invoice_id ]
+                    );
+                    $new_balance = max( 0, (float) ($inv_row->grand_total ?? 0) - $paid_total - (float) ($inv_row->credit_applied ?? 0) );
+                    $db->update( 'invoices', [
+                        'payment_status'    => $new_balance <= 0.009 ? 'Paid' : 'Partial',
+                        'balance_remaining' => round( $new_balance, 2 ),
+                        'updated_at'        => date( 'Y-m-d H:i:s' ),
+                    ], [ 'id' => $effective_invoice_id ] );
 
                     // Timeline entry
                     $db->insert( 'hearmed_core.patient_timeline', [

@@ -132,7 +132,7 @@ class HearMed_Finance {
      */
     public static function get_patient_credit_balance( $patient_id ) {
         $val = HearMed_DB::get_var(
-            "SELECT COALESCE(SUM(amount), 0)
+            "SELECT COALESCE(SUM(GREATEST(amount - COALESCE(used_amount, 0), 0)), 0)
                FROM hearmed_core.patient_credits
               WHERE patient_id = $1 AND status = 'active'",
             [ (int) $patient_id ]
@@ -153,7 +153,8 @@ class HearMed_Finance {
     public static function get_patient_credits( $patient_id, $status = 'active' ) {
         if ( $status === 'all' ) {
             return HearMed_DB::get_results(
-                "SELECT pc.*, o.order_number
+                "SELECT pc.*, o.order_number,
+                        GREATEST(pc.amount - COALESCE(pc.used_amount, 0), 0) AS remaining_amount
                    FROM hearmed_core.patient_credits pc
                    LEFT JOIN hearmed_core.orders o ON o.id = pc.order_id
                   WHERE pc.patient_id = $1
@@ -163,7 +164,8 @@ class HearMed_Finance {
         }
 
         return HearMed_DB::get_results(
-            "SELECT pc.*, o.order_number
+            "SELECT pc.*, o.order_number,
+                    GREATEST(pc.amount - COALESCE(pc.used_amount, 0), 0) AS remaining_amount
                FROM hearmed_core.patient_credits pc
                LEFT JOIN hearmed_core.orders o ON o.id = pc.order_id
               WHERE pc.patient_id = $1 AND pc.status = $2
@@ -191,7 +193,7 @@ class HearMed_Finance {
                LEFT JOIN hearmed_reference.staff s   ON s.id  = ft.staff_id
                LEFT JOIN hearmed_reference.clinics cl ON cl.id = ft.clinic_id
               WHERE ft.patient_id = $1
-              ORDER BY ft.created_at DESC
+                            ORDER BY ft.transaction_date DESC, ft.created_at DESC
               LIMIT $2",
             [ (int) $patient_id, (int) $limit ]
         );
@@ -235,7 +237,7 @@ class HearMed_Finance {
      * @return float      Total amount actually applied (may be less than
      *                    requested if the patient's balance was insufficient).
      */
-    public static function apply_credit( $patient_id, $amount_to_apply, $invoice_id, $order_id = null, $staff_id = null ) {
+    public static function apply_credit( $patient_id, $amount_to_apply, $invoice_id, $order_id = null, $staff_id = null, $transaction_date = null ) {
         // Ensure supporting tables exist
         self::ensure_credit_applications_table();
         self::ensure_financial_transactions_table();
@@ -250,7 +252,7 @@ class HearMed_Finance {
 
         // 1. Fetch active credits oldest-first (FIFO)
         $credits = HearMed_DB::get_results(
-            "SELECT id, amount
+            "SELECT id, amount, COALESCE(used_amount, 0) AS used_amount
                FROM hearmed_core.patient_credits
               WHERE patient_id = $1 AND status = 'active'
               ORDER BY created_at ASC",
@@ -266,38 +268,81 @@ class HearMed_Finance {
                 if ( $remaining <= 0 ) break;
 
                 $credit_amount = (float) $credit->amount;
-                $apply_now     = min( $credit_amount, $remaining );
+                $used_amount   = (float) ( $credit->used_amount ?? 0 );
+                $available     = max( 0, $credit_amount - $used_amount );
+                if ( $available <= 0 ) {
+                    continue;
+                }
+
+                $apply_now     = min( $available, $remaining );
+                $new_used      = $used_amount + $apply_now;
+                $is_fully_used = ( $new_used >= ( $credit_amount - 0.009 ) );
 
                 // Mark the credit as used
                 HearMed_DB::update(
                     'patient_credits',
                     [
-                        'status'             => 'used',
-                        'used_at'            => date( 'c' ),
-                        'used_on_invoice_id' => $invoice_id,
+                        'used_amount' => round( $new_used, 2 ),
+                        'status'      => $is_fully_used ? 'used' : 'active',
+                        'updated_at'  => date( 'Y-m-d H:i:s' ),
                     ],
                     [ 'id' => (int) $credit->id ]
                 );
 
-                // Record in credit_applications
-                HearMed_DB::insert( 'credit_applications', [
+                // Record in credit_applications (schema differs between environments)
+                $ca_inserted = HearMed_DB::insert( 'credit_applications', [
                     'credit_id'      => (int) $credit->id,
                     'invoice_id'     => $invoice_id,
                     'amount_applied' => $apply_now,
                     'applied_by'     => $staff_id ? (int) $staff_id : null,
                 ] );
+                if ( ! $ca_inserted ) {
+                    HearMed_DB::insert( 'credit_applications', [
+                        'patient_credit_id' => (int) $credit->id,
+                        'invoice_id'        => $invoice_id,
+                        'amount'            => $apply_now,
+                        'applied_by'        => $staff_id ? (int) $staff_id : null,
+                    ] );
+                }
 
                 // Record the financial transaction
                 self::record( 'credit_applied', $apply_now, [
-                    'patient_id' => $patient_id,
-                    'invoice_id' => $invoice_id,
-                    'order_id'   => $order_id,
-                    'staff_id'   => $staff_id,
-                    'notes'      => 'Credit #' . $credit->id . ' applied to invoice',
+                    'patient_id'       => $patient_id,
+                    'invoice_id'       => $invoice_id,
+                    'order_id'         => $order_id,
+                    'staff_id'         => $staff_id,
+                    'transaction_date' => $transaction_date ?: date( 'Y-m-d' ),
+                    'notes'            => 'Credit #' . $credit->id . ' applied to invoice',
                 ] );
 
                 $remaining     -= $apply_now;
                 $total_applied += $apply_now;
+            }
+
+            // Keep invoice balance/paid status in sync after credit applications
+            if ( $total_applied > 0 ) {
+                $inv = HearMed_DB::get_row(
+                    "SELECT COALESCE(grand_total, 0) AS grand_total, COALESCE(credit_applied, 0) AS credit_applied
+                     FROM hearmed_core.invoices
+                     WHERE id = $1",
+                    [ $invoice_id ]
+                );
+                $paid_total = (float) HearMed_DB::get_var(
+                    "SELECT COALESCE(SUM(amount), 0)
+                     FROM hearmed_core.payments
+                     WHERE invoice_id = $1 AND is_refund = false",
+                    [ $invoice_id ]
+                );
+
+                $new_credit_applied = (float) ( $inv->credit_applied ?? 0 ) + $total_applied;
+                $new_balance = max( 0, (float) ( $inv->grand_total ?? 0 ) - $paid_total - $new_credit_applied );
+
+                HearMed_DB::update( 'invoices', [
+                    'credit_applied'    => round( $new_credit_applied, 2 ),
+                    'balance_remaining' => round( $new_balance, 2 ),
+                    'payment_status'    => $new_balance <= 0.009 ? 'Paid' : 'Partial',
+                    'updated_at'        => date( 'Y-m-d H:i:s' ),
+                ], [ 'id' => $invoice_id ] );
             }
 
             HearMed_DB::commit();

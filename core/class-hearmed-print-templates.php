@@ -530,6 +530,9 @@ tfoot td { font-weight: 600; border-bottom: none; }
                 <?php if (($s['prsi'] ?? true) && !empty($order->prsi_applicable)): ?>
                 <tr><td colspan="6" class="money" style="color:var(--hm-accent);">PRSI Grant</td><td class="money" style="color:var(--hm-accent);">-€<?php echo number_format((float)($order->prsi_amount ?? 0), 2); ?></td></tr>
                 <?php endif; ?>
+                <?php if ((float)($invoice->credit_applied ?? 0) > 0): ?>
+                <tr><td colspan="6" class="money" style="color:#059669;">Credit Applied</td><td class="money" style="color:#059669;">-€<?php echo number_format((float)($invoice->credit_applied ?? 0), 2); ?></td></tr>
+                <?php endif; ?>
                 <tr class="total-row"><td colspan="6" class="money">Total Paid</td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->grand_total : ($order->grand_total ?? 0)), 2); ?></td></tr>
             </tfoot>
         </table>

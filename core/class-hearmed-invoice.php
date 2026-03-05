@@ -853,6 +853,25 @@ class HearMed_Invoice {
             [ $inv->id ]
         );
 
+        // Include applied patient credit as a payment-detail row so the invoice
+        // clearly shows credit amount and application date.
+        $credit_applied = (float) ( $inv->credit_applied ?? 0 );
+        if ( $credit_applied > 0 ) {
+            $credit_date = $db->get_var(
+                "SELECT COALESCE(MAX(transaction_date)::text, MAX(created_at)::date::text)
+                 FROM hearmed_core.financial_transactions
+                 WHERE invoice_id = \$1 AND transaction_type = 'credit_applied'",
+                [ $inv->id ]
+            ) ?: ( $inv->updated_at ?? date( 'Y-m-d' ) );
+
+            $credit_row = (object) [
+                'payment_method' => 'Credit Applied',
+                'payment_date'   => $credit_date,
+                'amount'         => $credit_applied,
+            ];
+            $tpl->payments[] = $credit_row;
+        }
+
         // Patient devices (serials) — only those linked to THIS invoice's order
         $tpl->devices = $db->get_results(
             "SELECT pd.serial_number_left, pd.serial_number_right, pr.product_name
