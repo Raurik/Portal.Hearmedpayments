@@ -75,6 +75,7 @@ add_action( 'wp_ajax_hm_complete_order',              [ 'HearMed_Orders', 'ajax_
 add_action( 'wp_ajax_hm_patient_search',              [ 'HearMed_Orders', 'ajax_patient_search' ] );
 add_action( 'wp_ajax_hm_get_orders',                  [ 'HearMed_Orders', 'ajax_get_orders' ] );
 add_action( 'wp_ajax_hm_get_order_detail',            [ 'HearMed_Orders', 'ajax_get_order_detail' ] );
+add_action( 'wp_ajax_hm_get_order_products',          [ 'HearMed_Orders', 'ajax_get_order_products' ] );
 add_action( 'wp_ajax_hm_update_order_status',         [ 'HearMed_Orders', 'ajax_update_order_status' ] );
 add_action( 'wp_ajax_hm_get_pending_orders',          [ 'HearMed_Orders', 'ajax_get_pending_orders' ] );
 add_action( 'wp_ajax_hm_get_awaiting_fitting',        [ 'HearMed_Orders', 'ajax_get_awaiting_fitting' ] );
@@ -3299,5 +3300,40 @@ class HearMed_Orders {
             : 0;
 
         wp_send_json_success( [ 'balance' => number_format( $balance, 2, '.', '' ) ] );
+    }
+
+    public static function ajax_get_order_products() {
+        check_ajax_referer( 'hm_orders_nonce', 'nonce' );
+
+        $db = HearMed_DB::instance();
+
+        // Products (hearing aids, accessories, consumables, bundled)
+        $products = $db->get_results(
+            "SELECT p.id, p.product_name, p.item_type,
+                    p.manufacturer_id, m.name AS manufacturer_name,
+                    p.style, p.tech_level,
+                    p.retail_price, p.cost_price,
+                    p.vat_category, p.is_active
+             FROM hearmed_reference.products p
+             LEFT JOIN hearmed_reference.manufacturers m 
+                    ON m.id = p.manufacturer_id
+             WHERE p.is_active = true
+             ORDER BY m.name, p.product_name"
+        );
+
+        // Services
+        $services = $db->get_results(
+            "SELECT id, service_name, default_price,
+                    service_code, is_invoiceable
+             FROM hearmed_reference.services
+             WHERE is_active = true
+             ORDER BY service_name"
+        );
+
+        wp_send_json_success([
+            'products' => $products ?: [],
+            'services' => $services ?: [],
+            'ranges'   => [],
+        ]);
     }
 }
