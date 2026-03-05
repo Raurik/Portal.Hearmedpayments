@@ -3333,12 +3333,20 @@ class HearMed_Orders {
         // Invoice is created with qbo_sync_status = 'pending_review' by default
         // Rauri reviews and sends to QBO via /qbo-review/ page
 
+        // Redirect to the invoice if one was created, otherwise fall back to order view
+        if ( $effective_invoice_id ) {
+            $redirect = admin_url('admin-ajax.php') . '?action=hm_download_invoice&nonce=' . wp_create_nonce('hm_nonce') . '&_ID=' . (int) $effective_invoice_id;
+        } else {
+            $redirect = HearMed_Utils::page_url('orders') . '?hm_action=view&order_id=' . $order_id;
+        }
+
         wp_send_json_success([
             'message'         => 'Fitting complete. Invoice created and queued for QBO review.'
                 . ( $credit_actually_applied > 0 ? ' Credit of €' . number_format( $credit_actually_applied, 2 ) . ' applied.' : '' ),
             'order_id'        => $order_id,
+            'invoice_id'      => $effective_invoice_id,
             'credit_applied'  => $credit_actually_applied,
-            'redirect'        => HearMed_Utils::page_url('orders').'?hm_action=view&order_id='.$order_id,
+            'redirect'        => $redirect,
         ]);
     }
 
