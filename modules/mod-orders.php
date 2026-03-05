@@ -595,20 +595,17 @@ class HearMed_Orders {
                     <!-- Notes -->
                     <div style="margin-top:14px"><textarea id="hm-oc-notes" rows="2" placeholder="Order notes..." class="hm-oc-inp" style="resize:vertical;font-size:12px;background:var(--hm-bg-alt,#f8fafc)"></textarea></div>
 
-                    <!-- ═══ DEPOSIT section ═══ -->
+                    <!-- ═══ DEPOSIT / SPLIT PAYMENT section ═══ -->
                     <div style="border-top:1px dashed var(--hm-border-light,#e2e8f0);padding-top:14px;margin-top:14px">
-                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--hm-text-light,#64748b);margin-bottom:10px;display:flex;align-items:center;gap:6px">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                            Deposit <span style="font-weight:400;color:var(--hm-text-muted,#94a3b8);text-transform:none;letter-spacing:0;font-size:11px">— optional, balance collected at fitting</span>
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--hm-text-light,#64748b);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+                            <span style="display:flex;align-items:center;gap:6px">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                                Deposit / Payments
+                                <span style="font-weight:400;color:var(--hm-text-muted,#94a3b8);text-transform:none;letter-spacing:0;font-size:11px">— optional, balance at fitting</span>
+                            </span>
+                            <button type="button" id="hm-oc-add-payment" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;border:1px solid var(--hm-teal,#0BB4C4);background:#fff;color:var(--hm-teal,#0BB4C4);cursor:pointer">+ Add Payment</button>
                         </div>
-                        <div style="display:flex;gap:10px;flex-wrap:wrap">
-                            <div style="flex:1;min-width:100px"><label class="hm-oc-lbl">Amount (€)</label>
-                            <input type="number" id="hm-oc-dep-amt" step="0.01" min="0" value="" placeholder="0.00" class="hm-oc-inp"></div>
-                            <div style="flex:1;min-width:120px"><label class="hm-oc-lbl">Method</label>
-                            <select id="hm-oc-dep-method" class="hm-oc-inp"><option value="">— None —</option><option value="Card">Card</option><option value="Cash">Cash</option><option value="Cheque">Cheque</option></select></div>
-                            <div style="flex:1;min-width:120px"><label class="hm-oc-lbl">Date Paid</label>
-                            <input type="date" id="hm-oc-dep-date" value="<?php echo date('Y-m-d'); ?>" class="hm-oc-inp"></div>
-                        </div>
+                        <div id="hm-oc-payments-list"></div>
                         <div id="hm-oc-dep-balance" style="display:none;margin-top:10px;padding:10px 14px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px;font-size:13px;color:#0e7490">
                             Balance due at fitting: <strong id="hm-oc-dep-bal-val">€0.00</strong>
                         </div>
@@ -825,28 +822,76 @@ class HearMed_Orders {
             $('#hm-oc-disc').on('input',function(){updateTotals();});
             $('#hm-oc-prsi-l,#hm-oc-prsi-r').on('change',function(){updateTotals();});
 
-            /* ── Deposit balance ── */
-            function updateDepositBalance(){
-                var dep=parseFloat($('#hm-oc-dep-amt').val())||0;
+            /* ── Split Payment Logic ── */
+            var paymentRows=[];
+
+            function renderPaymentRows(){
+                var $list=$('#hm-oc-payments-list');
+                if(!paymentRows.length){$list.html('');updateDepBalance();return;}
+                var h='';
+                paymentRows.forEach(function(p,i){
+                    h+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
+                    h+='<input type="number" class="hm-oc-inp hm-pay-amt" data-idx="'+i+'" step="0.01" min="0" value="'+p.amount+'" placeholder="€0.00" style="flex:1;min-width:80px">';
+                    h+='<select class="hm-oc-inp hm-pay-method" data-idx="'+i+'" style="flex:1;min-width:100px">';
+                    ['Card','Cash','Cheque','Bank Transfer'].forEach(function(m){
+                        h+='<option value="'+m+'"'+(p.method===m?' selected':'')+'>'+m+'</option>';
+                    });
+                    h+='</select>';
+                    h+='<input type="date" class="hm-oc-inp hm-pay-date" data-idx="'+i+'" value="'+p.date+'" style="flex:1;min-width:120px">';
+                    h+='<button type="button" class="hm-pay-del" data-idx="'+i+'" style="border:none;background:none;color:#dc2626;font-size:18px;cursor:pointer;padding:0 4px">×</button>';
+                    h+='</div>';
+                });
+                $list.html(h);
+                updateDepBalance();
+            }
+
+            function updateDepBalance(){
                 var total=parseFloat($('#hm-oc-total').text().replace(/[^0-9.]/g,''))||0;
-                if(dep>0){
-                    $('#hm-oc-dep-bal-val').text('€'+Math.max(0,total-dep).toFixed(2));
+                var paid=0;
+                paymentRows.forEach(function(p){paid+=parseFloat(p.amount)||0;});
+                if(paid>0){
+                    $('#hm-oc-dep-bal-val').text('€'+Math.max(0,total-paid).toFixed(2));
                     $('#hm-oc-dep-balance').show();
                 } else {
                     $('#hm-oc-dep-balance').hide();
                 }
             }
-            $('#hm-oc-dep-amt').on('input',updateDepositBalance);
+
+            $('#hm-oc-add-payment').on('click',function(){
+                var today=new Date().toISOString().split('T')[0];
+                paymentRows.push({amount:'',method:'Card',date:today});
+                renderPaymentRows();
+            });
+
+            $(document).on('input change','.hm-pay-amt,.hm-pay-method,.hm-pay-date',function(){
+                var i=parseInt($(this).data('idx'));
+                if($(this).hasClass('hm-pay-amt'))paymentRows[i].amount=$(this).val();
+                if($(this).hasClass('hm-pay-method'))paymentRows[i].method=$(this).val();
+                if($(this).hasClass('hm-pay-date'))paymentRows[i].date=$(this).val();
+                updateDepBalance();
+            });
+
+            $(document).on('click','.hm-pay-del',function(){
+                paymentRows.splice(parseInt($(this).data('idx')),1);
+                renderPaymentRows();
+            });
 
             /* ══════════════════════════════════════
                SUBMIT ORDER → hm_create_order
                ══════════════════════════════════════ */
             $('#hm-oc-submit').on('click',function(){
                 if(!orderItems.length){$('#hm-oc-err').text('Please add at least one item.');return;}
-                var dep=parseFloat($('#hm-oc-dep-amt').val())||0;
                 var total=parseFloat($('#hm-oc-total').text().replace(/[^0-9.]/g,''))||0;
-                if(dep>total+0.01){$('#hm-oc-err').text('Deposit (€'+dep.toFixed(2)+') cannot exceed the order total (€'+total.toFixed(2)+').');return;}
-                if(dep>0&&!$('#hm-oc-dep-method').val()){$('#hm-oc-err').text('Please select a deposit payment method.');return;}
+                var dep=0;
+                var firstMethod='';
+                var firstDate='';
+                paymentRows.forEach(function(p){dep+=parseFloat(p.amount)||0;});
+                if(paymentRows.length>0){
+                    firstMethod=paymentRows[0].method||'';
+                    firstDate=paymentRows[0].date||'';
+                }
+                if(dep>total+0.01){$('#hm-oc-err').text('Payments total (€'+dep.toFixed(2)+') cannot exceed order total (€'+total.toFixed(2)+').');return;}
+                if(dep>0&&!firstMethod){$('#hm-oc-err').text('Please select a payment method.');return;}
 
                 var $btn=$(this);
                 $btn.prop('disabled',true).text('Submitting…');
@@ -865,8 +910,9 @@ class HearMed_Orders {
                     discount_pct:discountMode==='pct'?discVal:0,
                     discount_euro:discountMode==='eur'?discVal:0,
                     deposit_amount:dep,
-                    deposit_method:$('#hm-oc-dep-method').val()||'',
-                    deposit_paid_at:$('#hm-oc-dep-date').val()||'',
+                    deposit_method:firstMethod,
+                    deposit_paid_at:firstDate,
+                    payments_json:JSON.stringify(paymentRows),
                     payment_method:''
                 },function(r){
                     if(r&&r.success){
@@ -3304,69 +3350,28 @@ class HearMed_Orders {
 
     public static function ajax_get_order_products() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
-
         $db = HearMed_DB::instance();
-
-        // Test 1: can we connect at all?
-        $test = $db->get_var( "SELECT 1" );
-        if ( ! $test ) {
-            wp_send_json_error( 'DB connection failed' );
-        }
-
-        // Test 2: does hearmed_reference.products exist?
-        $tbl = $db->get_var(
-            "SELECT COUNT(*) FROM information_schema.tables 
-             WHERE table_schema = 'hearmed_reference' 
-             AND table_name = 'products'"
+        $products = $db->get_results(
+            "SELECT p.id, p.product_name, p.item_type,
+                    p.manufacturer_id, m.name AS manufacturer_name,
+                    p.style, p.tech_level,
+                    p.retail_price, p.cost_price,
+                    p.vat_category, p.is_active
+             FROM hearmed_reference.products p
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+             WHERE p.is_active = true
+             ORDER BY m.name, p.product_name"
         );
-
-        // Test 3: how many products rows exist?
-        $count = 0;
-        $cols  = [];
-        if ( $tbl > 0 ) {
-            $count = $db->get_var( 
-                "SELECT COUNT(*) FROM hearmed_reference.products" 
-            );
-            // Get actual column names
-            $cols = $db->get_results(
-                "SELECT column_name 
-                 FROM information_schema.columns 
-                 WHERE table_schema = 'hearmed_reference' 
-                 AND table_name = 'products'
-                 ORDER BY ordinal_position"
-            );
-        }
-
-        // Test 4: does hearmed_reference.services exist?
-        $svc_tbl = $db->get_var(
-            "SELECT COUNT(*) FROM information_schema.tables 
-             WHERE table_schema = 'hearmed_reference' 
-             AND table_name = 'services'"
+        $services = $db->get_results(
+            "SELECT id, service_name, default_price, service_code
+             FROM hearmed_reference.services
+             WHERE is_active = true
+             ORDER BY service_name"
         );
-        $svc_count = 0;
-        $svc_cols  = [];
-        if ( $svc_tbl > 0 ) {
-            $svc_count = $db->get_var(
-                "SELECT COUNT(*) FROM hearmed_reference.services"
-            );
-            $svc_cols = $db->get_results(
-                "SELECT column_name 
-                 FROM information_schema.columns 
-                 WHERE table_schema = 'hearmed_reference' 
-                 AND table_name = 'services'
-                 ORDER BY ordinal_position"
-            );
-        }
-
         wp_send_json_success([
-            'debug'         => true,
-            'db_ok'         => $test,
-            'products_table_exists' => (int) $tbl,
-            'products_count'        => (int) $count,
-            'products_columns'      => $cols,
-            'services_table_exists' => (int) $svc_tbl,
-            'services_count'        => (int) $svc_count,
-            'services_columns'      => $svc_cols,
+            'products' => $products ?: [],
+            'services' => $services ?: [],
+            'ranges'   => [],
         ]);
     }
 }
