@@ -759,6 +759,13 @@
   height: 2px;
   z-index: 5;
   pointer-events: none;
+  opacity: 0.6;
+  animation: hm-now-pulse 2s ease-in-out infinite;
+}
+
+@keyframes hm-now-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
 .hm-now-dot {
@@ -768,6 +775,13 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  animation: hm-now-pulse 2s ease-in-out infinite;
+}
+
+/* Current-hour label highlight */
+.hm-time-cell.hm-time-cell--now {
+  font-weight: 800;
+  transition: color 0.3s ease;
 }
 
 

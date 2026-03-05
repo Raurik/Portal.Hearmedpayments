@@ -757,7 +757,7 @@ var Cal={
             var tm=cfg.startH*60+s*cfg.slotMin;
             var hr=Math.floor(tm/60),mn=tm%60;
             var isHr=mn===0;
-            h+='<div class="hm-time-cell'+(isHr?' hr':'')+'">'+(isHr?pad(hr)+':00':'')+'</div>';
+            h+='<div class="hm-time-cell'+(isHr?' hr':'')+'"'+(isHr?' data-hr="'+pad(hr)+'"':'')+'>'+(isHr?pad(hr)+':00':'')+'</div>';
             dates.forEach(function(d,di){
                 clinics.forEach(function(c,ci){
                     var key=c.id+'-'+d.getDay();
@@ -879,7 +879,7 @@ var Cal={
             var tm=cfg.startH*60+s*cfg.slotMin;
             var hr=Math.floor(tm/60),mn=tm%60;
             var isHr=mn===0;
-            h+='<div class="hm-time-cell'+(isHr?' hr':'')+'">'+(isHr?pad(hr)+':00':'')+'</div>';
+            h+='<div class="hm-time-cell'+(isHr?' hr':'')+'"'+(isHr?' data-hr="'+pad(hr)+'"':'')+'>'+(isHr?pad(hr)+':00':'')+'</div>';
             dates.forEach(function(d,di){
                 disps.forEach(function(p,pi){
                     var cls='hm-slot'+(isHr?' hr':'')+(pi===disps.length-1?' dl':'');
@@ -1224,6 +1224,8 @@ var Cal={
     // ── NOW LINE ──
     renderNow:function(){
         $('.hm-now').remove();
+        // Reset hour-label highlights
+        $('.hm-time-cell.hm-time-cell--now').removeClass('hm-time-cell--now').css('color','');
         var now=new Date(),dates=this.visDates(),cfg=this.cfg;
         var isClinicView=this.calViewMode==='clinic';
         var columns=isClinicView?this.visClinics():this.visDisps();
@@ -1234,11 +1236,15 @@ var Cal={
         if(nm<cfg.startH*60||nm>=cfg.endH*60)return;
         var si=Math.floor((nm-cfg.startH*60)/cfg.slotMin);
         var off=((nm-cfg.startH*60)%cfg.slotMin)/cfg.slotMin*cfg.slotHpx;
+        var indicatorCol=cfg.indicatorColor||'#00d59b';
         var dataAttr=isClinicView?'data-clinic':'data-disp';
         columns.forEach(function(p){
             var $t=$('.hm-slot[data-day="'+di+'"][data-slot="'+si+'"]['+dataAttr+'="'+p.id+'"]');
-            if($t.length)$t.append('<div class="hm-now" style="top:'+off+'px;background:'+(cfg.indicatorColor||'#00d59b')+'"><div class="hm-now-dot" style="background:'+(cfg.indicatorColor||'#00d59b')+'"></div></div>');
+            if($t.length)$t.append('<div class="hm-now" style="top:'+off+'px;background:'+indicatorCol+'"><div class="hm-now-dot" style="background:'+indicatorCol+'"></div></div>');
         });
+        // Highlight the current hour label with the indicator colour
+        var currentHr=pad(now.getHours());
+        $('.hm-time-cell[data-hr="'+currentHr+'"]').addClass('hm-time-cell--now').css('color',indicatorCol);
     },
 
     // ── HOVER TOOLTIP ──
