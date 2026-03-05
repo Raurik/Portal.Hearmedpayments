@@ -2112,15 +2112,11 @@ class HearMed_Orders {
              style="font-family:var(--hm-font,'Source Sans 3',sans-serif);color:var(--hm-text,#334155);-webkit-font-smoothing:antialiased">
 
             <!-- ═══ Teal top bar ═══ -->
-            <div style="background:var(--hm-teal,#0BB4C4);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:50px;border-radius:10px 10px 0 0">
-                <a href="<?php echo esc_url($base.'?hm_action=view&order_id='.$order_id); ?>" style="background:none;border:1px solid rgba(255,255,255,.2);color:#fff;font-size:13px;font-weight:600;padding:6px 14px;border-radius:6px;font-family:var(--hm-font-btn);display:flex;align-items:center;gap:6px;text-decoration:none;transition:all .15s">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8H1M8 15L1 8l7-7"/></svg> Back
-                </a>
+            <div style="background:var(--hm-teal,#0BB4C4);color:#fff;display:flex;align-items:center;justify-content:center;padding:0 24px;height:50px;border-radius:10px 10px 0 0">
                 <div style="text-align:center">
                     <div style="font-family:var(--hm-font-title,'Cormorant Garamond',serif);font-size:20px;font-weight:700;letter-spacing:-.3px">Record Fitting + Payment</div>
                     <div style="font-size:11px;opacity:.7;margin-top:1px"><?php echo esc_html($patient_name); ?> — <?php echo esc_html($invoice_number_display); ?></div>
                 </div>
-                <div style="min-width:90px"></div>
             </div>
 
             <!-- ═══ Two-panel split ═══ -->
@@ -2255,8 +2251,8 @@ class HearMed_Orders {
                         </div>
                         <div>
                             <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px">Second Amount (€)</label>
-                            <input type="number" id="hm-fit-amount-2" step="0.01" min="0" placeholder="0.00"
-                                   style="font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font)">
+                            <input type="number" id="hm-fit-amount-2" step="0.01" min="0" placeholder="0.00" readonly
+                                style="font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font);background:#f8fafc;color:#64748b;cursor:not-allowed">
                         </div>
                     </div>
                     <div style="margin-bottom:14px">
@@ -2421,21 +2417,10 @@ class HearMed_Orders {
             var totalDue  = hmCurrentCollectTotal();
 
             var a1 = parseFloat(amount1El.value || 0);
-            var a2 = parseFloat(amount2El.value || 0);
             if (!isFinite(a1) || a1 < 0) a1 = 0;
-            if (!isFinite(a2) || a2 < 0) a2 = 0;
 
-            if (changed === 'first') {
-                a1 = Math.min(a1, totalDue);
-                a2 = Math.max(0, totalDue - a1);
-            } else if (changed === 'second') {
-                a2 = Math.min(a2, totalDue);
-                a1 = Math.max(0, totalDue - a2);
-            } else {
-                // Default on toggle/open: keep first amount, derive second.
-                a1 = Math.min(a1, totalDue);
-                a2 = Math.max(0, totalDue - a1);
-            }
+            // Amount Received is the master value. Second amount is always derived.
+            var a2 = Math.max(0, totalDue - a1);
 
             amount1El.value = a1.toFixed(2);
             amount2El.value = a2.toFixed(2);
@@ -2460,16 +2445,9 @@ class HearMed_Orders {
             hmValidatePaymentInputs();
         });
 
-        document.getElementById('hm-fit-amount-2').addEventListener('input', function() {
-            if (!document.getElementById('hm-fit-split').checked) return;
-            hmRebalanceSplitAmounts('second');
-            hmValidatePaymentInputs();
-        });
-
         document.getElementById('hm-fit-method').addEventListener('change', hmValidatePaymentInputs);
         document.getElementById('hm-fit-method-2').addEventListener('change', hmValidatePaymentInputs);
         document.getElementById('hm-fit-amount').addEventListener('input', hmValidatePaymentInputs);
-        document.getElementById('hm-fit-amount-2').addEventListener('input', hmValidatePaymentInputs);
 
         document.getElementById('hm-confirm-complete').addEventListener('click', function() {
 
