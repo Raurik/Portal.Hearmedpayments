@@ -1566,126 +1566,235 @@ class HearMed_Orders {
         $deposit_already_paid = floatval( $order->deposit_amount ?? 0 );
         $amount_due = max( 0, ( $order->invoice_total ?? $order->grand_total ) - $deposit_already_paid );
 
+        // S6-FIX: INVOICE TRIGGER — fetch line items for invoice preview panel
+        $items = $db->get_results(
+            "SELECT oi.*,
+                    CASE WHEN oi.item_type = 'product'
+                         THEN CONCAT(m.name,' ',p.product_name,' ',p.style)
+                         ELSE s.service_name END AS item_name,
+                    p.tech_level
+             FROM hearmed_core.order_items oi
+             LEFT JOIN hearmed_reference.products p      ON p.id = oi.item_id AND oi.item_type = 'product'
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+             LEFT JOIN hearmed_reference.services s      ON s.id = oi.item_id AND oi.item_type = 'service'
+             WHERE oi.order_id = \$1 ORDER BY oi.line_number", [$order_id]
+        );
+
+        $patient_name = trim( $order->first_name . ' ' . $order->last_name );
+
         ob_start(); ?>
-        <div class="hm-content hm-complete-form">
-            <div class="hm-page-header">
-                <a href="<?php echo esc_url($base.'?hm_action=view&order_id='.$order_id); ?>" class="hm-back">← Order</a>
-                <h1 class="hm-page-title">Record Fitting + Payment</h1>
+        <!-- S6-FIX: INVOICE TRIGGER — Two-panel completion form matching order creation layout -->
+        <div class="hm-content hm-complete-form"
+             style="font-family:var(--hm-font,'Source Sans 3',sans-serif);color:var(--hm-text,#334155);-webkit-font-smoothing:antialiased">
+
+            <!-- ═══ Teal top bar ═══ -->
+            <div style="background:var(--hm-teal,#0BB4C4);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:50px;border-radius:10px 10px 0 0">
+                <a href="<?php echo esc_url($base.'?hm_action=view&order_id='.$order_id); ?>" style="background:none;border:1px solid rgba(255,255,255,.2);color:#fff;font-size:13px;font-weight:600;padding:6px 14px;border-radius:6px;font-family:var(--hm-font-btn);display:flex;align-items:center;gap:6px;text-decoration:none;transition:all .15s">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8H1M8 15L1 8l7-7"/></svg> Back
+                </a>
+                <div style="text-align:center">
+                    <div style="font-family:var(--hm-font-title,'Cormorant Garamond',serif);font-size:20px;font-weight:700;letter-spacing:-.3px">Record Fitting + Payment</div>
+                    <div style="font-size:11px;opacity:.7;margin-top:1px"><?php echo esc_html($patient_name); ?> — <?php echo esc_html($order->order_number ?? ''); ?></div>
+                </div>
+                <div style="min-width:90px"></div>
             </div>
 
-            <?php if ($has_missing_serials) : ?>
-            <!-- ── SERIAL NUMBERS REQUIRED ──────────────────────────────── -->
-            <div class="hm-card hm-card--action" style="max-width:600px;border-left:4px solid #e53e3e;">
-                <h3 class="hm-card-title" style="color:#e53e3e;">⚠ Serial Numbers Required</h3>
-                <p class="hm-form__hint">
-                    The following hearing aids have <strong>not been received in branch</strong> or
-                    serial numbers have not been entered. Enter them now before finalising.
-                </p>
+            <!-- ═══ Two-panel split ═══ -->
+            <div style="display:flex;min-height:600px;border:1px solid var(--hm-border,#e2e8f0);border-top:none;border-radius:0 0 10px 10px;overflow:hidden">
 
-                <?php foreach ($missing_serials as $ms) :
-                    $need_left  = in_array($ms->ear_side, ['Left','Binaural']);
-                    $need_right = in_array($ms->ear_side, ['Right','Binaural']);
-                    if (!$need_left && !$need_right) { $need_left = true; $need_right = true; } // unknown → ask both
-                ?>
-                <div class="hm-card hm-card--inset" style="margin-bottom:1rem;">
-                    <strong><?php echo esc_html($ms->item_name); ?></strong>
-                    <span class="hm-muted">(<?php echo esc_html($ms->ear_side ?? 'Unknown'); ?>)</span>
-                    <input type="hidden" class="hm-serial-product" value="<?php echo $ms->product_id; ?>">
-                    <input type="hidden" class="hm-serial-oiid"    value="<?php echo $ms->order_item_id; ?>">
+                <!-- ═════ LEFT PANEL — Payment form ═════ -->
+                <div style="flex:0 0 40%;max-width:40%;overflow-y:auto;padding:24px 28px;background:#fff;border-right:1px solid var(--hm-border,#e2e8f0)">
 
-                    <?php if ($need_left) : ?>
-                    <div class="hm-form-group" style="margin-top:0.75rem;">
-                        <label class="hm-label">Left Ear Serial Number <span style="color:#e53e3e;">*</span></label>
-                        <input type="text" class="hm-input hm-input--mono hm-serial-left"
-                               placeholder="Serial number..." required>
+                    <div style="font-size:12px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                        Payment Details
                     </div>
-                    <?php endif; ?>
-                    <?php if ($need_right) : ?>
-                    <div class="hm-form-group" style="margin-top:0.5rem;">
-                        <label class="hm-label">Right Ear Serial Number <span style="color:#e53e3e;">*</span></label>
-                        <input type="text" class="hm-input hm-input--mono hm-serial-right"
-                               placeholder="Serial number..." required>
+
+                    <!-- Summary -->
+                    <div style="padding:14px 16px;background:var(--hm-bg-alt,#f8fafc);border:1.5px solid var(--hm-border,#e2e8f0);border-radius:10px;margin-bottom:18px">
+                        <div style="font-size:13px;color:var(--hm-text,#334155)"><strong>Patient:</strong> <?php echo esc_html($patient_name); ?></div>
+                        <div style="font-size:13px;color:var(--hm-text,#334155);margin-top:4px"><strong>Payment Method:</strong> <?php echo esc_html($order->payment_method ?? '—'); ?></div>
+                        <?php if ($order->prsi_applicable) : ?>
+                        <div style="font-size:12px;color:var(--hm-text-muted,#94a3b8);margin-top:4px">PRSI grant of €<?php echo number_format($order->prsi_amount,2); ?> already deducted.</div>
+                        <?php endif; ?>
+                        <div style="font-size:18px;font-weight:700;color:var(--hm-teal,#0BB4C4);margin-top:8px">
+                            Collect: €<?php echo number_format($amount_due,2); ?>
+                        </div>
                     </div>
-                    <?php endif; ?>
-                </div>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
 
-            <div class="hm-card" style="max-width:520px;">
-                <div class="hm-complete-summary">
-                    <p><strong>Patient:</strong> <?php echo esc_html($order->first_name.' '.$order->last_name); ?></p>
-                    <p><strong>Payment Method:</strong> <?php echo esc_html($order->payment_method ?? '—'); ?></p>
-                    <?php if ($order->prsi_applicable) : ?>
-                    <p class="hm-muted" style="font-size:0.875rem;">
-                        PRSI grant of €<?php echo number_format($order->prsi_amount,2); ?> already deducted.
-                    </p>
-                    <?php endif; ?>
-                    <p style="font-size:1.25rem;margin-top:0.5rem;">
-                        <strong>Collect: <span class="hm-text--teal">€<?php echo number_format($amount_due,2); ?></span></strong>
-                    </p>
-                </div>
+                    <!-- Patient credit application -->
+                    <div id="hm-credit-available-row" style="display:none;margin-bottom:14px">
+                        <div style="padding:12px 16px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px;margin-bottom:4px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div>
+                                    <span style="font-size:13px;font-weight:600;color:#0e7490;">Patient has available credit</span>
+                                    <span style="font-size:16px;font-weight:700;color:#0e7490;margin-left:8px;">
+                                        €<span id="hm-credit-balance-display">0.00</span>
+                                    </span>
+                                </div>
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                    <input type="checkbox" id="hm-apply-credit-cb" name="apply_credit" value="1"
+                                           style="width:18px;height:18px;accent-color:var(--hm-teal);">
+                                    <span style="font-size:13px;font-weight:600;color:var(--hm-navy);">Apply credit</span>
+                                </label>
+                            </div>
+                            <div id="hm-credit-apply-detail" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #a5f3fc;">
+                                <div style="display:flex;justify-content:space-between;font-size:13px;color:#0e7490;">
+                                    <span>Credit applied:</span>
+                                    <strong>€<span id="hm-credit-apply-amount">0.00</span></strong>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--hm-navy);margin-top:4px;">
+                                    <span>Remaining to collect:</span>
+                                    <strong>€<span id="hm-credit-remaining-collect">0.00</span></strong>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="hm-credit-apply-value" name="credit_apply_amount" value="0">
+                    </div>
 
-                <hr class="hm-divider">
-
-                <!-- Patient credit application -->
-                <div id="hm-credit-available-row" class="hm-form-group" style="display:none;">
-                    <div style="padding:12px 16px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px;margin-bottom:4px;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <?php if ($has_missing_serials) : ?>
+                    <!-- ── SERIAL NUMBERS REQUIRED ── -->
+                    <div style="border:1.5px solid #fca5a5;border-radius:10px;padding:14px 16px;margin-bottom:14px;background:#fef2f2">
+                        <div style="font-size:12px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                            Serial Numbers Required
+                        </div>
+                        <div style="font-size:12px;color:#7f1d1d;margin-bottom:10px">Enter serial numbers before finalising.</div>
+                        <?php foreach ($missing_serials as $ms) :
+                            $need_left  = in_array($ms->ear_side, ['Left','Binaural']);
+                            $need_right = in_array($ms->ear_side, ['Right','Binaural']);
+                            if (!$need_left && !$need_right) { $need_left = true; $need_right = true; }
+                        ?>
+                        <div style="background:#fff;border:1px solid #fecaca;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+                            <div style="font-size:12px;font-weight:700;color:var(--hm-navy,#151B33)"><?php echo esc_html($ms->item_name); ?></div>
+                            <div style="font-size:11px;color:var(--hm-text-muted,#94a3b8);margin-bottom:6px"><?php echo esc_html($ms->ear_side ?? 'Unknown'); ?></div>
+                            <input type="hidden" class="hm-serial-product" value="<?php echo $ms->product_id; ?>">
+                            <input type="hidden" class="hm-serial-oiid"    value="<?php echo $ms->order_item_id; ?>">
+                            <?php if ($need_left) : ?>
+                            <div style="margin-bottom:6px">
+                                <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Left Ear Serial <span style="color:#e53e3e">*</span></label>
+                                <input type="text" class="hm-serial-left" placeholder="Serial number..."
+                                       style="font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font);transition:border-color .15s" required>
+                            </div>
+                            <?php endif; ?>
+                            <?php if ($need_right) : ?>
                             <div>
-                                <span style="font-size:13px;font-weight:600;color:#0e7490;">Patient has available credit</span>
-                                <span style="font-size:16px;font-weight:700;color:#0e7490;margin-left:8px;">
-                                    €<span id="hm-credit-balance-display">0.00</span>
-                                </span>
+                                <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Right Ear Serial <span style="color:#e53e3e">*</span></label>
+                                <input type="text" class="hm-serial-right" placeholder="Serial number..."
+                                       style="font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font);transition:border-color .15s" required>
                             </div>
-                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                                <input type="checkbox" id="hm-apply-credit-cb" name="apply_credit" value="1"
-                                       style="width:18px;height:18px;accent-color:var(--hm-teal);">
-                                <span style="font-size:13px;font-weight:600;color:var(--hm-navy);">Apply credit</span>
-                            </label>
+                            <?php endif; ?>
                         </div>
-                        <div id="hm-credit-apply-detail" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #a5f3fc;">
-                            <div style="display:flex;justify-content:space-between;font-size:13px;color:#0e7490;">
-                                <span>Credit applied:</span>
-                                <strong>€<span id="hm-credit-apply-amount">0.00</span></strong>
-                            </div>
-                            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--hm-navy);margin-top:4px;">
-                                <span>Remaining to collect:</span>
-                                <strong>€<span id="hm-credit-remaining-collect">0.00</span></strong>
-                            </div>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
-                    <input type="hidden" id="hm-credit-apply-value" name="credit_apply_amount" value="0">
-                </div>
+                    <?php endif; ?>
 
-                <div class="hm-form-group">
-                    <label class="hm-label">Fitting Date</label>
-                    <input type="date" id="hm-fit-date" class="hm-input" value="<?php echo date('Y-m-d'); ?>">
-                </div>
-                <div class="hm-form-group" style="margin-top:1rem;">
-                    <label class="hm-label">Amount Received (€)</label>
-                    <input type="number" id="hm-fit-amount" class="hm-input" step="0.01"
-                           value="<?php echo number_format($amount_due,2,'.',''); ?>">
-                </div>
-                <div class="hm-form-group" style="margin-top:1rem;">
-                    <label class="hm-label">Fitting Notes (optional)</label>
-                    <textarea id="hm-fit-notes" class="hm-input hm-input--textarea" rows="2"
-                              placeholder="Clinical notes, adjustments made..."></textarea>
-                </div>
+                    <!-- Form fields -->
+                    <div style="margin-bottom:14px">
+                        <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px">Fitting Date</label>
+                        <input type="date" id="hm-fit-date" value="<?php echo date('Y-m-d'); ?>"
+                               style="font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font);transition:border-color .15s">
+                    </div>
+                    <div style="margin-bottom:14px">
+                        <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px">Amount Received (€)</label>
+                        <input type="number" id="hm-fit-amount" step="0.01" value="<?php echo number_format($amount_due,2,'.',''); ?>"
+                               style="font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font);transition:border-color .15s">
+                    </div>
+                    <div style="margin-bottom:14px">
+                        <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px">Fitting Notes (optional)</label>
+                        <textarea id="hm-fit-notes" rows="2" placeholder="Clinical notes, adjustments made..."
+                                  style="font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font);resize:vertical;transition:border-color .15s"></textarea>
+                    </div>
 
-                <div class="hm-notice hm-notice--info" style="margin-top:1.25rem;font-size:0.875rem;">
-                    ℹ️ This will: mark the invoice as Paid, create a payment record,
-                    log the fitting in the patient file, and sync to QuickBooks.
-                </div>
+                    <div style="padding:10px 14px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px;font-size:12px;color:#0e7490;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px">
+                        <span style="font-size:14px">ℹ️</span> This will: mark the invoice as Paid, create a payment record, log the fitting in the patient file, and sync to QuickBooks.
+                    </div>
 
-                <div class="hm-form__actions" style="margin-top:1.25rem;">
-                    <button class="hm-btn hm-btn--primary hm-btn--block" id="hm-confirm-complete"
+                    <button id="hm-confirm-complete"
                             data-order-id="<?php echo $order_id; ?>"
-                            data-nonce="<?php echo esc_attr($nonce); ?>">
+                            data-nonce="<?php echo esc_attr($nonce); ?>"
+                            style="width:100%;padding:14px;font-size:14px;font-weight:700;border-radius:8px;border:none;background:var(--hm-navy,#151B33);color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">
                         ✓ Confirm Fitted + Paid — Finalise
                     </button>
+                    <div id="hm-complete-msg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px"></div>
                 </div>
-                <div id="hm-complete-msg" class="hm-notice" style="display:none;margin-top:1rem;"></div>
+
+                <!-- ═════ RIGHT PANEL — Invoice preview ═════ -->
+                <div style="flex:0 0 60%;max-width:60%;display:flex;flex-direction:column;padding:28px 32px;background:#fff">
+
+                    <!-- Invoice header -->
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+                        <div>
+                            <div style="font-size:22px;font-weight:700;font-family:var(--hm-font-title,'Cormorant Garamond',serif);color:var(--hm-navy,#151B33);letter-spacing:1px">INVOICE</div>
+                            <div style="font-size:11px;color:var(--hm-text-muted,#94a3b8);margin-top:2px"><?php echo esc_html($order->order_number ?? ''); ?> &bull; <?php echo date('j M Y'); ?></div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="font-size:12px;font-weight:600;color:var(--hm-navy,#151B33)"><?php echo esc_html($patient_name); ?></div>
+                            <div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:#f5f3ff;color:#6d28d9;text-transform:uppercase;letter-spacing:.3px;display:inline-block;margin-top:4px">Awaiting Fitting</div>
+                        </div>
+                    </div>
+
+                    <!-- Line items table -->
+                    <div style="flex:1;overflow-y:auto;margin-bottom:16px">
+                        <table style="width:100%;border-collapse:collapse">
+                            <thead><tr style="border-bottom:2px solid var(--hm-navy,#151B33)">
+                                <th style="text-align:left;padding:6px 0;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px">Item</th>
+                                <th style="text-align:center;padding:6px 8px;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:50px">Ear</th>
+                                <th style="text-align:center;padding:6px 8px;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:40px">Qty</th>
+                                <th style="text-align:right;padding:6px 8px;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:80px">Price</th>
+                                <th style="text-align:right;padding:6px 8px;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:60px">VAT</th>
+                                <th style="text-align:right;padding:6px 0;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:80px">Total</th>
+                            </tr></thead>
+                            <tbody>
+                            <?php if (empty($items)) : ?>
+                            <tr><td colspan="6" style="text-align:center;padding:24px 0;color:var(--hm-text-muted,#94a3b8);font-size:13px;font-style:italic">No line items</td></tr>
+                            <?php else : foreach ($items as $item) : ?>
+                            <tr style="border-bottom:1px solid #f1f5f9">
+                                <td style="padding:10px 0;font-size:13px"><?php echo esc_html($item->item_name); ?></td>
+                                <td style="text-align:center;font-size:12px;color:var(--hm-text-light,#64748b)"><?php echo esc_html($item->ear_side ?: '—'); ?></td>
+                                <td style="text-align:center;font-size:13px"><?php echo esc_html($item->quantity); ?></td>
+                                <td style="text-align:right;font-size:13px">€<?php echo number_format($item->unit_retail_price,2); ?></td>
+                                <td style="text-align:right;font-size:12px;color:var(--hm-text-light,#64748b)">€<?php echo number_format($item->vat_amount ?? 0,2); ?></td>
+                                <td style="text-align:right;font-size:13px;font-weight:600">€<?php echo number_format($item->line_total,2); ?></td>
+                            </tr>
+                            <?php endforeach; endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Totals block -->
+                    <div style="border-top:1px solid var(--hm-border,#e2e8f0);padding-top:12px">
+                        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:var(--hm-text-light,#64748b)"><span>Subtotal</span><span>€<?php echo number_format($order->subtotal ?? 0,2); ?></span></div>
+                        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:var(--hm-text-light,#64748b)"><span>Discount</span><span style="color:#dc2626">−€<?php echo number_format($order->discount_total ?? 0,2); ?></span></div>
+                        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:var(--hm-text-light,#64748b)"><span>VAT</span><span>€<?php echo number_format($order->vat_total ?? 0,2); ?></span></div>
+                        <?php if ($order->prsi_applicable) : ?>
+                        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:#059669"><span>PRSI Grant</span><span>−€<?php echo number_format($order->prsi_amount,2); ?></span></div>
+                        <?php endif; ?>
+
+                        <!-- Grand total -->
+                        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding-top:10px;border-top:2px solid var(--hm-navy,#151B33)">
+                            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--hm-navy,#151B33)">Patient Pays</span>
+                            <span style="font-size:22px;font-weight:700;color:var(--hm-navy,#151B33)">€<?php echo number_format($order->grand_total,2); ?></span>
+                        </div>
+
+                        <?php if ($deposit_already_paid > 0) : ?>
+                        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;color:#059669;margin-top:4px"><span>Deposit Paid</span><span>−€<?php echo number_format($deposit_already_paid,2); ?></span></div>
+                        <div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:6px;border-top:1px dashed var(--hm-border-light,#e2e8f0)">
+                            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--hm-teal,#0BB4C4)">Balance Due</span>
+                            <span style="font-size:18px;font-weight:700;color:var(--hm-teal,#0BB4C4)">€<?php echo number_format($amount_due,2); ?></span>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if ($order->notes) : ?>
+                    <div style="margin-top:14px"><div style="font-size:12px;color:var(--hm-text-muted,#94a3b8)"><strong>Notes:</strong> <?php echo esc_html($order->notes); ?></div></div>
+                    <?php endif; ?>
+
+                    <!-- Payment method -->
+                    <div style="margin-top:14px;padding:12px 16px;background:var(--hm-bg-alt,#f8fafc);border:1px solid var(--hm-border,#e2e8f0);border-radius:8px;font-size:12px;color:var(--hm-text-light,#64748b)">
+                        <strong style="color:var(--hm-navy,#151B33)">Payment Method:</strong> <?php echo esc_html($order->payment_method ?? '—'); ?>
+                    </div>
+                </div>
             </div>
         </div>
 
