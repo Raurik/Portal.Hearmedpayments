@@ -3025,6 +3025,8 @@ class HearMed_Orders {
             'approval_note'  => $note,
         ], ['id' => $order_id]);
 
+        self::return_cancelled_order_to_stock( $order_id, 'Rejected before fitting: ' . $note, $user->id ?? null );
+
         self::log_status_change($order_id, 'Awaiting Approval', 'Cancelled', $user->id ?? null, 'Rejected: '.$note);
         self::notify_user($order->staff_id ?? null, 'order_rejected', $order_id, ['note' => $note]);
 
@@ -4306,9 +4308,60 @@ class HearMed_Orders {
             [ $order_id ]
         );
 
+        self::return_cancelled_order_to_stock( $order_id, 'Pre-fit cancellation: ' . $reason, $user->id ?? null );
+
         self::log_status_change( $order_id, $order->current_status, 'Cancelled', $user->id ?? null, 'Pre-fit cancel: ' . $reason );
 
         wp_send_json_success( 'Order cancelled.' );
+    }
+
+    /**
+     * On cancellation, return serialled hearing aids (and charger) into inventory stock.
+     */
+    private static function return_cancelled_order_to_stock( int $order_id, string $reason, ?int $staff_id = null ) : void {
+        if ( ! function_exists( 'hm_ensure_stock_tables_for_return' ) || ! function_exists( 'hm_return_device_to_stock' ) ) {
+            return;
+        }
+
+        $db = HearMed_DB::instance();
+        hm_ensure_stock_tables_for_return();
+
+        $devices = $db->get_results(
+            "SELECT * FROM hearmed_core.patient_devices
+             WHERE order_id = \$1
+               AND COALESCE(device_status,'Active') <> 'Returned'",
+            [ $order_id ]
+        ) ?: [];
+
+        $returned_any = false;
+        foreach ( $devices as $dev ) {
+            $count = hm_return_device_to_stock( $dev, 'both', 'Cancelled', $staff_id, null, $order_id );
+            if ( $count > 0 ) {
+                $returned_any = true;
+                $db->update( 'hearmed_core.patient_devices', [
+                    'device_status'   => 'Returned',
+                    'inactive_reason' => 'Order Cancelled',
+                    'inactive_date'   => date( 'Y-m-d' ),
+                    'serial_number_left'  => null,
+                    'serial_number_right' => null,
+                ], [ 'id' => (int) $dev->id ] );
+            }
+        }
+
+        if ( function_exists( 'hm_return_order_charger_to_stock' ) ) {
+            hm_return_order_charger_to_stock( $order_id, 0, (int) ( $staff_id ?: 0 ) );
+        }
+
+        if ( ! $returned_any && class_exists( 'HearMed_Stock' ) ) {
+            $staff_name = 'System';
+            if ( $staff_id ) {
+                $s = $db->get_row( "SELECT first_name, last_name FROM hearmed_reference.staff WHERE id = \$1", [ $staff_id ] );
+                if ( $s ) {
+                    $staff_name = trim( ($s->first_name ?? '') . ' ' . ($s->last_name ?? '') ) ?: 'System';
+                }
+            }
+            HearMed_Stock::return_stock_from_order( $order_id, $reason, $staff_name );
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════

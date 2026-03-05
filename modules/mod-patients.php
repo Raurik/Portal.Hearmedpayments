@@ -3755,13 +3755,22 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null, $
         error_log( '[HearMed] Stock return: NO product found for device #' . ($device->id ?? '?') . ', inv=' . ($inv_id ?: 'null') . ', ord=' . ($ord_id ?: 'null') . ', product_id=' . ($target_product_id ?: 'null') );
     }
 
-    // Determine clinic from order
-    $dev_order_id = $ord_id ?: ( property_exists( $device, 'order_id' ) ? $device->order_id : null );
-    if ( ! empty( $dev_order_id ) ) {
+    // Determine clinic from patient's primary clinic first, then order clinic fallback.
+    $patient_id = ! empty( $device->patient_id ) ? (int) $device->patient_id : 0;
+    if ( $patient_id ) {
         $clinic_id = $db->get_var(
-            "SELECT clinic_id FROM hearmed_core.orders WHERE id = \$1",
-            [ $dev_order_id ]
+            "SELECT assigned_clinic_id FROM hearmed_core.patients WHERE id = \$1",
+            [ $patient_id ]
         );
+    }
+    if ( ! $clinic_id ) {
+        $dev_order_id = $ord_id ?: ( property_exists( $device, 'order_id' ) ? $device->order_id : null );
+        if ( ! empty( $dev_order_id ) ) {
+            $clinic_id = $db->get_var(
+                "SELECT clinic_id FROM hearmed_core.orders WHERE id = \$1",
+                [ $dev_order_id ]
+            );
+        }
     }
 
     $model_name = $product->model ?? $product->product_name ?? 'Unknown';
@@ -3869,11 +3878,21 @@ function hm_return_order_charger_to_stock( $order_id, $credit_note_id = 0, $staf
         $staff_name = $sn_row ? trim( $sn_row->first_name . ' ' . $sn_row->last_name ) : '';
     }
 
+    $order_patient = $db->get_row( "SELECT patient_id, clinic_id FROM hearmed_core.orders WHERE id = \$1", [ $order_id ] );
+    $primary_clinic_id = null;
+    if ( $order_patient && ! empty( $order_patient->patient_id ) ) {
+        $primary_clinic_id = $db->get_var(
+            "SELECT assigned_clinic_id FROM hearmed_core.patients WHERE id = \$1",
+            [ (int) $order_patient->patient_id ]
+        );
+    }
+    $resolved_clinic = $primary_clinic_id ?: ( ! empty( $charger->clinic_id ) ? (int) $charger->clinic_id : ( $order_patient->clinic_id ?? null ) );
+
     $stock_id = $db->insert( 'hearmed_reference.inventory_stock', [
         'item_category'   => 'charger_accessory',
         'manufacturer_id' => ! empty( $charger->manufacturer_id ) ? (int) $charger->manufacturer_id : null,
         'model_name'      => (string) ( $charger->charger_name ?? 'Charger' ),
-        'clinic_id'       => ! empty( $charger->clinic_id ) ? (int) $charger->clinic_id : null,
+        'clinic_id'       => $resolved_clinic,
         'quantity'        => $qty,
         'status'          => 'Available',
         'return_reason'   => $reason,
@@ -3887,7 +3906,7 @@ function hm_return_order_charger_to_stock( $order_id, $credit_note_id = 0, $staf
     $db->insert( 'hearmed_reference.stock_movements', [
         'stock_id'      => $stock_id,
         'movement_type' => 'return',
-        'to_clinic_id'  => ! empty( $charger->clinic_id ) ? (int) $charger->clinic_id : null,
+        'to_clinic_id'  => $resolved_clinic,
         'quantity'      => $qty,
         'notes'         => 'Bundled charger returned from order #' . $order_id,
         'created_by'    => $staff_name ?: null,

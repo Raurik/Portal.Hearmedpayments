@@ -37,6 +37,9 @@ class HearMed_Stock {
         add_action( 'wp_ajax_hm_stock_adjust_qty',    [ __CLASS__, 'ajax_adjust_quantity' ] );
         add_action( 'wp_ajax_hm_stock_reserve',       [ __CLASS__, 'ajax_reserve' ] );
         add_action( 'wp_ajax_hm_stock_get_products', [ __CLASS__, 'ajax_get_products' ] );
+        add_action( 'wp_ajax_hm_stock_request_from_clinic', [ __CLASS__, 'ajax_request_from_clinic' ] );
+        add_action( 'wp_ajax_hm_stock_use_from_stock',      [ __CLASS__, 'ajax_use_from_stock' ] );
+        add_action( 'wp_ajax_hm_stock_return_to_manufacturer', [ __CLASS__, 'ajax_return_to_manufacturer' ] );
         // Legacy compat
         add_action( 'wp_ajax_hm_get_stock',           [ __CLASS__, 'ajax_load_hearing_aids' ] );
         add_action( 'wp_ajax_hm_transfer_stock',      [ __CLASS__, 'ajax_transfer' ] );
@@ -170,6 +173,7 @@ class HearMed_Stock {
                         <option value="Reserved">Reserved</option>
                         <option value="Fitted">Fitted</option>
                         <option value="Returned">Returned</option>
+                        <option value="Requested">Requested</option>
                     </select>
                     <input type="text" id="hm-stock-search" class="hm-inp" placeholder="Search serial / model…">
                 </div>
@@ -257,6 +261,60 @@ class HearMed_Stock {
                 <div class="hm-modal-ft">
                     <button class="hm-btn hm-btn--secondary hm-modal-close">Cancel</button>
                     <button class="hm-btn hm-btn--primary" id="adjust-save">Update Qty</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="hm-modal-bg" id="hm-request-modal" style="display:none">
+            <div class="hm-modal hm-modal--sm">
+                <div class="hm-modal-hd"><h3>Request from Clinic</h3><button class="hm-close hm-modal-close">&times;</button></div>
+                <div class="hm-modal-body">
+                    <input type="hidden" id="request-stock-id">
+                    <div class="hm-form-group"><label class="hm-label">Request to clinic *</label>
+                        <select class="hm-input" id="request-to-clinic"><option value="">-- Select clinic --</option></select></div>
+                    <div class="hm-form-group"><label class="hm-label">Notes</label>
+                        <textarea class="hm-input" id="request-notes" rows="2"></textarea></div>
+                </div>
+                <div class="hm-modal-ft">
+                    <button class="hm-btn hm-btn--secondary hm-modal-close">Cancel</button>
+                    <button class="hm-btn hm-btn--primary" id="request-save">Send Request</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="hm-modal-bg" id="hm-use-stock-modal" style="display:none">
+            <div class="hm-modal hm-modal--sm">
+                <div class="hm-modal-hd"><h3>Use from Stock</h3><button class="hm-close hm-modal-close">&times;</button></div>
+                <div class="hm-modal-body">
+                    <input type="hidden" id="use-stock-id">
+                    <input type="hidden" id="use-patient-id">
+                    <div class="hm-form-group"><label class="hm-label">Find patient *</label>
+                        <input type="text" class="hm-input" id="use-patient-search" placeholder="Type patient name or number"></div>
+                    <div id="use-patient-results" style="max-height:160px;overflow:auto;border:1px solid #e2e8f0;border-radius:8px;display:none"></div>
+                    <div class="hm-form-group"><label class="hm-label">Selected patient</label>
+                        <input type="text" class="hm-input" id="use-selected-patient" readonly></div>
+                    <div class="hm-form-group"><label class="hm-label">Notes</label>
+                        <textarea class="hm-input" id="use-notes" rows="2"></textarea></div>
+                </div>
+                <div class="hm-modal-ft">
+                    <button class="hm-btn hm-btn--secondary hm-modal-close">Cancel</button>
+                    <button class="hm-btn hm-btn--primary" id="use-stock-save">Use from Stock</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="hm-modal-bg" id="hm-mfr-return-modal" style="display:none">
+            <div class="hm-modal hm-modal--sm">
+                <div class="hm-modal-hd"><h3>Return to Manufacturer</h3><button class="hm-close hm-modal-close">&times;</button></div>
+                <div class="hm-modal-body">
+                    <input type="hidden" id="mfr-stock-id">
+                    <div id="mfr-docket-summary" style="font-size:13px;color:#334155;line-height:1.6;margin-bottom:10px"></div>
+                    <div class="hm-form-group"><label class="hm-label">Return notes</label>
+                        <textarea class="hm-input" id="mfr-return-notes" rows="2"></textarea></div>
+                </div>
+                <div class="hm-modal-ft">
+                    <button class="hm-btn hm-btn--secondary hm-modal-close">Cancel</button>
+                    <button class="hm-btn hm-btn--primary" id="mfr-return-save">Print Docket & Return</button>
                 </div>
             </div>
         </div>
@@ -350,7 +408,7 @@ class HearMed_Stock {
                     mOpts+='<option value="'+cid+'">'+esc(c.name||c.clinic_name)+'</option>';
                 });
                 $('#hm-stock-clinic').html(opts);
-                $('#transfer-clinic,#add-clinic').html(mOpts);
+                $('#transfer-clinic,#add-clinic,#request-to-clinic').html(mOpts);
             });
         }
         function loadManufacturers(){
@@ -442,7 +500,10 @@ class HearMed_Stock {
                     '<td>'+esc(x.clinic_name)+'</td>'+
                     '<td><span class="hm-badge hm-badge--sm '+sc+'">'+esc(x.status)+'</span></td>'+
                     '<td style="display:flex;gap:4px">'+
+                        (canAct?'<button class="hm-btn hm-btn--secondary hm-btn--sm hm-stock-request" data-id="'+x._ID+'">Request from Clinic</button>':'')+
+                        (canAct?'<button class="hm-btn hm-btn--secondary hm-btn--sm hm-stock-use" data-id="'+x._ID+'">Use from Stock</button>':'')+
                         (canAct?'<button class="hm-btn hm-btn--secondary hm-btn--sm hm-stock-transfer" data-id="'+x._ID+'">Transfer</button>':'')+
+                        (canAct?'<button class="hm-btn hm-btn--secondary hm-btn--sm hm-stock-mfr-return" data-id="'+x._ID+'" data-mfr="'+esc(x.manufacturer_name)+'" data-model="'+esc(x.model_name)+'" data-serial="'+esc(x.serial_number||'')+'">Return to Manufacturer</button>':'')+
                     '</td></tr>';
             });
             h+='</tbody></table>';
@@ -576,6 +637,99 @@ class HearMed_Stock {
                 btn.prop('disabled',false).text('Transfer');
                 $('#hm-transfer-modal').fadeOut(150);
                 if(r.success) loadTab(currentTab); else alert(r.data?.message||r.data||'Transfer failed');
+            });
+        });
+
+        // ── Request from clinic (hearing aids) ───────────────────
+        $(document).on('click','.hm-stock-request',function(){
+            $('#request-stock-id').val($(this).data('id'));
+            $('#request-to-clinic').val('');
+            $('#request-notes').val('');
+            $('#hm-request-modal').fadeIn(150);
+        });
+        $('#request-save').on('click',function(){
+            var btn=$(this), id=$('#request-stock-id').val(), toClinic=$('#request-to-clinic').val();
+            if(!toClinic){ alert('Select a clinic'); return; }
+            btn.prop('disabled',true).text('Sending…');
+            $.post(_hm.ajax,{action:'hm_stock_request_from_clinic',nonce:_hm.nonce,stock_id:id,to_clinic_id:toClinic,notes:$('#request-notes').val()},function(r){
+                btn.prop('disabled',false).text('Send Request');
+                $('#hm-request-modal').fadeOut(150);
+                if(r&&r.success) loadTab(currentTab); else alert(r.data?.message||r.data||'Request failed');
+            });
+        });
+
+        // ── Use from stock (hearing aids) ────────────────────────
+        var useSearchTimer = null;
+        $(document).on('click','.hm-stock-use',function(){
+            $('#use-stock-id').val($(this).data('id'));
+            $('#use-patient-id').val('');
+            $('#use-patient-search').val('');
+            $('#use-selected-patient').val('');
+            $('#use-notes').val('');
+            $('#use-patient-results').hide().html('');
+            $('#hm-use-stock-modal').fadeIn(150);
+        });
+        $('#use-patient-search').on('input',function(){
+            var q=$.trim($(this).val()||'');
+            clearTimeout(useSearchTimer);
+            if(q.length<2){ $('#use-patient-results').hide().html(''); return; }
+            useSearchTimer=setTimeout(function(){
+                $.post(_hm.ajax,{action:'hm_search_patients',nonce:_hm.nonce,q:q},function(r){
+                    if(!r||!r.success||!r.data||!r.data.length){ $('#use-patient-results').show().html('<div style="padding:8px 10px;color:#94a3b8;font-size:12px">No patients found</div>'); return; }
+                    var h='';
+                    r.data.forEach(function(p){
+                        h+='<div class="hm-use-pick" data-id="'+p.id+'" data-label="'+esc(p.label||p.name||'')+'" style="padding:8px 10px;border-bottom:1px solid #f1f5f9;cursor:pointer">'+esc(p.label||p.name||'')+'</div>';
+                    });
+                    $('#use-patient-results').show().html(h);
+                });
+            },220);
+        });
+        $(document).on('click','.hm-use-pick',function(){
+            $('#use-patient-id').val($(this).data('id'));
+            $('#use-selected-patient').val($(this).data('label'));
+            $('#use-patient-results').hide().html('');
+        });
+        $('#use-stock-save').on('click',function(){
+            var btn=$(this), sid=$('#use-stock-id').val(), pid=$('#use-patient-id').val();
+            if(!pid){ alert('Select a patient'); return; }
+            btn.prop('disabled',true).text('Saving…');
+            $.post(_hm.ajax,{action:'hm_stock_use_from_stock',nonce:_hm.nonce,stock_id:sid,patient_id:pid,notes:$('#use-notes').val()},function(r){
+                btn.prop('disabled',false).text('Use from Stock');
+                $('#hm-use-stock-modal').fadeOut(150);
+                if(r&&r.success) loadTab(currentTab); else alert(r.data?.message||r.data||'Use from stock failed');
+            });
+        });
+
+        // ── Return to manufacturer (hearing aids) ────────────────
+        function printManufacturerDocket(mfr,model,serial,notes){
+            var w = window.open('', '_blank');
+            if(!w) return;
+            var now = new Date();
+            var dt = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+            var html = '<html><head><title>Manufacturer Return Docket</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#0f172a}h1{font-size:20px;margin:0 0 12px}table{border-collapse:collapse;width:100%;margin-top:12px}td,th{border:1px solid #cbd5e1;padding:8px;text-align:left}small{color:#64748b}</style></head><body>'+
+                '<h1>Manufacturer Return Docket</h1><small>Generated: '+esc(dt)+'</small>'+
+                '<table><tr><th>Manufacturer</th><td>'+esc(mfr||'')+'</td></tr><tr><th>Model</th><td>'+esc(model||'')+'</td></tr><tr><th>Serial</th><td>'+esc(serial||'N/A')+'</td></tr><tr><th>Notes</th><td>'+esc(notes||'')+'</td></tr></table>'+
+                '</body></html>';
+            w.document.open(); w.document.write(html); w.document.close();
+            w.focus();
+            setTimeout(function(){ w.print(); }, 150);
+        }
+        $(document).on('click','.hm-stock-mfr-return',function(){
+            var $b=$(this);
+            $('#mfr-stock-id').val($b.data('id'));
+            $('#hm-mfr-return-modal').data('mfr',$b.data('mfr')||'').data('model',$b.data('model')||'').data('serial',$b.data('serial')||'');
+            $('#mfr-return-notes').val('');
+            $('#mfr-docket-summary').html('<strong>Manufacturer:</strong> '+esc($b.data('mfr')||'')+'<br><strong>Model:</strong> '+esc($b.data('model')||'')+'<br><strong>Serial:</strong> '+esc($b.data('serial')||'N/A'));
+            $('#hm-mfr-return-modal').fadeIn(150);
+        });
+        $('#mfr-return-save').on('click',function(){
+            var btn=$(this), sid=$('#mfr-stock-id').val(), notes=$('#mfr-return-notes').val();
+            printManufacturerDocket($('#hm-mfr-return-modal').data('mfr'), $('#hm-mfr-return-modal').data('model'), $('#hm-mfr-return-modal').data('serial'), notes);
+            btn.prop('disabled',true).text('Saving…');
+            $.post(_hm.ajax,{action:'hm_stock_return_to_manufacturer',nonce:_hm.nonce,stock_id:sid,notes:notes},function(r){
+                btn.prop('disabled',false).text('Print Docket & Return');
+                $('#hm-mfr-return-modal').fadeOut(150);
+                if(r&&r.success) loadTab(currentTab); else alert(r.data?.message||r.data||'Return to manufacturer failed');
             });
         });
 
@@ -813,7 +967,7 @@ class HearMed_Stock {
         self::ensure_tables();
         $db = HearMed_DB::instance();
 
-        $where = [ "s.item_category = 'hearing_aid'" ];
+        $where = [ "s.item_category = 'hearing_aid'", "COALESCE(s.status,'Available') <> 'Inactive'" ];
         $params = [];
         $i = 1;
 
@@ -836,8 +990,9 @@ class HearMed_Stock {
         $w = implode( ' AND ', $where );
 
         $rows = $db->get_results(
-            "SELECT s.id AS \"_ID\", s.serial_number, s.model_name, s.style,
+                "SELECT s.id AS \"_ID\", s.serial_number, s.model_name, s.style,
                     s.technology_level, s.status, s.quantity,
+                    s.clinic_id, s.manufacturer_id,
                     COALESCE(m.name, '') AS manufacturer_name,
                     COALESCE(c.clinic_name, 'Unassigned') AS clinic_name
              FROM hearmed_reference.inventory_stock s
@@ -849,13 +1004,14 @@ class HearMed_Stock {
         );
 
         // Stats
-        $stats_sql = "SELECT
+                $stats_sql = "SELECT
                         COUNT(*) AS total,
                         COUNT(*) FILTER (WHERE s.status = 'Available') AS available,
                         COUNT(*) FILTER (WHERE s.status = 'Reserved')  AS reserved,
                         COUNT(*) FILTER (WHERE s.status = 'Fitted')    AS fitted
                       FROM hearmed_reference.inventory_stock s
-                      WHERE s.item_category = 'hearing_aid'";
+                                            WHERE s.item_category = 'hearing_aid'
+                                                AND COALESCE(s.status,'Available') <> 'Inactive'";
         $stats = $db->get_row( $stats_sql );
 
         wp_send_json_success([
@@ -1059,6 +1215,117 @@ class HearMed_Stock {
             HearMed_DB::rollback();
             wp_send_json_error( 'Transfer failed: ' . $e->getMessage() );
         }
+    }
+
+    public static function ajax_request_from_clinic() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+        self::ensure_tables();
+
+        $stock_id   = intval( $_POST['stock_id'] ?? 0 );
+        $to_clinic  = intval( $_POST['to_clinic_id'] ?? 0 );
+        $notes      = sanitize_text_field( $_POST['notes'] ?? '' );
+        if ( ! $stock_id || ! $to_clinic ) wp_send_json_error( 'Missing fields' );
+
+        $db = HearMed_DB::instance();
+        $user = HearMed_Auth::current_user();
+        $stock = $db->get_row( "SELECT * FROM hearmed_reference.inventory_stock WHERE id = $1", [ $stock_id ] );
+        if ( ! $stock ) wp_send_json_error( 'Stock not found' );
+        if ( ( $stock->item_category ?? '' ) !== 'hearing_aid' ) wp_send_json_error( 'Request from clinic is only available for hearing aids.' );
+
+        $db->query(
+            "UPDATE hearmed_reference.inventory_stock SET status = 'Requested', updated_at = NOW() WHERE id = $1",
+            [ $stock_id ]
+        );
+
+        $db->insert( 'hearmed_reference.stock_movements', [
+            'stock_id'       => $stock_id,
+            'movement_type'  => 'request',
+            'from_clinic_id' => intval( $stock->clinic_id ?? 0 ) ?: null,
+            'to_clinic_id'   => $to_clinic,
+            'quantity'       => intval( $stock->quantity ?? 1 ),
+            'notes'          => $notes ?: 'Requested from clinic',
+            'created_by'     => trim( ( $user->first_name ?? '' ) . ' ' . ( $user->last_name ?? '' ) ),
+            'created_at'     => date( 'Y-m-d H:i:s' ),
+        ] );
+
+        wp_send_json_success( [ 'message' => 'Request logged' ] );
+    }
+
+    public static function ajax_use_from_stock() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+        self::ensure_tables();
+
+        $stock_id    = intval( $_POST['stock_id'] ?? 0 );
+        $patient_id  = intval( $_POST['patient_id'] ?? 0 );
+        $notes       = sanitize_text_field( $_POST['notes'] ?? '' );
+        if ( ! $stock_id || ! $patient_id ) wp_send_json_error( 'Missing fields' );
+
+        $db = HearMed_DB::instance();
+        $user = HearMed_Auth::current_user();
+
+        $stock = $db->get_row( "SELECT * FROM hearmed_reference.inventory_stock WHERE id = $1", [ $stock_id ] );
+        if ( ! $stock ) wp_send_json_error( 'Stock not found' );
+        if ( ( $stock->item_category ?? '' ) !== 'hearing_aid' ) wp_send_json_error( 'Use from stock is only available for hearing aids.' );
+
+        $patient = $db->get_row(
+            "SELECT id, assigned_clinic_id FROM hearmed_core.patients WHERE id = $1",
+            [ $patient_id ]
+        );
+        if ( ! $patient ) wp_send_json_error( 'Patient not found' );
+
+        $db->query(
+            "UPDATE hearmed_reference.inventory_stock
+             SET status = 'Fitted', fitted_to_patient_id = $1, reserved_for_patient_id = NULL,
+                 clinic_id = COALESCE($2, clinic_id), updated_at = NOW()
+             WHERE id = $3",
+            [ $patient_id, intval( $patient->assigned_clinic_id ?? 0 ) ?: null, $stock_id ]
+        );
+
+        $db->insert( 'hearmed_reference.stock_movements', [
+            'stock_id'       => $stock_id,
+            'movement_type'  => 'fitted',
+            'to_clinic_id'   => intval( $patient->assigned_clinic_id ?? 0 ) ?: null,
+            'quantity'       => 1,
+            'notes'          => $notes ?: ( 'Used from stock for patient #' . $patient_id ),
+            'created_by'     => trim( ( $user->first_name ?? '' ) . ' ' . ( $user->last_name ?? '' ) ),
+            'created_at'     => date( 'Y-m-d H:i:s' ),
+        ] );
+
+        wp_send_json_success( [ 'message' => 'Stock item marked as fitted' ] );
+    }
+
+    public static function ajax_return_to_manufacturer() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+        self::ensure_tables();
+
+        $stock_id = intval( $_POST['stock_id'] ?? 0 );
+        $notes    = sanitize_text_field( $_POST['notes'] ?? '' );
+        if ( ! $stock_id ) wp_send_json_error( 'Missing stock ID' );
+
+        $db = HearMed_DB::instance();
+        $user = HearMed_Auth::current_user();
+        $stock = $db->get_row( "SELECT * FROM hearmed_reference.inventory_stock WHERE id = $1", [ $stock_id ] );
+        if ( ! $stock ) wp_send_json_error( 'Stock not found' );
+        if ( ( $stock->item_category ?? '' ) !== 'hearing_aid' ) wp_send_json_error( 'Return to manufacturer is only available for hearing aids.' );
+
+        $db->query(
+            "UPDATE hearmed_reference.inventory_stock
+             SET status = 'Inactive', updated_at = NOW(), return_reason = $1
+             WHERE id = $2",
+            [ $notes ?: 'Returned to manufacturer', $stock_id ]
+        );
+
+        $db->insert( 'hearmed_reference.stock_movements', [
+            'stock_id'       => $stock_id,
+            'movement_type'  => 'manufacturer_return',
+            'from_clinic_id' => intval( $stock->clinic_id ?? 0 ) ?: null,
+            'quantity'       => 1,
+            'notes'          => $notes ?: 'Returned to manufacturer',
+            'created_by'     => trim( ( $user->first_name ?? '' ) . ' ' . ( $user->last_name ?? '' ) ),
+            'created_at'     => date( 'Y-m-d H:i:s' ),
+        ] );
+
+        wp_send_json_success( [ 'message' => 'Returned to manufacturer and marked inactive' ] );
     }
 
     // ═══════════════════════════════════════════════════════════════════════
