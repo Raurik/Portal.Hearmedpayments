@@ -1668,7 +1668,7 @@ function initProfile(){
                     '<col class="hm-col-note"><col class="hm-col-date"><col class="hm-col-money"><col class="hm-col-money"><col class="hm-col-money"><col class="hm-col-status">'+
                 '</colgroup>'+
                 '<thead><tr>'+
-                    '<th>Credit Note</th><th>Date</th><th class="hm-ta-right">Original</th><th class="hm-ta-right">Used</th><th class="hm-ta-right">Remaining</th><th>Status</th>'+
+                    '<th class="hm-col-note">Credit Note</th><th class="hm-col-date">Date</th><th class="hm-col-money hm-ta-right">Original</th><th class="hm-col-money hm-ta-right">Used</th><th class="hm-col-money hm-ta-right">Remaining</th><th class="hm-col-status">Status</th>'+
                 '</tr></thead><tbody id="hm-credits-tbody">'+
                     '<tr><td colspan="6" class="hm-muted" style="text-align:center;padding:20px;">Loading\u2026</td></tr>'+
                 '</tbody></table>'+
@@ -1678,7 +1678,7 @@ function initProfile(){
                     '<col class="hm-col-date"><col class="hm-col-type"><col class="hm-col-money"><col class="hm-col-ref"><col class="hm-col-staff"><col class="hm-col-notes">'+
                 '</colgroup>'+
                 '<thead><tr>'+
-                    '<th>Date</th><th>Type</th><th class="hm-ta-right">Amount</th><th>Reference</th><th>Staff</th><th>Notes</th>'+
+                    '<th class="hm-col-date">Date</th><th class="hm-col-type">Type</th><th class="hm-col-money hm-ta-right">Amount</th><th class="hm-col-ref">Reference</th><th class="hm-col-staff">Staff</th><th class="hm-col-notes">Notes</th>'+
                 '</tr></thead><tbody id="hm-transactions-tbody">'+
                     '<tr><td colspan="6" class="hm-muted" style="text-align:center;padding:20px;">Loading\u2026</td></tr>'+
                 '</tbody></table>'+
@@ -1704,12 +1704,12 @@ function initProfile(){
                     var remaining=parseFloat(c.remaining_amount||0);
                     var statusClass=c.status==='active'?'hm-badge--green':c.status==='exhausted'?'hm-badge--amber':'';
                     html+='<tr>'+
-                        '<td>'+esc(c.credit_note_number||'\u2014')+'</td>'+
-                        '<td>'+fmtDate((c.created_at||'').substring(0,10))+'</td>'+
-                        '<td class="hm-ta-right">\u20ac'+parseFloat(c.amount).toFixed(2)+'</td>'+
-                        '<td class="hm-ta-right">\u20ac'+parseFloat(c.used_amount).toFixed(2)+'</td>'+
-                        '<td class="hm-ta-right" style="font-weight:600;">\u20ac'+remaining.toFixed(2)+'</td>'+
-                        '<td><span class="hm-badge '+statusClass+'">'+esc(c.status)+'</span></td>'+
+                        '<td class="hm-col-note">'+esc(c.credit_note_number||'\u2014')+'</td>'+
+                        '<td class="hm-col-date">'+fmtDate((c.created_at||'').substring(0,10))+'</td>'+
+                        '<td class="hm-col-money hm-ta-right">\u20ac'+parseFloat(c.amount).toFixed(2)+'</td>'+
+                        '<td class="hm-col-money hm-ta-right">\u20ac'+parseFloat(c.used_amount).toFixed(2)+'</td>'+
+                        '<td class="hm-col-money hm-ta-right" style="font-weight:600;">\u20ac'+remaining.toFixed(2)+'</td>'+
+                        '<td class="hm-col-status"><span class="hm-badge '+statusClass+'">'+esc(c.status)+'</span></td>'+
                     '</tr>';
                 });
             } else {
@@ -1726,12 +1726,12 @@ function initProfile(){
                         refLabel=t.reference_type.charAt(0).toUpperCase()+t.reference_type.slice(1).replace('_',' ')+' #'+t.reference_id;
                     }
                     html+='<tr>'+
-                        '<td>'+fmtDate((t.transaction_date||'').substring(0,10))+'</td>'+
-                        '<td>'+esc(typeLabel)+'</td>'+
-                        '<td class="hm-ta-right" style="font-weight:600;">\u20ac'+parseFloat(t.amount).toFixed(2)+'</td>'+
-                        '<td>'+esc(refLabel)+'</td>'+
-                        '<td>'+esc(t.staff_name||'\u2014')+'</td>'+
-                        '<td style="font-size:12px;color:#94a3b8;">'+esc(t.notes||'\u2014')+'</td>'+
+                        '<td class="hm-col-date">'+fmtDate((t.transaction_date||'').substring(0,10))+'</td>'+
+                        '<td class="hm-col-type">'+esc(typeLabel)+'</td>'+
+                        '<td class="hm-col-money hm-ta-right" style="font-weight:600;">\u20ac'+parseFloat(t.amount).toFixed(2)+'</td>'+
+                        '<td class="hm-col-ref">'+esc(refLabel)+'</td>'+
+                        '<td class="hm-col-staff">'+esc(t.staff_name||'\u2014')+'</td>'+
+                        '<td class="hm-col-notes" style="font-size:12px;color:#94a3b8;">'+esc(t.notes||'\u2014')+'</td>'+
                     '</tr>';
                 });
             } else {

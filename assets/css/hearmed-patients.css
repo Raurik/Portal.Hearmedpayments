@@ -461,6 +461,34 @@
 .hm-account-table .hm-col-staff { width: 15%; }
 .hm-account-table .hm-col-notes { width: 31%; }
 
+/* Apply widths/alignment to both header and body cells explicitly. */
+.hm-account-table th.hm-col-note,
+.hm-account-table td.hm-col-note { width: 22%; }
+
+.hm-account-table th.hm-col-date,
+.hm-account-table td.hm-col-date { width: 14%; }
+
+.hm-account-table th.hm-col-money,
+.hm-account-table td.hm-col-money {
+  width: 13%;
+  text-align: right;
+}
+
+.hm-account-table th.hm-col-status,
+.hm-account-table td.hm-col-status { width: 12%; }
+
+.hm-account-table th.hm-col-type,
+.hm-account-table td.hm-col-type { width: 12%; }
+
+.hm-account-table th.hm-col-ref,
+.hm-account-table td.hm-col-ref { width: 14%; }
+
+.hm-account-table th.hm-col-staff,
+.hm-account-table td.hm-col-staff { width: 15%; }
+
+.hm-account-table th.hm-col-notes,
+.hm-account-table td.hm-col-notes { width: 31%; }
+
 .hm-account-table th,
 .hm-account-table td {
   white-space: nowrap;
