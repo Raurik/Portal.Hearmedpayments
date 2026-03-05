@@ -2444,6 +2444,37 @@ class HearMed_Orders {
             const btn = this;
             btn.disabled=true; btn.textContent='Finalising...';
 
+            // Validate final collected amount against current outstanding.
+            var totalDue = hmCurrentCollectTotal();
+            var amount1 = parseFloat(document.getElementById('hm-fit-amount').value || 0);
+            if (!isFinite(amount1) || amount1 < 0) amount1 = 0;
+
+            var splitCbCheck = document.getElementById('hm-fit-split');
+            var totalPaid = amount1;
+            if (splitCbCheck && splitCbCheck.checked) {
+                var amount2 = parseFloat(document.getElementById('hm-fit-amount-2').value || 0);
+                if (!isFinite(amount2) || amount2 < 0) amount2 = 0;
+                totalPaid = amount1 + amount2;
+            }
+
+            // Never allow taking more than what is owed.
+            if (totalPaid > totalDue + 0.009) {
+                alert('You cannot take more than the amount owed. Owed: €' + totalDue.toFixed(2) + ', entered: €' + totalPaid.toFixed(2) + '.');
+                btn.disabled=false; btn.textContent='✓ Confirm Fitted + Paid — Finalise';
+                return;
+            }
+
+            // If payment does not exactly match, bring it to staff attention.
+            var delta = Math.abs(totalDue - totalPaid);
+            if (delta >= 0.01) {
+                var msg = 'Amount check: owed €' + totalDue.toFixed(2) + ', entered €' + totalPaid.toFixed(2) + '.\n\n'
+                    + 'If this is intentional (for example €999 instead of €1000), click OK to continue.';
+                if (!confirm(msg)) {
+                    btn.disabled=false; btn.textContent='✓ Confirm Fitted + Paid — Finalise';
+                    return;
+                }
+            }
+
             var params = {
                 action:'hm_complete_order',
                 order_id: btn.dataset.orderId,
@@ -2479,7 +2510,17 @@ class HearMed_Orders {
                     msg.className='hm-notice hm-notice--success';
                     msg.innerHTML='<div class="hm-notice-body"><span class="hm-notice-icon">✓</span> '+d.data.message+'</div>';
                     if (d.data && d.data.print_url) {
-                        window.open(d.data.print_url, '_blank');
+                        var iframe = document.createElement('iframe');
+                        iframe.style.position = 'fixed';
+                        iframe.style.right = '0';
+                        iframe.style.bottom = '0';
+                        iframe.style.width = '0';
+                        iframe.style.height = '0';
+                        iframe.style.border = '0';
+                        iframe.style.opacity = '0';
+                        iframe.setAttribute('aria-hidden', 'true');
+                        iframe.src = d.data.print_url;
+                        document.body.appendChild(iframe);
                     }
                     setTimeout(()=>window.location=(d.data.next_redirect || d.data.redirect), 1200);
                 } else {
@@ -3110,6 +3151,32 @@ class HearMed_Orders {
         );
         if (!$order) wp_send_json_error('Order not found.');
 
+        // Guardrail: never allow collecting more cash/card than outstanding.
+        $payment_total = $amount;
+        $split_payments = json_decode( $split_payments_json, true );
+        $has_split = ! empty( $split_payments ) && is_array( $split_payments ) && count( $split_payments ) > 1;
+        if ( $has_split ) {
+            $payment_total = 0;
+            foreach ( $split_payments as $sp ) {
+                $payment_total += max( 0, floatval( $sp['amount'] ?? 0 ) );
+            }
+        }
+
+        $deposit_paid = floatval( $order->deposit_amount ?? 0 );
+        $base_due = max( 0, floatval( $order->grand_total ?? 0 ) - $deposit_paid );
+        $expected_credit = 0;
+        if ( $apply_credit && $credit_apply_amount > 0 && class_exists( 'HearMed_Finance' ) ) {
+            $credit_balance = HearMed_Finance::get_patient_credit_balance( (int) $order->patient_id );
+            $expected_credit = min( $credit_apply_amount, $credit_balance, $base_due );
+        }
+        $max_cash_due = max( 0, $base_due - $expected_credit );
+        if ( $payment_total > $max_cash_due + 0.009 ) {
+            wp_send_json_error(
+                'Amount exceeds outstanding balance. Outstanding: €' . number_format( $max_cash_due, 2 )
+                . ', entered: €' . number_format( $payment_total, 2 ) . '.'
+            );
+        }
+
         // ── Save inline serials submitted from the complete form ──
         $inline_serials = json_decode(stripslashes($_POST['inline_serials'] ?? ''), true);
         if (!empty($inline_serials) && is_array($inline_serials)) {
@@ -3171,7 +3238,6 @@ class HearMed_Orders {
         );
 
         // 4. Calculate deposit already paid vs balance due at fitting
-        $deposit_paid = floatval( $order->deposit_amount ?? 0 );
         $balance_paid = $amount;  // amount entered by dispenser at fitting
 
         // Resolve payment method (use form selection, fallback to order default)
@@ -3181,8 +3247,6 @@ class HearMed_Orders {
         }
 
         // Parse split payments if provided
-        $split_payments = json_decode( $split_payments_json, true );
-        $has_split = ! empty( $split_payments ) && is_array( $split_payments ) && count( $split_payments ) > 1;
 
         // 5. Create proper invoice with VAT breakdown (captures invoice_id)
         $fitting_invoice_id = null;
