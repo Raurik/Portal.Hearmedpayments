@@ -503,15 +503,11 @@ class HearMed_Orders {
              style="font-family:var(--hm-font,'Source Sans 3',sans-serif);color:var(--hm-text,#334155);-webkit-font-smoothing:antialiased">
 
             <!-- Top bar -->
-            <div style="background:var(--hm-teal,#0BB4C4);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:50px;border-radius:10px 10px 0 0">
-                <a href="<?php echo esc_url( $base ); ?>" style="background:none;border:1px solid rgba(255,255,255,.2);color:#fff;font-size:13px;font-weight:600;padding:6px 14px;border-radius:6px;font-family:var(--hm-font-btn);display:flex;align-items:center;gap:6px;text-decoration:none;transition:all .15s">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8H1M8 15L1 8l7-7"/></svg> Orders
-                </a>
+            <div style="background:var(--hm-teal,#0BB4C4);color:#fff;display:flex;align-items:center;justify-content:center;padding:0 24px;height:50px;border-radius:10px 10px 0 0">
                 <div style="text-align:center">
                     <div style="font-family:var(--hm-font-title,'Cormorant Garamond',serif);font-size:20px;font-weight:700;letter-spacing:-.3px">New Order</div>
                     <div style="font-size:11px;opacity:.7;margin-top:1px"><?php echo esc_html( $patient_name ); ?></div>
                 </div>
-                <div style="min-width:90px"></div>
             </div>
 
             <!-- Two-panel split -->
@@ -1457,11 +1453,9 @@ class HearMed_Orders {
                         var msg='<div style="background:#e8f8f0;border:1px solid #27AE60;border-left:4px solid #27AE60;padding:16px 20px;border-radius:6px;color:#1a4731">';
                         msg+='<div style="font-size:14px;font-weight:700;margin-bottom:4px">✓ Order '+esc(d.order_number)+' submitted for approval.</div>';
                         if(d.deposit_amount>0){msg+='<div style="font-size:13px;margin-bottom:6px">'+fmt(d.deposit_amount)+' deposit recorded. Balance '+fmt(d.balance_due)+' due at fitting.</div>';}
-                        msg+='<div style="margin-top:10px;display:flex;gap:16px">';
-                        msg+='<a href="'+esc(ordersBase)+'" style="font-size:13px;font-weight:600;color:#0BB4C4;text-decoration:none">← Back to Orders</a>';
-                        msg+='<a href="'+esc(ordersBase)+'?hm_action=view&order_id='+d.order_id+'" style="font-size:13px;font-weight:600;color:#0BB4C4;text-decoration:none">View Order →</a>';
-                        msg+='</div></div>';
+                        msg+='<div style="font-size:13px;margin-top:8px">Redirecting to calendar...</div></div>';
                         $('#hm-oc-success').html(msg).show();
+                        setTimeout(function(){ window.location = '<?php echo esc_url( HearMed_Utils::page_url('calendar') ); ?>'; }, 900);
                     } else {
                         $btn.prop('disabled',false).text('Submit Order for Approval');
                         $('#hm-oc-err').text(r&&r.data&&r.data.message?r.data.message:(typeof r.data==='string'?r.data:'Failed to create order.'));

@@ -34,6 +34,11 @@
     var qs   = url.searchParams;
     var o    = url.origin;
 
+    // Create-order screen has its own dedicated header UX; do not inject global back link.
+    if (path.indexOf('/orders') === 0 && (qs.get('hm_action') || '').toLowerCase() === 'create') {
+      return null;
+    }
+
     /* Admin console sub-pages → back to /admin-console/ */
     if (path.indexOf('/admin-console') === 0) {
       return path === '/admin-console' ? null : o + '/admin-console/';
