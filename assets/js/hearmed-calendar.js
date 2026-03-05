@@ -1822,42 +1822,97 @@ var Cal={
         var self=this;
         $('.hm-modal-bg.hm-invoice-order-modal').remove();
 
-        var rows=orders.map(function(o,idx){
-            var dt=o.order_date?new Date(o.order_date):null;
-            var dtText=dt&&!isNaN(dt.getTime())?dt.toLocaleDateString():(o.order_date||'');
+        // ── Build order cards for left panel ──
+        var orderCards=orders.map(function(o,idx){
+            var dt=o.order_date?new Date(o.order_date+'T00:00:00'):null;
+            var dtText=dt&&!isNaN(dt.getTime())?(dt.getDate()+' '+'Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec'.split(',')[dt.getMonth()]+' '+dt.getFullYear()):(o.order_date||'');
             var totalNum=parseFloat(o.grand_total||0);
-            var totalText=isNaN(totalNum)?(o.grand_total||'0.00'):totalNum.toFixed(2);
+            var totalText=isNaN(totalNum)?'0.00':totalNum.toFixed(2);
             var checked=idx===0?' checked':'';
             var num=o.order_number||('#'+o.id);
             var status=o.current_status||'Open';
+            var products=o.products||'No products';
+            var stColors={Approved:{bg:'#ecfdf5',color:'#065f46'},Ordered:{bg:'rgba(11,180,196,.08)',color:'#0a8a96'},Received:{bg:'#eff6ff',color:'#1e40af'},'Awaiting Fitting':{bg:'#f5f3ff',color:'#6d28d9'}};
+            var sc=stColors[status]||{bg:'#f1f5f9',color:'#475569'};
             return ''+
-                '<label class="hm-io-row" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer">'+
-                    '<input type="radio" name="hm-io-order" value="'+parseInt(o.id||0,10)+'"'+checked+' style="margin-top:3px">'+
-                    '<div style="flex:1">'+
-                        '<div style="font-weight:700;color:#0f172a">'+esc(num)+'</div>'+
-                        '<div style="font-size:12px;color:#64748b">'+esc(dtText)+' | $'+esc(totalText)+' | '+esc(status)+'</div>'+
+                '<label class="hm-io-card" data-idx="'+idx+'" style="display:flex;align-items:flex-start;gap:12px;padding:14px;border:1.5px solid '+(idx===0?'var(--hm-teal,#0BB4C4)':'#e2e8f0')+';border-radius:10px;cursor:pointer;background:'+(idx===0?'#f0fdfa':'#fff')+';transition:all .15s;margin-bottom:0">'+
+                    '<input type="radio" name="hm-io-order" value="'+parseInt(o.id||0,10)+'"'+checked+' style="margin-top:2px;accent-color:var(--hm-teal,#0BB4C4);width:16px;height:16px">'+
+                    '<div style="flex:1;min-width:0">'+
+                        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
+                            '<span style="font-weight:700;font-size:14px;color:var(--hm-navy,#151B33)">'+esc(num)+'</span>'+
+                            '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:'+sc.bg+';color:'+sc.color+';text-transform:uppercase;letter-spacing:.3px">'+esc(status)+'</span>'+
+                        '</div>'+
+                        '<div style="font-size:12px;color:var(--hm-text-light,#64748b);margin-bottom:2px">'+esc(dtText)+'</div>'+
+                        '<div style="font-size:11px;color:var(--hm-text-muted,#94a3b8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(products)+'</div>'+
+                    '</div>'+
+                    '<div style="text-align:right;white-space:nowrap">'+
+                        '<div style="font-size:16px;font-weight:700;color:var(--hm-navy,#151B33)">\u20AC'+esc(totalText)+'</div>'+
                     '</div>'+
                 '</label>';
         }).join('');
 
+        // ── Build the two-panel modal matching the order creation form layout ──
         var h='';
-        h+='<div class="hm-modal-bg hm-invoice-order-modal open">';
-        h+='<div class="hm-modal hm-modal--md" style="max-width:620px">';
-        h+='<div class="hm-modal-hd"><h3>Select Open Order To Complete</h3><button class="hm-close hm-io-close">'+IC.x+'</button></div>';
-        h+='<div class="hm-modal-body">';
-        h+='<div style="font-size:12px;color:#475569;margin-bottom:10px">Choose an existing open order for this patient, then continue to completion and invoicing.</div>';
-        h+='<div class="hm-io-list" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto">'+rows+'</div>';
+        h+='<div class="hm-modal-bg hm-invoice-order-modal open" style="display:flex;align-items:center;justify-content:center">';
+        h+='<div style="width:90%;max-width:900px;border-radius:10px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.18);font-family:var(--hm-font,\'Source Sans 3\',sans-serif);-webkit-font-smoothing:antialiased">';
+
+        // ── Teal top bar ──
+        h+='<div style="background:var(--hm-teal,#0BB4C4);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:50px;border-radius:10px 10px 0 0">';
+        h+='<div></div>';
+        h+='<div style="text-align:center"><div style="font-family:var(--hm-font-title,\'Cormorant Garamond\',serif);font-size:20px;font-weight:700;letter-spacing:-.3px">Complete &amp; Invoice</div>';
+        h+='<div style="font-size:11px;opacity:.7;margin-top:1px">'+esc(a.patient_name||'')+'</div></div>';
+        h+='<button class="hm-io-close" style="background:none;border:1px solid rgba(255,255,255,.25);color:#fff;font-size:13px;font-weight:600;padding:5px 12px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:4px">'+IC.x+'</button>';
+        h+='</div>';
+
+        // ── Two-panel split ──
+        h+='<div style="display:flex;min-height:420px;border:1px solid var(--hm-border,#e2e8f0);border-top:none;border-radius:0 0 10px 10px;overflow:hidden">';
+
+        // LEFT PANEL — Order selector
+        h+='<div style="flex:0 0 40%;max-width:40%;overflow-y:auto;padding:24px;background:#fff;border-right:1px solid var(--hm-border,#e2e8f0)">';
+        h+='<div style="font-size:12px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px">';
+        h+='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21V7M16 21V7"/></svg>';
+        h+=' Open Orders <span style="font-weight:400;color:var(--hm-text-muted,#94a3b8);text-transform:none;letter-spacing:0">('+orders.length+')</span></div>';
+        h+='<div class="hm-io-list" style="display:flex;flex-direction:column;gap:10px">'+orderCards+'</div>';
         h+='<div id="hm-io-err" style="color:#dc2626;font-size:12px;margin-top:10px"></div>';
         h+='</div>';
-        h+='<div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hm-io-close">Cancel</button><button class="hm-btn hm-btn--primary hm-io-complete">Complete &amp; Invoice</button></div></div>';
-        h+='</div></div>';
+
+        // RIGHT PANEL — Invoice preview (updates on selection)
+        h+='<div id="hm-io-preview" style="flex:0 0 60%;max-width:60%;display:flex;flex-direction:column;padding:28px 32px;background:#fff">';
+        h+=self._buildInvoicePreview(orders[0],a);
+        h+='</div>';
+
+        h+='</div>'; // end split
+        h+='</div>'; // end outer card
+        h+='</div>'; // end modal bg
         $('body').append(h);
 
-        $(document).off('click.ioclose').on('click.ioclose','.hm-io-close',function(){
-            $('.hm-modal-bg.hm-invoice-order-modal').remove();
-            $(document).off('.ioclose .iocomplete');
+        // ── Radio change → highlight card + update preview ──
+        $(document).off('change.ioradio').on('change.ioradio','input[name="hm-io-order"]',function(){
+            var selectedId=parseInt($(this).val()||0,10);
+            var order=orders.find(function(o){return parseInt(o.id)===selectedId;});
+            // Highlight selected card
+            $('.hm-io-card').css({borderColor:'#e2e8f0',background:'#fff'});
+            $(this).closest('.hm-io-card').css({borderColor:'var(--hm-teal,#0BB4C4)',background:'#f0fdfa'});
+            // Rebuild preview
+            if(order) $('#hm-io-preview').html(self._buildInvoicePreview(order,a));
         });
 
+        // ── Close ──
+        $(document).off('click.ioclose').on('click.ioclose','.hm-io-close',function(e){
+            e.stopPropagation();
+            $('.hm-modal-bg.hm-invoice-order-modal').remove();
+            $(document).off('.ioclose .iocomplete .ioradio');
+        });
+
+        // ── Background click to close ──
+        $(document).off('click.iobg').on('click.iobg','.hm-invoice-order-modal',function(e){
+            if($(e.target).hasClass('hm-invoice-order-modal')){
+                $('.hm-modal-bg.hm-invoice-order-modal').remove();
+                $(document).off('.ioclose .iocomplete .ioradio .iobg');
+            }
+        });
+
+        // ── Complete button ──
         $(document).off('click.iocomplete').on('click.iocomplete','.hm-io-complete',function(){
             var orderId=parseInt($('input[name="hm-io-order"]:checked').val()||0,10);
             if(!orderId){
@@ -1867,6 +1922,67 @@ var Cal={
             var url=(HM.orders_url||'/orders/')+'?hm_action=complete&order_id='+orderId;
             window.location.href=url;
         });
+    },
+
+    // S6-FIX: INVOICE TRIGGER — build right-panel invoice preview for a given order
+    _buildInvoicePreview:function(order,a){
+        if(!order) return '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--hm-text-muted,#94a3b8);font-size:13px">Select an order</div>';
+        var num=order.order_number||('#'+order.id);
+        var dt=order.order_date?new Date(order.order_date+'T00:00:00'):null;
+        var dtText=dt&&!isNaN(dt.getTime())?(dt.getDate()+' '+'Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec'.split(',')[dt.getMonth()]+' '+dt.getFullYear()):(order.order_date||'');
+        var totalNum=parseFloat(order.grand_total||0);
+        var totalText=isNaN(totalNum)?'0.00':totalNum.toFixed(2);
+        var products=(order.products||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+        var status=order.current_status||'Open';
+        var stColors={Approved:{bg:'#ecfdf5',color:'#065f46'},Ordered:{bg:'rgba(11,180,196,.08)',color:'#0a8a96'},Received:{bg:'#eff6ff',color:'#1e40af'},'Awaiting Fitting':{bg:'#f5f3ff',color:'#6d28d9'}};
+        var sc=stColors[status]||{bg:'#f1f5f9',color:'#475569'};
+
+        var h='';
+        // Invoice header
+        h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">';
+        h+='<div>';
+        h+='<div style="font-size:22px;font-weight:700;font-family:var(--hm-font-title,\'Cormorant Garamond\',serif);color:var(--hm-navy,#151B33);letter-spacing:1px">INVOICE</div>';
+        h+='<div style="font-size:11px;color:var(--hm-text-muted,#94a3b8);margin-top:2px">'+esc(num)+' &bull; '+esc(dtText)+'</div>';
+        h+='</div>';
+        h+='<div style="text-align:right">';
+        h+='<div style="font-size:12px;font-weight:600;color:var(--hm-navy,#151B33)">'+esc(a.patient_name||'')+'</div>';
+        h+='<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:'+sc.bg+';color:'+sc.color+';text-transform:uppercase;letter-spacing:.3px">'+esc(status)+'</span>';
+        h+='</div></div>';
+
+        // Products table
+        h+='<div style="flex:1;overflow-y:auto;margin-bottom:16px">';
+        h+='<table style="width:100%;border-collapse:collapse">';
+        h+='<thead><tr style="border-bottom:2px solid var(--hm-navy,#151B33)">';
+        h+='<th style="text-align:left;padding:6px 0;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px">Item</th>';
+        h+='<th style="text-align:right;padding:6px 0;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:100px">Total</th>';
+        h+='</tr></thead><tbody>';
+        if(products.length){
+            products.forEach(function(p){
+                h+='<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:10px 0;font-size:13px;color:var(--hm-text,#334155)">'+esc(p)+'</td><td style="text-align:right;padding:10px 0;font-size:13px;color:var(--hm-text-muted,#94a3b8)">&mdash;</td></tr>';
+            });
+        } else {
+            h+='<tr><td colspan="2" style="text-align:center;padding:24px 0;color:var(--hm-text-muted,#94a3b8);font-size:13px;font-style:italic">No line items available</td></tr>';
+        }
+        h+='</tbody></table></div>';
+
+        // Totals
+        h+='<div style="border-top:2px solid var(--hm-navy,#151B33);padding-top:12px">';
+        h+='<div style="display:flex;justify-content:space-between;align-items:baseline">';
+        h+='<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--hm-navy,#151B33)">Total Due</span>';
+        h+='<span style="font-size:22px;font-weight:700;color:var(--hm-navy,#151B33)">\u20AC'+esc(totalText)+'</span>';
+        h+='</div></div>';
+
+        // Info notice
+        h+='<div style="margin-top:16px;padding:12px 16px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px;font-size:12px;color:#0e7490;display:flex;align-items:flex-start;gap:8px">';
+        h+='<span style="font-size:14px">&#8505;&#65039;</span> This will open the order completion form where you can record fitting, payment, and finalise.';
+        h+='</div>';
+
+        // Action button
+        h+='<div style="margin-top:16px">';
+        h+='<button class="hm-io-complete" style="width:100%;padding:14px;font-size:14px;font-weight:700;border-radius:8px;border:none;background:var(--hm-navy,#151B33);color:#fff;cursor:pointer;font-family:var(--hm-font-btn,inherit);transition:all .15s">\u2713 Complete &amp; Invoice</button>';
+        h+='</div>';
+
+        return h;
     },
 
 
