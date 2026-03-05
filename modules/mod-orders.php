@@ -650,7 +650,7 @@ class HearMed_Orders {
 
                     <!-- Submit -->
                     <div id="hm-oc-actions" style="margin-top:14px">
-                        <button id="hm-oc-submit" style="width:100%;padding:14px;font-size:14px;font-weight:700;border-radius:8px;border:none;background:var(--hm-navy,#151B33);color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">Submit Order for Approval</button>
+                        <button type="button" id="hm-oc-submit" style="width:100%;padding:14px;font-size:14px;font-weight:700;border-radius:8px;border:none;background:var(--hm-navy,#151B33);color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">Submit Order for Approval</button>
                     </div>
 
                     <!-- Success banner (hidden) -->
