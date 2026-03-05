@@ -48,6 +48,10 @@ add_action( 'wp_ajax_hm_invalidate_form',      [ 'HearMed_Forms', 'ajax_invalida
 // Enqueue assets when shortcode is present
 // ---------------------------------------------------------------------------
 add_action( 'wp_enqueue_scripts', function () {
+    if ( HearMed_Utils::is_elementor_editor() && ! HearMed_Utils::allow_elementor_preview_boot() ) {
+        return;
+    }
+
     if ( is_page() && has_shortcode( get_post()->post_content, 'hearmed_forms' ) ) {
         wp_enqueue_style(
             'hearmed-forms',

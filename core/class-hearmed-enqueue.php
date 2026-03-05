@@ -53,6 +53,84 @@ class HearMed_Enqueue {
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_foundation' ], 15 );
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_modules' ], 16 );
         add_action( 'wp_enqueue_scripts', [ $this, 'maybe_enqueue_calendar_settings' ], 17 );
+        add_action( 'wp_enqueue_scripts', [ $this, 'strip_hearmed_assets_in_elementor' ], 999 );
+    }
+
+    /**
+     * Final safety-net: if Elementor editor/preview is active, strip HearMed assets
+     * even if something enqueued them outside the central loader.
+     */
+    public function strip_hearmed_assets_in_elementor() {
+        if ( ! $this->should_block_in_elementor() ) {
+            return;
+        }
+
+        $this->strip_registered_assets( 'script' );
+        $this->strip_registered_assets( 'style' );
+    }
+
+    /**
+     * Shared gate for Elementor edit/preview runtime blocking.
+     *
+     * @return bool
+     */
+    private function should_block_in_elementor() {
+        return HearMed_Utils::is_elementor_editor() && ! HearMed_Utils::allow_elementor_preview_boot();
+    }
+
+    /**
+     * Dequeue and deregister plugin-owned assets by handle/source.
+     *
+     * @param string $type "script" or "style"
+     * @return void
+     */
+    private function strip_registered_assets( $type ) {
+        $registry = $type === 'script' ? wp_scripts() : wp_styles();
+        if ( ! $registry || empty( $registry->registered ) ) {
+            return;
+        }
+
+        foreach ( array_keys( (array) $registry->registered ) as $handle ) {
+            if ( ! $this->is_hearmed_asset( $handle, $registry ) ) {
+                continue;
+            }
+
+            if ( $type === 'script' ) {
+                wp_dequeue_script( $handle );
+                wp_deregister_script( $handle );
+            } else {
+                wp_dequeue_style( $handle );
+                wp_deregister_style( $handle );
+            }
+        }
+    }
+
+    /**
+     * Identify HearMed-owned assets by naming convention or registered source.
+     *
+     * @param string               $handle   Script/style handle
+     * @param WP_Dependencies|null $registry Script/style registry
+     * @return bool
+     */
+    private function is_hearmed_asset( $handle, $registry ) {
+        if ( strpos( $handle, 'hearmed-' ) === 0 || $handle === 'calendar-settings' ) {
+            return true;
+        }
+
+        if ( empty( $registry->registered[ $handle ] ) ) {
+            return false;
+        }
+
+        $src = (string) $registry->registered[ $handle ]->src;
+        if ( $src === '' ) {
+            return false;
+        }
+
+        if ( strpos( $src, HEARMED_URL ) !== false ) {
+            return true;
+        }
+
+        return strpos( $src, 'hearmed-calendar' ) !== false;
     }
     
     /**
@@ -62,7 +140,7 @@ class HearMed_Enqueue {
     public function enqueue_foundation() {
         // Never boot HearMed runtime assets inside Elementor editor/preview
         // unless explicitly allowed for staging diagnostics.
-        if ( HearMed_Utils::is_elementor_editor() && ! HearMed_Utils::allow_elementor_preview_boot() ) {
+        if ( $this->should_block_in_elementor() ) {
             return;
         }
 
@@ -352,7 +430,7 @@ class HearMed_Enqueue {
         }
 
         // Skip module scripts in Elementor editor/preview unless explicitly enabled
-        if ( HearMed_Utils::is_elementor_editor() && ! HearMed_Utils::allow_elementor_preview_boot() ) {
+        if ( $this->should_block_in_elementor() ) {
             return;
         }
         
