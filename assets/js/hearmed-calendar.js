@@ -472,10 +472,13 @@ var Cal={
                     $('#hm-pop').removeClass('open');
                     self.refresh();
 
-                    // ── Handle order / invoice triggers ──
-                    var needsOrder=(o.triggers_order||o.triggers_invoice)&&a.patient_id;
-                    if(needsOrder){
+                    // S6-FIX: INVOICE TRIGGER
+                    var needsNewOrder=o.triggers_order&&a.patient_id;
+                    var needsInvoice=o.triggers_invoice&&!o.triggers_order&&a.patient_id;
+                    if(needsNewOrder){
                         self._openOrderPage(a,{name:o.name,color:o.color,triggers_order:o.triggers_order,triggers_invoice:o.triggers_invoice});
+                    } else if(needsInvoice){
+                        self._openInvoiceOrderPicker(a);
                     }
                 } else {
                     $btn.prop('disabled',false).text('Save Outcome');
@@ -1744,21 +1747,25 @@ var Cal={
                 self.refresh();
                 self.toast('Outcome saved: '+o.name);
 
-                // Determine flows needed
-                var needsOrder=(o.triggers_order||o.triggers_invoice)&&a.patient_id;
+                // S6-FIX: INVOICE TRIGGER
+                var needsNewOrder=o.triggers_order&&a.patient_id;
+                var needsInvoice=o.triggers_invoice&&!o.triggers_order&&a.patient_id;
                 var needsFollowUp=fuSvcId&&a.patient_id;
 
-                if(needsFollowUp&&needsOrder){
-                    // Follow-up first, then open order page
+                if(needsFollowUp&&(needsNewOrder||needsInvoice)){
+                    // Follow-up first, then continue to order/invoice flow
                     setTimeout(function(){
                         self._openFollowUpBooking(a,fuSvcId,function(){
-                            self._openOrderPage(a,o);
+                            if(needsNewOrder) self._openOrderPage(a,o);
+                            else self._openInvoiceOrderPicker(a);
                         });
                     },100);
                 } else if(needsFollowUp){
                     setTimeout(function(){self._openFollowUpBooking(a,fuSvcId);},100);
-                } else if(needsOrder){
+                } else if(needsNewOrder){
                     self._openOrderPage(a,o);
+                } else if(needsInvoice){
+                    self._openInvoiceOrderPicker(a);
                 }
             }).fail(function(){
                 $btn.prop('disabled',false).text('Save Outcome');
@@ -1773,6 +1780,93 @@ var Cal={
         var url = (HM.orders_url || '/orders/') + '?hm_action=create&patient_id=' + (a.patient_id||0);
         if (a._ID || a.id) url += '&from_appointment=' + (a._ID || a.id);
         window.location.href = url;
+    },
+
+    // S6-FIX: INVOICE TRIGGER
+    _openInvoiceOrderPicker:function(a){
+        var self=this;
+        if(!a||!a.patient_id){
+            self._openOrderPage(a||{},{});
+            return;
+        }
+
+        $.post(HM.ajax_url,{
+            action:'hm_get_patient_open_orders',
+            patient_id:a.patient_id,
+            nonce:HM.nonce
+        }).done(function(r){
+            if(!r||!r.success){
+                self._openQuickpayOrderPage(a);
+                return;
+            }
+            var orders=(r.data&&r.data.length)?r.data:[];
+            if(!orders.length){
+                self._openQuickpayOrderPage(a);
+                return;
+            }
+            self._showInvoiceOrderPickerModal(a,orders);
+        }).fail(function(){
+            self._openQuickpayOrderPage(a);
+        });
+    },
+
+    // S6-FIX: INVOICE TRIGGER
+    _openQuickpayOrderPage:function(a){
+        var url=(HM.orders_url||'/orders/')+'?hm_action=create&patient_id='+(a.patient_id||0)+'&quickpay=1';
+        if(a&&((a._ID)||a.id)) url+='&from_appointment='+(a._ID||a.id);
+        window.location.href=url;
+    },
+
+    // S6-FIX: INVOICE TRIGGER
+    _showInvoiceOrderPickerModal:function(a,orders){
+        var self=this;
+        $('.hm-modal-bg.hm-invoice-order-modal').remove();
+
+        var rows=orders.map(function(o,idx){
+            var dt=o.order_date?new Date(o.order_date):null;
+            var dtText=dt&&!isNaN(dt.getTime())?dt.toLocaleDateString():(o.order_date||'');
+            var totalNum=parseFloat(o.grand_total||0);
+            var totalText=isNaN(totalNum)?(o.grand_total||'0.00'):totalNum.toFixed(2);
+            var checked=idx===0?' checked':'';
+            var num=o.order_number||('#'+o.id);
+            var status=o.current_status||'Open';
+            return ''+
+                '<label class="hm-io-row" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer">'+
+                    '<input type="radio" name="hm-io-order" value="'+parseInt(o.id||0,10)+'"'+checked+' style="margin-top:3px">'+
+                    '<div style="flex:1">'+
+                        '<div style="font-weight:700;color:#0f172a">'+esc(num)+'</div>'+
+                        '<div style="font-size:12px;color:#64748b">'+esc(dtText)+' | $'+esc(totalText)+' | '+esc(status)+'</div>'+
+                    '</div>'+
+                '</label>';
+        }).join('');
+
+        var h='';
+        h+='<div class="hm-modal-bg hm-invoice-order-modal open">';
+        h+='<div class="hm-modal hm-modal--md" style="max-width:620px">';
+        h+='<div class="hm-modal-hd"><h3>Select Open Order To Complete</h3><button class="hm-close hm-io-close">'+IC.x+'</button></div>';
+        h+='<div class="hm-modal-body">';
+        h+='<div style="font-size:12px;color:#475569;margin-bottom:10px">Choose an existing open order for this patient, then continue to completion and invoicing.</div>';
+        h+='<div class="hm-io-list" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto">'+rows+'</div>';
+        h+='<div id="hm-io-err" style="color:#dc2626;font-size:12px;margin-top:10px"></div>';
+        h+='</div>';
+        h+='<div class="hm-modal-ft"><span></span><div class="hm-modal-acts"><button class="hm-btn hm-io-close">Cancel</button><button class="hm-btn hm-btn--primary hm-io-complete">Complete &amp; Invoice</button></div></div>';
+        h+='</div></div>';
+        $('body').append(h);
+
+        $(document).off('click.ioclose').on('click.ioclose','.hm-io-close',function(){
+            $('.hm-modal-bg.hm-invoice-order-modal').remove();
+            $(document).off('.ioclose .iocomplete');
+        });
+
+        $(document).off('click.iocomplete').on('click.iocomplete','.hm-io-complete',function(){
+            var orderId=parseInt($('input[name="hm-io-order"]:checked').val()||0,10);
+            if(!orderId){
+                $('#hm-io-err').text('Please select an order.');
+                return;
+            }
+            var url=(HM.orders_url||'/orders/')+'?hm_action=complete&order_id='+orderId;
+            window.location.href=url;
+        });
     },
 
 

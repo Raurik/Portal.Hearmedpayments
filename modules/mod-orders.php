@@ -84,6 +84,32 @@ add_action( 'wp_ajax_hm_get_patient_credit_balance',  [ 'HearMed_Orders', 'ajax_
 add_action( 'wp_ajax_hm_record_order_deposit',        [ 'HearMed_Orders', 'ajax_record_order_deposit' ] );
 add_action( 'wp_ajax_hm_get_order_stock',             [ 'HearMed_Orders', 'ajax_get_order_stock' ] );
 
+// S6-FIX: INVOICE TRIGGER
+add_action( 'wp_ajax_hm_get_patient_open_orders', function() {
+    check_ajax_referer( 'hm_nonce', 'nonce' );
+
+    $patient_id = intval( $_POST['patient_id'] ?? 0 );
+    if ( ! $patient_id ) {
+        wp_send_json_error( 'No patient ID' );
+    }
+
+    $db = HearMed_DB::instance();
+    $orders = $db->get_results(
+        "SELECT id, order_number, order_date, grand_total, current_status,
+                (SELECT string_agg(p.product_name, ', ')
+                 FROM hearmed_core.order_items oi
+             JOIN hearmed_reference.products p ON p.id = oi.item_id
+             WHERE oi.order_id = o.id AND oi.item_type = 'product') AS products
+         FROM hearmed_core.orders o
+         WHERE o.patient_id = $1
+         AND o.current_status IN ('Approved', 'Ordered', 'Received', 'Awaiting Fitting')
+         ORDER BY o.order_date DESC",
+        [ $patient_id ]
+    );
+
+    wp_send_json_success( $orders ?: [] );
+} );
+
 // ---------------------------------------------------------------------------
 // Main class
 // ---------------------------------------------------------------------------
