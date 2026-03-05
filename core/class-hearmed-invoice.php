@@ -853,6 +853,44 @@ class HearMed_Invoice {
             [ $inv->id ]
         );
 
+        // Include order deposit (recorded before invoice creation) in payment details.
+        if ( ! empty( $inv->order_id ) ) {
+            $order_pay = $db->get_row(
+                "SELECT COALESCE(deposit_amount, 0) AS deposit_amount,
+                        deposit_paid_at,
+                        COALESCE(deposit_method, payment_method, 'Card') AS deposit_method
+                 FROM hearmed_core.orders
+                 WHERE id = \$1",
+                [ (int) $inv->order_id ]
+            );
+
+            $dep_amount = (float) ( $order_pay->deposit_amount ?? 0 );
+            if ( $dep_amount > 0 ) {
+                $dep_date   = ! empty( $order_pay->deposit_paid_at ) ? substr( (string) $order_pay->deposit_paid_at, 0, 10 ) : null;
+                $dep_method = (string) ( $order_pay->deposit_method ?? 'Card' );
+
+                // Avoid duplicate display if a matching row is already linked to this invoice.
+                $has_match = false;
+                foreach ( (array) $tpl->payments as $pm ) {
+                    $pm_amt = (float) ( $pm->amount ?? 0 );
+                    $pm_dat = ! empty( $pm->payment_date ) ? substr( (string) $pm->payment_date, 0, 10 ) : '';
+                    $pm_met = (string) ( $pm->payment_method ?? '' );
+                    if ( abs( $pm_amt - $dep_amount ) < 0.009 && $pm_dat === (string) $dep_date && strcasecmp( $pm_met, $dep_method ) === 0 ) {
+                        $has_match = true;
+                        break;
+                    }
+                }
+
+                if ( ! $has_match ) {
+                    $tpl->payments[] = (object) [
+                        'payment_method' => $dep_method . ' (Deposit)',
+                        'payment_date'   => $dep_date ?: date( 'Y-m-d' ),
+                        'amount'         => $dep_amount,
+                    ];
+                }
+            }
+        }
+
         // Include applied patient credit as a payment-detail row so the invoice
         // clearly shows credit amount and application date.
         $credit_applied = (float) ( $inv->credit_applied ?? 0 );

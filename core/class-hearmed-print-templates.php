@@ -500,6 +500,10 @@ tfoot td { font-weight: 600; border-bottom: none; }
         $items   = $d->items ?? [];
         $invoice = $d->invoice ?? null;
         $order   = $d;
+        $grand_total = (float) ( $invoice ? $invoice->grand_total : ( $order->grand_total ?? 0 ) );
+        $balance_remaining = max( 0, (float) ( $invoice ? ( $invoice->balance_remaining ?? 0 ) : 0 ) );
+        $amount_paid = max( 0, $grand_total - $balance_remaining );
+        $is_paid_in_full = $balance_remaining <= 0.009;
         ob_start(); ?>
         <div class="hm-print-section-title">Items</div>
         <table>
@@ -533,7 +537,12 @@ tfoot td { font-weight: 600; border-bottom: none; }
                 <?php if ((float)($invoice->credit_applied ?? 0) > 0): ?>
                 <tr><td colspan="6" class="money" style="color:#059669;">Credit Applied</td><td class="money" style="color:#059669;">-€<?php echo number_format((float)($invoice->credit_applied ?? 0), 2); ?></td></tr>
                 <?php endif; ?>
-                <tr class="total-row"><td colspan="6" class="money">Total Paid</td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->grand_total : ($order->grand_total ?? 0)), 2); ?></td></tr>
+                <tr class="total-row"><td colspan="6" class="money">Invoice Total</td><td class="money">€<?php echo number_format( $grand_total, 2 ); ?></td></tr>
+                <tr><td colspan="6" class="money">Amount Paid</td><td class="money">€<?php echo number_format( $amount_paid, 2 ); ?></td></tr>
+                <tr><td colspan="6" class="money">Balance</td><td class="money">€<?php echo number_format( $balance_remaining, 2 ); ?></td></tr>
+                <?php if ( $is_paid_in_full ) : ?>
+                <tr><td colspan="6" class="money" style="color:#059669;font-weight:700;">Status</td><td class="money" style="color:#059669;font-weight:700;">Paid in full</td></tr>
+                <?php endif; ?>
             </tfoot>
         </table>
         <?php return ob_get_clean();
