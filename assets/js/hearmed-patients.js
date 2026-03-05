@@ -743,14 +743,18 @@ function initProfile(){
             if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
             var d=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Documents ('+d.length+')</h3><button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-upload-doc">+ Upload</button></div>';
             if(!d.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.form+'</div><div class="hm-empty-text">No documents</div></div>';
-            else{h+='<table class="hm-table"><thead><tr><th>File name</th><th>Type</th><th>Uploaded by</th><th>Date</th><th></th></tr></thead><tbody>';d.forEach(function(x){h+='<tr><td>'+esc(x.file_name)+'</td><td><span class="hm-badge hm-badge--sm hm-badge--grey">'+esc(x.document_type)+'</span></td><td>'+esc(x.created_by)+'</td><td>'+fmtDate((x.created_at||'').split(' ')[0])+'</td><td><a href="#" class="hm-download-doc hm-btn hm-btn--secondary hm-btn--sm" data-id="'+x._ID+'" data-type="'+esc(x.document_type)+'" data-url="'+esc(x.download_url)+'">Download</a></td></tr>';});h+='</tbody></table>';}
+            else{h+='<table class="hm-table"><thead><tr><th>File name</th><th>Type</th><th>Uploaded by</th><th>Date</th><th></th></tr></thead><tbody>';d.forEach(function(x){h+='<tr><td>'+esc(x.file_name)+'</td><td><span class="hm-badge hm-badge--sm hm-badge--grey">'+esc(x.document_type)+'</span></td><td>'+esc(x.created_by)+'</td><td>'+fmtDate((x.created_at||'').split(' ')[0])+'</td><td><a href="#" class="hm-download-doc hm-btn hm-btn--secondary hm-btn--sm" data-id="'+x._ID+'" data-type="'+esc(x.document_type)+'" data-url="'+esc(x.download_url)+'" data-view-url="'+esc(x.view_url||'')+'">View</a></td></tr>';});h+='</tbody></table>';}
             $c.html(h+'</div>');
         });
         $c.off('click','#hm-upload-doc').on('click','#hm-upload-doc',showUploadDocModal);
         $c.off('click','.hm-download-doc').on('click','.hm-download-doc',function(e){
             e.preventDefault();var $l=$(this),dt=$l.data('type'),clinical=['Audiogram','Referral Letter','GP Letter','Consent Form'].indexOf(dt)!==-1;
             var ct=clinical?'I confirm this document is being shared for the purpose of providing healthcare to this patient.':'I confirm I am authorised to export this document under HearMed\'s data handling policy.';
-            showDownloadConsent(ct,function(){window.location=$l.data('url');});
+            showDownloadConsent(ct,function(){
+                var u=$l.data('view-url')||$l.data('url');
+                if(!u){toast('Document link unavailable','error');return;}
+                window.open(u,'_blank','noopener');
+            });
         });
     }
     function showUploadDocModal(){
@@ -761,7 +765,7 @@ function initProfile(){
     }
     function showDownloadConsent(txt,cb){
         if($('#hm-modal-overlay').length)return;
-        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>Download Consent</span><button class="hm-close">&times;</button></div><div class="hm-modal-body"><label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="dl-consent" style="margin-top:2px;flex-shrink:0;"><span>'+esc(txt)+'</span></label></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="dl-confirm" disabled>Download</button></div></div></div>');
+        $('body').append('<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>View Consent</span><button class="hm-close">&times;</button></div><div class="hm-modal-body"><label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="dl-consent" style="margin-top:2px;flex-shrink:0;"><span>'+esc(txt)+'</span></label></div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="dl-confirm" disabled>View</button></div></div></div>');
         $('#dl-consent').on('change',function(){$('#dl-confirm').prop('disabled',!this.checked);});$('.hm-close').on('click',closeModal);$('#hm-modal-overlay').on('click',function(e){if(e.target===this)closeModal();});
         $('#dl-confirm').on('click',function(){closeModal();cb();});
     }

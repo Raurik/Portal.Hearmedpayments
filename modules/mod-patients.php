@@ -70,6 +70,7 @@ add_action( 'wp_ajax_hm_get_patient_alerts',   'hm_ajax_get_patient_alerts' );
 // Documents
 add_action( 'wp_ajax_hm_get_patient_documents',     'hm_ajax_get_patient_documents' );
 add_action( 'wp_ajax_hm_upload_patient_document',   'hm_ajax_upload_patient_document' );
+add_action( 'wp_ajax_hm_view_patient_document',     'hm_ajax_view_patient_document' );
 
 // Hearing Aids (patient_devices)
 add_action( 'wp_ajax_hm_get_patient_products',              'hm_ajax_get_patient_products' );
@@ -1062,11 +1063,75 @@ function hm_ajax_get_patient_documents() {
             'document_type' => $r->document_type,
             'file_name'     => $r->file_name,
             'download_url'  => $r->file_url,
+            'view_url'      => admin_url( 'admin-ajax.php?action=hm_view_patient_document&nonce=' . wp_create_nonce( 'hm_nonce' ) . '&_ID=' . (int) $r->id ),
             'created_by'    => $r->created_by_name,
             'created_at'    => $r->created_at,
         ];
     }
     wp_send_json_success( $out );
+}
+
+function hm_ajax_view_patient_document() {
+    if ( ! wp_verify_nonce( $_GET['nonce'] ?? '', 'hm_nonce' ) ) {
+        wp_die( 'Security check failed' );
+    }
+    if ( ! PortalAuth::is_logged_in() ) {
+        wp_die( 'Access denied' );
+    }
+
+    $doc_id = intval( $_GET['_ID'] ?? 0 );
+    if ( ! $doc_id ) {
+        wp_die( 'Missing document ID' );
+    }
+
+    $db = HearMed_DB::instance();
+    $doc = $db->get_row(
+        "SELECT id, document_type, file_url, file_name, html_content
+         FROM hearmed_core.patient_documents
+         WHERE id = \$1",
+        [ $doc_id ]
+    );
+    if ( ! $doc ) {
+        wp_die( 'Document not found' );
+    }
+
+    // Uploaded file/doc URL path
+    if ( ! empty( $doc->file_url ) ) {
+        wp_redirect( esc_url_raw( $doc->file_url ) );
+        exit;
+    }
+
+    // Inline HTML path for auto-saved invoice/credit note docs
+    if ( ! empty( $doc->html_content ) ) {
+        header( 'Content-Type: text/html; charset=utf-8' );
+        echo $doc->html_content;
+        exit;
+    }
+
+    // Fallbacks when html_content is empty but file_name references a generated doc.
+    if ( strcasecmp( (string) $doc->document_type, 'Invoice' ) === 0 && ! empty( $doc->file_name ) ) {
+        $inv_id = (int) $db->get_var(
+            "SELECT id FROM hearmed_core.invoices WHERE invoice_number = \$1 LIMIT 1",
+            [ (string) $doc->file_name ]
+        );
+        if ( $inv_id ) {
+            wp_redirect( admin_url( 'admin-ajax.php?action=hm_download_invoice&nonce=' . wp_create_nonce( 'hm_nonce' ) . '&_ID=' . $inv_id ) );
+            exit;
+        }
+    }
+
+    if ( strcasecmp( (string) $doc->document_type, 'Credit Note' ) === 0 && ! empty( $doc->file_name ) ) {
+        $cn_id = (int) $db->get_var(
+            "SELECT id FROM hearmed_core.credit_notes WHERE credit_note_number = \$1 LIMIT 1",
+            [ (string) $doc->file_name ]
+        );
+        if ( $cn_id ) {
+            wp_redirect( admin_url( 'admin-ajax.php?action=hm_print_credit_note&nonce=' . wp_create_nonce( 'hm_nonce' ) . '&credit_note_id=' . $cn_id ) );
+            exit;
+        }
+    }
+
+    wp_die( 'Document content is unavailable.' );
 }
 
 function hm_ajax_upload_patient_document() {
