@@ -144,6 +144,38 @@
             if (callback) callback();
         });
     };
+
+    /**
+     * Branded alert dialog (replaces browser-native alert popups on portal pages).
+     */
+    HM.alert = function(message, title, onClose) {
+        title = title || 'Notice';
+        var text = (message === undefined || message === null) ? '' : String(message);
+        var safe = $('<div/>').text(text).html();
+
+        // Ensure only one alert modal is visible at a time
+        $('.hm-modal-overlay.hm-alert-overlay').remove();
+
+        var content = '' +
+            '<div class="hm-alert-body" style="font-size:14px;color:#334155;line-height:1.45;">' + safe + '</div>' +
+            '<div style="display:flex;justify-content:flex-end;margin-top:18px;">' +
+                '<button class="hm-btn hm-btn--primary" data-action="ok">OK</button>' +
+            '</div>';
+
+        var modal = HM.modal(content, {
+            title: title,
+            width: '460px',
+            closeButton: true,
+            onClose: onClose || null
+        });
+
+        modal.addClass('hm-alert-overlay');
+        modal.on('click', '[data-action="ok"]', function() {
+            HM.closeModal(modal, onClose);
+        });
+
+        return modal;
+    };
     
     /**
      * Confirm dialog
@@ -229,6 +261,15 @@
      * Initialize on document ready
      */
     $(document).ready(function() {
+        // Use branded alerts throughout portal runtime.
+        // Keep native alert available for diagnostics if needed.
+        HM.nativeAlert = HM.nativeAlert || window.alert.bind(window);
+        if ( $('body').hasClass('hm-portal-page') || $('#hm-app').length ) {
+            window.alert = function(message) {
+                HM.alert(message, 'HearMed');
+            };
+        }
+
         // Add loading indicator to AJAX requests
         $(document).ajaxStart(function() {
             // Optional: Show global loading indicator
