@@ -2081,10 +2081,11 @@ function hm_ajax_download_patient_form() {
     header( 'Content-Disposition: attachment; filename="' . $form->patient_number . '-' . sanitize_file_name( $form->form_type ) . '.html"' );
 
     echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' . esc_html( $form->form_type ) . '</title>';
-    echo '<style>body{font-family:Arial,sans-serif;padding:40px;max-width:800px;margin:0 auto;}'
-       . 'h1{font-size:20px;border-bottom:2px solid var(--hm-teal);padding-bottom:8px;}'
-       . '.field{margin:8px 0;font-size:14px;}.label{font-weight:bold;color:#64748b;}'
-       . '.sig{margin-top:20px;border:1px solid #e2e8f0;padding:10px;}</style></head><body>';
+     echo '<style>@page{size:A4 portrait;margin:0;}html,body{margin:0;padding:0;background:#fff;font-family:Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
+         . '.sheet{width:210mm;min-height:297mm;padding:12mm;box-sizing:border-box;margin:0 auto;}'
+         . 'h1{font-size:20px;border-bottom:2px solid #0BB4C4;padding-bottom:8px;}'
+         . '.field{margin:8px 0;font-size:14px;}.label{font-weight:bold;color:#64748b;}'
+         . '.sig{margin-top:20px;border:1px solid #e2e8f0;padding:10px;}</style></head><body><div class="sheet">';
     echo '<h1>' . esc_html( $form->form_type ) . '</h1>';
     echo '<div class="field"><span class="label">Patient:</span> ' . esc_html( $form->first_name . ' ' . $form->last_name ) . ' (' . esc_html( $form->patient_number ) . ')</div>';
     echo '<div class="field"><span class="label">Date:</span> ' . esc_html( $form->created_at ) . '</div>';
@@ -2103,7 +2104,7 @@ function hm_ajax_download_patient_form() {
         echo '<div class="sig"><p class="label">Signature:</p><img src="' . esc_url( $form->signature_image_url ) . '" style="max-width:400px;"></div>';
     }
 
-    echo '</body></html>';
+    echo '</div></body></html>';
     exit;
 }
 

@@ -706,10 +706,10 @@ class HearMed_Stock {
             if(!w) return;
             var now = new Date();
             var dt = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
-            var html = '<html><head><title>Manufacturer Return Docket</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#0f172a}h1{font-size:20px;margin:0 0 12px}table{border-collapse:collapse;width:100%;margin-top:12px}td,th{border:1px solid #cbd5e1;padding:8px;text-align:left}small{color:#64748b}</style></head><body>'+
+            var html = '<html><head><title>Manufacturer Return Docket</title><style>@page{size:A4 portrait;margin:0;}html,body{margin:0;padding:0;width:100%;background:#fff;font-family:Arial,sans-serif;color:#0f172a;-webkit-print-color-adjust:exact;print-color-adjust:exact}.sheet{width:210mm;min-height:297mm;margin:0 auto;padding:12mm;box-sizing:border-box}h1{font-size:20px;margin:0 0 12px}table{border-collapse:collapse;width:100%;margin-top:12px}td,th{border:1px solid #cbd5e1;padding:8px;text-align:left}small{color:#64748b}</style></head><body><div class="sheet">'+
                 '<h1>Manufacturer Return Docket</h1><small>Generated: '+esc(dt)+'</small>'+
                 '<table><tr><th>Manufacturer</th><td>'+esc(mfr||'')+'</td></tr><tr><th>Model</th><td>'+esc(model||'')+'</td></tr><tr><th>Serial</th><td>'+esc(serial||'N/A')+'</td></tr><tr><th>Notes</th><td>'+esc(notes||'')+'</td></tr></table>'+
-                '</body></html>';
+                '</div></body></html>';
             w.document.open(); w.document.write(html); w.document.close();
             w.focus();
             setTimeout(function(){ w.print(); }, 150);

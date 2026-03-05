@@ -244,10 +244,28 @@ class HearMed_Print_Templates {
 <?php echo $font_link; ?>
 <style>
 :root { --hm-accent: <?php echo esc_attr($accent); ?>; --hm-navy: #151B33; }
-@page { size: A4; margin: 12mm; }
+@page { size: A4 portrait; margin: 0; }
 @media print {
-    html, body { height: 100% !important; }
-    body { -webkit-print-color-adjust: exact; }
+    html, body {
+        width: 210mm !important;
+        height: 297mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        background: #fff !important;
+    }
+    .hm-print-page {
+        width: 210mm !important;
+        min-height: 297mm !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        page-break-after: always;
+    }
+    .hm-print-page:last-of-type { page-break-after: auto; }
     .no-print { display: none !important; }
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -255,9 +273,22 @@ html { height: 100%; }
 body {
     font-family: '<?php echo esc_attr($s['tableFont'] ?? 'Source Sans 3'); ?>', -apple-system, sans-serif;
     font-size: <?php echo intval($s['tableSize'] ?? 11); ?>px;
-    color: #1e293b; line-height: 1.6; padding: 40px; width: 210mm; max-width: 210mm; margin: 0 auto;
-    min-height: 297mm; height: 100%;
-    display: flex; flex-direction: column;
+    color: #1e293b;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: none;
+    overflow-wrap: anywhere;
+}
+.hm-print-page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    padding: 12mm;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
 }
 /* Header */
 .hm-print-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 18px; border-bottom: 3px solid var(--hm-accent); margin-bottom: 24px; }
@@ -337,6 +368,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
 </head>
 <body>
 <button class="print-btn no-print" onclick="window.print()">Print / Save PDF</button>
+<div class="hm-print-page">
 <div class="hm-print-content">
 <?php
         // Render sections in saved order (footer rendered separately outside content wrapper)
@@ -352,6 +384,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
             echo self::render_section($type, 'footer', $s, $data);
         }
 ?>
+</div>
 </body>
 </html>
 <?php

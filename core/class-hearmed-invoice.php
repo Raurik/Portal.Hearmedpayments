@@ -572,8 +572,10 @@ class HearMed_Invoice {
     <title>Invoice <?php echo esc_html( $invoice->invoice_number ); ?></title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        @page { size: A4; margin: 15mm; }
-        body { font-family: Arial, sans-serif; font-size: 13px; color: #151B33; background: #fff; padding: 2rem; max-width: 860px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+        @page { size: A4 portrait; margin: 0; }
+        html, body { margin: 0; padding: 0; width: 100%; background: #fff; }
+        body { font-family: Arial, sans-serif; font-size: 13px; color: #151B33; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .hm-inv__sheet { width: 210mm; min-height: 297mm; padding: 12mm; margin: 0 auto; display: flex; flex-direction: column; }
         .hm-inv__content { flex: 1; }
         .hm-inv__header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; border-bottom: 3px solid #151B33; padding-bottom: 1.25rem; }
         .hm-inv__logo { font-size: 1.5rem; font-weight: 700; color: #151B33; }
@@ -604,19 +606,21 @@ class HearMed_Invoice {
         .hm-inv__paid-stamp { font-size: 1.4rem; font-weight: 900; color: #059669; border: 3px solid #059669; padding: 4px 14px; border-radius: 4px; transform: rotate(-5deg); display: inline-block; }
         .hm-inv__footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid #e2e8f0; font-size: 0.75rem; color: #94a3b8; display: flex; justify-content: space-between; }
         .no-print { display: block; margin-bottom: 1rem; }
-        @media print { .no-print { display: none !important; } body { padding: 0.5cm; min-height: 100%; } }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body>
 
 <div class="no-print">
     <button onclick="window.print()" style="padding:8px 20px;background:#0BB4C4;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px;">
-        🖨 Print / Save as PDF
+        Print / Save as PDF
     </button>
     <button onclick="window.close()" style="padding:8px 16px;background:#f1f5f9;color:#151B33;border:none;border-radius:4px;cursor:pointer;font-size:14px;margin-left:8px;">
-        ✕ Close
+        Close
     </button>
 </div>
+
+<div class="hm-inv__sheet">
 
 <div class="hm-inv__content">
 <!-- Header -->
@@ -750,6 +754,8 @@ class HearMed_Invoice {
 <div class="hm-inv__footer">
     <span><?php echo esc_html( $company ); ?><?php if ( $vat_num ) echo ' — VAT Reg: ' . esc_html( $vat_num ); ?></span>
     <span>Invoice <?php echo esc_html( $invoice->invoice_number ); ?></span>
+</div>
+
 </div>
 
 </body>

@@ -662,14 +662,20 @@ function hm_build_clinical_pdf_html( $doc, $patient ) {
     <head>
     <meta charset="UTF-8">
     <style>
-    @page { margin: 20mm 15mm 25mm 15mm; }
+    @page { size: A4 portrait; margin: 0; }
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+    }
     body {
         font-family: 'Source Sans 3', 'Source Sans Pro', Helvetica, Arial, sans-serif;
         font-size: 11pt;
         color: #1e293b;
         line-height: 1.5;
-        margin: 0;
-        padding: 20px;
+        padding: 12mm;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
     .pdf-header {
         display: flex;

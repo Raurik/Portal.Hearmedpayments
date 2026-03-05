@@ -505,12 +505,19 @@
         const body = document.getElementById('hm-view-modal-body');
         if (!body) return;
         const w = window.open('', '_blank');
+        if (!w) return;
         w.document.write(`<!DOCTYPE html><html><head><title>Form Record</title>
-            <style>body{font-family:Arial,sans-serif;padding:1.5rem;max-width:820px;margin:0 auto;color:#151B33;}
-            .hm-muted{color:#64748b;font-size:0.85rem;} img{max-width:100%;border:1px solid #e2e8f0;}
-            .hm-badge--red{color:#dc2626;font-weight:bold;}</style></head><body>`);
+            <style>
+            @page{size:A4 portrait;margin:0;}
+            html,body{margin:0;padding:0;width:100%;background:#fff;color:#151B33;font-family:Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+            .hm-print-sheet{width:210mm;min-height:297mm;margin:0 auto;padding:12mm;box-sizing:border-box;}
+            .hm-doc-content{max-width:none;}
+            .hm-muted{color:#64748b;font-size:0.85rem;}
+            img{max-width:100%;border:1px solid #e2e8f0;}
+            .hm-badge--red{color:#dc2626;font-weight:bold;}
+            </style></head><body><div class="hm-print-sheet">`);
         w.document.write(body.innerHTML);
-        w.document.write('</body></html>');
+        w.document.write('</div></body></html>');
         w.document.close();
         w.print();
     }
