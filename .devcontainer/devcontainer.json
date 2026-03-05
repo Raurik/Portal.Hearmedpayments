@@ -1,0 +1,12 @@
+{
+  "name": "HearMed Portal",
+  "customizations": {
+    "codespaces": {
+      "permissions": {
+        "actions": "write",
+        "contents": "write",
+        "workflows": "write"
+      }
+    }
+  }
+}
