@@ -2891,8 +2891,12 @@ function hm_ajax_create_return() {
     }
 
     // Mark device as "Pending Return" so the hearing aids tab shows the return status
+    $pending_reason = ( $side === 'both' ) ? 'Pending Return' : ( 'Pending Return (' . ucfirst( $side ) . ')' );
+    if ( strlen( $pending_reason ) > 50 ) {
+        $pending_reason = substr( $pending_reason, 0, 50 );
+    }
     $device_upd = [
-        'inactive_reason'=> ( $device->inactive_reason ? $device->inactive_reason . '; ' : '' ) . 'Pending return (' . ucfirst($side) . '): ' . $reason,
+        'inactive_reason'=> $pending_reason,
         'updated_at'     => date( 'c' ),
     ];
     if ( $side === 'both' ) {
@@ -3189,9 +3193,10 @@ function hm_ajax_create_return_credit_note() {
     try {
         // 1. Mark device as Returned
         if ( $side === 'both' ) {
+            $ret_reason = 'Returned';
             $dev_upd_ok = $db->update( 'hearmed_core.patient_devices', [
                 'device_status'   => 'Returned',
-                'inactive_reason' => 'Return: ' . $reason,
+                'inactive_reason' => $ret_reason,
                 'inactive_date'   => date( 'Y-m-d' ),
             ], [ 'id' => $device_id ] );
             if ( $dev_upd_ok === false ) {
@@ -3204,7 +3209,7 @@ function hm_ajax_create_return_credit_note() {
 
             $upd = [
                 $clear_col       => null,
-                'inactive_reason'=> ( $device->inactive_reason ? $device->inactive_reason . '; ' : '' ) . ucfirst($side) . ' returned: ' . $reason,
+                'inactive_reason'=> 'Returned (' . ucfirst( $side ) . ')',
             ];
             if ( ! $other_serial ) {
                 $upd['device_status'] = 'Returned';
