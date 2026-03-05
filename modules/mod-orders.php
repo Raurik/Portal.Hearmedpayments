@@ -2226,9 +2226,44 @@ class HearMed_Orders {
                                style="font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font);transition:border-color .15s">
                     </div>
                     <div style="margin-bottom:14px">
+                        <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px">Payment Method</label>
+                        <select id="hm-fit-method"
+                                style="font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font);transition:border-color .15s;background:#fff">
+                            <option value="Card"<?php echo ($order->payment_method ?? '') === 'Card' ? ' selected' : ''; ?>>Card</option>
+                            <option value="Cash"<?php echo ($order->payment_method ?? '') === 'Cash' ? ' selected' : ''; ?>>Cash</option>
+                            <option value="Bank Transfer"<?php echo ($order->payment_method ?? '') === 'Bank Transfer' ? ' selected' : ''; ?>>Bank Transfer</option>
+                            <option value="Cheque"<?php echo ($order->payment_method ?? '') === 'Cheque' ? ' selected' : ''; ?>>Cheque</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom:14px">
                         <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px">Amount Received (€)</label>
                         <input type="number" id="hm-fit-amount" step="0.01" value="<?php echo number_format($amount_due,2,'.',''); ?>"
                                style="font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font);transition:border-color .15s">
+                    </div>
+                    <!-- Split payment toggle -->
+                    <div style="margin-bottom:14px">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--hm-text,#334155)">
+                            <input type="checkbox" id="hm-fit-split" style="width:18px;height:18px;accent-color:var(--hm-teal)">
+                            Split payment methods
+                        </label>
+                    </div>
+                    <div id="hm-fit-split-row" style="display:none;margin-bottom:14px;padding:14px 16px;background:var(--hm-bg-alt,#f8fafc);border:1.5px solid var(--hm-border,#e2e8f0);border-radius:10px">
+                        <div style="margin-bottom:10px">
+                            <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px">Second Method</label>
+                            <select id="hm-fit-method-2"
+                                    style="font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font);background:#fff">
+                                <option value="">Select method</option>
+                                <option value="Card">Card</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Cheque">Cheque</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px">Second Amount (€)</label>
+                            <input type="number" id="hm-fit-amount-2" step="0.01" min="0" placeholder="0.00"
+                                   style="font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font)">
+                        </div>
                     </div>
                     <div style="margin-bottom:14px">
                         <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px">Fitting Notes (optional)</label>
@@ -2323,6 +2358,15 @@ class HearMed_Orders {
             }
         })();
 
+        // ── Split payment toggle ──
+        document.getElementById('hm-fit-split').addEventListener('change', function() {
+            document.getElementById('hm-fit-split-row').style.display = this.checked ? '' : 'none';
+            if (!this.checked) {
+                document.getElementById('hm-fit-method-2').value = '';
+                document.getElementById('hm-fit-amount-2').value = '';
+            }
+        });
+
         document.getElementById('hm-confirm-complete').addEventListener('click', function() {
 
             // ── Collect inline serials if any are on-screen ──
@@ -2362,10 +2406,23 @@ class HearMed_Orders {
                 nonce: btn.dataset.nonce,
                 fit_date: document.getElementById('hm-fit-date').value,
                 amount: document.getElementById('hm-fit-amount').value,
+                payment_method: document.getElementById('hm-fit-method').value,
                 notes: document.getElementById('hm-fit-notes').value,
                 apply_credit: document.getElementById('hm-apply-credit-cb').checked ? '1' : '',
                 credit_apply_amount: document.getElementById('hm-credit-apply-value').value
             };
+            // Build split payments array
+            var splitCb = document.getElementById('hm-fit-split');
+            if (splitCb && splitCb.checked) {
+                var m2 = document.getElementById('hm-fit-method-2').value;
+                var a2 = parseFloat(document.getElementById('hm-fit-amount-2').value || 0);
+                if (m2 && a2 > 0) {
+                    params.split_payments_json = JSON.stringify([
+                        {method: params.payment_method, amount: parseFloat(params.amount)},
+                        {method: m2, amount: a2}
+                    ]);
+                }
+            }
             if (serials.length) params.inline_serials = JSON.stringify(serials);
 
             fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
@@ -2993,6 +3050,8 @@ class HearMed_Orders {
         $fit_date = sanitize_text_field($_POST['fit_date'] ?? date('Y-m-d'));
         $amount   = floatval($_POST['amount'] ?? 0);
         $notes    = sanitize_textarea_field($_POST['notes'] ?? '');
+        $payment_method      = sanitize_text_field($_POST['payment_method'] ?? '');
+        $split_payments_json = stripslashes($_POST['split_payments_json'] ?? '');
         $apply_credit        = ! empty( $_POST['apply_credit'] );
         $credit_apply_amount = floatval( $_POST['credit_apply_amount'] ?? 0 );
 
@@ -3075,33 +3134,117 @@ class HearMed_Orders {
         $deposit_paid = floatval( $order->deposit_amount ?? 0 );
         $balance_paid = $amount;  // amount entered by dispenser at fitting
 
+        // Resolve payment method (use form selection, fallback to order default)
+        $allowed_methods = ['Card','Cash','Bank Transfer','Cheque','PRSI'];
+        if ( ! $payment_method || ! in_array( $payment_method, $allowed_methods ) ) {
+            $payment_method = $order->payment_method ?? 'Card';
+        }
+
+        // Parse split payments if provided
+        $split_payments = json_decode( $split_payments_json, true );
+        $has_split = ! empty( $split_payments ) && is_array( $split_payments ) && count( $split_payments ) > 1;
+
         // 5. Create proper invoice with VAT breakdown (captures invoice_id)
         $fitting_invoice_id = null;
-        $payment_data = [
-            'amount'         => $balance_paid,
-            'payment_date'   => $fit_date,
-            'payment_method' => $order->payment_method ?? 'Card',
-            'received_by'    => $user->id ?? null,
-        ];
-        if ( class_exists( 'HearMed_Invoice' ) ) {
-            $fitting_invoice_id = HearMed_Invoice::create_from_order( $order_id, $payment_data );
+        if ( $has_split ) {
+            // For split payments, record first payment via create_from_order
+            $first = $split_payments[0];
+            $payment_data = [
+                'amount'         => floatval( $first['amount'] ?? 0 ),
+                'payment_date'   => $fit_date,
+                'payment_method' => in_array( $first['method'] ?? '', $allowed_methods ) ? $first['method'] : $payment_method,
+                'received_by'    => $user->id ?? null,
+            ];
+            if ( class_exists( 'HearMed_Invoice' ) ) {
+                $fitting_invoice_id = HearMed_Invoice::create_from_order( $order_id, $payment_data );
+            }
+            // Record additional split payments
+            if ( $fitting_invoice_id ) {
+                for ( $i = 1; $i < count( $split_payments ); $i++ ) {
+                    $sp = $split_payments[$i];
+                    $sp_amount = floatval( $sp['amount'] ?? 0 );
+                    $sp_method = in_array( $sp['method'] ?? '', $allowed_methods ) ? $sp['method'] : 'Card';
+                    if ( $sp_amount > 0 ) {
+                        $db->insert( 'payments', [
+                            'invoice_id'     => $fitting_invoice_id,
+                            'patient_id'     => $order->patient_id,
+                            'amount'         => $sp_amount,
+                            'payment_date'   => $fit_date,
+                            'payment_method' => $sp_method,
+                            'received_by'    => $user->id ?? null,
+                            'clinic_id'      => $order->clinic_id,
+                            'created_by'     => $user->id ?? null,
+                        ] );
+                    }
+                }
+                // Recalculate invoice balance after all split payments
+                $inv_row = $db->get_row(
+                    "SELECT grand_total FROM hearmed_core.invoices WHERE id = \$1",
+                    [ $fitting_invoice_id ]
+                );
+                $total_paid_now = (float) $db->get_var(
+                    "SELECT COALESCE(SUM(amount), 0) FROM hearmed_core.payments WHERE invoice_id = \$1 AND is_refund = false",
+                    [ $fitting_invoice_id ]
+                );
+                $credit_on_inv = (float) $db->get_var(
+                    "SELECT COALESCE(credit_applied, 0) FROM hearmed_core.invoices WHERE id = \$1",
+                    [ $fitting_invoice_id ]
+                );
+                $new_bal = max( 0, (float) $inv_row->grand_total - $total_paid_now - $credit_on_inv );
+                $db->update( 'invoices', [
+                    'payment_status'    => $new_bal <= 0.009 ? 'Paid' : 'Partial',
+                    'balance_remaining' => round( $new_bal, 2 ),
+                    'updated_at'        => date( 'Y-m-d H:i:s' ),
+                ], [ 'id' => $fitting_invoice_id ] );
+            }
+        } else {
+            // Single payment method
+            $payment_data = [
+                'amount'         => $balance_paid,
+                'payment_date'   => $fit_date,
+                'payment_method' => $payment_method,
+                'received_by'    => $user->id ?? null,
+            ];
+            if ( class_exists( 'HearMed_Invoice' ) ) {
+                $fitting_invoice_id = HearMed_Invoice::create_from_order( $order_id, $payment_data );
+            }
         }
 
         $effective_invoice_id = $fitting_invoice_id ?: ( $order->invoice_id ?: null );
 
         // 6. Record fitting payment in financial_transactions
-        if ( class_exists( 'HearMed_Finance' ) && $balance_paid > 0 ) {
-            HearMed_Finance::record( 'payment', $balance_paid, [
-                'patient_id'       => (int) $order->patient_id,
-                'order_id'         => $order_id,
-                'invoice_id'       => $effective_invoice_id ?: null,
-                'payment_method'   => $order->payment_method ?? 'Card',
-                'staff_id'         => $user->id ?? null,
-                'clinic_id'        => $order->clinic_id ? (int) $order->clinic_id : null,
-                'notes'            => 'Fitting payment — balance collected',
-                'reference'        => $order->order_number ?? '',
-                'transaction_date' => date('Y-m-d'),
-            ] );
+        if ( class_exists( 'HearMed_Finance' ) ) {
+            if ( $has_split ) {
+                foreach ( $split_payments as $sp ) {
+                    $sp_amt = floatval( $sp['amount'] ?? 0 );
+                    $sp_meth = in_array( $sp['method'] ?? '', $allowed_methods ) ? $sp['method'] : $payment_method;
+                    if ( $sp_amt > 0 ) {
+                        HearMed_Finance::record( 'payment', $sp_amt, [
+                            'patient_id'       => (int) $order->patient_id,
+                            'order_id'         => $order_id,
+                            'invoice_id'       => $effective_invoice_id ?: null,
+                            'payment_method'   => $sp_meth,
+                            'staff_id'         => $user->id ?? null,
+                            'clinic_id'        => $order->clinic_id ? (int) $order->clinic_id : null,
+                            'notes'            => 'Fitting payment — ' . $sp_meth,
+                            'reference'        => $order->order_number ?? '',
+                            'transaction_date' => date('Y-m-d'),
+                        ] );
+                    }
+                }
+            } elseif ( $balance_paid > 0 ) {
+                HearMed_Finance::record( 'payment', $balance_paid, [
+                    'patient_id'       => (int) $order->patient_id,
+                    'order_id'         => $order_id,
+                    'invoice_id'       => $effective_invoice_id ?: null,
+                    'payment_method'   => $payment_method,
+                    'staff_id'         => $user->id ?? null,
+                    'clinic_id'        => $order->clinic_id ? (int) $order->clinic_id : null,
+                    'notes'            => 'Fitting payment — balance collected',
+                    'reference'        => $order->order_number ?? '',
+                    'transaction_date' => date('Y-m-d'),
+                ] );
+            }
         }
 
         // 7. Record deposit portion applied at fitting

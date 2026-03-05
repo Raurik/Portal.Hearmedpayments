@@ -735,10 +735,10 @@ class HearMed_Invoice {
         $method = $payment_data['payment_method'] ?? $order->payment_method ?? 'Card';
         if ( ! in_array( $method, $allowed_methods ) ) $method = 'Card';
 
-        // Don't double-insert if payment already recorded
+        // Don't double-insert if this exact payment was already recorded (same amount + method + date)
         $existing = $db->get_row(
-            "SELECT id FROM hearmed_core.payments WHERE invoice_id = $1 AND is_refund = false LIMIT 1",
-            [ $invoice_id ]
+            "SELECT id FROM hearmed_core.payments WHERE invoice_id = \$1 AND is_refund = false AND amount = \$2 AND payment_method = \$3 AND payment_date = \$4 LIMIT 1",
+            [ $invoice_id, $payment_data['amount'] ?? $order->grand_total, $method, $payment_data['payment_date'] ?? date('Y-m-d') ]
         );
         if ( $existing ) return;
 

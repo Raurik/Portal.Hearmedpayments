@@ -474,7 +474,7 @@ function hm_render_fitting_page() {
                 if (o.current_status === 'Ordered') {
                     actions = '<button class="hm-btn hm-btn-receive" onclick="hmFitting.openSerial(' + o.id + ')">Receive in Branch</button>';
                 } else if (o.current_status === 'Awaiting Fitting') {
-                    actions = '<span style="color:#334155;font-size:11px;font-weight:600;">Complete in Appointment close-off</span>';
+                    actions = '<button class="hm-btn hm-btn--primary" style="font-size:12px;padding:6px 14px;" onclick="hmFitting.openPayment(' + o.id + ')">Fitted / Pay</button>';
                 } else {
                     actions = '<span style="color:var(--hm-text-muted);font-size:11px;">Awaiting finance</span>';
                 }
