@@ -950,6 +950,7 @@ class HearMed_Orders {
 
             /* ── Submit ── */
             $('#hm-oc-submit').off('click').on('click',function(){
+                console.log('SUBMIT FIRED — orderItems count:',orderItems.length,JSON.stringify(orderItems));
                 if(!orderItems.length){$('#hm-oc-err').text('Please add at least one item.');return;}
                 var total=parseFloat($('#hm-oc-total').text().replace(/[^0-9.]/g,''))||0;
                 var dep=0;
