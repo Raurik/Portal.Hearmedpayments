@@ -2715,7 +2715,7 @@ class HearMed_Orders {
                     'payment_method'   => $deposit_method ?: $payment_method,
                     'staff_id'         => $user->id ?? null,
                     'clinic_id'        => $clinic,
-                    'notes'            => 'Deposit at order creation — held in patient credits',
+                    'notes'            => 'Deposit at order creation — held against this order',
                     'reference'        => $order_num,
                     'transaction_date' => $deposit_paid_at ?: date('Y-m-d'),
                 ] );
@@ -2868,7 +2868,7 @@ class HearMed_Orders {
                 'payment_method'   => $deposit_method,
                 'staff_id'         => $user->id ?? null,
                 'clinic_id'        => $order->clinic_id,
-                'notes'            => 'Deposit at order creation — balance collected at fitting',
+                'notes'            => 'Deposit recorded against this order',
                 'reference'        => $order->order_number,
                 'transaction_date' => $deposit_date,
             ] );
@@ -3272,20 +3272,8 @@ class HearMed_Orders {
             }
         }
 
-        // 7. Record deposit portion applied at fitting
-        if ( $deposit_paid > 0 && class_exists( 'HearMed_Finance' ) ) {
-            HearMed_Finance::record( 'payment', $deposit_paid, [
-                'patient_id'       => (int) $order->patient_id,
-                'order_id'         => $order_id,
-                'invoice_id'       => $effective_invoice_id ?: null,
-                'payment_method'   => $order->deposit_method ?? $order->payment_method ?? 'Card',
-                'staff_id'         => $user->id ?? null,
-                'clinic_id'        => $order->clinic_id ? (int) $order->clinic_id : null,
-                'notes'            => 'Deposit portion — applied at fitting',
-                'reference'        => $order->order_number ?? '',
-                'transaction_date' => $order->deposit_paid_at ?? date('Y-m-d'),
-            ] );
-        }
+        // 7. Do NOT post deposit again in financial_transactions at fitting.
+        // Deposit was already recorded at order creation and is now linked to invoice payments.
 
         // 8. Log in patient timeline
         $db->insert( 'hearmed_core.patient_timeline', [
