@@ -34,7 +34,7 @@ function hm_render_fitting_page() {
     // Counts + totals by status
     $counts = $db->get_results(
         "SELECT o.current_status, COUNT(*) AS cnt,
-                COALESCE(SUM(o.subtotal), 0) AS total_subtotal,
+                COALESCE(SUM(o.subtotal - COALESCE(o.deposit_amount, 0)), 0) AS total_subtotal,
                 COALESCE(SUM(o.prsi_amount), 0) AS total_prsi
          FROM hearmed_core.orders o
          WHERE o.current_status IN ('Approved','Ordered','Awaiting Fitting')
@@ -486,7 +486,7 @@ function hm_render_fitting_page() {
                 html += '<td><span class="hmf-product">' + hmFE(o.product_names) + '</span></td>';
                 html += '<td>' + hmFE(o.clinic_name) + '</td>';
                 html += '<td>' + hmFE(o.dispenser_name) + '</td>';
-                html += '<td style="text-align:right;font-weight:600;white-space:nowrap;">€' + parseFloat(o.subtotal || 0).toFixed(2) + '</td>';
+                html += '<td style="text-align:right;font-weight:600;white-space:nowrap;">€' + parseFloat(o.balance_due || o.subtotal || 0).toFixed(2) + '</td>';
                 html += '<td>' + prsiDot + '</td>';
                 html += '<td><span class="hm-status ' + statusClass + '">' + statusLabel + '</span></td>';
                 html += '<td>' + fittingDate + '</td>';
@@ -511,10 +511,10 @@ function hm_render_fitting_page() {
             }
             function euro(v) { return '€' + v.toFixed(2); }
 
-            var valAwaiting  = sumField(awaitingFitting, 'subtotal');
-            var valOrder     = sumField(awaitingOrder, 'subtotal');
-            var valDelivery  = sumField(awaitingDelivery, 'subtotal');
-            var valPipeline  = sumField(orders, 'subtotal');
+            var valAwaiting  = sumField(awaitingFitting, 'balance_due');
+            var valOrder     = sumField(awaitingOrder, 'balance_due');
+            var valDelivery  = sumField(awaitingDelivery, 'balance_due');
+            var valPipeline  = sumField(orders, 'balance_due');
 
             // PRSI to claim — only count PRSI-applicable orders within PRSI cycle window
             // Cycle: 2nd Tuesday of current month → 1st Monday of next month
@@ -920,7 +920,7 @@ function hm_ajax_fitting_load() {
     $orders = $db->get_results(
         "SELECT o.id, o.order_number, o.patient_id, o.current_status,
                 o.prsi_applicable, o.subtotal, o.prsi_amount, o.prsi_left, o.prsi_right,
-                o.grand_total, o.order_date, o.invoice_id,
+                o.grand_total, o.deposit_amount, o.order_date, o.invoice_id,
                 o.clinic_id, o.staff_id,
                 p.patient_number, p.first_name AS p_first, p.last_name AS p_last,
                 c.clinic_name,
@@ -1002,6 +1002,8 @@ function hm_ajax_fitting_load() {
             'fitting_date'    => $o->fitting_date ? date('d M Y', strtotime($o->fitting_date)) : '',
             'fitting_date_raw'=> $o->fitting_date ?? '',
             'subtotal'        => (float)($o->subtotal ?? 0),
+            'deposit_amount'  => (float)($o->deposit_amount ?? 0),
+            'balance_due'     => max(0, (float)($o->subtotal ?? 0) - (float)($o->deposit_amount ?? 0)),
             'prsi_amount'     => $prsi_computed,
             'grand_total'     => (float)($o->grand_total ?? 0),
             'invoice_id'      => $o->invoice_id ? (int)$o->invoice_id : null,
