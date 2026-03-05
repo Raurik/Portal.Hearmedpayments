@@ -1849,6 +1849,7 @@ function hm_ajax_save_appointment_outcome() {
     $appt_id    = intval( $_POST['appointment_id'] );
     $outcome_id = intval( $_POST['outcome_id'] ?? 0 );
     $note       = sanitize_textarea_field( $_POST['outcome_note'] ?? '' );
+    $posted_pid = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $appt_id ) { wp_send_json_error( 'Invalid appointment' ); return; }
 
     // Get outcome template details
@@ -1875,6 +1876,9 @@ function hm_ajax_save_appointment_outcome() {
         [ $appt_id ]
     );
     $patient_id      = $appt_row ? (int) $appt_row->patient_id : null;
+    if ( ! $patient_id && $posted_pid > 0 ) {
+        $patient_id = $posted_pid;
+    }
     $clinic_id       = $appt_row ? (int) ( $appt_row->clinic_id ?? 0 ) : null;
     $staff_id        = $appt_row ? (int) ( $appt_row->dispenser_id ?? 0 ) : null;
     $report_category = $appt_row ? ($appt_row->report_category ?: null) : null;
@@ -1886,6 +1890,9 @@ function hm_ajax_save_appointment_outcome() {
         'outcome'            => $outcome_text,
         'updated_at'         => current_time( 'mysql' ),
     ];
+    if ( '' !== trim( (string) $note ) ) {
+        $data['notes'] = $note;
+    }
 
     HearMed_DB::update( HearMed_Portal::table( 'appointments' ), $data, [ 'id' => $appt_id ] );
 
@@ -1944,11 +1951,16 @@ function hm_ajax_save_appointment_outcome() {
             if ( $svc_name ) $prefix .= ' — ' . $svc_name;
             if ( $date_str ) $prefix .= ' (' . $date_str . ( $time_str ? ' ' . $time_str : '' ) . ')';
 
+            $creator_id = (int) ( PortalAuth::staff_id() ?: 0 );
+            if ( ! $creator_id && ! empty( $appt_row->dispenser_id ) ) {
+                $creator_id = (int) $appt_row->dispenser_id;
+            }
+
             $note_data = [
                 'patient_id' => $patient_id,
                 'note_type'  => 'Appointment Outcome',
                 'note_text'  => $prefix . "\n" . $note,
-                'created_by' => PortalAuth::staff_id() ?: null,
+                'created_by' => $creator_id ?: null,
             ];
             // Add category column if available
             $has_cat = HearMed_DB::get_var(
@@ -1958,7 +1970,11 @@ function hm_ajax_save_appointment_outcome() {
             if ( $has_cat ) {
                 $note_data['note_category'] = 'appointment';
             }
-            HearMed_DB::insert( 'hearmed_core.patient_notes', $note_data );
+            $note_insert_id = HearMed_DB::insert( 'hearmed_core.patient_notes', $note_data );
+            if ( ! $note_insert_id ) {
+                // Fallback for installs expecting unqualified table slug.
+                HearMed_DB::insert( 'patient_notes', $note_data );
+            }
         } catch ( Throwable $e ) {
             error_log( '[HearMed] outcome → patient_notes insert failed: ' . $e->getMessage() );
         }

@@ -466,7 +466,8 @@ var Cal={
             post('save_appointment_outcome',{
                 appointment_id:a._ID,
                 outcome_id:o.id,
-                outcome_note:$('#hm-outcome-note').val()||''
+                outcome_note:$('#hm-outcome-note').val()||'',
+                patient_id:a.patient_id||0
             }).then(function(r){
                 if(r.success){
                     $('#hm-pop').removeClass('open');
@@ -1739,7 +1740,8 @@ var Cal={
             post('save_appointment_outcome',{
                 appointment_id:a._ID,
                 outcome_id:o.id,
-                outcome_note:noteVal
+                outcome_note:noteVal,
+                patient_id:a.patient_id||0
             }).then(function(r){
                 if(!r.success){
                     $btn.prop('disabled',false).text('Save Outcome');
