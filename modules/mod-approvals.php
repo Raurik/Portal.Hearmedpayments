@@ -162,6 +162,7 @@ function hm_render_approvals_page() {
                 html += '<span style="font-size:11px;color:var(--hm-text-light);">Cost: &euro;' + hmN(o.cost_total) + '</span>';
                 html += '<span class="hma-total">Retail: &euro;' + hmN(o.grand_total) + '</span>';
                 html += '<span class="hma-margin ' + marginClass + '">' + o.margin_percent.toFixed(1) + '%</span>';
+                html += '<button type="button" class="hm-btn hm-btn--primary" style="padding:4px 14px;font-size:12px;font-weight:700;white-space:nowrap" onclick="event.stopPropagation();hmApprovals.approve(' + o.id + ')">Approve &#10004;</button>';
                 html += '<span class="hma-expand" id="hma-arrow-' + o.id + '">&#9660;</span>';
                 html += '</div></div>';
 
