@@ -2432,7 +2432,10 @@ class HearMed_Orders {
                 if (d.success) {
                     msg.className='hm-notice hm-notice--success';
                     msg.innerHTML='<div class="hm-notice-body"><span class="hm-notice-icon">✓</span> '+d.data.message+'</div>';
-                    setTimeout(()=>window.location=d.data.redirect, 1500);
+                    if (d.data && d.data.print_url) {
+                        window.open(d.data.print_url, '_blank');
+                    }
+                    setTimeout(()=>window.location=(d.data.next_redirect || d.data.redirect), 1200);
                 } else {
                     msg.className='hm-notice hm-notice--error';
                     msg.innerHTML='<div class="hm-notice-body"><span class="hm-notice-icon">×</span> '+d.data+'</div>';
@@ -2718,15 +2721,8 @@ class HearMed_Orders {
                 ] );
             }
 
-            // Hold deposit as patient credit so it shows in patient account and can be applied at fitting
-            $db->insert( 'hearmed_core.patient_credits', [
-                'patient_id' => $patient_id,
-                'order_id'   => $order_id,
-                'amount'     => $deposit_amount,
-                'status'     => 'active',
-                'notes'      => 'Deposit at order creation — order ' . $order_num,
-                'created_by' => $user->id ?? null,
-            ] );
+            // IMPORTANT: deposits are not patient credits.
+            // They remain tied to this order and are carried into its invoice at fitting.
         }
 
         // ── Quickpay: auto-create invoice for service-only orders ──
@@ -3210,6 +3206,37 @@ class HearMed_Orders {
 
         $effective_invoice_id = $fitting_invoice_id ?: ( $order->invoice_id ?: null );
 
+        // Ensure deposit is attached to this invoice once (deposit is order-specific, not reusable credit).
+        if ( $deposit_paid > 0 && $effective_invoice_id ) {
+            $deposit_date = ! empty( $order->deposit_paid_at ) ? substr( (string) $order->deposit_paid_at, 0, 10 ) : $fit_date;
+            $existing_deposit_payment = (int) $db->get_var(
+                "SELECT id
+                   FROM hearmed_core.payments
+                  WHERE invoice_id = \$1
+                    AND patient_id = \$2
+                    AND is_refund = false
+                    AND amount = \$3
+                    AND payment_date::date = \$4::date
+                  ORDER BY id DESC
+                  LIMIT 1",
+                [ $effective_invoice_id, $order->patient_id, $deposit_paid, $deposit_date ]
+            );
+
+            if ( ! $existing_deposit_payment ) {
+                $db->insert( 'hearmed_core.payments', [
+                    'invoice_id'     => $effective_invoice_id,
+                    'patient_id'     => $order->patient_id,
+                    'amount'         => $deposit_paid,
+                    'payment_date'   => $deposit_date,
+                    'payment_method' => $order->deposit_method ?? $order->payment_method ?? 'Card',
+                    'received_by'    => $user->id ?? null,
+                    'clinic_id'      => $order->clinic_id,
+                    'created_by'     => $user->id ?? null,
+                    'is_refund'      => false,
+                ] );
+            }
+        }
+
         // 6. Record fitting payment in financial_transactions
         if ( class_exists( 'HearMed_Finance' ) ) {
             if ( $has_split ) {
@@ -3330,11 +3357,14 @@ class HearMed_Orders {
         // Invoice is created with qbo_sync_status = 'pending_review' by default
         // Rauri reviews and sends to QBO via /qbo-review/ page
 
-        // Redirect to the invoice if one was created, otherwise fall back to order view
+        // After completion: open invoice print view and return staff to calendar.
+        $redirect  = HearMed_Utils::page_url('calendar');
+        $print_url = null;
         if ( $effective_invoice_id ) {
-            $redirect = admin_url('admin-ajax.php') . '?action=hm_download_invoice&nonce=' . wp_create_nonce('hm_nonce') . '&_ID=' . (int) $effective_invoice_id;
-        } else {
-            $redirect = HearMed_Utils::page_url('orders') . '?hm_action=view&order_id=' . $order_id;
+            $print_url = admin_url('admin-ajax.php')
+                . '?action=hm_download_invoice&nonce=' . wp_create_nonce('hm_nonce')
+                . '&_ID=' . (int) $effective_invoice_id
+                . '&auto_print=1';
         }
 
         wp_send_json_success([
@@ -3343,6 +3373,8 @@ class HearMed_Orders {
             'order_id'        => $order_id,
             'invoice_id'      => $effective_invoice_id,
             'credit_applied'  => $credit_actually_applied,
+            'print_url'       => $print_url,
+            'next_redirect'   => $redirect,
             'redirect'        => $redirect,
         ]);
     }

@@ -1452,6 +1452,9 @@ function hm_ajax_download_invoice() {
     $tpl = HearMed_Invoice::build_template_data( $data );
     header( 'Content-Type: text/html; charset=utf-8' );
     echo HearMed_Print_Templates::render( 'invoice', $tpl );
+    if ( ! empty( $_GET['auto_print'] ) ) {
+        echo "<script>(function(){setTimeout(function(){try{window.print();}catch(e){}},150);})();</script>";
+    }
     exit;
 }
 

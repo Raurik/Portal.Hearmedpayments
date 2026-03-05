@@ -134,7 +134,9 @@ class HearMed_Finance {
         $val = HearMed_DB::get_var(
             "SELECT COALESCE(SUM(GREATEST(amount - COALESCE(used_amount, 0), 0)), 0)
                FROM hearmed_core.patient_credits
-              WHERE patient_id = $1 AND status = 'active'",
+                            WHERE patient_id = $1
+                                AND status = 'active'
+                                AND (notes IS NULL OR notes NOT ILIKE 'Deposit at order creation%')",
             [ (int) $patient_id ]
         );
         return (float) $val;
@@ -157,7 +159,8 @@ class HearMed_Finance {
                         GREATEST(pc.amount - COALESCE(pc.used_amount, 0), 0) AS remaining_amount
                    FROM hearmed_core.patient_credits pc
                    LEFT JOIN hearmed_core.orders o ON o.id = pc.order_id
-                  WHERE pc.patient_id = $1
+                                    WHERE pc.patient_id = $1
+                                        AND (pc.notes IS NULL OR pc.notes NOT ILIKE 'Deposit at order creation%')
                   ORDER BY pc.created_at DESC",
                 [ (int) $patient_id ]
             );
@@ -168,7 +171,9 @@ class HearMed_Finance {
                     GREATEST(pc.amount - COALESCE(pc.used_amount, 0), 0) AS remaining_amount
                FROM hearmed_core.patient_credits pc
                LEFT JOIN hearmed_core.orders o ON o.id = pc.order_id
-              WHERE pc.patient_id = $1 AND pc.status = $2
+                            WHERE pc.patient_id = $1
+                                AND pc.status = $2
+                                AND (pc.notes IS NULL OR pc.notes NOT ILIKE 'Deposit at order creation%')
               ORDER BY pc.created_at DESC",
             [ (int) $patient_id, $status ]
         );
@@ -254,7 +259,9 @@ class HearMed_Finance {
         $credits = HearMed_DB::get_results(
             "SELECT id, amount, COALESCE(used_amount, 0) AS used_amount
                FROM hearmed_core.patient_credits
-              WHERE patient_id = $1 AND status = 'active'
+                            WHERE patient_id = $1
+                                AND status = 'active'
+                                AND (notes IS NULL OR notes NOT ILIKE 'Deposit at order creation%')
               ORDER BY created_at ASC",
             [ $patient_id ]
         );
