@@ -2933,6 +2933,10 @@ function hm_ajax_create_return_credit_note() {
 
     $db       = HearMed_DB::instance();
     $staff_id = hm_patient_staff_id();
+    $settlement_type = sanitize_key( $_POST['settlement_type'] ?? 'refund' );
+    if ( ! in_array( $settlement_type, [ 'refund', 'credit' ], true ) ) {
+        $settlement_type = 'refund';
+    }
 
     hm_ensure_returns_tables();
 
@@ -2980,7 +2984,7 @@ function hm_ajax_create_return_credit_note() {
     $prsi_amount     = 0;
     $patient_paid    = 0;
     $order           = null;
-    $inv_id          = null;
+    $inv_id          = ! empty( $ret->invoice_id ) ? (int) $ret->invoice_id : null;
     $ord_id          = $ret->order_id ?: ( property_exists( $device, 'order_id' ) ? $device->order_id : null );
     $per_ear         = floatval( HearMed_Settings::get( 'hm_prsi_amount_per_ear', '500' ) );
 
@@ -3004,7 +3008,7 @@ function hm_ajax_create_return_credit_note() {
             [ $ord_id ]
         );
         if ( $order ) {
-            $inv_id = $order->inv_id ?? null;
+            $inv_id = $order->inv_id ?? ( $order->invoice_id ?? $inv_id );
 
             // Price source: invoice_items (preferred) or order_items fallback.
             // Use hearing-aid line totals for this device product + returned side.
@@ -3094,6 +3098,67 @@ function hm_ajax_create_return_credit_note() {
         error_log( "[HearMed] Credit note: no order_id found for return #{$return_id}, device #{$device_id}, product=" . ($device->product_id ?? 'null') );
     }
 
+    // Fallback when order linkage is missing: use original invoice directly.
+    if ( $total_amount <= 0 && $inv_id ) {
+        $inv = $db->get_row(
+            "SELECT id, grand_total, COALESCE(prsi_amount,0) AS prsi_amount
+             FROM hearmed_core.invoices
+             WHERE id = \$1",
+            [ $inv_id ]
+        );
+        if ( $inv ) {
+            $inv_items = $db->get_results(
+                "SELECT item_id, ear_side, line_total
+                 FROM hearmed_core.invoice_items
+                 WHERE invoice_id = \$1 AND item_type = 'product'",
+                [ $inv_id ]
+            ) ?: [];
+
+            $target_product_id = ! empty( $device->product_id ) ? intval( $device->product_id ) : 0;
+            $rows_for_device = [];
+            foreach ( $inv_items as $it ) {
+                if ( ! $target_product_id || intval( $it->item_id ?? 0 ) === $target_product_id ) {
+                    $rows_for_device[] = $it;
+                }
+            }
+            if ( empty( $rows_for_device ) ) {
+                $rows_for_device = $inv_items;
+            }
+
+            if ( $side === 'both' ) {
+                foreach ( $rows_for_device as $it ) {
+                    $total_amount += floatval( $it->line_total ?? 0 );
+                }
+            } else {
+                $explicit = 0.0;
+                $binaural = 0.0;
+                foreach ( $rows_for_device as $it ) {
+                    $ear = strtolower( trim( (string) ( $it->ear_side ?? '' ) ) );
+                    $val = floatval( $it->line_total ?? 0 );
+                    if ( $ear === $side ) {
+                        $explicit += $val;
+                    } elseif ( $ear === 'binaural' || $ear === 'both' || $ear === '' ) {
+                        $binaural += $val;
+                    }
+                }
+                $total_amount = $explicit > 0 ? $explicit : ( $binaural > 0 ? $binaural / 2 : 0 );
+            }
+
+            if ( $total_amount <= 0 ) {
+                $total_amount = floatval( $inv->grand_total ?? 0 );
+                if ( $side === 'left' || $side === 'right' ) {
+                    $total_amount = $total_amount / 2;
+                }
+            }
+
+            $prsi_amount = floatval( $inv->prsi_amount ?? 0 );
+            if ( $side === 'left' || $side === 'right' ) {
+                $prsi_amount = $prsi_amount > 0 ? $prsi_amount / 2 : 0;
+            }
+            $patient_paid = max( 0, $total_amount - $prsi_amount );
+        }
+    }
+
     // Allow override from POST
     $refund_override = isset( $_POST['refund_amount'] ) ? floatval( $_POST['refund_amount'] ) : null;
     $patient_refund  = $refund_override !== null ? $refund_override : $patient_paid;
@@ -3124,12 +3189,14 @@ function hm_ajax_create_return_credit_note() {
     try {
         // 1. Mark device as Returned
         if ( $side === 'both' ) {
-            $db->update( 'hearmed_core.patient_devices', [
+            $dev_upd_ok = $db->update( 'hearmed_core.patient_devices', [
                 'device_status'   => 'Returned',
                 'inactive_reason' => 'Return: ' . $reason,
                 'inactive_date'   => date( 'Y-m-d' ),
-                'updated_at'      => date( 'c' ),
             ], [ 'id' => $device_id ] );
+            if ( $dev_upd_ok === false ) {
+                throw new \Exception( 'Failed to mark device returned: ' . HearMed_DB::last_error() );
+            }
         } else {
             $clear_col = ( $side === 'left' ) ? 'serial_number_left' : 'serial_number_right';
             $other_col = ( $side === 'left' ) ? 'serial_number_right' : 'serial_number_left';
@@ -3138,13 +3205,15 @@ function hm_ajax_create_return_credit_note() {
             $upd = [
                 $clear_col       => null,
                 'inactive_reason'=> ( $device->inactive_reason ? $device->inactive_reason . '; ' : '' ) . ucfirst($side) . ' returned: ' . $reason,
-                'updated_at'     => date( 'c' ),
             ];
             if ( ! $other_serial ) {
                 $upd['device_status'] = 'Returned';
                 $upd['inactive_date'] = date( 'Y-m-d' );
             }
-            $db->update( 'hearmed_core.patient_devices', $upd, [ 'id' => $device_id ] );
+            $dev_upd_ok = $db->update( 'hearmed_core.patient_devices', $upd, [ 'id' => $device_id ] );
+            if ( $dev_upd_ok === false ) {
+                throw new \Exception( 'Failed to update returned side on device: ' . HearMed_DB::last_error() );
+            }
         }
 
         // 2. Generate credit note number
@@ -3172,7 +3241,7 @@ function hm_ajax_create_return_credit_note() {
             'patient_refund_amount' => $patient_refund,
             'reason'                => 'Return (' . $side . '): ' . $reason,
             'credit_date'           => date( 'Y-m-d' ),
-            'refund_type'           => 'cheque',
+            'refund_type'           => ( $settlement_type === 'credit' ? 'credit' : 'cheque' ),
             'cheque_sent'           => false,
             'prsi_notified'         => false,
             'created_by'            => $staff_id ?: null,
@@ -3190,14 +3259,14 @@ function hm_ajax_create_return_credit_note() {
             'total_refund_amount'   => $patient_refund + $prsi_amount,
             'patient_refund_amount' => $patient_refund,
             'prsi_refund_amount'    => $prsi_amount,
-            'refund_status'         => 'completed',
+            'refund_status'         => ( $settlement_type === 'credit' ? 'credited' : 'completed' ),
         ], [ 'id' => $return_id ] );
         if ( $upd_ok === false ) {
             throw new \Exception( 'Failed to update return record: ' . HearMed_DB::last_error() );
         }
 
         // 5. Create patient credit (spendable on future orders / refundable)
-        if ( $patient_refund > 0 ) {
+        if ( $patient_refund > 0 && $settlement_type === 'credit' ) {
             $pc_id = $db->insert( 'hearmed_core.patient_credits', [
                 'patient_id'          => $pid,
                 'credit_note_id'      => $cn_id,
@@ -3334,8 +3403,9 @@ function hm_ajax_create_return_credit_note() {
         'patient_refund'     => $patient_refund,
         'prsi_amount'        => $prsi_amount,
         'side'               => $side,
+        'settlement_type'    => $settlement_type,
         'stock_returned'     => $stock_ok,
-        'message'            => "Credit note {$cn_number} created. PDF saved to patient documents." . ( $stock_ok ? ' Device returned to stock.' : ' Stock return pending — please check manually.' ),
+        'message'            => "Credit note {$cn_number} created (" . ( $settlement_type === 'credit' ? 'credited to patient account' : 'refund queued' ) . "). PDF saved to patient documents." . ( $stock_ok ? ' Device returned to stock.' : ' Stock return pending — please check manually.' ),
     ] );
 }
 

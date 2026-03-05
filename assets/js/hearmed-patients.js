@@ -1182,6 +1182,11 @@ function initProfile(){
         $('body').append(
             '<div id="hm-modal-overlay" class="hm-modal-bg"><div class="hm-modal hm-modal--md"><div class="hm-modal-hd"><span>'+title+'</span><button class="hm-close">&times;</button></div><div class="hm-modal-body">'+
             infoBox+
+            '<div class="hm-form-group" style="margin-bottom:10px;">'+
+                '<label class="hm-label">How should this amount be handled?</label>'+
+                '<label style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px;color:#334155;"><input type="radio" name="cn-settlement" value="refund" checked style="accent-color:#0BB4C4;"> Refund patient (show in Refunds queue)</label>'+
+                '<label style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px;color:#334155;"><input type="radio" name="cn-settlement" value="credit" style="accent-color:#0BB4C4;"> Credit patient account (no cheque queue)</label>'+
+            '</div>'+
             '<div class="hm-form-group"><label class="hm-label">Patient refund amount (€)</label><input type="number" class="hm-inp" id="cn-refund-amt" step="0.01" min="0" placeholder="Auto-calculated from original order"><p style="font-size:11px;color:#94a3b8;margin-top:4px;">Leave blank to auto-calculate from original order (excluding PRSI). Enter a value to override.</p></div>'+
             '<div id="cn-error" style="display:none;background:#fef2f2;border:1px solid #fecdd3;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:13px;color:#991b1b;"></div>'+
             '</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn--primary" id="cn-save">'+title+'</button></div></div></div>'
@@ -1193,6 +1198,7 @@ function initProfile(){
             $('#cn-error').hide();
             var data={action:'hm_create_return_credit_note',nonce:_hm.nonce,return_id:returnId};
             if(isRedo) data.redo_cn_id=oldCnId;
+            data.settlement_type = ($('input[name="cn-settlement"]:checked').val()||'refund');
             var amt=$('#cn-refund-amt').val();
             if(amt) data.refund_amount=parseFloat(amt);
             console.log('[HearMed] Creating credit note for return_id='+returnId, data);
