@@ -431,12 +431,31 @@ class HearMed_Core {
      * Runs once then sets an option flag so it never runs again.
      */
     public function repair_elementor_page_settings() {
-        if ( HearMed_Settings::get( 'hm_elementor_meta_repaired_v1', '' ) ) {
+        if ( HearMed_Settings::get( 'hm_elementor_meta_repaired_v2', '' ) ) {
             return;
         }
 
-        // Pages that may have corrupted meta
-        $page_ids = [ 765 ];
+        // Scan all known portal pages plus the currently edited Elementor post (if any).
+        $page_ids = [];
+        $portal_slugs = [
+            'calendar', 'patients', 'orders', 'order-status', 'accounting',
+            'repairs', 'refunds', 'stock', 'reporting', 'notifications',
+            'kpi', 'clinical-review',
+        ];
+
+        foreach ( $portal_slugs as $slug ) {
+            $page_obj = get_page_by_path( $slug, OBJECT, 'page' );
+            $pid = $page_obj ? (int) $page_obj->ID : 0;
+            if ( $pid > 0 ) {
+                $page_ids[] = $pid;
+            }
+        }
+
+        $editing_post_id = intval( $_GET['post'] ?? 0 );
+        if ( $editing_post_id > 0 ) {
+            $page_ids[] = $editing_post_id;
+        }
+        $page_ids = array_values( array_unique( array_filter( $page_ids ) ) );
 
         foreach ( $page_ids as $pid ) {
             $raw = get_post_meta( $pid, '_elementor_page_settings', true );
@@ -458,7 +477,7 @@ class HearMed_Core {
             }
         }
 
-        HearMed_Settings::set( 'hm_elementor_meta_repaired_v1', '1' );
+        HearMed_Settings::set( 'hm_elementor_meta_repaired_v2', '1' );
     }
     
     /**

@@ -636,6 +636,10 @@ class HearMed_Router {
        ================================================================ */
 
     public function render_user_bar() {
+        if ( HearMed_Utils::is_elementor_editor() && ! HearMed_Utils::allow_elementor_preview_boot() ) {
+            return;
+        }
+
         if ( ! PortalAuth::is_logged_in() ) {
             return;
         }

@@ -423,6 +423,11 @@ class HearMed_Utils {
         if ( null !== filter_input( INPUT_GET, 'elementor-preview' ) ) {
             return true;
         }
+        // Elementor editor load in wp-admin: ?action=elementor
+        $action = sanitize_text_field( $_GET['action'] ?? '' );
+        if ( $action === 'elementor' ) {
+            return true;
+        }
         // Editor mode when Elementor plugin is active
         if ( class_exists( '\Elementor\Plugin' ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) {
             return true;

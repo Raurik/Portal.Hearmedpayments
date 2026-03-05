@@ -60,6 +60,12 @@ class HearMed_Enqueue {
      * These files control layout, design system, and core JS
      */
     public function enqueue_foundation() {
+        // Never boot HearMed runtime assets inside Elementor editor/preview
+        // unless explicitly allowed for staging diagnostics.
+        if ( HearMed_Utils::is_elementor_editor() && ! HearMed_Utils::allow_elementor_preview_boot() ) {
+            return;
+        }
+
         // Google Fonts — Cormorant Garamond (titles), Bricolage Grotesque (subtitles),
         // Source Sans 3 (body), Plus Jakarta Sans (buttons),
         // + all card typography options: Inter, Roboto, Open Sans, Lato, Poppins,
