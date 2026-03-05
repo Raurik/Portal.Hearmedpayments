@@ -534,6 +534,125 @@ class HearMed_Orders {
                             <select id="hm-oc-cat" class="hm-oc-inp"><option value="">— Select Category —</option></select>
                         </div>
 
+                        <!-- ═══ HEARING AID FLOW ═══ -->
+                        <div id="hm-oc-ha-flow" style="display:none">
+                            <!-- Step: Search method -->
+                            <div style="margin-bottom:14px">
+                                <label class="hm-oc-lbl">Search By</label>
+                                <div style="display:flex;gap:8px">
+                                    <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border:2px solid var(--hm-border,#e2e8f0);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s" id="hm-oc-search-range-label">
+                                        <input type="radio" name="hm-oc-search-method" value="range" style="accent-color:var(--hm-teal,#0BB4C4)"> HearMed Range
+                                    </label>
+                                    <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border:2px solid var(--hm-border,#e2e8f0);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s" id="hm-oc-search-mfr-label">
+                                        <input type="radio" name="hm-oc-search-method" value="manufacturer" style="accent-color:var(--hm-teal,#0BB4C4)"> Manufacturer
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Path A: HearMed Range -->
+                            <div id="hm-oc-path-range" style="display:none">
+                                <div style="margin-bottom:14px">
+                                    <label class="hm-oc-lbl">HearMed Range</label>
+                                    <select id="hm-oc-hmrange" class="hm-oc-inp"><option value="">— Select Range —</option></select>
+                                </div>
+                                <div id="hm-oc-pr-mfr-wrap" style="display:none;margin-bottom:14px">
+                                    <label class="hm-oc-lbl">Manufacturer</label>
+                                    <select id="hm-oc-pr-mfr" class="hm-oc-inp"><option value="">— All Manufacturers —</option></select>
+                                </div>
+                                <div id="hm-oc-pr-style-wrap" style="display:none;margin-bottom:14px">
+                                    <label class="hm-oc-lbl">Style</label>
+                                    <select id="hm-oc-pr-style" class="hm-oc-inp"><option value="">— All Styles —</option></select>
+                                </div>
+                                <div id="hm-oc-pr-tech-wrap" style="display:none;margin-bottom:14px">
+                                    <label class="hm-oc-lbl">Tech Level</label>
+                                    <select id="hm-oc-pr-tech" class="hm-oc-inp"><option value="">— All Tech Levels —</option></select>
+                                </div>
+                                <div id="hm-oc-pr-prod-wrap" style="display:none;margin-bottom:14px">
+                                    <label class="hm-oc-lbl">Model</label>
+                                    <select id="hm-oc-pr-prod" class="hm-oc-inp"><option value="">— Select Model —</option></select>
+                                </div>
+                            </div>
+
+                            <!-- Path B: Manufacturer -->
+                            <div id="hm-oc-path-mfr" style="display:none">
+                                <div style="margin-bottom:14px">
+                                    <label class="hm-oc-lbl">Manufacturer</label>
+                                    <select id="hm-oc-pm-mfr" class="hm-oc-inp"><option value="">— Select Manufacturer —</option></select>
+                                </div>
+                                <div id="hm-oc-pm-row" style="display:none;margin-bottom:14px">
+                                    <div style="display:flex;gap:10px">
+                                        <div style="flex:1">
+                                            <label class="hm-oc-lbl">Style</label>
+                                            <select id="hm-oc-pm-style" class="hm-oc-inp"><option value="">— All Styles —</option></select>
+                                        </div>
+                                        <div style="flex:1">
+                                            <label class="hm-oc-lbl">Model</label>
+                                            <select id="hm-oc-pm-model" class="hm-oc-inp"><option value="">— All Models —</option></select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="hm-oc-pm-tech-wrap" style="display:none;margin-bottom:14px">
+                                    <label class="hm-oc-lbl">Tech Level</label>
+                                    <select id="hm-oc-pm-tech" class="hm-oc-inp"><option value="">— All Tech Levels —</option></select>
+                                </div>
+                                <div id="hm-oc-pm-prod-wrap" style="display:none;margin-bottom:14px">
+                                    <label class="hm-oc-lbl">Product</label>
+                                    <select id="hm-oc-pm-prod" class="hm-oc-inp"><option value="">— Select Product —</option></select>
+                                </div>
+                            </div>
+
+                            <!-- Ear selection (shared) -->
+                            <div id="hm-oc-ha-ear-wrap" style="display:none;margin-bottom:14px">
+                                <label class="hm-oc-lbl">Ear</label>
+                                <select id="hm-oc-ha-ear" class="hm-oc-inp">
+                                    <option value="">— Select —</option>
+                                    <option value="Left">Left</option>
+                                    <option value="Right">Right</option>
+                                    <option value="Binaural">Binaural (both)</option>
+                                </select>
+                            </div>
+
+                            <!-- Charger -->
+                            <div id="hm-oc-charger-wrap" style="display:none;margin-bottom:14px;padding:12px 14px;background:var(--hm-bg-alt,#f8fafc);border-radius:8px;border:1px solid var(--hm-border,#e2e8f0)">
+                                <label class="hm-oc-lbl" style="margin-bottom:8px">Charger Required?</label>
+                                <div style="display:flex;gap:8px;margin-bottom:8px">
+                                    <label style="flex:1;display:flex;align-items:center;gap:6px;padding:8px 12px;border:1.5px solid var(--hm-border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;background:#fff;transition:all .15s" id="hm-oc-charger-yes-label">
+                                        <input type="radio" name="hm-oc-charger" value="yes" style="accent-color:var(--hm-teal,#0BB4C4)"> Yes
+                                    </label>
+                                    <label style="flex:1;display:flex;align-items:center;gap:6px;padding:8px 12px;border:1.5px solid var(--hm-border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;background:#fff;transition:all .15s" id="hm-oc-charger-no-label">
+                                        <input type="radio" name="hm-oc-charger" value="no" style="accent-color:var(--hm-teal,#0BB4C4)"> No
+                                    </label>
+                                </div>
+                                <div id="hm-oc-charger-select-wrap" style="display:none">
+                                    <select id="hm-oc-charger-sel" class="hm-oc-inp"><option value="">— Select Charger —</option></select>
+                                    <div style="font-size:11px;color:#059669;margin-top:4px;font-weight:600">Bundled free with hearing aids — €0.00</div>
+                                </div>
+                            </div>
+
+                            <!-- Bundled Accessories -->
+                            <div id="hm-oc-bundled-wrap" style="display:none;margin-bottom:14px;padding:12px 14px;background:var(--hm-bg-alt,#f8fafc);border-radius:8px;border:1px solid var(--hm-border,#e2e8f0)">
+                                <label class="hm-oc-lbl" style="margin-bottom:10px">Bundled Accessories <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--hm-text-muted,#94a3b8)">— free on first sale</span></label>
+                                <div style="margin-bottom:10px">
+                                    <label style="font-size:11px;font-weight:600;color:var(--hm-text,#334155);display:block;margin-bottom:4px">Domes</label>
+                                    <select id="hm-oc-dome" class="hm-oc-inp"><option value="">— None —</option></select>
+                                </div>
+                                <div style="margin-bottom:10px">
+                                    <label style="font-size:11px;font-weight:600;color:var(--hm-text,#334155);display:block;margin-bottom:4px">Speakers</label>
+                                    <select id="hm-oc-speaker" class="hm-oc-inp"><option value="">— None —</option></select>
+                                </div>
+                                <div style="margin-bottom:10px">
+                                    <label style="font-size:11px;font-weight:600;color:var(--hm-text,#334155);display:block;margin-bottom:4px">Filters</label>
+                                    <select id="hm-oc-filter" class="hm-oc-inp"><option value="">— None —</option></select>
+                                </div>
+                            </div>
+
+                            <!-- Add HA button -->
+                            <div id="hm-oc-ha-add-wrap" style="display:none;margin-bottom:14px;text-align:right">
+                                <button type="button" id="hm-oc-ha-add" style="font-size:13px;font-weight:600;padding:8px 20px;border-radius:8px;border:none;background:var(--hm-teal,#0BB4C4);color:#fff;cursor:pointer">+ Add to Order</button>
+                            </div>
+                        </div>
+
+                        <!-- ═══ NON-HA PRODUCT FLOW (original) ═══ -->
                         <div id="hm-oc-filters" style="display:none">
                             <div style="margin-bottom:14px">
                                 <label class="hm-oc-lbl">Manufacturer</label>
@@ -701,7 +820,7 @@ class HearMed_Orders {
             var ordersBase=<?php echo json_encode($base); ?>;
 
             var orderItems=[];
-            var allProducts=[], allSvcs=[];
+            var allProducts=[], allSvcs=[], allRanges=[];
             var discountMode='pct';
             var paymentRows=[];
             var stockItems=[], stockLoaded=false;
@@ -709,26 +828,330 @@ class HearMed_Orders {
             function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
             function fmt(n){return '€'+(parseFloat(n)||0).toFixed(2);}
 
+            /* helpers */
+            function haProducts(){ return allProducts.filter(function(p){return p.item_type==='product';}); }
+            function chargerProducts(){ return allProducts.filter(function(p){return p.item_type==='charger';}); }
+            function bundledProducts(){ return allProducts.filter(function(p){return p.item_type==='bundled';}); }
+            function unique(arr,key){var m={};arr.forEach(function(p){if(p[key])m[p[key]]=p[key];});return m;}
+            function uniqueBy(arr,idKey,nameKey){var m={};arr.forEach(function(p){if(p[idKey])m[p[idKey]]=p[nameKey]||p[idKey];});return m;}
+            function populateSel(sel,map,cur,allLabel){
+                var $el=$(sel).empty().append('<option value="">'+allLabel+'</option>');
+                Object.keys(map).sort(function(a,b){return String(map[a]).localeCompare(String(map[b]));}).forEach(function(k){
+                    $el.append('<option value="'+k+'"'+(String(k)===String(cur)?' selected':'')+'>'+esc(map[k])+'</option>');
+                });
+            }
+
             /* ── Load products ── */
             $.post(ajaxUrl,{action:'hm_get_order_products',nonce:nonce},function(r){
                 if(!r||!r.success){$('#hm-oc-loading').text('Failed to load products.');return;}
                 allProducts=r.data.products||[];
                 allSvcs=r.data.services||[];
+                allRanges=r.data.ranges||[];
                 buildCategoryDropdown();
                 $('#hm-oc-loading').hide();
                 $('#hm-oc-selectors').show();
             });
 
             function buildCategoryDropdown(){
-                var seen={};
-                var labels={product:'Hearing Aid',service:'Service',accessory:'Accessory',consumable:'Consumable',bundled:'Bundled Item'};
-                allProducts.forEach(function(p){seen[p.item_type||'product']=labels[p.item_type||'product']||p.item_type;});
-                if(allSvcs.length) seen['service']='Service';
                 var $c=$('#hm-oc-cat').empty().append('<option value="">— Select Category —</option>');
-                Object.keys(seen).forEach(function(k){$c.append('<option value="'+k+'">'+esc(seen[k])+'</option>');});
+                /* Hearing Aid first */
+                if(haProducts().length) $c.append('<option value="product">Hearing Aids</option>');
+                if(allSvcs.length)      $c.append('<option value="service">Service</option>');
+                var otherTypes={};
+                allProducts.forEach(function(p){
+                    if(p.item_type==='product'||p.item_type==='charger'||p.item_type==='bundled') return;
+                    var labels={accessory:'Accessory',consumable:'Consumable'};
+                    otherTypes[p.item_type]=labels[p.item_type]||p.item_type;
+                });
+                Object.keys(otherTypes).forEach(function(k){$c.append('<option value="'+k+'">'+esc(otherTypes[k])+'</option>');});
             }
 
-            /* ── Faceted filter system ── */
+            /* ══════════════════════════════════════════
+               CATEGORY CHANGE — route to correct flow
+               ══════════════════════════════════════════ */
+            $('#hm-oc-cat').on('change',function(){
+                var cat=$(this).val();
+                $('#hm-oc-ha-flow,#hm-oc-filters,#hm-oc-svc-wrap').hide();
+                $('#hm-oc-ear-wrap,#hm-oc-add-wrap').hide();
+                resetHAFlow();
+                if(!cat) return;
+                if(cat==='product'){
+                    /* Hearing aid path */
+                    $('input[name="hm-oc-search-method"]').prop('checked',false);
+                    $('#hm-oc-path-range,#hm-oc-path-mfr').hide();
+                    $('#hm-oc-search-range-label,#hm-oc-search-mfr-label').css({borderColor:'var(--hm-border,#e2e8f0)',background:'#fff'});
+                    $('#hm-oc-ha-flow').show();
+                } else if(cat==='service'){
+                    var $sv=$('#hm-oc-svc').empty().append('<option value="">— Select Service —</option>');
+                    allSvcs.forEach(function(s){
+                        $sv.append('<option value="'+s.id+'" data-price="'+parseFloat(s.default_price||0)+'">'+esc(s.service_name)+' — €'+parseFloat(s.default_price||0).toFixed(2)+'</option>');
+                    });
+                    $('#hm-oc-svc-wrap').show();
+                } else {
+                    /* Other product types — use existing faceted flow */
+                    $('#hm-oc-filters').show();
+                    $('#hm-oc-mfr,#hm-oc-style,#hm-oc-range,#hm-oc-prod,#hm-oc-ear').val('');
+                    refreshAllFilters(cat);
+                }
+            });
+
+            /* ══════════════════════════════════════════
+               HEARING AID FLOW (HA)
+               ══════════════════════════════════════════ */
+            var _haSelectedProd=null;
+            var _haSelectedMfr=null;
+
+            function resetHAFlow(){
+                _haSelectedProd=null;_haSelectedMfr=null;
+                $('#hm-oc-path-range,#hm-oc-path-mfr').hide();
+                $('#hm-oc-ha-ear-wrap,#hm-oc-charger-wrap,#hm-oc-bundled-wrap,#hm-oc-ha-add-wrap').hide();
+                $('input[name="hm-oc-charger"]').prop('checked',false);
+                $('#hm-oc-charger-select-wrap').hide();
+            }
+
+            /* Search method toggle */
+            $('input[name="hm-oc-search-method"]').on('change',function(){
+                var method=$(this).val();
+                resetHAFlow();
+                $('#hm-oc-search-range-label,#hm-oc-search-mfr-label').css({borderColor:'var(--hm-border,#e2e8f0)',background:'#fff'});
+                $(this).closest('label').css({borderColor:'var(--hm-teal,#0BB4C4)',background:'rgba(11,180,196,0.06)'});
+                if(method==='range'){
+                    /* populate ranges */
+                    var rMap={};
+                    allRanges.forEach(function(r){rMap[r.id]=r.range_name;});
+                    populateSel('#hm-oc-hmrange',rMap,'','— Select Range —');
+                    $('#hm-oc-path-range').show();
+                    $('#hm-oc-path-mfr').hide();
+                } else {
+                    /* populate all HA manufacturers */
+                    var mMap=uniqueBy(haProducts(),'manufacturer_id','manufacturer_name');
+                    populateSel('#hm-oc-pm-mfr',mMap,'','— Select Manufacturer —');
+                    $('#hm-oc-path-mfr').show();
+                    $('#hm-oc-path-range').hide();
+                }
+            });
+
+            /* ── PATH A: HearMed Range ── */
+            $('#hm-oc-hmrange').on('change',function(){
+                var rid=$(this).val();
+                $('#hm-oc-pr-mfr-wrap,#hm-oc-pr-style-wrap,#hm-oc-pr-tech-wrap,#hm-oc-pr-prod-wrap').hide();
+                hideHAExtras();
+                if(!rid) return;
+                var inRange=haProducts().filter(function(p){return String(p.hearmed_range_id)===String(rid);});
+                var mMap=uniqueBy(inRange,'manufacturer_id','manufacturer_name');
+                populateSel('#hm-oc-pr-mfr',mMap,'','— All Manufacturers —');
+                $('#hm-oc-pr-mfr-wrap').show();
+                refreshPathA();
+            });
+
+            $('#hm-oc-pr-mfr').on('change',function(){ refreshPathA(); });
+            $('#hm-oc-pr-style').on('change',function(){ refreshPathA(); });
+            $('#hm-oc-pr-tech').on('change',function(){ refreshPathA(); });
+
+            function refreshPathA(){
+                var rid=$('#hm-oc-hmrange').val();
+                var mfr=$('#hm-oc-pr-mfr').val();
+                var style=$('#hm-oc-pr-style').val();
+                var tech=$('#hm-oc-pr-tech').val();
+                if(!rid) return;
+                var pool=haProducts().filter(function(p){return String(p.hearmed_range_id)===String(rid);});
+                var poolForStyle=mfr?pool.filter(function(p){return String(p.manufacturer_id)===String(mfr);}):pool;
+                var poolForTech=style?poolForStyle.filter(function(p){return p.style===style;}):poolForStyle;
+                var poolFinal=tech?poolForTech.filter(function(p){return p.tech_level===tech;}):poolForTech;
+
+                /* styles */
+                var sMap=unique(poolForStyle,'style');
+                populateSel('#hm-oc-pr-style',sMap,style,'— All Styles —');
+                if(Object.keys(sMap).length) $('#hm-oc-pr-style-wrap').show();
+
+                /* tech levels */
+                var tMap=unique(poolForTech,'tech_level');
+                populateSel('#hm-oc-pr-tech',tMap,tech,'— All Tech Levels —');
+                if(Object.keys(tMap).length) $('#hm-oc-pr-tech-wrap').show();
+
+                /* products */
+                var $p=$('#hm-oc-pr-prod').empty().append('<option value="">— Select Model —</option>');
+                poolFinal.forEach(function(p){
+                    var price=parseFloat(p.retail_price||0);
+                    $p.append('<option value="'+p.id+'" data-price="'+price+'" data-vat="'+(p.vat_category==='standard'?23:0)+'" data-name="'+esc(p.product_name)+'" data-mfr="'+p.manufacturer_id+'">'+esc(p.product_name)+' — €'+price.toFixed(2)+'</option>');
+                });
+                if(poolFinal.length) $('#hm-oc-pr-prod-wrap').show();
+                handleHAProdChange('#hm-oc-pr-prod');
+            }
+
+            $('#hm-oc-pr-prod').on('change',function(){ handleHAProdChange('#hm-oc-pr-prod'); });
+
+            /* ── PATH B: Manufacturer ── */
+            $('#hm-oc-pm-mfr').on('change',function(){
+                var mfr=$(this).val();
+                $('#hm-oc-pm-row,#hm-oc-pm-tech-wrap,#hm-oc-pm-prod-wrap').hide();
+                hideHAExtras();
+                if(!mfr) return;
+                $('#hm-oc-pm-row').show();
+                refreshPathB();
+            });
+
+            $('#hm-oc-pm-style').on('change',function(){ refreshPathB(); });
+            $('#hm-oc-pm-model').on('change',function(){ refreshPathB(); });
+            $('#hm-oc-pm-tech').on('change',function(){ refreshPathB(); });
+
+            function refreshPathB(){
+                var mfr=$('#hm-oc-pm-mfr').val();
+                var style=$('#hm-oc-pm-style').val();
+                var model=$('#hm-oc-pm-model').val();
+                var tech=$('#hm-oc-pm-tech').val();
+                if(!mfr) return;
+                var pool=haProducts().filter(function(p){return String(p.manufacturer_id)===String(mfr);});
+
+                /* styles */
+                var sPool=model?pool.filter(function(p){return String(p.id)===String(model);}):pool;
+                var sMap=unique(pool,'style');
+                populateSel('#hm-oc-pm-style',sMap,style,'— All Styles —');
+
+                /* models (filtered by style) */
+                var mPool=style?pool.filter(function(p){return p.style===style;}):pool;
+                var mMap={};mPool.forEach(function(p){mMap[p.id]=p.product_name;});
+                populateSel('#hm-oc-pm-model',mMap,model,'— All Models —');
+
+                /* tech level — only show once style or model narrows it */
+                var tPool=pool;
+                if(style) tPool=tPool.filter(function(p){return p.style===style;});
+                if(model) tPool=tPool.filter(function(p){return String(p.id)===String(model);});
+                var tMap=unique(tPool,'tech_level');
+                populateSel('#hm-oc-pm-tech',tMap,tech,'— All Tech Levels —');
+                if(Object.keys(tMap).length && (style||model)) $('#hm-oc-pm-tech-wrap').show();
+                else $('#hm-oc-pm-tech-wrap').hide();
+
+                /* final product select — if model already chosen from dropdown */
+                if(model){
+                    handleHAProdChangeVal(model);
+                } else {
+                    /* build product selector from pool */
+                    var fPool=tPool;
+                    if(tech) fPool=fPool.filter(function(p){return p.tech_level===tech;});
+                    if(fPool.length<=10 && (style||tech)){
+                        var $pp=$('#hm-oc-pm-prod').empty().append('<option value="">— Select Product —</option>');
+                        fPool.forEach(function(p){
+                            var pr=parseFloat(p.retail_price||0);
+                            $pp.append('<option value="'+p.id+'" data-price="'+pr+'" data-vat="'+(p.vat_category==='standard'?23:0)+'" data-name="'+esc(p.product_name)+'" data-mfr="'+p.manufacturer_id+'">'+esc(p.product_name)+' — €'+pr.toFixed(2)+'</option>');
+                        });
+                        $('#hm-oc-pm-prod-wrap').show();
+                    } else {
+                        $('#hm-oc-pm-prod-wrap').hide();
+                    }
+                    hideHAExtras();
+                }
+            }
+
+            $('#hm-oc-pm-prod').on('change',function(){
+                var v=$(this).val();
+                if(v) handleHAProdChangeVal(v);
+                else hideHAExtras();
+            });
+
+            /* ── Shared: when a hearing aid product is selected ── */
+            function handleHAProdChange(sel){
+                var v=$(sel).val();
+                if(v) handleHAProdChangeVal(v);
+                else hideHAExtras();
+            }
+            function handleHAProdChangeVal(prodId){
+                var p=allProducts.find(function(x){return String(x.id)===String(prodId);});
+                if(!p){hideHAExtras();return;}
+                _haSelectedProd=p;
+                _haSelectedMfr=p.manufacturer_id;
+                /* show ear */
+                $('#hm-oc-ha-ear-wrap').show();
+                /* populate charger */
+                var chargers=chargerProducts().filter(function(c){return String(c.manufacturer_id)===String(p.manufacturer_id);});
+                if(chargers.length){
+                    var $cs=$('#hm-oc-charger-sel').empty().append('<option value="">— Select Charger —</option>');
+                    chargers.forEach(function(c){$cs.append('<option value="'+c.id+'" data-name="'+esc(c.product_name)+'">'+esc(c.product_name)+'</option>');});
+                    $('input[name="hm-oc-charger"]').prop('checked',false);
+                    $('#hm-oc-charger-select-wrap').hide();
+                    $('#hm-oc-charger-wrap').show();
+                } else { $('#hm-oc-charger-wrap').hide(); }
+                /* populate bundled (domes, speakers, filters) */
+                var bun=bundledProducts().filter(function(b){return String(b.manufacturer_id)===String(p.manufacturer_id);});
+                if(bun.length){
+                    var domes=bun.filter(function(b){return(b.bundled_category||'').toLowerCase()==='dome';});
+                    var speakers=bun.filter(function(b){return(b.bundled_category||'').toLowerCase()==='speaker';});
+                    var filters=bun.filter(function(b){var c=(b.bundled_category||'').toLowerCase();return c==='filter'||c==='other';});
+                    fillBundledSel('#hm-oc-dome',domes);
+                    fillBundledSel('#hm-oc-speaker',speakers);
+                    fillBundledSel('#hm-oc-filter',filters);
+                    if(domes.length||speakers.length||filters.length) $('#hm-oc-bundled-wrap').show();
+                    else $('#hm-oc-bundled-wrap').hide();
+                } else { $('#hm-oc-bundled-wrap').hide(); }
+                /* show add button */
+                $('#hm-oc-ha-add-wrap').show();
+            }
+
+            function fillBundledSel(sel,items){
+                var $el=$(sel).empty().append('<option value="">— None —</option>');
+                items.forEach(function(b){
+                    var label=b.product_name;
+                    if(b.dome_type) label+=' ('+b.dome_type+(b.dome_size?' '+b.dome_size:'')+')';
+                    if(b.speaker_power) label+=' ('+b.speaker_power+(b.speaker_length?' / '+b.speaker_length:'')+')';
+                    $el.append('<option value="'+b.id+'" data-name="'+esc(b.product_name)+'">'+esc(label)+'</option>');
+                });
+            }
+
+            function hideHAExtras(){
+                _haSelectedProd=null;
+                $('#hm-oc-ha-ear-wrap,#hm-oc-charger-wrap,#hm-oc-bundled-wrap,#hm-oc-ha-add-wrap').hide();
+            }
+
+            /* Charger radio */
+            $('input[name="hm-oc-charger"]').on('change',function(){
+                var v=$(this).val();
+                $('#hm-oc-charger-yes-label,#hm-oc-charger-no-label').css({borderColor:'var(--hm-border,#e2e8f0)',background:'#fff'});
+                $(this).closest('label').css({borderColor:'var(--hm-teal,#0BB4C4)',background:'rgba(11,180,196,0.06)'});
+                if(v==='yes') $('#hm-oc-charger-select-wrap').show();
+                else $('#hm-oc-charger-select-wrap').hide();
+            });
+
+            /* ── ADD HEARING AID + BUNDLED ── */
+            $('#hm-oc-ha-add').on('click',function(){
+                if(!_haSelectedProd){$('#hm-oc-err').text('Please select a hearing aid.');return;}
+                var ear=$('#hm-oc-ha-ear').val();
+                if(!ear){$('#hm-oc-err').text('Please select an ear.');return;}
+                var p=_haSelectedProd;
+                var price=parseFloat(p.retail_price||0);
+                var vatRate=p.vat_category==='standard'?23:0;
+                var qty=ear==='Binaural'?2:1;
+                var gross=price*qty;
+                var vatAmt=vatRate>0?Math.round((gross-gross/(1+vatRate/100))*100)/100:0;
+                /* Hearing aid */
+                orderItems.push({id:parseInt(p.id),type:'product',name:p.product_name,unit_price:price,qty:qty,ear:ear,vat_rate:vatRate,vat_amount:vatAmt,line_total:gross});
+                /* Charger (free) */
+                if($('input[name="hm-oc-charger"]:checked').val()==='yes'){
+                    var cid=$('#hm-oc-charger-sel').val();
+                    if(cid){
+                        var cname=$('#hm-oc-charger-sel option:selected').data('name')||'Charger';
+                        orderItems.push({id:parseInt(cid),type:'charger',name:cname+' (bundled)',unit_price:0,qty:1,ear:'',vat_rate:0,vat_amount:0,line_total:0,bundled:true});
+                    }
+                }
+                /* Bundled accessories (free) */
+                ['#hm-oc-dome','#hm-oc-speaker','#hm-oc-filter'].forEach(function(sel){
+                    var bid=$(sel).val();
+                    if(bid){
+                        var bname=$(sel+' option:selected').data('name')||'Accessory';
+                        var bqty=ear==='Binaural'?2:1;
+                        orderItems.push({id:parseInt(bid),type:'bundled',name:bname+' (bundled)',unit_price:0,qty:bqty,ear:ear!=='Binaural'?'':ear,vat_rate:0,vat_amount:0,line_total:0,bundled:true});
+                    }
+                });
+                renderItems();updateTotals();$('#hm-oc-err').text('');
+                /* Reset HA flow to add another */
+                resetHAFlow();
+                $('input[name="hm-oc-search-method"]').prop('checked',false);
+                $('#hm-oc-search-range-label,#hm-oc-search-mfr-label').css({borderColor:'var(--hm-border,#e2e8f0)',background:'#fff'});
+                $('#hm-oc-path-range,#hm-oc-path-mfr').hide();
+            });
+
+            /* ══════════════════════════════════════════
+               NON-HA FACETED FILTERS (accessories etc)
+               ══════════════════════════════════════════ */
             function getFilters(){
                 return {
                     cat:   $('#hm-oc-cat').val()||'',
@@ -787,23 +1210,7 @@ class HearMed_Orders {
                 });
             }
 
-            $('#hm-oc-cat').on('change',function(){
-                var cat=$(this).val();
-                $('#hm-oc-filters,#hm-oc-svc-wrap').hide();
-                $('#hm-oc-ear-wrap,#hm-oc-add-wrap').hide();
-                $('#hm-oc-mfr,#hm-oc-style,#hm-oc-range,#hm-oc-prod,#hm-oc-ear,#hm-oc-svc').val('');
-                if(!cat) return;
-                if(cat==='service'){
-                    var $sv=$('#hm-oc-svc').empty().append('<option value="">— Select Service —</option>');
-                    allSvcs.forEach(function(s){
-                        $sv.append('<option value="'+s.id+'" data-price="'+parseFloat(s.default_price||0)+'">'+esc(s.service_name)+' — €'+parseFloat(s.default_price||0).toFixed(2)+'</option>');
-                    });
-                    $('#hm-oc-svc-wrap').show();
-                } else {
-                    $('#hm-oc-filters').show();
-                    refreshAllFilters();
-                }
-            });
+            /* old cat handler removed — handled above */
 
             $('#hm-oc-mfr,#hm-oc-style,#hm-oc-range').on('change',function(){refreshAllFilters();});
             $('#hm-oc-prod').on('change',function(){
@@ -1297,6 +1704,51 @@ class HearMed_Orders {
                     </div>
                     <?php endif; ?>
 
+                    <!-- DEPOSIT — record or view deposit on any active order -->
+                    <?php
+                    $deposit_recorded = floatval( $order->deposit_amount ?? 0 ) > 0;
+                    $is_active_order  = ! in_array( $order->current_status, [ 'Complete', 'Cancelled' ] );
+                    ?>
+                    <?php if ( $is_active_order ) : ?>
+                    <div class="hm-card hm-card--action" id="hm-deposit-card">
+                        <h3 class="hm-card-title">Deposit</h3>
+                        <?php if ( $deposit_recorded ) : ?>
+                        <div style="padding:10px 14px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px;font-size:13px;color:#0e7490;margin-bottom:8px">
+                            <div><strong>Amount:</strong> €<?php echo number_format($order->deposit_amount,2); ?></div>
+                            <div><strong>Method:</strong> <?php echo esc_html($order->deposit_method ?? '—'); ?></div>
+                            <div><strong>Paid:</strong> <?php echo $order->deposit_paid_at ? date('j M Y', strtotime($order->deposit_paid_at)) : '—'; ?></div>
+                        </div>
+                        <?php else : ?>
+                        <p class="hm-form__hint">Record a deposit for this order.</p>
+                        <div style="margin-bottom:8px">
+                            <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Amount (€)</label>
+                            <input type="number" id="hm-dep-amount" step="0.01" min="0" placeholder="0.00"
+                                   style="font-size:13px;padding:8px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font)">
+                        </div>
+                        <div style="margin-bottom:8px">
+                            <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Payment Method</label>
+                            <select id="hm-dep-method" style="font-size:13px;padding:8px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font)">
+                                <option value="Card">Card</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                            </select>
+                        </div>
+                        <div style="margin-bottom:10px">
+                            <label style="font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:4px">Date Paid</label>
+                            <input type="date" id="hm-dep-date" value="<?php echo date('Y-m-d'); ?>"
+                                   style="font-size:13px;padding:8px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;box-sizing:border-box;font-family:var(--hm-font)">
+                        </div>
+                        <button class="hm-btn hm-btn--primary hm-btn--block" id="hm-dep-submit"
+                                data-order-id="<?php echo $order_id; ?>"
+                                data-nonce="<?php echo esc_attr($nonce); ?>">
+                            Record Deposit
+                        </button>
+                        <div id="hm-dep-msg" style="display:none;margin-top:8px;padding:8px 12px;border-radius:6px;font-size:12px"></div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+
                     <?php if ($can_print && !$can_order) : ?>
                     <div class="hm-card">
                         <a href="<?php echo esc_url(admin_url('admin-ajax.php').'?action=hm_download_order_pdf&nonce='.wp_create_nonce('hm_nonce').'&order_id='.$order_id); ?>"
@@ -1384,6 +1836,35 @@ class HearMed_Orders {
                         alert('Error: ' + (d.data && d.data.message ? d.data.message : d.data));
                         me.disabled = false; me.textContent = 'Receive in Branch + Enter Serials';
                     }
+                });
+            });
+        }
+
+        // Record Deposit — inline deposit form
+        var depBtn = document.getElementById('hm-dep-submit');
+        if (depBtn) {
+            depBtn.addEventListener('click', function() {
+                var me = this;
+                var amt = parseFloat(document.getElementById('hm-dep-amount').value) || 0;
+                var method = document.getElementById('hm-dep-method').value;
+                var dt = document.getElementById('hm-dep-date').value;
+                var msgEl = document.getElementById('hm-dep-msg');
+                if (amt <= 0) { msgEl.textContent = 'Enter a deposit amount.'; msgEl.style.display = 'block'; msgEl.style.background = '#fef2f2'; msgEl.style.color = '#991b1b'; return; }
+                me.disabled = true; me.textContent = 'Recording…';
+                fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({
+                        action: 'hm_record_order_deposit',
+                        order_id: me.dataset.orderId,
+                        nonce: me.dataset.nonce,
+                        deposit_amount: amt,
+                        deposit_method: method,
+                        deposit_paid_at: dt
+                    })
+                }).then(function(r){return r.json();}).then(function(d){
+                    if (d.success) { location.reload(); }
+                    else { msgEl.textContent = d.data && d.data.message ? d.data.message : (typeof d.data === 'string' ? d.data : 'Failed'); msgEl.style.display = 'block'; msgEl.style.background = '#fef2f2'; msgEl.style.color = '#991b1b'; me.disabled = false; me.textContent = 'Record Deposit'; }
                 });
             });
         }
@@ -3568,10 +4049,14 @@ class HearMed_Orders {
             "SELECT p.id, p.product_name, p.item_type,
                     p.manufacturer_id, m.name AS manufacturer_name,
                     p.style, p.tech_level,
-                    p.retail_price, p.cost_price,
-                    p.vat_category, p.is_active
+                    COALESCE(p.retail_price, hr.price_total::numeric, 0) AS retail_price,
+                    p.cost_price, p.vat_category, p.is_active,
+                    p.hearmed_range_id, p.hearing_aid_class, p.power_type,
+                    p.bundled_category, p.speaker_length, p.speaker_power,
+                    p.dome_type, p.dome_size
              FROM hearmed_reference.products p
              LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+             LEFT JOIN hearmed_reference.hearmed_range hr ON hr.id = p.hearmed_range_id
              WHERE p.is_active = true
              ORDER BY m.name, p.product_name"
         );
@@ -3581,10 +4066,17 @@ class HearMed_Orders {
              WHERE is_active = true
              ORDER BY service_name"
         );
+        $ranges = $db->get_results(
+            "SELECT id, range_name, price_total::numeric AS price_total,
+                    price_ex_prsi::numeric AS price_ex_prsi
+             FROM hearmed_reference.hearmed_range
+             WHERE COALESCE(is_active::text,'true') NOT IN ('false','f','0')
+             ORDER BY range_name"
+        ) ?: [];
         wp_send_json_success([
             'products' => $products ?: [],
             'services' => $services ?: [],
-            'ranges'   => [],
+            'ranges'   => $ranges,
         ]);
     }
 

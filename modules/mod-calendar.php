@@ -1866,6 +1866,8 @@ function hm_ajax_save_appointment_outcome() {
     // Get appointment details for patient_id, clinic_id, staff and report_category
     $appt_row = HearMed_DB::get_row(
         "SELECT a.patient_id, a.clinic_id, a.dispenser_id, a.service_id,
+                a.appointment_date, a.start_time,
+                COALESCE(sv.service_name, '') AS service_name,
                 COALESCE(sv.report_category, '') AS report_category
          FROM hearmed_core.appointments a
          LEFT JOIN hearmed_reference.services sv ON sv.id = a.service_id
@@ -1928,6 +1930,38 @@ function hm_ajax_save_appointment_outcome() {
         HearMed_DB::insert( 'hearmed_core.appointment_outcomes', $ao_data );
     } catch ( Throwable $e ) {
         error_log( '[HearMed] appointment_outcomes insert failed: ' . $e->getMessage() );
+    }
+
+    // ── Save outcome note to patient_notes so it appears in patient file ──
+    if ( $note && $patient_id ) {
+        try {
+            $svc_name  = $appt_row->service_name ?? '';
+            $appt_date = $appt_row->appointment_date ?? '';
+            $appt_time = $appt_row->start_time ?? '';
+            $date_str  = $appt_date ? date( 'j M Y', strtotime( $appt_date ) ) : '';
+            $time_str  = $appt_time ? substr( $appt_time, 0, 5 ) : '';
+            $prefix    = 'Outcome: ' . $outcome_text;
+            if ( $svc_name ) $prefix .= ' — ' . $svc_name;
+            if ( $date_str ) $prefix .= ' (' . $date_str . ( $time_str ? ' ' . $time_str : '' ) . ')';
+
+            $note_data = [
+                'patient_id' => $patient_id,
+                'note_type'  => 'Appointment Outcome',
+                'note_text'  => $prefix . "\n" . $note,
+                'created_by' => PortalAuth::staff_id() ?: null,
+            ];
+            // Add category column if available
+            $has_cat = HearMed_DB::get_var(
+                "SELECT column_name FROM information_schema.columns
+                 WHERE table_schema = 'hearmed_core' AND table_name = 'patient_notes' AND column_name = 'note_category'"
+            );
+            if ( $has_cat ) {
+                $note_data['note_category'] = 'appointment';
+            }
+            HearMed_DB::insert( 'hearmed_core.patient_notes', $note_data );
+        } catch ( Throwable $e ) {
+            error_log( '[HearMed] outcome → patient_notes insert failed: ' . $e->getMessage() );
+        }
     }
 
     HearMed_Portal::log( 'outcome_set', 'appointment', $appt_id, [
