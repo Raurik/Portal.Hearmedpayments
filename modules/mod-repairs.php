@@ -45,8 +45,9 @@ class HearMed_Repairs {
 
     public static function init() {
         add_shortcode("hearmed_repairs", [__CLASS__, "render"]);
-        add_action("wp_ajax_hm_get_all_repairs", [__CLASS__, "ajax_get_all"]);
-        add_action("wp_ajax_hm_get_repair_docket", [__CLASS__, "ajax_repair_docket"]);
+        add_action("wp_ajax_hm_get_all_repairs",       [__CLASS__, "ajax_get_all"]);
+        add_action("wp_ajax_hm_get_repair_docket",     [__CLASS__, "ajax_repair_docket"]);
+        add_action("wp_ajax_hm_update_repair_status",  [__CLASS__, "ajax_update_repair_status"]);
     }
 
     public static function render($atts = []): string {
@@ -222,6 +223,91 @@ class HearMed_Repairs {
         // Use template engine
         $tpl_html = HearMed_Print_Templates::render('repair', $r);
         wp_send_json_success(['html' => $tpl_html]);
+    }
+
+    // ─── AJAX: update repair status ──────────────────────────────────────────
+
+    public static function ajax_update_repair_status() {
+        check_ajax_referer('hm_nonce', 'nonce');
+        if ( ! PortalAuth::is_logged_in() ) wp_send_json_error('Access denied');
+
+        $rid    = intval( $_POST['_ID']    ?? 0 );
+        $status = sanitize_text_field( $_POST['status'] ?? '' );
+
+        if ( ! $rid )    wp_send_json_error('Missing repair ID');
+        if ( ! $status ) wp_send_json_error('Missing status');
+
+        $db      = HearMed_DB::instance();
+        $user_id = PortalAuth::staff_id();
+
+        $repair = $db->get_row(
+            "SELECT id, repair_status FROM hearmed_core.repairs WHERE id = \$1",
+            [ $rid ]
+        );
+        if ( ! $repair ) wp_send_json_error('Repair not found');
+
+        $from = $repair->repair_status;
+
+        // Validate the transition
+        $valid = [
+            'Booked'   => 'Sent',
+            'Sent'     => 'Received',
+            'Received' => 'Complete',
+        ];
+        if ( ! isset( $valid[ $from ] ) || $valid[ $from ] !== $status ) {
+            wp_send_json_error( "Invalid transition: {$from} → {$status}" );
+        }
+
+        // Build the update fields based on target status
+        $fields = [ 'repair_status' => $status, 'updated_at' => date('Y-m-d H:i:s') ];
+
+        if ( $status === 'Sent' ) {
+            $sent_to = sanitize_text_field( $_POST['sent_to'] ?? '' );
+            if ( ! $sent_to ) wp_send_json_error('sent_to is required when marking Sent');
+            $fields['date_sent'] = date('Y-m-d');
+            $fields['sent_to']   = $sent_to;
+
+            $mfr_ref = sanitize_text_field( $_POST['manufacturer_reference'] ?? '' );
+            $tracking = sanitize_text_field( $_POST['tracking_number'] ?? '' );
+            if ( $mfr_ref ) {
+                // Only set these if the columns exist (graceful degradation)
+                $has_mfr_ref = $db->get_var(
+                    "SELECT 1 FROM information_schema.columns
+                     WHERE table_schema='hearmed_core' AND table_name='repairs' AND column_name='manufacturer_reference'"
+                );
+                if ( $has_mfr_ref ) {
+                    $fields['manufacturer_reference'] = $mfr_ref;
+                }
+            }
+            if ( $tracking ) {
+                $has_tracking = $db->get_var(
+                    "SELECT 1 FROM information_schema.columns
+                     WHERE table_schema='hearmed_core' AND table_name='repairs' AND column_name='tracking_number'"
+                );
+                if ( $has_tracking ) {
+                    $fields['tracking_number'] = $tracking;
+                }
+            }
+
+        } elseif ( $status === 'Received' ) {
+            $fields['date_received'] = date('Y-m-d');
+
+        } elseif ( $status === 'Complete' ) {
+            $has_completed = $db->get_var(
+                "SELECT 1 FROM information_schema.columns
+                 WHERE table_schema='hearmed_core' AND table_name='repairs' AND column_name='completed_date'"
+            );
+            if ( $has_completed ) {
+                $fields['completed_date'] = date('Y-m-d');
+            }
+        }
+
+        $db->update( 'hearmed_core.repairs', $fields, [ 'id' => $rid ] );
+
+        wp_send_json_success([
+            'message' => "Repair marked as {$status}",
+            'status'  => $status,
+        ]);
     }
 }
 

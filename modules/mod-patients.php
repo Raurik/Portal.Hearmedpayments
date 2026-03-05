@@ -1110,16 +1110,8 @@ function hm_ajax_get_patient_products() {
     $db   = HearMed_DB::instance();
 
     // Check if model/tech_level columns exist in products table
-    $has_model = $db->get_var(
-        "SELECT column_name FROM information_schema.columns
-         WHERE table_schema = 'hearmed_reference' AND table_name = 'products' AND column_name = 'model'"
-    );
-    $has_tech = $db->get_var(
-        "SELECT column_name FROM information_schema.columns
-         WHERE table_schema = 'hearmed_reference' AND table_name = 'products' AND column_name = 'tech_level'"
-    );
-    $model_col = $has_model ? "COALESCE(pr.model, '') AS model," : "'' AS model,";
-    $tech_col  = $has_tech  ? "COALESCE(pr.tech_level, '') AS tech_level," : "'' AS tech_level,";
+    $model_col = "'' AS model,";
+    $tech_col  = "'' AS tech_level,";
 
     $rows = $db->get_results(
         "SELECT pd.id, pd.product_id, pd.serial_number_left, pd.serial_number_right,

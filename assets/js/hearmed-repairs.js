@@ -136,6 +136,7 @@
             var actions = '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-r-docket" data-id="' + x._ID + '" title="Print Docket" style="padding:4px 8px;">Print</button> ';
             if (x.status === 'Booked') actions += '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-r-send" data-id="' + x._ID + '" data-name="' + esc(x.patient_name) + '">Mark Sent</button>';
             else if (x.status === 'Sent') actions += '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-r-recv" data-id="' + x._ID + '">Received</button>';
+            else if (x.status === 'Received') actions += '<button class="hm-btn hm-btn--primary hm-btn--sm hm-r-complete" data-id="' + x._ID + '">Complete</button>';
 
             h += '<tr' + rowClass + '>' +
                 '<td><code class="hm-pt-hnum">' + esc(x.repair_number || '—') + '</code></td>' +
@@ -194,6 +195,17 @@
         $.post(ajaxUrl, { action: 'hm_update_repair_status', nonce: nonce, _ID: rid, status: 'Received' }, function(r) {
             if (r.success) loadRepairs();
             else { alert('Error updating status'); $b.prop('disabled', false).text('Received'); }
+        });
+    });
+
+    // Mark Complete
+    $(document).on('click', '.hm-r-complete', function() {
+        var $b = $(this), rid = $b.data('id');
+        if (!confirm('Mark this repair as Complete?')) return;
+        $b.prop('disabled', true).text('…');
+        $.post(ajaxUrl, { action: 'hm_update_repair_status', nonce: nonce, _ID: rid, status: 'Complete' }, function(r) {
+            if (r.success) loadRepairs();
+            else { alert('Error updating status'); $b.prop('disabled', false).text('Complete'); }
         });
     });
 

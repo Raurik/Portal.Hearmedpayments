@@ -1094,6 +1094,59 @@ function hm_ajax_fitting_receive() {
             'device_status'       => 'Active',
             'created_by'          => $staff_id ?: $uid,
         ]);
+
+        // S4: Mark matching inventory_stock row as Fitted
+        if ( $device_id ) {
+            $combined_serial = implode( ' / ', array_filter( [ $sr['left'], $sr['right'] ] ) );
+
+            // Try to find a Reserved stock row for this product at this clinic
+            $stock_id = $db->get_var(
+                "SELECT id FROM hearmed_core.inventory_stock
+                 WHERE product_id = \$1 AND clinic_id = \$2 AND status = 'Reserved'
+                 ORDER BY created_at ASC LIMIT 1",
+                [ $product_id, $order->clinic_id ]
+            );
+
+            // Fallback: match by product name against model_name
+            if ( ! $stock_id ) {
+                $product_name = $db->get_var(
+                    "SELECT product_name FROM hearmed_reference.products WHERE id = \$1",
+                    [ $product_id ]
+                );
+                if ( $product_name ) {
+                    $stock_id = $db->get_var(
+                        "SELECT id FROM hearmed_core.inventory_stock
+                         WHERE LOWER(model_name) LIKE LOWER(\$1) AND clinic_id = \$2
+                               AND status IN ('Reserved','In Stock')
+                         ORDER BY created_at ASC LIMIT 1",
+                        [ '%' . $product_name . '%', $order->clinic_id ]
+                    );
+                }
+            }
+
+            if ( $stock_id ) {
+                $db->query(
+                    "UPDATE hearmed_core.inventory_stock
+                     SET status = 'Fitted', fitted_to_patient_id = \$1,
+                         serial_number = \$2, fitted_date = NOW(), updated_at = NOW()
+                     WHERE id = \$3",
+                    [ $order->patient_id, $combined_serial, $stock_id ]
+                );
+                $db->insert( 'hearmed_core.stock_movements', [
+                    'inventory_stock_id' => (int) $stock_id,
+                    'movement_type'      => 'fitted',
+                    'from_status'        => 'Reserved',
+                    'to_status'          => 'Fitted',
+                    'order_id'           => $order_id,
+                    'patient_id'         => $order->patient_id,
+                    'moved_by'           => $staff_id ?: $uid,
+                    'notes'              => 'Serial: ' . $combined_serial,
+                    'created_at'         => $now,
+                ] );
+            } else {
+                error_log( '[HM S4] No matching inventory_stock for product_id=' . $product_id . ' clinic=' . $order->clinic_id . ' — device created, stock mismatch to reconcile' );
+            }
+        }
     }
 
     // Update order status → Awaiting Fitting

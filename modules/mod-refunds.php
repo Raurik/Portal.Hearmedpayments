@@ -826,7 +826,7 @@ class HearMed_Refunds {
         if ( $invoice_id && in_array( $type, [ 'exchange', 'cheque' ] ) ) {
             // Find the original order from the invoice
             $orig_order_id = $db->get_var(
-                "SELECT order_id FROM hearmed_core.invoices WHERE id = $1",
+                "SELECT order_id FROM hearmed_core.invoices WHERE id = \$1",
                 [ $invoice_id ]
             );
             if ( $orig_order_id && class_exists( 'HearMed_Stock' ) ) {
@@ -835,6 +835,25 @@ class HearMed_Refunds {
                     $orig_order_id,
                     ucfirst( $type ) . ' — Credit Note ' . $cn_num . '. ' . $reason,
                     $staff_name
+                );
+            }
+        }
+
+        // S5: Mark patient_devices as Returned when a credit note is raised
+        if ( $invoice_id ) {
+            $cn_order_id = $db->get_var(
+                "SELECT order_id FROM hearmed_core.invoices WHERE id = \$1",
+                [ $invoice_id ]
+            );
+            if ( $cn_order_id ) {
+                $db->query(
+                    "UPDATE hearmed_core.patient_devices
+                     SET device_status    = 'Returned',
+                         inactive_reason  = 'Returned — Credit Note #' || \$1::text,
+                         inactive_date    = NOW(),
+                         updated_at       = NOW()
+                     WHERE order_id = \$2 AND device_status = 'Active'",
+                    [ $cn_id, (int) $cn_order_id ]
                 );
             }
         }
