@@ -466,172 +466,436 @@ class HearMed_Orders {
         })();
         </script>
         <?php else : ?>
-        <!-- Minimal container — the calendar-style order page takes over .hm-main -->
-        <div class="hm-content hm-orders-create" id="hm-orders-create-placeholder"
-             style="display:flex;align-items:center;justify-content:center;min-height:400px;color:var(--hm-text-muted,#94a3b8);font-family:var(--hm-font,'Source Sans 3',sans-serif)">
-            <div style="text-align:center">
-                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Loading Order Page…</div>
-                <div style="font-size:13px;opacity:.6"><?php echo esc_html( $patient_name ?: 'Preparing' ); ?></div>
+        <!-- ═══════════════════════════════════════════════════════════════
+             STANDALONE ORDER CREATION FORM
+             Posts to hm_create_order (ajax_create_order).
+             Same form for Orders page AND calendar outcome redirect.
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="hm-content hm-orders-create" id="hm-oc"
+             style="font-family:var(--hm-font,'Source Sans 3',sans-serif);color:var(--hm-text,#334155);-webkit-font-smoothing:antialiased">
+
+            <!-- Top bar -->
+            <div style="background:var(--hm-teal,#0BB4C4);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:50px;border-radius:10px 10px 0 0">
+                <a href="<?php echo esc_url( $base ); ?>" style="background:none;border:1px solid rgba(255,255,255,.2);color:#fff;font-size:13px;font-weight:600;padding:6px 14px;border-radius:6px;font-family:var(--hm-font-btn);display:flex;align-items:center;gap:6px;text-decoration:none;transition:all .15s">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8H1M8 15L1 8l7-7"/></svg> Orders
+                </a>
+                <div style="text-align:center">
+                    <div style="font-family:var(--hm-font-title,'Cormorant Garamond',serif);font-size:20px;font-weight:700;letter-spacing:-.3px">New Order</div>
+                    <div style="font-size:11px;opacity:.7;margin-top:1px"><?php echo esc_html( $patient_name ); ?></div>
+                </div>
+                <div style="min-width:90px"></div>
+            </div>
+
+            <!-- Two-panel split -->
+            <div style="display:flex;min-height:600px;border:1px solid var(--hm-border,#e2e8f0);border-top:none;border-radius:0 0 10px 10px;overflow:hidden">
+
+                <!-- ═════ LEFT PANEL — Product picker ═════ -->
+                <div id="hm-oc-left" style="flex:0 0 40%;max-width:40%;overflow-y:auto;padding:24px 28px;background:#fff;border-right:1px solid var(--hm-border,#e2e8f0)">
+                    <input type="hidden" id="hm-oc-pid" value="<?php echo (int) $pid; ?>">
+
+                    <div style="font-size:12px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> Add Products
+                    </div>
+
+                    <div id="hm-oc-loading" style="text-align:center;padding:40px 0;color:var(--hm-text-muted,#94a3b8);font-size:13px">Loading products…</div>
+
+                    <!-- Dropdowns populated by JS -->
+                    <div id="hm-oc-selectors" style="display:none">
+                        <div style="margin-bottom:14px"><label class="hm-oc-lbl">Product Type</label>
+                        <select id="hm-oc-cat" class="hm-oc-inp"><option value="">— Select Category —</option></select></div>
+
+                        <div id="hm-oc-mfr-wrap" style="display:none;margin-bottom:14px"><label class="hm-oc-lbl">Manufacturer</label>
+                        <select id="hm-oc-mfr" class="hm-oc-inp"><option value="">— Select —</option></select></div>
+
+                        <div id="hm-oc-style-wrap" style="display:none;margin-bottom:14px"><label class="hm-oc-lbl">Style</label>
+                        <select id="hm-oc-style" class="hm-oc-inp"><option value="">— Select —</option></select></div>
+
+                        <div id="hm-oc-prod-wrap" style="display:none;margin-bottom:14px"><label class="hm-oc-lbl">Product</label>
+                        <select id="hm-oc-prod" class="hm-oc-inp"><option value="">— Select —</option></select></div>
+
+                        <div id="hm-oc-ear-wrap" style="display:none;margin-bottom:14px"><label class="hm-oc-lbl">Ear</label>
+                        <select id="hm-oc-ear" class="hm-oc-inp">
+                            <option value="">— Select —</option><option value="Left">Left</option><option value="Right">Right</option><option value="Binaural">Binaural (both)</option>
+                        </select></div>
+
+                        <div id="hm-oc-svc-wrap" style="display:none;margin-bottom:14px"><label class="hm-oc-lbl">Service</label>
+                        <select id="hm-oc-svc" class="hm-oc-inp"><option value="">— Select —</option></select></div>
+
+                        <div id="hm-oc-add-wrap" style="display:none;margin-bottom:14px;text-align:right">
+                            <button type="button" id="hm-oc-add-item" style="font-size:13px;font-weight:600;padding:8px 20px;border-radius:8px;border:none;background:var(--hm-teal,#0BB4C4);color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">+ Add to Order</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═════ RIGHT PANEL — Invoice preview ═════ -->
+                <div id="hm-oc-right" style="flex:0 0 60%;max-width:60%;display:flex;flex-direction:column;padding:28px 32px;background:#fff">
+
+                    <!-- Invoice header -->
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+                        <div>
+                            <div style="font-size:22px;font-weight:700;font-family:var(--hm-font-title,'Cormorant Garamond',serif);color:var(--hm-navy,#151B33);letter-spacing:1px">INVOICE</div>
+                            <div style="font-size:11px;color:var(--hm-text-muted,#94a3b8);margin-top:2px">Draft &bull; <?php echo date('j M Y'); ?></div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="font-size:12px;font-weight:600;color:var(--hm-navy,#151B33)"><?php echo esc_html( $patient_name ); ?></div>
+                        </div>
+                    </div>
+
+                    <!-- Line items table -->
+                    <div style="flex:1;overflow-y:auto;margin-bottom:16px">
+                        <table style="width:100%;border-collapse:collapse">
+                            <thead><tr style="border-bottom:2px solid var(--hm-navy,#151B33)">
+                                <th style="text-align:left;padding:6px 0;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px">Item</th>
+                                <th style="text-align:center;padding:6px 8px;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:40px">Qty</th>
+                                <th style="text-align:right;padding:6px 8px;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:80px">Price</th>
+                                <th style="text-align:right;padding:6px 0;font-size:10px;font-weight:700;color:var(--hm-text-light,#64748b);text-transform:uppercase;letter-spacing:.8px;width:80px">Total</th>
+                                <th style="width:28px"></th>
+                            </tr></thead>
+                            <tbody id="hm-oc-items"><tr><td colspan="5" style="text-align:center;padding:24px 0;color:var(--hm-text-muted,#94a3b8);font-size:13px;font-style:italic">No items added yet</td></tr></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Totals block -->
+                    <div style="border-top:1px solid var(--hm-border,#e2e8f0);padding-top:12px">
+                        <div class="hm-oc-totrow" style="color:var(--hm-text-light,#64748b)"><span>Subtotal (excl. VAT)</span><span id="hm-oc-sub">€0.00</span></div>
+                        <div class="hm-oc-totrow" style="color:var(--hm-text-light,#64748b)"><span>VAT</span><span id="hm-oc-vat">€0.00</span></div>
+
+                        <!-- Discount -->
+                        <div class="hm-oc-totrow" style="margin-top:6px;padding-top:8px;border-top:1px dashed var(--hm-border-light,#e2e8f0)">
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <span style="font-size:13px">Discount</span>
+                                <div style="display:inline-flex;border:1px solid var(--hm-border,#e2e8f0);border-radius:4px;overflow:hidden">
+                                    <button type="button" class="hm-oc-disc-mode" data-mode="pct" style="padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:var(--hm-navy,#151B33);color:#fff">%</button>
+                                    <button type="button" class="hm-oc-disc-mode" data-mode="eur" style="padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:#fff;color:var(--hm-text,#334155)">€</button>
+                                </div>
+                                <input type="number" id="hm-oc-disc" value="0" min="0" max="100" step="1" style="width:60px;font-size:12px;padding:3px 6px;border-radius:4px;border:1px solid var(--hm-border,#e2e8f0);text-align:right;font-family:var(--hm-font)">
+                                <span id="hm-oc-disc-unit" style="font-size:11px;font-weight:600;color:var(--hm-text-light,#64748b)">%</span>
+                            </div>
+                            <span id="hm-oc-disc-amt" style="font-size:13px;color:#dc2626">−€0.00</span>
+                        </div>
+
+                        <!-- PRSI -->
+                        <div style="margin-top:6px;padding-top:8px;border-top:1px dashed var(--hm-border-light,#e2e8f0)">
+                            <div class="hm-oc-totrow"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+                                <input type="checkbox" id="hm-oc-prsi-l" style="accent-color:#0e7490;width:14px;height:14px"> PRSI Grant — Left ear</label>
+                                <span style="font-size:13px;color:#059669">−€500.00</span></div>
+                            <div class="hm-oc-totrow"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+                                <input type="checkbox" id="hm-oc-prsi-r" style="accent-color:#0e7490;width:14px;height:14px"> PRSI Grant — Right ear</label>
+                                <span style="font-size:13px;color:#059669">−€500.00</span></div>
+                        </div>
+
+                        <!-- Grand total -->
+                        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding-top:10px;border-top:2px solid var(--hm-navy,#151B33)">
+                            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--hm-navy,#151B33)">Total Due</span>
+                            <span id="hm-oc-total" style="font-size:22px;font-weight:700;color:var(--hm-navy,#151B33)">€0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div style="margin-top:14px"><textarea id="hm-oc-notes" rows="2" placeholder="Order notes..." class="hm-oc-inp" style="resize:vertical;font-size:12px;background:var(--hm-bg-alt,#f8fafc)"></textarea></div>
+
+                    <!-- ═══ DEPOSIT section ═══ -->
+                    <div style="border-top:1px dashed var(--hm-border-light,#e2e8f0);padding-top:14px;margin-top:14px">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--hm-text-light,#64748b);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                            Deposit <span style="font-weight:400;color:var(--hm-text-muted,#94a3b8);text-transform:none;letter-spacing:0;font-size:11px">— optional, balance collected at fitting</span>
+                        </div>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap">
+                            <div style="flex:1;min-width:100px"><label class="hm-oc-lbl">Amount (€)</label>
+                            <input type="number" id="hm-oc-dep-amt" step="0.01" min="0" value="" placeholder="0.00" class="hm-oc-inp"></div>
+                            <div style="flex:1;min-width:120px"><label class="hm-oc-lbl">Method</label>
+                            <select id="hm-oc-dep-method" class="hm-oc-inp"><option value="">— None —</option><option value="Card">Card</option><option value="Cash">Cash</option><option value="Cheque">Cheque</option></select></div>
+                            <div style="flex:1;min-width:120px"><label class="hm-oc-lbl">Date Paid</label>
+                            <input type="date" id="hm-oc-dep-date" value="<?php echo date('Y-m-d'); ?>" class="hm-oc-inp"></div>
+                        </div>
+                        <div id="hm-oc-dep-balance" style="display:none;margin-top:10px;padding:10px 14px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px;font-size:13px;color:#0e7490">
+                            Balance due at fitting: <strong id="hm-oc-dep-bal-val">€0.00</strong>
+                        </div>
+                    </div>
+
+                    <!-- Error -->
+                    <div id="hm-oc-err" style="color:#ef4444;font-size:12px;margin-top:6px"></div>
+
+                    <!-- Submit -->
+                    <div id="hm-oc-actions" style="margin-top:14px">
+                        <button id="hm-oc-submit" style="width:100%;padding:14px;font-size:14px;font-weight:700;border-radius:8px;border:none;background:var(--hm-navy,#151B33);color:#fff;cursor:pointer;font-family:var(--hm-font-btn);transition:all .15s">Submit Order for Approval</button>
+                    </div>
+
+                    <!-- Success banner (hidden) -->
+                    <div id="hm-oc-success" style="display:none"></div>
+                </div>
             </div>
         </div>
+
+        <style>
+        .hm-oc-lbl{font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px}
+        .hm-oc-inp{font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;background:#fff;box-sizing:border-box;font-family:var(--hm-font);transition:border-color .15s}
+        .hm-oc-inp:focus{border-color:var(--hm-teal,#0BB4C4);outline:none}
+        .hm-oc-totrow{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:3px 0}
+        </style>
+
         <script>
         (function(){
-            /* Wait for HM_openOrderPage (from hearmed-calendar.js) to be available */
-            var _waitCount = 0;
-            function boot(){
-                if(typeof window.HM_openOrderPage==='function'){launch();return;}
-                if(++_waitCount>80){
-                    /* Fallback after ~4 s — show error */
-                    var ph=document.getElementById('hm-orders-create-placeholder');
-                    if(ph)ph.innerHTML='<div style="text-align:center;color:#ef4444;font-size:14px;font-weight:600">Order page failed to load.<br><a href="<?php echo esc_url( $base ); ?>" style="color:#0BB4C4;text-decoration:underline;font-size:13px">← Back to Orders</a></div>';
-                    return;
-                }
-                setTimeout(boot,50);
+            var $=jQuery;
+            var ajaxUrl=HM.ajax_url, nonce=HM.nonce;
+            var pid=<?php echo (int) $pid; ?>;
+            var patientName=<?php echo json_encode( $patient_name ); ?>;
+            var ordersBase=<?php echo json_encode( $base ); ?>;
+
+            /* ── State ── */
+            var orderItems=[];
+            var allProducts=[], allSvcs=[], allRanges=[];
+            var discountMode='pct';
+
+            /* ── Load products ── */
+            $.post(ajaxUrl,{action:'hm_get_order_products',nonce:nonce},function(r){
+                if(!r||!r.success){$('#hm-oc-loading').text('Failed to load products.');return;}
+                allProducts=r.data.products||[];
+                allSvcs=r.data.services||[];
+                allRanges=r.data.ranges||[];
+                populateCategories();
+                $('#hm-oc-loading').hide();
+                $('#hm-oc-selectors').show();
+            });
+
+            function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+            /* ── Populate category dropdown ── */
+            function populateCategories(){
+                var cats={};
+                var catMap={product:'Hearing Aid',service:'Service',accessory:'Accessory',consumable:'Consumable',bundled:'Bundled Item'};
+                allProducts.forEach(function(p){var c=p.item_type||'product';if(!cats[c])cats[c]=catMap[c]||c;});
+                if(allSvcs.length)cats['service']='Service';
+                var $cat=$('#hm-oc-cat');
+                Object.keys(cats).forEach(function(k){$cat.append('<option value="'+k+'">'+esc(cats[k])+'</option>');});
             }
-            function launch(){
-                /* Remove the placeholder immediately — the order page renders into .hm-main */
-                var ph=document.getElementById('hm-orders-create-placeholder');
-                if(ph)ph.remove();
 
-                /* Shared promise — set by ajaxSuccess when a deposit is recorded */
-                window._hmDepositPromise = null;
+            /* ── Category change ── */
+            $('#hm-oc-cat').on('change',function(){
+                var cat=$(this).val();
+                $('#hm-oc-mfr-wrap,#hm-oc-style-wrap,#hm-oc-prod-wrap,#hm-oc-ear-wrap,#hm-oc-svc-wrap,#hm-oc-add-wrap').hide();
+                $('#hm-oc-mfr,#hm-oc-style,#hm-oc-prod,#hm-oc-svc,#hm-oc-ear').val('');
+                if(!cat)return;
+                if(cat==='service'){
+                    var $s=$('#hm-oc-svc').empty().append('<option value="">— Select —</option>');
+                    allSvcs.forEach(function(s){$s.append('<option value="'+s.id+'" data-price="'+parseFloat(s.default_price||0)+'">'+esc(s.service_name)+' — €'+parseFloat(s.default_price||0).toFixed(2)+'</option>');});
+                    $('#hm-oc-svc-wrap').show();
+                } else {
+                    var mfrs={};
+                    allProducts.filter(function(p){return p.item_type===cat;}).forEach(function(p){if(p.manufacturer_name)mfrs[p.manufacturer_id]=p.manufacturer_name;});
+                    var $m=$('#hm-oc-mfr').empty().append('<option value="">— Select —</option>');
+                    Object.keys(mfrs).forEach(function(k){$m.append('<option value="'+k+'">'+esc(mfrs[k])+'</option>');});
+                    $('#hm-oc-mfr-wrap').show();
+                }
+            });
 
-                window.HM_openOrderPage({
-                    patient_id:    <?php echo (int) $pid; ?>,
-                    patient_name:  <?php echo json_encode( $patient_name ); ?>,
-                    appointment_id: 0,
-                    outcome:       {name:'', color:'#3B82F6'},
-                    service_colour:'#3B82F6',
-                    service_name:  '',
-                    clinic_id:     '',
-                    dispenser_id:  0,
-                    backLabel:     'Orders',
-                    onDone: function(){
-                        var dest = <?php echo json_encode( $base ); ?>;
-                        if (window._hmDepositPromise) {
-                            /* Wait for deposit recording to finish before navigating */
-                            window._hmDepositPromise.always(function(){ window.location = dest; });
-                        } else {
-                            window.location = dest;
-                        }
-                    }
+            /* ── Manufacturer change ── */
+            $('#hm-oc-mfr').on('change',function(){
+                var cat=$('#hm-oc-cat').val(), mfr=$(this).val();
+                $('#hm-oc-style-wrap,#hm-oc-prod-wrap,#hm-oc-ear-wrap,#hm-oc-add-wrap').hide();
+                if(!mfr)return;
+                var styles={};
+                allProducts.filter(function(p){return p.item_type===cat&&String(p.manufacturer_id)===mfr;}).forEach(function(p){if(p.style)styles[p.style]=1;});
+                var keys=Object.keys(styles);
+                if(keys.length>1){
+                    var $s=$('#hm-oc-style').empty().append('<option value="">— Select —</option>');
+                    keys.sort().forEach(function(k){$s.append('<option value="'+k+'">'+esc(k)+'</option>');});
+                    $('#hm-oc-style-wrap').show();
+                } else {
+                    populateProducts(cat,mfr,keys[0]||'');
+                }
+            });
+
+            /* ── Style change ── */
+            $('#hm-oc-style').on('change',function(){
+                var cat=$('#hm-oc-cat').val(), mfr=$('#hm-oc-mfr').val(), style=$(this).val();
+                if(!style)return;
+                populateProducts(cat,mfr,style);
+            });
+
+            function populateProducts(cat,mfr,style){
+                var prods=allProducts.filter(function(p){
+                    return p.item_type===cat&&String(p.manufacturer_id)===mfr&&(!style||p.style===style);
                 });
-
-                /* ── Inject deposit section + override handlers ── */
-                /* Poll until #hm-op-actions exists (products AJAX must complete first) */
-                var _depWait=0;
-                function _injectDeposit(){
-                    if(!document.getElementById('hm-op-actions')){
-                        if(++_depWait>200)return; /* give up after ~10 s */
-                        setTimeout(_injectDeposit,50);
-                        return;
-                    }
-                    var $=jQuery;
-                    var ordersBase=<?php echo json_encode( $base ); ?>;
-
-                    /* Override back button to navigate */
-                    $(document).off('click.opback').on('click.opback','#hm-op-back',function(){
-                        window.location=ordersBase;
-                    });
-
-                    /* ═══ FIX 1: Remove full PAYMENT section — deposits only at order creation ═══ */
-                    $('#hm-op-pay-btn').remove();           /* "Take Payment" button */
-                    $('#hm-op-paysec').remove();            /* Confirm Payment, allocation bar, payment methods */
-                    $('#hm-op-submit').text('Submit Order for Approval').css('flex','1');
-
-                    /* ═══ FIX 2: Serial number modal cannot appear — it is triggered from payment
-                       flow (Confirm Payment → serials_required). Since we removed #hm-op-paysec
-                       and #hm-op-pay-btn, the _showSerialModal pathway is unreachable. ═══ */
-
-                    /* ── Deposit section: inject above action buttons ── */
-                    var LB='font-size:11px;font-weight:700;color:var(--hm-text,#334155);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:5px';
-                    var INP='font-size:13px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--hm-border,#e2e8f0);width:100%;background:#fff;box-sizing:border-box';
-                    var today=new Date().toISOString().split('T')[0];
-
-                    var depHtml='<div id="hm-op-deposit-section" style="border-top:1px dashed var(--hm-border-light,#e2e8f0);padding-top:14px;margin-top:14px">';
-                    depHtml+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--hm-text-light,#64748b);margin-bottom:10px;display:flex;align-items:center;gap:6px">';
-                    depHtml+='<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>';
-                    depHtml+='Deposit <span style="font-weight:400;color:var(--hm-text-muted,#94a3b8);text-transform:none;letter-spacing:0;font-size:11px">— optional, balance collected at fitting</span></div>';
-                    depHtml+='<div style="display:flex;gap:10px;flex-wrap:wrap">';
-                    depHtml+='<div style="flex:1;min-width:100px"><label style="'+LB+'">Amount (€)</label>';
-                    depHtml+='<input type="number" id="hm-op-dep-amt" step="0.01" min="0" value="" placeholder="0.00" style="'+INP+'"></div>';
-                    depHtml+='<div style="flex:1;min-width:120px"><label style="'+LB+'">Method</label>';
-                    depHtml+='<select id="hm-op-dep-method" style="'+INP+'"><option value="">— None —</option><option value="Card">Card</option><option value="Cash">Cash</option><option value="Cheque">Cheque</option></select></div>';
-                    depHtml+='<div style="flex:1;min-width:120px"><label style="'+LB+'">Date Paid</label>';
-                    depHtml+='<input type="date" id="hm-op-dep-date" value="'+today+'" style="'+INP+'"></div>';
-                    depHtml+='</div>';
-                    depHtml+='<div id="hm-op-dep-balance" style="display:none;margin-top:10px;padding:10px 14px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px;font-size:13px;color:#0e7490">';
-                    depHtml+='Balance due at fitting: <strong id="hm-op-dep-bal-val">€0.00</strong></div>';
-                    depHtml+='</div>';
-
-                    $('#hm-op-actions').before(depHtml);
-
-                    /* Live "balance due at fitting" update */
-                    function updateDepositBalance(){
-                        var dep=parseFloat($('#hm-op-dep-amt').val())||0;
-                        var total=parseFloat($('#hm-op-total').text().replace(/[^0-9.]/g,''))||0;
-                        if(dep>0){
-                            var bal=Math.max(0,total-dep);
-                            $('#hm-op-dep-bal-val').text('€'+bal.toFixed(2));
-                            $('#hm-op-dep-balance').show();
-                        }else{
-                            $('#hm-op-dep-balance').hide();
-                        }
-                    }
-                    $(document).on('input','#hm-op-dep-amt',updateDepositBalance);
-                    /* Also recalc when totals change (item add/remove, PRSI, discount) */
-                    var _origTotal=$('#hm-op-total').text();
-                    setInterval(function(){
-                        var cur=$('#hm-op-total').text();
-                        if(cur!==_origTotal){_origTotal=cur;updateDepositBalance();}
-                    },300);
-
-                    /* ── Override "Submit Order" to also record deposit after order creation ── */
-
-                    /* Intercept jQuery ajax responses for create_outcome_order */
-                    $(document).ajaxSuccess(function(e,xhr,settings,data){
-                        if(!settings||!settings.data||typeof settings.data!=='string')return;
-                        if(settings.data.indexOf('hm_create_outcome_order')===-1)return;
-                        if(!data||!data.success)return;
-
-                        var dep=parseFloat($('#hm-op-dep-amt').val())||0;
-                        if(dep<=0)return; /* no deposit — nothing to do */
-
-                        var depMethod=$('#hm-op-dep-method').val()||'Card';
-                        var depDate=$('#hm-op-dep-date').val()||today;
-                        var orderId=data.data.order_id;
-
-                        /* Record deposit — store promise so onDone waits */
-                        window._hmDepositPromise = $.post(HM.ajax_url,{
-                            action:'hm_record_order_deposit',
-                            nonce:HM.nonce,
-                            order_id:orderId,
-                            deposit_amount:dep,
-                            deposit_method:depMethod,
-                            deposit_paid_at:depDate
-                        });
-                    });
-
-                    /* Deposit validation: block submit if deposit > total or method missing */
-                    $(document).on('click','#hm-op-submit',function(e){
-                        var dep=parseFloat($('#hm-op-dep-amt').val())||0;
-                        var total=parseFloat($('#hm-op-total').text().replace(/[^0-9.]/g,''))||0;
-                        if(dep>total+0.01){
-                            e.stopImmediatePropagation();
-                            $('#hm-op-err').text('Deposit (€'+dep.toFixed(2)+') cannot exceed the order total (€'+total.toFixed(2)+').');
-                            return false;
-                        }
-                        if(dep>0 && !$('#hm-op-dep-method').val()){
-                            e.stopImmediatePropagation();
-                            $('#hm-op-err').text('Please select a deposit payment method.');
-                            return false;
-                        }
-                    });
-
-                }
-                _injectDeposit();
+                var $p=$('#hm-oc-prod').empty().append('<option value="">— Select —</option>');
+                prods.forEach(function(p){
+                    var price=parseFloat(p.retail_price||0);
+                    $p.append('<option value="'+p.id+'" data-price="'+price+'" data-vat="'+(p.vat_category==='standard'?23:0)+'" data-name="'+esc(p.product_name)+'" data-type="product">'+esc(p.product_name)+' — €'+price.toFixed(2)+'</option>');
+                });
+                $('#hm-oc-prod-wrap').show();
             }
-            boot();
+
+            /* ── Product change → show ear picker ── */
+            $('#hm-oc-prod').on('change',function(){
+                if(!$(this).val()){$('#hm-oc-ear-wrap,#hm-oc-add-wrap').hide();return;}
+                $('#hm-oc-ear-wrap,#hm-oc-add-wrap').show();
+            });
+
+            /* ── Service change → show add button ── */
+            $('#hm-oc-svc').on('change',function(){
+                if(!$(this).val()){$('#hm-oc-add-wrap').hide();return;}
+                $('#hm-oc-ear-wrap').hide();
+                $('#hm-oc-add-wrap').show();
+            });
+
+            /* ── ADD ITEM ── */
+            $('#hm-oc-add-item').on('click',function(){
+                var cat=$('#hm-oc-cat').val();
+                var item={};
+                if(cat==='service'){
+                    var $opt=$('#hm-oc-svc option:selected');
+                    if(!$opt.val())return;
+                    item={id:parseInt($opt.val()),type:'service',name:$opt.text().split(' — ')[0],unit_price:parseFloat($opt.data('price'))||0,qty:1,ear:'',vat_rate:0,vat_amount:0,line_total:parseFloat($opt.data('price'))||0};
+                } else {
+                    var $opt=$('#hm-oc-prod option:selected');
+                    if(!$opt.val())return;
+                    var ear=$('#hm-oc-ear').val();
+                    if(!ear){$('#hm-oc-err').text('Please select an ear.');return;}
+                    var price=parseFloat($opt.data('price'))||0;
+                    var vatRate=parseFloat($opt.data('vat'))||0;
+                    var qty=ear==='Binaural'?2:1;
+                    var gross=price*qty;
+                    var vatAmt=vatRate>0?Math.round((gross-gross/(1+vatRate/100))*100)/100:0;
+                    item={id:parseInt($opt.val()),type:$opt.data('type')||'product',name:$opt.data('name'),unit_price:price,qty:qty,ear:ear,vat_rate:vatRate,vat_amount:vatAmt,line_total:gross};
+                }
+                orderItems.push(item);
+                renderItems();
+                updateTotals();
+                $('#hm-oc-err').text('');
+                // Reset selectors
+                $('#hm-oc-cat').val('').trigger('change');
+            });
+
+            /* ── Render items table ── */
+            function renderItems(){
+                var $tb=$('#hm-oc-items');
+                if(!orderItems.length){$tb.html('<tr><td colspan="5" style="text-align:center;padding:24px 0;color:var(--hm-text-muted,#94a3b8);font-size:13px;font-style:italic">No items added yet</td></tr>');return;}
+                var h='';
+                orderItems.forEach(function(it,i){
+                    var total=it.unit_price*it.qty;
+                    h+='<tr style="border-bottom:1px solid var(--hm-border-light,#f1f5f9)">';
+                    h+='<td style="padding:10px 0;font-size:13px">'+esc(it.name)+(it.ear?' <span style="font-size:11px;color:var(--hm-text-light,#64748b)">('+esc(it.ear)+')</span>':'')+'</td>';
+                    h+='<td style="text-align:center;font-size:13px">'+it.qty+'</td>';
+                    h+='<td style="text-align:right;font-size:13px">€'+it.unit_price.toFixed(2)+'</td>';
+                    h+='<td style="text-align:right;font-size:13px;font-weight:600">€'+total.toFixed(2)+'</td>';
+                    h+='<td><button class="hm-oc-rem" data-idx="'+i+'" style="border:none;background:none;color:#b91c1c;font-size:15px;cursor:pointer;padding:2px 6px;opacity:.5" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.5">×</button></td>';
+                    h+='</tr>';
+                });
+                $tb.html(h);
+            }
+
+            /* ── Remove item ── */
+            $(document).on('click','.hm-oc-rem',function(){
+                orderItems.splice(parseInt($(this).data('idx')),1);
+                renderItems();updateTotals();
+            });
+
+            /* ── Update totals ── */
+            function updateTotals(){
+                var sub=0,vat=0;
+                orderItems.forEach(function(it){
+                    var gross=it.unit_price*it.qty;
+                    vat+=it.vat_amount;
+                    sub+=gross-it.vat_amount;
+                });
+                var discVal=parseFloat($('#hm-oc-disc').val())||0;
+                var discAmt=0;
+                if(discountMode==='pct'&&discVal>0)discAmt=Math.round(sub*(discVal/100)*100)/100;
+                else if(discountMode==='eur'&&discVal>0)discAmt=Math.min(discVal,sub+vat);
+                var prsiL=$('#hm-oc-prsi-l').is(':checked')?500:0;
+                var prsiR=$('#hm-oc-prsi-r').is(':checked')?500:0;
+                var total=Math.max(0,sub+vat-discAmt-prsiL-prsiR);
+                $('#hm-oc-sub').text('€'+sub.toFixed(2));
+                $('#hm-oc-vat').text('€'+vat.toFixed(2));
+                $('#hm-oc-disc-amt').text('−€'+discAmt.toFixed(2));
+                $('#hm-oc-total').text('€'+total.toFixed(2));
+                updateDepositBalance();
+            }
+
+            /* ── Discount mode toggle ── */
+            $(document).on('click','.hm-oc-disc-mode',function(){
+                discountMode=$(this).data('mode');
+                $('.hm-oc-disc-mode').css({background:'#fff',color:'var(--hm-text,#334155)'});
+                $(this).css({background:'var(--hm-navy,#151B33)',color:'#fff'});
+                if(discountMode==='pct'){$('#hm-oc-disc-unit').text('%');$('#hm-oc-disc').attr({max:100,step:1});}
+                else{$('#hm-oc-disc-unit').text('€');$('#hm-oc-disc').attr({max:99999,step:10});}
+                $('#hm-oc-disc').val(0);updateTotals();
+            });
+            $('#hm-oc-disc').on('input',function(){updateTotals();});
+            $('#hm-oc-prsi-l,#hm-oc-prsi-r').on('change',function(){updateTotals();});
+
+            /* ── Deposit balance ── */
+            function updateDepositBalance(){
+                var dep=parseFloat($('#hm-oc-dep-amt').val())||0;
+                var total=parseFloat($('#hm-oc-total').text().replace(/[^0-9.]/g,''))||0;
+                if(dep>0){
+                    $('#hm-oc-dep-bal-val').text('€'+Math.max(0,total-dep).toFixed(2));
+                    $('#hm-oc-dep-balance').show();
+                } else {
+                    $('#hm-oc-dep-balance').hide();
+                }
+            }
+            $('#hm-oc-dep-amt').on('input',updateDepositBalance);
+
+            /* ══════════════════════════════════════
+               SUBMIT ORDER → hm_create_order
+               ══════════════════════════════════════ */
+            $('#hm-oc-submit').on('click',function(){
+                if(!orderItems.length){$('#hm-oc-err').text('Please add at least one item.');return;}
+                var dep=parseFloat($('#hm-oc-dep-amt').val())||0;
+                var total=parseFloat($('#hm-oc-total').text().replace(/[^0-9.]/g,''))||0;
+                if(dep>total+0.01){$('#hm-oc-err').text('Deposit (€'+dep.toFixed(2)+') cannot exceed the order total (€'+total.toFixed(2)+').');return;}
+                if(dep>0&&!$('#hm-oc-dep-method').val()){$('#hm-oc-err').text('Please select a deposit payment method.');return;}
+
+                var $btn=$(this);
+                $btn.prop('disabled',true).text('Submitting…');
+                $('#hm-oc-err').text('');
+
+                var discVal=parseFloat($('#hm-oc-disc').val())||0;
+
+                $.post(ajaxUrl,{
+                    action:'hm_create_order',
+                    nonce:nonce,
+                    patient_id:pid,
+                    items_json:JSON.stringify(orderItems),
+                    notes:$('#hm-oc-notes').val()||'',
+                    prsi_left:$('#hm-oc-prsi-l').is(':checked')?1:0,
+                    prsi_right:$('#hm-oc-prsi-r').is(':checked')?1:0,
+                    discount_pct:discountMode==='pct'?discVal:0,
+                    discount_euro:discountMode==='eur'?discVal:0,
+                    deposit_amount:dep,
+                    deposit_method:$('#hm-oc-dep-method').val()||'',
+                    deposit_paid_at:$('#hm-oc-dep-date').val()||'',
+                    payment_method:''
+                },function(r){
+                    if(r&&r.success){
+                        var d=r.data;
+                        /* Hide form controls, show success banner */
+                        $('#hm-oc-actions').hide();
+
+                        var msg='<div style="background:#e8f8f0;border:1px solid #27AE60;border-left:4px solid #27AE60;padding:16px 20px;border-radius:6px;color:#1a4731;font-family:inherit">';
+                        msg+='<div style="font-size:14px;font-weight:700;margin-bottom:4px">✓ Order '+esc(d.order_number)+' submitted for C-Level approval.</div>';
+                        if(d.deposit_amount>0){
+                            msg+='<div style="font-size:13px;margin-bottom:6px">€'+parseFloat(d.deposit_amount).toFixed(2)+' deposit recorded on '+esc(d.patient_name)+'\'s account. Balance of €'+parseFloat(d.balance_due).toFixed(2)+' due at fitting.</div>';
+                        }
+                        if(d.duplicate_flag){
+                            msg+='<div style="font-size:13px;color:#c0392b;margin-bottom:6px">⚠ Possible duplicate: '+esc(d.duplicate_flag_reason)+'</div>';
+                        }
+                        msg+='<div style="margin-top:10px;display:flex;gap:16px">';
+                        msg+='<a href="'+esc(ordersBase)+'" style="font-size:13px;font-weight:600;color:#0BB4C4;text-decoration:none">← Back to Orders</a>';
+                        msg+='<a href="'+esc(ordersBase)+'?hm_action=view&order_id='+d.order_id+'" style="font-size:13px;font-weight:600;color:#0BB4C4;text-decoration:none">View Order →</a>';
+                        msg+='</div></div>';
+
+                        $('#hm-oc-success').html(msg).show();
+                    } else {
+                        $btn.prop('disabled',false).text('Submit Order for Approval');
+                        $('#hm-oc-err').text(r&&r.data&&r.data.message?r.data.message:(typeof r.data==='string'?r.data:'Failed to create order.'));
+                    }
+                }).fail(function(){
+                    $btn.prop('disabled',false).text('Submit Order for Approval');
+                    $('#hm-oc-err').text('Network error — please try again.');
+                });
+            });
         })();
         </script>
         <?php endif; ?>
@@ -1726,6 +1990,13 @@ class HearMed_Orders {
             self::notify('c_level', 'order_awaiting_approval', $order_id, ['order_number' => $order_num]);
         }
 
+        // Fetch patient name for the success response
+        $patient_row = $db->get_row(
+            "SELECT CONCAT(first_name, ' ', last_name) AS name FROM hearmed_core.patients WHERE id = \$1",
+            [$patient_id]
+        );
+        $balance_due = max(0, $grand_total - $deposit_amount);
+
         wp_send_json_success([
             'message'        => $is_quickpay
                 ? 'Service invoice '.$order_num.' created.'
@@ -1736,7 +2007,10 @@ class HearMed_Orders {
             'invoice_id'     => $invoice_id,
             'duplicate_flag' => $duplicate_flag,
             'duplicate_flag_reason' => $dup_reason,
-            'redirect'       => HearMed_Utils::page_url('orders'),
+            'patient_name'   => $patient_row ? $patient_row->name : '',
+            'grand_total'    => $grand_total,
+            'deposit_amount' => $deposit_amount,
+            'balance_due'    => $balance_due,
         ]);
     }
 
