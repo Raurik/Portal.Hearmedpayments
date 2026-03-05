@@ -114,6 +114,27 @@ class HearMed_Invoice {
                 'updated_at'        => date( 'Y-m-d H:i:s' ),
             ], [ 'id' => $order->invoice_id ] );
 
+            // Generate HTML snapshot via the Form Builder template
+            $inv_data = self::get_invoice_data( $order->invoice_id );
+            if ( $inv_data ) {
+                $tpl  = self::build_template_data( $inv_data );
+                $html = class_exists( 'HearMed_Print_Templates' )
+                    ? HearMed_Print_Templates::render( 'invoice', $tpl )
+                    : self::render_invoice_html( $inv_data );
+                $db->update( 'invoices', [ 'invoice_template' => $html ], [ 'id' => $order->invoice_id ] );
+
+                // Save to patient documents
+                if ( class_exists( 'HearMed_Utils' ) && method_exists( 'HearMed_Utils', 'auto_save_document' ) ) {
+                    HearMed_Utils::auto_save_document(
+                        $order->patient_id,
+                        'Invoice',
+                        $inv_data->invoice_number ?? '',
+                        $html,
+                        $payment_data['received_by'] ?? null
+                    );
+                }
+            }
+
             return $order->invoice_id;
         }
 
@@ -212,22 +233,26 @@ class HearMed_Invoice {
         // Record payment
         self::record_payment( $invoice_id, $order, $payment_data );
 
-        // Generate and store HTML snapshot for re-printing
+        // Generate and store HTML snapshot via the Form Builder template
         $invoice_data = self::get_invoice_data( $invoice_id );
+        $html = '';
         if ( $invoice_data ) {
-            $html = self::render_invoice_html( $invoice_data );
+            $tpl  = self::build_template_data( $invoice_data );
+            $html = class_exists( 'HearMed_Print_Templates' )
+                ? HearMed_Print_Templates::render( 'invoice', $tpl )
+                : self::render_invoice_html( $invoice_data );
             $db->update( 'invoices', [ 'invoice_template' => $html ], [ 'id' => $invoice_id ] );
         }
 
         HearMed_DB::commit();
 
-        // Auto-save invoice to patient documents
+        // Auto-save invoice to patient documents (with actual HTML content)
         if ( class_exists( 'HearMed_Utils' ) && method_exists( 'HearMed_Utils', 'auto_save_document' ) ) {
             HearMed_Utils::auto_save_document(
                 $order->patient_id,
                 'Invoice',
                 $invoice_number,
-                '',
+                $html,
                 $payment_data['received_by'] ?? null
             );
         }
@@ -373,12 +398,22 @@ class HearMed_Invoice {
             return false;
         }
 
-        // Auto-save invoice to patient documents
+        // Generate HTML snapshot via the Form Builder template and save to documents
+        $inv_data = self::get_invoice_data( intval( $invoice_id ) );
+        $html = '';
+        if ( $inv_data ) {
+            $tpl  = self::build_template_data( $inv_data );
+            $html = class_exists( 'HearMed_Print_Templates' )
+                ? HearMed_Print_Templates::render( 'invoice', $tpl )
+                : self::render_invoice_html( $inv_data );
+            $db->update( 'invoices', [ 'invoice_template' => $html ], [ 'id' => intval( $invoice_id ) ] );
+        }
+
         HearMed_Utils::auto_save_document(
             $order->patient_id,
             'Invoice',
             $invoice_number,
-            '', // HTML generated on demand via print
+            $html,
             $created_by
         );
 

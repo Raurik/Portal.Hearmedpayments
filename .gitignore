@@ -53,3 +53,7 @@ desktop.ini
 *.gz
 *.tar
 *.tar.gz
+
+vendor/
+composer.json
+composer.lock
