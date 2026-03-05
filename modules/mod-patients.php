@@ -3214,6 +3214,11 @@ function hm_ajax_create_return_credit_note() {
             if ( ! $other_serial ) {
                 $upd['device_status'] = 'Returned';
                 $upd['inactive_date'] = date( 'Y-m-d' );
+            } else {
+                // Keep remaining side active and clear pending-return state.
+                $upd['device_status']   = 'Active';
+                $upd['inactive_reason'] = null;
+                $upd['inactive_date']   = null;
             }
             $dev_upd_ok = $db->update( 'hearmed_core.patient_devices', $upd, [ 'id' => $device_id ] );
             if ( $dev_upd_ok === false ) {
@@ -3310,6 +3315,12 @@ function hm_ajax_create_return_credit_note() {
     $stock_ok = false;
     try {
         $returned_count = hm_return_device_to_stock( $device, $side, 'Return', $staff_id, $inv_id, $ord_id );
+
+        // If both hearing aids are returned, send bundled charger back to charger stock too.
+        if ( $side === 'both' && $ord_id ) {
+            hm_return_order_charger_to_stock( (int) $ord_id, (int) ( $cn_id ?? 0 ), (int) ( $staff_id ?: 0 ) );
+        }
+
         $stock_ok = ( $returned_count >= 1 );
         if ( ! $stock_ok ) {
             error_log( '[HearMed] Stock return inserted 0 rows for device #' . $device_id . ' (return #' . $return_id . '). DB error: ' . HearMed_DB::last_error() );
@@ -3727,7 +3738,7 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null, $
             'serial_number'    => $entry['serial'] ?: null,
             'clinic_id'        => $clinic_id,
             'quantity'         => 1,
-            'status'           => 'Returned',
+            'status'           => 'Available',
             'return_reason'    => $reason,
         ];
 
@@ -3753,6 +3764,72 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null, $
     }
 
     return $returned_count;
+}
+
+/**
+ * Return bundled charger to charger/accessory stock when both aids are returned.
+ */
+function hm_return_order_charger_to_stock( $order_id, $credit_note_id = 0, $staff_id = 0 ) {
+    if ( ! $order_id ) return 0;
+
+    $db = HearMed_DB::instance();
+
+    $charger = $db->get_row(
+        "SELECT oi.quantity,
+                COALESCE(pr.product_name, oi.item_description, 'Charger') AS charger_name,
+                pr.manufacturer_id,
+                o.clinic_id
+         FROM hearmed_core.order_items oi
+         LEFT JOIN hearmed_reference.products pr ON pr.id = oi.item_id
+         LEFT JOIN hearmed_core.orders o ON o.id = oi.order_id
+         WHERE oi.order_id = \$1
+           AND (
+               oi.item_type = 'charger'
+               OR COALESCE(pr.item_type, '') = 'charger'
+               OR COALESCE(pr.product_name, oi.item_description, '') ILIKE '%charger%'
+           )
+         ORDER BY oi.line_number
+         LIMIT 1",
+        [ $order_id ]
+    );
+
+    if ( ! $charger ) return 0;
+
+    $qty = max( 1, (int) ( $charger->quantity ?? 1 ) );
+    $reason = 'Return (both aids)' . ( $credit_note_id ? ' — Credit Note #' . $credit_note_id : '' );
+
+    $staff_name = '';
+    if ( $staff_id ) {
+        $sn_row = $db->get_row( "SELECT first_name, last_name FROM hearmed_reference.staff WHERE id = \$1", [ $staff_id ] );
+        $staff_name = $sn_row ? trim( $sn_row->first_name . ' ' . $sn_row->last_name ) : '';
+    }
+
+    $stock_id = $db->insert( 'hearmed_reference.inventory_stock', [
+        'item_category'   => 'charger_accessory',
+        'manufacturer_id' => ! empty( $charger->manufacturer_id ) ? (int) $charger->manufacturer_id : null,
+        'model_name'      => (string) ( $charger->charger_name ?? 'Charger' ),
+        'clinic_id'       => ! empty( $charger->clinic_id ) ? (int) $charger->clinic_id : null,
+        'quantity'        => $qty,
+        'status'          => 'Available',
+        'return_reason'   => $reason,
+    ] );
+
+    if ( ! $stock_id ) {
+        error_log( '[HearMed] Charger stock return failed for order #' . $order_id . ': ' . HearMed_DB::last_error() );
+        return 0;
+    }
+
+    $db->insert( 'hearmed_reference.stock_movements', [
+        'stock_id'      => $stock_id,
+        'movement_type' => 'return',
+        'to_clinic_id'  => ! empty( $charger->clinic_id ) ? (int) $charger->clinic_id : null,
+        'quantity'      => $qty,
+        'notes'         => 'Bundled charger returned from order #' . $order_id,
+        'created_by'    => $staff_name ?: null,
+        'created_at'    => date( 'Y-m-d H:i:s' ),
+    ] );
+
+    return $qty;
 }
 
 
