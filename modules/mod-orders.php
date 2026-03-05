@@ -2313,11 +2313,11 @@ class HearMed_Orders {
         </div>
 
         <script>
+        var hmPatientId  = <?php echo (int) $order->patient_id; ?>;
+        var hmBalanceDue = <?php echo (float) $amount_due; ?>;
+
         (function(){
             // ── Check patient credit balance on form load ──
-            var hmPatientId  = <?php echo (int) $order->patient_id; ?>;
-            var hmBalanceDue = <?php echo (float) $amount_due; ?>;
-
             if (hmBalanceDue > 0) {
                 var fd = new URLSearchParams({action:'hm_get_patient_credit_balance', nonce:'<?php echo $nonce; ?>', patient_id:hmPatientId});
                 fetch('<?php echo admin_url('admin-ajax.php'); ?>', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:fd})
@@ -2358,6 +2358,63 @@ class HearMed_Orders {
             return Math.max(0, hmBalanceDue - creditApplied);
         }
 
+        function hmSetAmountFieldState(el, isAlert) {
+            if (!el) return;
+            el.style.borderColor = isAlert ? '#dc2626' : '';
+            el.style.color = isAlert ? '#b91c1c' : '';
+        }
+
+        function hmValidatePaymentInputs() {
+            var amount1El = document.getElementById('hm-fit-amount');
+            var amount2El = document.getElementById('hm-fit-amount-2');
+            var splitEl   = document.getElementById('hm-fit-split');
+            var msg       = document.getElementById('hm-complete-msg');
+
+            var due = hmCurrentCollectTotal();
+            var a1  = parseFloat((amount1El && amount1El.value) || 0);
+            var a2  = parseFloat((amount2El && amount2El.value) || 0);
+            if (!isFinite(a1) || a1 < 0) a1 = 0;
+            if (!isFinite(a2) || a2 < 0) a2 = 0;
+
+            var splitOn = !!(splitEl && splitEl.checked);
+            var entered = splitOn ? (a1 + a2) : a1;
+            var isOver = entered > due + 0.009;
+            var delta = Math.abs(due - entered);
+            var isMismatch = !isOver && delta >= 0.01;
+
+            hmSetAmountFieldState(amount1El, isOver);
+            hmSetAmountFieldState(amount2El, splitOn && isOver);
+
+            if (msg) {
+                if (isOver) {
+                    msg.style.display = 'block';
+                    msg.className = '';
+                    msg.style.background = '#fef2f2';
+                    msg.style.border = '1px solid #fecaca';
+                    msg.style.color = '#991b1b';
+                    msg.innerHTML = '<strong>Flag:</strong> Entered amount (€' + entered.toFixed(2) + ') is above outstanding (€' + due.toFixed(2) + ').';
+                    msg.dataset.mode = 'payment-flag';
+                } else if (isMismatch) {
+                    msg.style.display = 'block';
+                    msg.className = '';
+                    msg.style.background = '#fffbeb';
+                    msg.style.border = '1px solid #fde68a';
+                    msg.style.color = '#92400e';
+                    msg.innerHTML = '<strong>Flag:</strong> Amounts do not exactly match outstanding (difference €' + delta.toFixed(2) + ').';
+                    msg.dataset.mode = 'payment-flag';
+                } else if (msg.dataset.mode === 'payment-flag') {
+                    msg.style.display = 'none';
+                    msg.innerHTML = '';
+                    msg.dataset.mode = '';
+                    msg.style.background = '';
+                    msg.style.border = '';
+                    msg.style.color = '';
+                }
+            }
+
+            return { totalDue: due, totalEntered: entered, isOver: isOver, isMismatch: isMismatch };
+        }
+
         function hmRebalanceSplitAmounts(changed) {
             var amount1El = document.getElementById('hm-fit-amount');
             var amount2El = document.getElementById('hm-fit-amount-2');
@@ -2382,6 +2439,7 @@ class HearMed_Orders {
 
             amount1El.value = a1.toFixed(2);
             amount2El.value = a2.toFixed(2);
+            hmValidatePaymentInputs();
         }
 
         // ── Split payment toggle ──
@@ -2392,18 +2450,26 @@ class HearMed_Orders {
             } else {
                 document.getElementById('hm-fit-method-2').value = '';
                 document.getElementById('hm-fit-amount-2').value = '';
+                hmValidatePaymentInputs();
             }
         });
 
         document.getElementById('hm-fit-amount').addEventListener('input', function() {
             if (!document.getElementById('hm-fit-split').checked) return;
             hmRebalanceSplitAmounts('first');
+            hmValidatePaymentInputs();
         });
 
         document.getElementById('hm-fit-amount-2').addEventListener('input', function() {
             if (!document.getElementById('hm-fit-split').checked) return;
             hmRebalanceSplitAmounts('second');
+            hmValidatePaymentInputs();
         });
+
+        document.getElementById('hm-fit-method').addEventListener('change', hmValidatePaymentInputs);
+        document.getElementById('hm-fit-method-2').addEventListener('change', hmValidatePaymentInputs);
+        document.getElementById('hm-fit-amount').addEventListener('input', hmValidatePaymentInputs);
+        document.getElementById('hm-fit-amount-2').addEventListener('input', hmValidatePaymentInputs);
 
         document.getElementById('hm-confirm-complete').addEventListener('click', function() {
 
@@ -2438,35 +2504,11 @@ class HearMed_Orders {
             const btn = this;
             btn.disabled=true; btn.textContent='Finalising...';
 
-            // Validate final collected amount against current outstanding.
-            var totalDue = hmCurrentCollectTotal();
-            var amount1 = parseFloat(document.getElementById('hm-fit-amount').value || 0);
-            if (!isFinite(amount1) || amount1 < 0) amount1 = 0;
-
-            var splitCbCheck = document.getElementById('hm-fit-split');
-            var totalPaid = amount1;
-            if (splitCbCheck && splitCbCheck.checked) {
-                var amount2 = parseFloat(document.getElementById('hm-fit-amount-2').value || 0);
-                if (!isFinite(amount2) || amount2 < 0) amount2 = 0;
-                totalPaid = amount1 + amount2;
-            }
-
-            // Never allow taking more than what is owed.
-            if (totalPaid > totalDue + 0.009) {
-                alert('You cannot take more than the amount owed. Owed: €' + totalDue.toFixed(2) + ', entered: €' + totalPaid.toFixed(2) + '.');
+            // Inline flagging for amount checks; do not hard-jam the screen.
+            var check = hmValidatePaymentInputs();
+            if (check.isOver) {
                 btn.disabled=false; btn.textContent='✓ Confirm Fitted + Paid — Finalise';
                 return;
-            }
-
-            // If payment does not exactly match, bring it to staff attention.
-            var delta = Math.abs(totalDue - totalPaid);
-            if (delta >= 0.01) {
-                var msg = 'Amount check: owed €' + totalDue.toFixed(2) + ', entered €' + totalPaid.toFixed(2) + '.\n\n'
-                    + 'If this is intentional (for example €999 instead of €1000), click OK to continue.';
-                if (!confirm(msg)) {
-                    btn.disabled=false; btn.textContent='✓ Confirm Fitted + Paid — Finalise';
-                    return;
-                }
             }
 
             var params = {
@@ -2502,6 +2544,7 @@ class HearMed_Orders {
                 msg.style.display='block';
                 if (d.success) {
                     msg.className='hm-notice hm-notice--success';
+                    msg.dataset.mode='';
                     msg.innerHTML='<div class="hm-notice-body"><span class="hm-notice-icon">✓</span> '+d.data.message+'</div>';
                     if (d.data && d.data.print_url) {
                         var iframe = document.createElement('iframe');
@@ -2519,11 +2562,22 @@ class HearMed_Orders {
                     setTimeout(()=>window.location=(d.data.next_redirect || d.data.redirect), 1200);
                 } else {
                     msg.className='hm-notice hm-notice--error';
-                    msg.innerHTML='<div class="hm-notice-body"><span class="hm-notice-icon">×</span> '+d.data+'</div>';
+                    msg.dataset.mode='';
+                    var errText = (d && d.data && d.data.message) ? d.data.message : (typeof d.data === 'string' ? d.data : 'Finalise failed.');
+                    msg.innerHTML='<div class="hm-notice-body"><span class="hm-notice-icon">×</span> '+errText+'</div>';
                     btn.disabled=false; btn.textContent='✓ Confirm Fitted + Paid — Finalise';
                 }
+            }).catch(function(){
+                const msg=document.getElementById('hm-complete-msg');
+                msg.style.display='block';
+                msg.className='hm-notice hm-notice--error';
+                msg.dataset.mode='';
+                msg.innerHTML='<div class="hm-notice-body"><span class="hm-notice-icon">×</span> Network error while finalising. Please try again.</div>';
+                btn.disabled=false; btn.textContent='✓ Confirm Fitted + Paid — Finalise';
             });
         });
+
+        hmValidatePaymentInputs();
         </script>
         <?php return ob_get_clean();
     }
