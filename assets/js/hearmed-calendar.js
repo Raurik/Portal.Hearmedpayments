@@ -17,6 +17,13 @@
 (function($){
 'use strict';
 
+/* Prevent running inside Elementor editor */
+if (window.location.href.includes('elementor') ||
+    window.location.href.includes('elementor-preview') ||
+    window.location.href.includes('action=elementor')) {
+    return;
+}
+
 var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function pad(n){return String(n).padStart(2,'0');}
