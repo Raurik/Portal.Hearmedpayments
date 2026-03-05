@@ -1853,7 +1853,7 @@ class HearMed_Orders {
         $notes           = sanitize_textarea_field($_POST['notes'] ?? '');
         $prsi_left       = !empty($_POST['prsi_left']);
         $prsi_right      = !empty($_POST['prsi_right']);
-        $items           = json_decode(sanitize_text_field($_POST['items_json'] ?? '[]'), true);
+        $items           = json_decode(wp_unslash($_POST['items_json'] ?? '[]'), true);
         $deposit_amount  = floatval($_POST['deposit_amount'] ?? 0);
         $deposit_method  = sanitize_text_field($_POST['deposit_method'] ?? '');
         $deposit_paid_at = sanitize_text_field($_POST['deposit_paid_at'] ?? '');
