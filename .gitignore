@@ -55,5 +55,3 @@ desktop.ini
 *.tar.gz
 
 vendor/
-composer.json
-composer.lock

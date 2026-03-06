@@ -57,11 +57,60 @@ function hearmed_fix_old_domain( $url ) {
     return $url;
 }
 
-add_action('wp_head', function() {
+// Browser Sentry (Loader Script path) for JS errors/traces/replay.
+// Keep this early in wp_head so the loader can buffer early runtime issues.
+add_action( 'wp_head', function() {
+    $environment = wp_get_environment_type();
+    $release     = defined( 'HEARMED_VERSION' ) ? HEARMED_VERSION : null;
     ?>
+    <script>
+        window.sentryOnLoad = function () {
+            if (!window.Sentry || !window.Sentry.init) {
+                return;
+            }
+            window.Sentry.init({
+                tracesSampleRate: 1.0,
+                replaysSessionSampleRate: 0.1,
+                replaysOnErrorSampleRate: 1.0,
+                environment: <?php echo wp_json_encode( $environment ); ?>,
+                release: <?php echo wp_json_encode( $release ); ?>
+            });
+        };
+    </script>
     <script src="https://js-de.sentry-cdn.com/db35dba8723fe49b1298a4364581a120.min.js" crossorigin="anonymous"></script>
     <?php
-});
+}, 1 );
+
+// PHP Sentry (SDK path) initialized when dependencies are installed.
+function hearmed_bootstrap_sentry_php_sdk() {
+    $autoload = HEARMED_PATH . 'vendor/autoload.php';
+    if ( ! is_readable( $autoload ) ) {
+        return;
+    }
+
+    require_once $autoload;
+
+    if ( ! class_exists( '\\Sentry\\State\\Hub' ) ) {
+        return;
+    }
+
+    $dsn = getenv( 'SENTRY_DSN' );
+    if ( ! is_string( $dsn ) || $dsn === '' ) {
+        return;
+    }
+
+    \Sentry\init( [
+        'dsn'                  => $dsn,
+        'environment'          => getenv( 'SENTRY_ENVIRONMENT' ) ?: wp_get_environment_type(),
+        'release'              => getenv( 'SENTRY_RELEASE' ) ?: ( defined( 'HEARMED_VERSION' ) ? HEARMED_VERSION : null ),
+        'send_default_pii'     => true,
+        'traces_sample_rate'   => 1.0,
+        'profiles_sample_rate' => 1.0,
+        'enable_logs'          => true,
+    ] );
+}
+
+hearmed_bootstrap_sentry_php_sdk();
 
 // Load core helpers and PostgreSQL connection classes
 require_once HEARMED_PATH . 'core/class-hearmed-runtime-debug.php';

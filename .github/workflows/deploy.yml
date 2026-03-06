@@ -43,6 +43,11 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             git clean -fd
+            if command -v composer >/dev/null 2>&1; then
+              composer install --no-interaction --no-dev --prefer-dist --optimize-autoloader
+            else
+              echo "[deploy] Composer not found on server; skipping PHP dependency install"
+            fi
             echo "[deploy] After sync:  $(git rev-parse --short HEAD)"
             echo "[deploy] Commit:      $(git log -1 --oneline)"
             # Deploy MU-plugins

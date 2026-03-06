@@ -1,0 +1,11 @@
+{
+  "name": "hearmed/portal-plugin",
+  "description": "HearMed Portal WordPress plugin",
+  "type": "project",
+  "require": {
+    "sentry/sentry": "^4.0"
+  },
+  "config": {
+    "sort-packages": true
+  }
+}
