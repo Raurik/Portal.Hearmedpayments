@@ -57,6 +57,12 @@ function hearmed_fix_old_domain( $url ) {
     return $url;
 }
 
+add_action('wp_head', function() {
+    ?>
+    <script src="https://js-de.sentry-cdn.com/db35dba8723fe49b1298a4364581a120.min.js" crossorigin="anonymous"></script>
+    <?php
+});
+
 // Load core helpers and PostgreSQL connection classes
 require_once HEARMED_PATH . 'core/class-hearmed-runtime-debug.php';
 require_once HEARMED_PATH . 'core/class-hearmed-logger.php';
