@@ -398,6 +398,12 @@ class HearMed_Router {
 
         $module = $config['module'];
         $view = $config['view'];
+
+        // In Elementor editor/preview, always short-circuit to a placeholder
+        // before auth/redirect checks so the editor iframe can load reliably.
+        if ( HearMed_Utils::is_elementor_editor() && ! HearMed_Utils::allow_elementor_preview_boot() ) {
+            return '<div id="hm-app" class="hm-elementor-placeholder"><p style="text-align:center;padding:32px;color:#94a3b8;">[ HearMed ' . esc_html( ucfirst( $module ) ) . ' — editing mode ]</p><p style="text-align:center;padding:0 32px 24px;color:#64748b;font-size:13px;">Enable preview runtime with <code>hm_allow_elementor_preview_boot</code> filter for staging validation.</p></div>';
+        }
         
         // Check authentication — PortalAuth is source of truth
         $logged_in = PortalAuth::is_logged_in();
@@ -422,11 +428,6 @@ class HearMed_Router {
             return $privacy_notice;
         }
 
-        // Show placeholder in Elementor editor/preview unless explicitly enabled for staging QA
-        if ( HearMed_Utils::is_elementor_editor() && ! HearMed_Utils::allow_elementor_preview_boot() ) {
-            return '<div id="hm-app" class="hm-elementor-placeholder"><p style="text-align:center;padding:32px;color:#94a3b8;">[ HearMed ' . esc_html( ucfirst( $module ) ) . ' — editing mode ]</p><p style="text-align:center;padding:0 32px 24px;color:#64748b;font-size:13px;">Enable preview runtime with <code>hm_allow_elementor_preview_boot</code> filter for staging validation.</p></div>';
-        }
-        
         // Load the module file
         // Ensure CSS/JS for this module are enqueued even if enqueue_modules()
         // missed the shortcode (e.g. shortcode placed via template, widget, or
