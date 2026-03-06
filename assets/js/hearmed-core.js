@@ -12,6 +12,29 @@
 
 (function($) {
     'use strict';
+
+    function hmIsElementorContext() {
+        var href = String(window.location.href || '');
+        var ref = String(document.referrer || '');
+        var search = String(window.location.search || '');
+        var topHref = '';
+
+        try {
+            if (window.top && window.top !== window && window.top.location) {
+                topHref = String(window.top.location.href || '');
+            }
+        } catch (e) {
+            topHref = '';
+        }
+
+        var haystack = (href + ' ' + ref + ' ' + search + ' ' + topHref).toLowerCase();
+        return haystack.indexOf('elementor') !== -1 || haystack.indexOf('action=elementor') !== -1 || haystack.indexOf('elementor-preview') !== -1;
+    }
+
+    if (hmIsElementorContext()) {
+        window.__HM_ELEMENTOR_EDITOR__ = true;
+        return;
+    }
     
     // Extend HM object with core functionality
     window.HM = window.HM || {};

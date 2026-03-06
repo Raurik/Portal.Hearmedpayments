@@ -694,6 +694,27 @@ class HearMed_Router {
 
         <script>
         (function(){
+            function hmIsElementorContext(){
+                if(window.__HM_ELEMENTOR_EDITOR__){ return true; }
+                var href = String(window.location.href || '');
+                var ref = String(document.referrer || '');
+                var search = String(window.location.search || '');
+                var topHref = '';
+                try {
+                    if (window.top && window.top !== window && window.top.location) {
+                        topHref = String(window.top.location.href || '');
+                    }
+                } catch (e) {
+                    topHref = '';
+                }
+                var hay = (href + ' ' + ref + ' ' + search + ' ' + topHref).toLowerCase();
+                return hay.indexOf('elementor') !== -1 || hay.indexOf('action=elementor') !== -1 || hay.indexOf('elementor-preview') !== -1;
+            }
+
+            if (hmIsElementorContext()) {
+                return;
+            }
+
             /* ── Place logout button in sidebar bottom-right ── */
             function placeLogout(){
                 var btn = document.getElementById('hm-logout-btn');
