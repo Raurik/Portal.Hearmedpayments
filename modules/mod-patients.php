@@ -2949,6 +2949,12 @@ function hm_ajax_update_repair_status() {
     check_ajax_referer( 'hm_nonce', 'nonce' );
     $id     = intval( $_POST['_ID'] ?? 0 );
     $status = sanitize_text_field( $_POST['status'] ?? '' );
+
+    // Accept both labels; keep one canonical form in code paths below.
+    if ( $status === 'Complete' ) {
+        $status = 'Completed';
+    }
+
     if ( ! $id || ! $status ) wp_send_json_error( 'Missing repair ID or status' );
 
     $db       = HearMed_DB::instance();
@@ -2966,7 +2972,7 @@ function hm_ajax_update_repair_status() {
     } elseif ( $status === 'Received' ) {
         $update['date_received'] = sanitize_text_field( $_POST['date_received'] ?? date( 'Y-m-d' ) );
         $update['received_by']   = $staff_id ?: null;
-    } elseif ( $status === 'Complete' ) {
+    } elseif ( $status === 'Completed' ) {
         // If complete is clicked directly after Received, preserve return date if already set.
         $update['date_received'] = sanitize_text_field( $_POST['date_received'] ?? date( 'Y-m-d' ) );
 
@@ -2980,9 +2986,12 @@ function hm_ajax_update_repair_status() {
         }
     }
 
-    $db->update( 'hearmed_core.repairs', $update, [ 'id' => $id ] );
+    $ok = $db->update( 'hearmed_core.repairs', $update, [ 'id' => $id ] );
+    if ( ! $ok ) {
+        wp_send_json_error( 'Failed to update repair status: ' . ( HearMed_DB::last_error() ?: 'Unknown error' ) );
+    }
 
-    if ( $status === 'Complete' ) {
+    if ( $status === 'Completed' ) {
         $repair = $db->get_row(
             "SELECT id, patient_id, repair_number, COALESCE(date_received::text, '') AS date_received
              FROM hearmed_core.repairs

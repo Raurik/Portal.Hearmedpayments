@@ -47,7 +47,8 @@ class HearMed_Repairs {
         add_shortcode("hearmed_repairs", [__CLASS__, "render"]);
         add_action("wp_ajax_hm_get_all_repairs",       [__CLASS__, "ajax_get_all"]);
         add_action("wp_ajax_hm_get_repair_docket",     [__CLASS__, "ajax_repair_docket"]);
-        add_action("wp_ajax_hm_update_repair_status",  [__CLASS__, "ajax_update_repair_status"]);
+        // Run before any legacy handler on the same hook.
+        add_action("wp_ajax_hm_update_repair_status",  [__CLASS__, "ajax_update_repair_status"], 1);
     }
 
     public static function render($atts = []): string {
