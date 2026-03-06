@@ -76,6 +76,7 @@ require_once HEARMED_PATH . 'includes/ajax-handlers.php';
 // Load admin-only pages (menus, enqueues, AJAX handlers for admin tools)
 if ( is_admin() ) {
     require_once HEARMED_PATH . 'admin/admin-debug.php';
+    require_once HEARMED_PATH . 'admin/admin-runtime-log.php';
 }
 
 // Log any fatal PHP errors on shutdown to help diagnose white screens.
