@@ -2582,6 +2582,8 @@ function hm_ajax_get_patient_account() {
     $patient_id = intval( $_POST['patient_id'] ?? 0 );
     if ( ! $patient_id ) wp_send_json_error( 'No patient ID.' );
 
+    $db = HearMed_DB::instance();
+
     // Credits (all, not just active — so staff can see history)
     $credits = class_exists( 'HearMed_Finance' )
         ? HearMed_Finance::get_patient_credits( $patient_id )
@@ -2609,16 +2611,40 @@ function hm_ajax_get_patient_account() {
     );
 
     $seen_payment_keys = [];
+    $seen_credit_note_keys = [];
+    $seen_refund_keys = [];
+
     foreach ( ( $transactions ?: [] ) as $t ) {
-        if ( ( $t->transaction_type ?? '' ) !== 'payment' ) {
-            continue;
+        $tt = (string) ( $t->transaction_type ?? '' );
+        $amt = number_format( (float) ( $t->amount ?? 0 ), 2, '.', '' );
+        $td  = (string) ( $t->transaction_date ?? '' );
+
+        if ( $tt === 'payment' ) {
+            $k = implode( '|', [
+                (string) ( $t->invoice_id ?? 0 ),
+                $amt,
+                $td,
+            ] );
+            $seen_payment_keys[ $k ] = true;
         }
-        $k = implode( '|', [
-            (string) ( $t->invoice_id ?? 0 ),
-            number_format( (float) ( $t->amount ?? 0 ), 2, '.', '' ),
-            (string) ( $t->transaction_date ?? '' ),
-        ] );
-        $seen_payment_keys[ $k ] = true;
+
+        if ( $tt === 'credit_note' ) {
+            $k = implode( '|', [
+                (string) ( $t->credit_note_id ?? 0 ),
+                $amt,
+                $td,
+            ] );
+            $seen_credit_note_keys[ $k ] = true;
+        }
+
+        if ( $tt === 'refund' ) {
+            $k = implode( '|', [
+                (string) ( $t->credit_note_id ?? 0 ),
+                $amt,
+                $td,
+            ] );
+            $seen_refund_keys[ $k ] = true;
+        }
     }
 
     foreach ( ( $payment_rows ?: [] ) as $p ) {
@@ -2643,6 +2669,83 @@ function hm_ajax_get_patient_account() {
             'notes'            => 'Payment recorded',
         ];
         $transactions[] = $row;
+    }
+
+    // Fallback source: ensure credit notes and cheque-refund events appear
+    // even when financial_transactions rows are missing.
+    $credit_note_rows = $db->get_results(
+        "SELECT cn.id, cn.credit_note_number,
+                COALESCE(cn.patient_refund_amount, cn.amount, 0) AS patient_amount,
+                cn.credit_date, cn.created_at,
+                cn.cheque_sent, cn.cheque_sent_date,
+                cn.refund_type,
+                CONCAT(s.first_name, ' ', s.last_name) AS staff_name,
+                inv.id AS invoice_id,
+                inv.invoice_number
+         FROM hearmed_core.credit_notes cn
+         LEFT JOIN hearmed_reference.staff s ON s.id = cn.created_by
+         LEFT JOIN hearmed_core.invoices inv ON inv.id = cn.invoice_id
+         WHERE cn.patient_id = \$1
+         ORDER BY cn.credit_date DESC, cn.created_at DESC
+         LIMIT 100",
+        [ $patient_id ]
+    );
+
+    foreach ( ( $credit_note_rows ?: [] ) as $cn ) {
+        $credit_date = (string) ( $cn->credit_date ?: substr( (string) ( $cn->created_at ?? '' ), 0, 10 ) );
+        $credit_amt  = abs( (float) ( $cn->patient_amount ?? 0 ) );
+
+        if ( $credit_amt > 0 ) {
+            $cn_key = implode( '|', [
+                (string) ( $cn->id ?? 0 ),
+                number_format( -$credit_amt, 2, '.', '' ),
+                $credit_date,
+            ] );
+
+            if ( ! isset( $seen_credit_note_keys[ $cn_key ] ) ) {
+                $transactions[] = (object) [
+                    'transaction_type'  => 'credit_note',
+                    'amount'            => -$credit_amt,
+                    'transaction_date'  => $credit_date,
+                    'created_at'        => (string) ( $cn->created_at ?? '' ),
+                    'invoice_id'        => (int) ( $cn->invoice_id ?? 0 ),
+                    'invoice_number'    => (string) ( $cn->invoice_number ?? '' ),
+                    'credit_note_id'    => (int) ( $cn->id ?? 0 ),
+                    'credit_note_number'=> (string) ( $cn->credit_note_number ?? '' ),
+                    'staff_name'        => (string) ( $cn->staff_name ?? '' ),
+                    'notes'             => 'Credit note issued',
+                ];
+                $seen_credit_note_keys[ $cn_key ] = true;
+            }
+        }
+
+        if ( hm_pg_bool( $cn->cheque_sent ) ) {
+            $refund_date = (string) ( $cn->cheque_sent_date ?: $credit_date );
+            $refund_amt  = abs( (float) ( $cn->patient_amount ?? 0 ) );
+            if ( $refund_amt > 0 ) {
+                $rf_key = implode( '|', [
+                    (string) ( $cn->id ?? 0 ),
+                    number_format( -$refund_amt, 2, '.', '' ),
+                    $refund_date,
+                ] );
+                if ( ! isset( $seen_refund_keys[ $rf_key ] ) ) {
+                    $transactions[] = (object) [
+                        'transaction_type'  => 'refund',
+                        'amount'            => -$refund_amt,
+                        'transaction_date'  => $refund_date,
+                        'created_at'        => (string) ( $cn->created_at ?? '' ),
+                        'payment_method'    => 'cheque',
+                        'invoice_id'        => (int) ( $cn->invoice_id ?? 0 ),
+                        'invoice_number'    => (string) ( $cn->invoice_number ?? '' ),
+                        'credit_note_id'    => (int) ( $cn->id ?? 0 ),
+                        'credit_note_number'=> (string) ( $cn->credit_note_number ?? '' ),
+                        'staff_name'        => (string) ( $cn->staff_name ?? '' ),
+                        'notes'             => 'Cheque refund sent',
+                    ];
+                    $seen_refund_keys[ $rf_key ] = true;
+                }
+            }
+        }
     }
 
     usort( $transactions, static function( $a, $b ) {

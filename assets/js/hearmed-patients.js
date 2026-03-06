@@ -1700,7 +1700,7 @@ function initProfile(){
                     '<col class="hm-col-date"><col class="hm-col-type"><col class="hm-col-money"><col class="hm-col-invoice"><col class="hm-col-staff"><col class="hm-col-notes">'+
                 '</colgroup>'+
                 '<thead><tr>'+
-                    '<th class="hm-col-date">Date</th><th class="hm-col-type">Type</th><th class="hm-col-money hm-col-amount hm-ta-right">Amount</th><th class="hm-col-invoice">Invoice</th><th class="hm-col-staff">Staff</th><th class="hm-col-notes">Notes</th>'+
+                    '<th class="hm-col-date">Date</th><th class="hm-col-type">Type</th><th class="hm-col-money hm-col-amount hm-ta-right">Amount</th><th class="hm-col-invoice">Document</th><th class="hm-col-staff">Staff</th><th class="hm-col-notes">Notes</th>'+
                 '</tr></thead><tbody id="hm-transactions-tbody">'+
                     '<tr><td colspan="6" class="hm-muted" style="text-align:center;padding:20px;">Loading\u2026</td></tr>'+
                 '</tbody></table>'+
@@ -1745,6 +1745,8 @@ function initProfile(){
                     var typeLabel=typeLabels[t.transaction_type]||t.transaction_type;
                     var invLabel=t.invoice_number||'';
                     if(!invLabel&&t.invoice_id){invLabel='Invoice #'+t.invoice_id;}
+                    if(!invLabel&&t.credit_note_number){invLabel=t.credit_note_number;}
+                    if(!invLabel&&t.credit_note_id){invLabel='Credit Note #'+t.credit_note_id;}
                     if(!invLabel){invLabel='-';}
                     html+='<tr>'+
                         '<td class="hm-col-date">'+fmtDate((t.transaction_date||'').substring(0,10))+'</td>'+
