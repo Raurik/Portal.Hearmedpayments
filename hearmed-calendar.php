@@ -58,11 +58,17 @@ function hearmed_fix_old_domain( $url ) {
 }
 
 // Load core helpers and PostgreSQL connection classes
+require_once HEARMED_PATH . 'core/class-hearmed-runtime-debug.php';
 require_once HEARMED_PATH . 'core/class-hearmed-logger.php';
 require_once HEARMED_PATH . 'core/class-hearmed-pg.php';
 require_once HEARMED_PATH . 'core/class-hearmed-db.php';  // Main database abstraction
 require_once HEARMED_PATH . 'core/class-hearmed-settings.php';
 require_once HEARMED_PATH . 'core/class-hearmed-finance.php';
+
+// Plugin-local runtime diagnostics log:
+//   wp-content/plugins/hearmed-calendar/var/hearmed-runtime.log
+// This captures PHP/WP runtime issues during requests that load this plugin.
+HearMed_Runtime_Debug::bootstrap();
 
 // Add AJAX handlers
 require_once HEARMED_PATH . 'includes/ajax-handlers.php';
