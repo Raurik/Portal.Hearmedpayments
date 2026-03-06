@@ -236,6 +236,11 @@ class HearMed_Repairs {
         $rid    = intval( $_POST['_ID']    ?? 0 );
         $status = sanitize_text_field( $_POST['status'] ?? '' );
 
+        // Backward compatibility: old clients may still post "Complete".
+        if ( $status === 'Complete' ) {
+            $status = 'Completed';
+        }
+
         if ( ! $rid )    wp_send_json_error('Missing repair ID');
         if ( ! $status ) wp_send_json_error('Missing status');
 
@@ -254,7 +259,7 @@ class HearMed_Repairs {
         $valid = [
             'Booked'   => 'Sent',
             'Sent'     => 'Received',
-            'Received' => 'Complete',
+            'Received' => 'Completed',
         ];
         if ( ! isset( $valid[ $from ] ) || $valid[ $from ] !== $status ) {
             wp_send_json_error( "Invalid transition: {$from} → {$status}" );
@@ -294,7 +299,7 @@ class HearMed_Repairs {
         } elseif ( $status === 'Received' ) {
             $fields['date_received'] = date('Y-m-d');
 
-        } elseif ( $status === 'Complete' ) {
+        } elseif ( $status === 'Completed' ) {
             $has_completed = $db->get_var(
                 "SELECT 1 FROM information_schema.columns
                  WHERE table_schema='hearmed_core' AND table_name='repairs' AND column_name='completed_date'"
@@ -321,7 +326,10 @@ class HearMed_Repairs {
             }
         }
 
-        $db->update( 'hearmed_core.repairs', $fields, [ 'id' => $rid ] );
+        $ok = $db->update( 'hearmed_core.repairs', $fields, [ 'id' => $rid ] );
+        if ( ! $ok ) {
+            wp_send_json_error( 'Failed to update repair status: ' . ( HearMed_DB::last_error() ?: 'Unknown error' ) );
+        }
 
         wp_send_json_success([
             'message' => "Repair marked as {$status}",

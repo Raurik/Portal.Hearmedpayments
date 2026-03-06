@@ -1601,7 +1601,7 @@ function hm_ajax_get_patient_repairs() {
             'date_booked'      => $r->date_booked,
             'date_sent'        => $r->date_sent,
             'date_received'    => $r->date_received,
-            'status'           => $r->status ?: 'Booked',
+            'status'           => ( ( $r->status ?: 'Booked' ) === 'Complete' ? 'Completed' : ( $r->status ?: 'Booked' ) ),
             'warranty_status'  => $r->warranty_status ?: '',
             'under_warranty'   => hm_pg_bool( $r->under_warranty ?? false ),
             'repair_notes'     => $r->repair_notes ?: '',

@@ -1082,19 +1082,22 @@ function initProfile(){
             if(!r.success){$c.html('<div class="hm-empty">Error</div>');return;}
             var rr=r.data,h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Repairs ('+rr.length+')</h3><button class="hm-btn hm-btn--primary hm-btn--sm" id="hm-log-repair-btn">+ Log Repair</button></div>';
             if(!rr.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.repair+'</div><div class="hm-empty-text">No repairs</div></div>';
-            else{h+='<table class="hm-table"><thead><tr><th>Repair #</th><th>Hearing aid</th><th>Reason</th><th>Booked</th><th>Status</th><th>Days</th><th>Warranty</th><th></th></tr></thead><tbody>';
+            else{h+='<table class="hm-table"><thead><tr><th style="width:110px;">Repair #</th><th>Hearing aid</th><th>Reason</th><th style="width:98px;">Booked</th><th style="width:110px;">Status</th><th style="width:125px;">Received back on</th><th style="width:70px;text-align:center;">Days</th><th style="width:95px;">Warranty</th><th style="width:165px;"></th></tr></thead><tbody>';
             rr.forEach(function(x){
-                var sc=x.status==='Booked'?'hm-badge--amber':x.status==='Sent'?'hm-badge--blue':'hm-badge--green';
+                var st=(x.status==='Complete')?'Completed':(x.status||'Booked');
+                var sc=st==='Booked'?'hm-badge--amber':st==='Sent'?'hm-badge--blue':st==='Received'?'hm-badge--green':'hm-badge--teal';
                 var rowClass='';
-                if(x.status!=='Received'&&x.days_open){
+                if((st==='Booked'||st==='Sent')&&x.days_open){
                     if(x.days_open>14)rowClass=' class="hm-repair-overdue"';
                     else if(x.days_open>10)rowClass=' class="hm-repair-warning"';
                 }
                 var actions='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-repair-print" data-id="'+x._ID+'" title="Print Docket">Print</button> ';
-                if(x.status==='Booked')actions+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-repair-send" data-id="'+x._ID+'">Mark Sent</button>';
-                else if(x.status==='Sent')actions+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-repair-receive" data-id="'+x._ID+'">Received Back</button>';
-                h+='<tr'+rowClass+'><td><code class="hm-pt-hnum">'+esc(x.repair_number||'—')+'</code></td><td>'+esc(x.product_name)+(x.manufacturer_name?' <span style="color:#94a3b8;font-size:12px;">('+esc(x.manufacturer_name)+')</span>':'')+'</td><td style="font-size:13px;">'+esc(x.repair_reason||'—')+'</td><td>'+fmtDate(x.date_booked)+'</td><td><span class="hm-badge hm-badge--sm '+sc+'">'+esc(x.status)+'</span></td><td style="text-align:center;">'+(x.days_open||'—')+'</td><td>'+(x.under_warranty?'<span class="hm-badge hm-badge--sm hm-badge--green"><span class="hm-dot-green"></span> Yes</span>':'<span class="hm-badge hm-badge--sm hm-badge--red"><span class="hm-dot-red"></span> '+(x.warranty_status||'No')+'</span>')+'</td><td>'+actions+'</td></tr>'+
-                (x.repair_notes?'<tr'+rowClass+'><td colspan="8"><div class="hm-appt-note">'+esc(x.repair_notes)+'</div></td></tr>':'');
+                if(st==='Booked')actions+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-repair-send" data-id="'+x._ID+'">Mark Sent</button>';
+                else if(st==='Sent')actions+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-repair-receive" data-id="'+x._ID+'">Received Back</button>';
+                var recBack = x.date_received ? fmtDate(x.date_received) : '—';
+                var daysCell = (st==='Booked'||st==='Sent') ? (x.days_open||'—') : '—';
+                h+='<tr'+rowClass+'><td><code class="hm-pt-hnum">'+esc(x.repair_number||'—')+'</code></td><td>'+esc(x.product_name)+((x.manufacturer_name||x.manufacturer)?' <span style="color:#94a3b8;font-size:12px;">('+esc(x.manufacturer_name||x.manufacturer)+')</span>':'')+'</td><td style="font-size:13px;">'+esc(x.repair_reason||'—')+'</td><td>'+fmtDate(x.date_booked)+'</td><td><span class="hm-badge hm-badge--sm '+sc+'">'+esc(st)+'</span></td><td>'+recBack+'</td><td style="text-align:center;">'+daysCell+'</td><td>'+(x.under_warranty?'<span class="hm-badge hm-badge--sm hm-badge--green"><span class="hm-dot-green"></span> Yes</span>':'<span class="hm-badge hm-badge--sm hm-badge--red"><span class="hm-dot-red"></span> '+(x.warranty_status||'No')+'</span>')+'</td><td style="white-space:nowrap;">'+actions+'</td></tr>'+
+                (x.repair_notes?'<tr'+rowClass+'><td colspan="9"><div class="hm-appt-note">'+esc(x.repair_notes)+'</div></td></tr>':'');
             });h+='</tbody></table>';}
             $c.html(h+'</div>');
         });

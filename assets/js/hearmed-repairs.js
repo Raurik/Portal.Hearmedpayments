@@ -203,7 +203,7 @@
         var $b = $(this), rid = $b.data('id');
         if (!confirm('Mark this repair as Complete?')) return;
         $b.prop('disabled', true).text('…');
-        $.post(ajaxUrl, { action: 'hm_update_repair_status', nonce: nonce, _ID: rid, status: 'Complete' }, function(r) {
+        $.post(ajaxUrl, { action: 'hm_update_repair_status', nonce: nonce, _ID: rid, status: 'Completed' }, function(r) {
             if (r.success) loadRepairs();
             else { alert((r&&r.data)?r.data:'Error updating status'); $b.prop('disabled', false).text('Complete'); }
         });
