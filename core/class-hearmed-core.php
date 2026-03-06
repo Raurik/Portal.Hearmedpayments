@@ -431,7 +431,23 @@ class HearMed_Core {
      * Runs once then sets an option flag so it never runs again.
      */
     public function repair_elementor_page_settings() {
-        if ( HearMed_Settings::get( 'hm_elementor_meta_repaired_v2', '' ) ) {
+        // Always repair currently edited Elementor documents, even after the
+        // one-time global repair has already run in the past.
+        $editing_ids = [];
+        $editing_post_id = intval( $_GET['post'] ?? 0 );
+        if ( $editing_post_id > 0 ) {
+            $editing_ids[] = $editing_post_id;
+        }
+        $preview_post_id = intval( $_GET['elementor-preview'] ?? 0 );
+        if ( $preview_post_id > 0 ) {
+            $editing_ids[] = $preview_post_id;
+        }
+        foreach ( array_values( array_unique( array_filter( $editing_ids ) ) ) as $pid ) {
+            $this->repair_single_elementor_meta( (int) $pid );
+        }
+
+        // Keep a one-time full scan for known portal pages.
+        if ( HearMed_Settings::get( 'hm_elementor_meta_repaired_v3', '' ) ) {
             return;
         }
 
@@ -451,33 +467,71 @@ class HearMed_Core {
             }
         }
 
-        $editing_post_id = intval( $_GET['post'] ?? 0 );
         if ( $editing_post_id > 0 ) {
             $page_ids[] = $editing_post_id;
+        }
+        if ( $preview_post_id > 0 ) {
+            $page_ids[] = $preview_post_id;
         }
         $page_ids = array_values( array_unique( array_filter( $page_ids ) ) );
 
         foreach ( $page_ids as $pid ) {
-            $raw = get_post_meta( $pid, '_elementor_page_settings', true );
-
-            if ( is_string( $raw ) && '' !== $raw ) {
-                $unserialized = maybe_unserialize( $raw );
-
-                if ( is_array( $unserialized ) ) {
-                    // It was double-serialised — store the real array
-                    delete_post_meta( $pid, '_elementor_page_settings' );
-                    update_post_meta( $pid, '_elementor_page_settings', $unserialized );
-                } else {
-                    // Completely garbled — reset to safe default
-                    delete_post_meta( $pid, '_elementor_page_settings' );
-                    update_post_meta( $pid, '_elementor_page_settings', [
-                        'template' => 'elementor_canvas',
-                    ] );
-                }
-            }
+            $this->repair_single_elementor_meta( (int) $pid );
         }
 
-        HearMed_Settings::set( 'hm_elementor_meta_repaired_v2', '1' );
+        HearMed_Settings::set( 'hm_elementor_meta_repaired_v3', '1' );
+    }
+
+    /**
+     * Repair Elementor meta for a single post/document.
+     *
+     * @param int $pid
+     * @return void
+     */
+    private function repair_single_elementor_meta( $pid ) {
+        if ( $pid <= 0 ) {
+            return;
+        }
+
+        $raw_settings = get_post_meta( $pid, '_elementor_page_settings', true );
+        if ( is_string( $raw_settings ) && '' !== $raw_settings ) {
+            $unserialized = maybe_unserialize( $raw_settings );
+
+            if ( is_array( $unserialized ) ) {
+                // It was double-serialised — store the real array.
+                delete_post_meta( $pid, '_elementor_page_settings' );
+                update_post_meta( $pid, '_elementor_page_settings', $unserialized );
+            } else {
+                // Garbled scalar value — reset to safe array settings.
+                delete_post_meta( $pid, '_elementor_page_settings' );
+                update_post_meta( $pid, '_elementor_page_settings', [
+                    'template' => 'elementor_canvas',
+                ] );
+            }
+        } elseif ( $raw_settings === null || $raw_settings === '' ) {
+            update_post_meta( $pid, '_elementor_page_settings', [
+                'template' => 'elementor_canvas',
+            ] );
+        }
+
+        // _elementor_data should be JSON string. Repair serialized/array edge-cases.
+        $raw_data = get_post_meta( $pid, '_elementor_data', true );
+        if ( is_array( $raw_data ) ) {
+            update_post_meta( $pid, '_elementor_data', wp_json_encode( $raw_data ) );
+            return;
+        }
+
+        if ( is_string( $raw_data ) && $raw_data !== '' ) {
+            json_decode( $raw_data, true );
+            if ( json_last_error() === JSON_ERROR_NONE ) {
+                return;
+            }
+
+            $unserialized_data = maybe_unserialize( $raw_data );
+            if ( is_array( $unserialized_data ) ) {
+                update_post_meta( $pid, '_elementor_data', wp_json_encode( $unserialized_data ) );
+            }
+        }
     }
     
     /**
