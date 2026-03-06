@@ -272,6 +272,18 @@ class HearMed_Router {
     public function auth_redirect() {
         if ( defined( 'DOING_AJAX' ) || defined( 'DOING_CRON' ) || defined( 'REST_REQUEST' ) || defined( 'WP_CLI' ) ) return;
 
+        // Elementor editor/preview/library render requests often hit "/" with
+        // query args (elementor_preview / elementor_library / render_mode).
+        // Never force portal auth redirects for those requests.
+        if (
+            isset( $_GET['elementor-preview'] ) ||
+            isset( $_GET['elementor_library'] ) ||
+            isset( $_GET['render_mode'] ) ||
+            ( isset( $_GET['action'] ) && sanitize_text_field( $_GET['action'] ) === 'elementor' )
+        ) {
+            return;
+        }
+
         // Don't redirect the login page itself (WP check + exact URI match).
         // home_url is /login/ so every page starts with "login/" — we must
         // match ONLY the login page paths, not /login/calendar/ etc.
@@ -310,7 +322,8 @@ class HearMed_Router {
             exit;
         }
 
-        // Logged-in user hitting root URL → send to calendar
+        // Logged-in user hitting plain root URL → send to calendar
+        // (but never for query-driven editor/preview requests; handled above).
         if ( $uri === '' ) {
             $this->ensure_page_exists( 'calendar', 'Calendar', '[hearmed_calendar]' );
             wp_redirect( home_url( '/calendar/' ) );
