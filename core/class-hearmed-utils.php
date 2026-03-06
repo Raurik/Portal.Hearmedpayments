@@ -420,18 +420,49 @@ class HearMed_Utils {
      */
     public static function is_elementor_editor() {
         // Preview iframe: ?elementor-preview=POST_ID
-        if ( null !== filter_input( INPUT_GET, 'elementor-preview' ) ) {
+        if ( isset( $_GET['elementor-preview'] ) ) {
             return true;
         }
+
         // Elementor editor load in wp-admin: ?action=elementor
         $action = sanitize_text_field( $_GET['action'] ?? '' );
         if ( $action === 'elementor' ) {
             return true;
         }
-        // Editor mode when Elementor plugin is active
-        if ( class_exists( '\Elementor\Plugin' ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) {
+
+        // Common Elementor request params/routes in editor and preview contexts.
+        $page = sanitize_text_field( $_GET['page'] ?? '' );
+        if ( $page === 'elementor' || $page === 'elementor-app' || $page === 'elementor-tools' ) {
             return true;
         }
+
+        $request_uri = (string) ( $_SERVER['REQUEST_URI'] ?? '' );
+        if ( strpos( $request_uri, 'elementor-preview=' ) !== false || strpos( $request_uri, '/wp-admin/post.php' ) !== false && strpos( $request_uri, 'action=elementor' ) !== false ) {
+            return true;
+        }
+
+        // Elementor AJAX editor actions.
+        if ( wp_doing_ajax() ) {
+            $ajax_action = sanitize_text_field( $_REQUEST['action'] ?? '' );
+            if ( strpos( $ajax_action, 'elementor_' ) === 0 || strpos( $ajax_action, 'elementor-' ) === 0 ) {
+                return true;
+            }
+        }
+
+        // Editor mode when Elementor plugin is active
+        if ( class_exists( '\Elementor\Plugin' ) ) {
+            try {
+                if ( isset( \Elementor\Plugin::$instance->editor ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) {
+                    return true;
+                }
+                if ( isset( \Elementor\Plugin::$instance->preview ) && method_exists( \Elementor\Plugin::$instance->preview, 'is_preview_mode' ) && \Elementor\Plugin::$instance->preview->is_preview_mode() ) {
+                    return true;
+                }
+            } catch ( \Throwable $e ) {
+                // Ignore Elementor runtime exceptions and fall through to false.
+            }
+        }
+
         return false;
     }
 

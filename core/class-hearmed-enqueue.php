@@ -54,6 +54,9 @@ class HearMed_Enqueue {
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_modules' ], 16 );
         add_action( 'wp_enqueue_scripts', [ $this, 'maybe_enqueue_calendar_settings' ], 17 );
         add_action( 'wp_enqueue_scripts', [ $this, 'strip_hearmed_assets_in_elementor' ], 999 );
+        add_action( 'wp_print_styles', [ $this, 'strip_hearmed_assets_in_elementor' ], 999 );
+        add_action( 'wp_print_scripts', [ $this, 'strip_hearmed_assets_in_elementor' ], 999 );
+        add_action( 'wp_print_footer_scripts', [ $this, 'strip_hearmed_assets_in_elementor' ], 999 );
     }
 
     /**
