@@ -79,6 +79,8 @@ add_action( 'wp_ajax_hm_get_order_products',          [ 'HearMed_Orders', 'ajax_
 add_action( 'wp_ajax_hm_update_order_status',         [ 'HearMed_Orders', 'ajax_update_order_status' ] );
 add_action( 'wp_ajax_hm_get_pending_orders',          [ 'HearMed_Orders', 'ajax_get_pending_orders' ] );
 add_action( 'wp_ajax_hm_get_awaiting_fitting',        [ 'HearMed_Orders', 'ajax_get_awaiting_fitting' ] );
+add_action( 'wp_ajax_hm_get_awaiting_order_edit',     [ 'HearMed_Orders', 'ajax_get_awaiting_order_edit' ] );
+add_action( 'wp_ajax_hm_save_awaiting_order_edit',    [ 'HearMed_Orders', 'ajax_save_awaiting_order_edit' ] );
 add_action( 'wp_ajax_hm_update_awaiting_fitting_order', [ 'HearMed_Orders', 'ajax_update_awaiting_fitting_order' ] );
 add_action( 'wp_ajax_hm_prefit_cancel',               [ 'HearMed_Orders', 'ajax_prefit_cancel' ] );
 add_action( 'wp_ajax_hm_get_patient_credit_balance',  [ 'HearMed_Orders', 'ajax_get_patient_credit_balance' ] );
@@ -4680,6 +4682,219 @@ class HearMed_Orders {
         }
 
         wp_send_json_success( $data );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AJAX: Load full editable order data for Awaiting Fitting editor
+    // ═══════════════════════════════════════════════════════════════════════
+    public static function ajax_get_awaiting_order_edit() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+
+        if ( ! self::can_manage_awaiting_fitting_actions() ) {
+            wp_send_json_error( [ 'msg' => 'Only Finance and C-Level can edit orders here.' ] );
+        }
+
+        $order_id = intval( $_POST['order_id'] ?? 0 );
+        if ( ! $order_id ) {
+            wp_send_json_error( [ 'msg' => 'Missing order ID.' ] );
+        }
+
+        $db = HearMed_DB::instance();
+        $order = $db->get_row(
+            "SELECT id, order_number, current_status, notes,
+                    COALESCE(prsi_left, false) AS prsi_left,
+                    COALESCE(prsi_right, false) AS prsi_right,
+                    prsi_amount, subtotal, vat_total, grand_total,
+                    (SELECT fq.fitting_date::date FROM hearmed_core.fitting_queue fq WHERE fq.order_id = o.id LIMIT 1) AS fitting_date
+             FROM hearmed_core.orders
+             o
+             WHERE id = \$1",
+            [ $order_id ]
+        );
+        if ( ! $order ) {
+            wp_send_json_error( [ 'msg' => 'Order not found.' ] );
+        }
+        if ( ! in_array( $order->current_status, [ 'Approved', 'Ordered', 'Awaiting Fitting' ], true ) ) {
+            wp_send_json_error( [ 'msg' => 'Only pre-fit orders can be edited.' ] );
+        }
+
+        $rows = $db->get_results(
+            "SELECT id, line_number, item_type, item_id, item_description,
+                    COALESCE(ear_side, '') AS ear_side,
+                    COALESCE(quantity, 1) AS quantity,
+                    COALESCE(vat_rate, 0) AS vat_rate,
+                    COALESCE(line_total, 0) AS line_total
+             FROM hearmed_core.order_items
+             WHERE order_id = \$1
+             ORDER BY line_number ASC, id ASC",
+            [ $order_id ]
+        ) ?: [];
+
+        $items = [];
+        foreach ( $rows as $r ) {
+            $qty = max( 1, (int) ( $r->quantity ?? 1 ) );
+            $line_total = (float) ( $r->line_total ?? 0 );
+            $unit_price = $qty > 0 ? round( $line_total / $qty, 2 ) : 0.0;
+            $items[] = [
+                'id'          => (int) $r->id,
+                'line_number' => (int) ( $r->line_number ?? 0 ),
+                'item_type'   => (string) ( $r->item_type ?? '' ),
+                'item_id'     => (int) ( $r->item_id ?? 0 ),
+                'description' => (string) ( $r->item_description ?? '' ),
+                'ear_side'    => (string) ( $r->ear_side ?? '' ),
+                'qty'         => $qty,
+                'vat_rate'    => (float) ( $r->vat_rate ?? 0 ),
+                'unit_price'  => $unit_price,
+                'line_total'  => round( $line_total, 2 ),
+            ];
+        }
+
+        wp_send_json_success( [
+            'order_id'     => (int) $order->id,
+            'order_number' => (string) ( $order->order_number ?? '' ),
+            'status'       => (string) ( $order->current_status ?? '' ),
+            'notes'        => (string) ( $order->notes ?? '' ),
+            'fitting_date' => ! empty( $order->fitting_date ) ? date( 'Y-m-d', strtotime( (string) $order->fitting_date ) ) : '',
+            'prsi_left'    => (bool) $order->prsi_left,
+            'prsi_right'   => (bool) $order->prsi_right,
+            'prsi_per_ear' => (float) self::prsi_per_ear_amount(),
+            'subtotal'     => (float) ( $order->subtotal ?? 0 ),
+            'vat_total'    => (float) ( $order->vat_total ?? 0 ),
+            'prsi_amount'  => (float) ( $order->prsi_amount ?? 0 ),
+            'grand_total'  => (float) ( $order->grand_total ?? 0 ),
+            'items'        => $items,
+        ] );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AJAX: Save full editable order data from Awaiting Fitting editor
+    // ═══════════════════════════════════════════════════════════════════════
+    public static function ajax_save_awaiting_order_edit() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+
+        if ( ! self::can_manage_awaiting_fitting_actions() ) {
+            wp_send_json_error( [ 'msg' => 'Only Finance and C-Level can edit orders here.' ] );
+        }
+
+        $order_id = intval( $_POST['order_id'] ?? 0 );
+        $notes = sanitize_textarea_field( $_POST['notes'] ?? '' );
+        $fitting_date = sanitize_text_field( $_POST['fitting_date'] ?? '' );
+        $prsi_left = ! empty( $_POST['prsi_left'] );
+        $prsi_right = ! empty( $_POST['prsi_right'] );
+        $items = json_decode( wp_unslash( $_POST['items_json'] ?? '[]' ), true );
+
+        if ( ! $order_id ) {
+            wp_send_json_error( [ 'msg' => 'Missing order ID.' ] );
+        }
+        if ( $fitting_date && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $fitting_date ) ) {
+            wp_send_json_error( [ 'msg' => 'Fitting date must be YYYY-MM-DD.' ] );
+        }
+        if ( ! is_array( $items ) || empty( $items ) ) {
+            wp_send_json_error( [ 'msg' => 'At least one line item is required.' ] );
+        }
+
+        $db = HearMed_DB::instance();
+        $order = $db->get_row(
+            "SELECT id, patient_id, current_status
+             FROM hearmed_core.orders
+             WHERE id = \$1",
+            [ $order_id ]
+        );
+        if ( ! $order ) {
+            wp_send_json_error( [ 'msg' => 'Order not found.' ] );
+        }
+        if ( ! in_array( $order->current_status, [ 'Approved', 'Ordered', 'Awaiting Fitting' ], true ) ) {
+            wp_send_json_error( [ 'msg' => 'Only pre-fit orders can be edited.' ] );
+        }
+
+        $existing_ids = $db->get_results(
+            "SELECT id FROM hearmed_core.order_items WHERE order_id = \$1",
+            [ $order_id ]
+        ) ?: [];
+        $allowed_ids = [];
+        foreach ( $existing_ids as $row ) {
+            $allowed_ids[] = (int) $row->id;
+        }
+
+        $subtotal = 0.0;
+        $vat_total = 0.0;
+
+        foreach ( $items as $idx => $it ) {
+            $line_id = (int) ( $it['id'] ?? 0 );
+            if ( ! $line_id || ! in_array( $line_id, $allowed_ids, true ) ) {
+                wp_send_json_error( [ 'msg' => 'Invalid line item supplied.' ] );
+            }
+
+            $qty = max( 1, (int) ( $it['qty'] ?? 1 ) );
+            $unit_price = (float) ( $it['unit_price'] ?? 0 );
+            $vat_rate = max( 0.0, (float) ( $it['vat_rate'] ?? 0 ) );
+            $ear_side = sanitize_text_field( $it['ear_side'] ?? '' );
+            $description = sanitize_text_field( $it['description'] ?? '' );
+
+            if ( $unit_price < 0 ) {
+                wp_send_json_error( [ 'msg' => 'Unit price cannot be negative.' ] );
+            }
+
+            $line_total = round( $qty * $unit_price, 2 ); // VAT-inclusive
+            $vat_amount = $vat_rate > 0 ? round( $line_total - ( $line_total / ( 1 + ( $vat_rate / 100 ) ) ), 2 ) : 0.0;
+            $unit_retail_net = round( $unit_price - ( $vat_amount / max( $qty, 1 ) ), 2 );
+            $subtotal += ( $line_total - $vat_amount );
+            $vat_total += $vat_amount;
+
+            $db->update( 'hearmed_core.order_items', [
+                'item_description'  => $description,
+                'ear_side'          => $ear_side,
+                'quantity'          => $qty,
+                'unit_retail_price' => $unit_retail_net,
+                'vat_rate'          => $vat_rate,
+                'vat_amount'        => $vat_amount,
+                'line_total'        => $line_total,
+            ], [ 'id' => $line_id, 'order_id' => $order_id ] );
+        }
+
+        $prsi_sources = self::resolve_prsi_sources_for_order( (int) $order->patient_id, $prsi_left, $prsi_right );
+        $prsi_per_ear = self::prsi_per_ear_amount();
+        $prsi_amount = ( $prsi_left ? $prsi_per_ear : 0 ) + ( $prsi_right ? $prsi_per_ear : 0 );
+        $grand_total = max( 0.0, round( $subtotal + $vat_total - $prsi_amount, 2 ) );
+
+        $db->update( 'hearmed_core.orders', [
+            'notes'             => $notes,
+            'subtotal'          => round( $subtotal, 2 ),
+            'discount_total'    => 0,
+            'vat_total'         => round( $vat_total, 2 ),
+            'prsi_applicable'   => ( $prsi_left || $prsi_right ),
+            'prsi_left'         => $prsi_left,
+            'prsi_right'        => $prsi_right,
+            'prsi_left_source'  => $prsi_sources['left'],
+            'prsi_right_source' => $prsi_sources['right'],
+            'prsi_amount'       => round( $prsi_amount, 2 ),
+            'grand_total'       => $grand_total,
+            'updated_at'        => date( 'Y-m-d H:i:s' ),
+        ], [ 'id' => $order_id ] );
+
+        if ( $fitting_date ) {
+            $updated = $db->query(
+                "UPDATE hearmed_core.fitting_queue
+                 SET fitting_date = \$1
+                 WHERE order_id = \$2",
+                [ $fitting_date, $order_id ]
+            );
+            if ( ! $updated ) {
+                $db->insert( 'hearmed_core.fitting_queue', [
+                    'order_id'     => $order_id,
+                    'fitting_date' => $fitting_date,
+                    'queue_status' => 'Awaiting Fitting',
+                ] );
+            }
+        }
+
+        wp_send_json_success( [
+            'msg'        => 'Order updated successfully.',
+            'subtotal'   => round( $subtotal, 2 ),
+            'vat_total'  => round( $vat_total, 2 ),
+            'prsi_amount'=> round( $prsi_amount, 2 ),
+            'grand_total'=> $grand_total,
+        ] );
     }
 
     // ═══════════════════════════════════════════════════════════════════════

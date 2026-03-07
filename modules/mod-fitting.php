@@ -480,13 +480,13 @@ function hm_render_fitting_page() {
                 if (o.current_status === 'Ordered') {
                     actions = '<button class="hm-btn hm-btn-receive" onclick="hmFitting.openSerial(' + o.id + ')">Receive in Branch</button>';
                     if (canManage) {
-                        actions += ' <button class="hm-btn hm-btn--secondary" style="font-size:11px;padding:6px 10px;" onclick="hmFitting.editAwaiting(' + o.id + ')">Edit</button>';
+                        actions += ' <button class="hm-btn hm-btn--secondary" style="font-size:11px;padding:6px 10px;" onclick="hmFitting.editAwaiting(' + o.id + ')">Edit Order</button>';
                         actions += ' <button class="hm-btn hm-btn-danger" style="font-size:11px;padding:6px 10px;" onclick="hmFitting.prefitCancel(' + o.id + ')">Pre-Fit Cancel</button>';
                     }
                 } else if (o.current_status === 'Awaiting Fitting') {
                     actions = '<button class="hm-btn hm-btn--primary" style="font-size:12px;padding:6px 14px;" onclick="hmFitting.openPayment(' + o.id + ')">Fitted / Pay</button>';
                     if (canManage) {
-                        actions += ' <button class="hm-btn hm-btn--secondary" style="font-size:11px;padding:6px 10px;" onclick="hmFitting.editAwaiting(' + o.id + ')">Edit</button>';
+                        actions += ' <button class="hm-btn hm-btn--secondary" style="font-size:11px;padding:6px 10px;" onclick="hmFitting.editAwaiting(' + o.id + ')">Edit Order</button>';
                         actions += ' <button class="hm-btn hm-btn-danger" style="font-size:11px;padding:6px 10px;" onclick="hmFitting.prefitCancel(' + o.id + ')">Pre-Fit Cancel</button>';
                     }
                 } else {
@@ -626,6 +626,88 @@ function hm_render_fitting_page() {
             document.getElementById('hmf-serial-modal').classList.add('open');
         },
 
+        ensureOrderEditModal: function() {
+            if (document.getElementById('hmf-order-edit-modal')) return;
+
+            var wrap = document.createElement('div');
+            wrap.id = 'hmf-order-edit-modal';
+            wrap.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10050;padding:24px;overflow:auto;';
+            wrap.innerHTML = '' +
+                '<div style="max-width:1120px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 30px 80px rgba(2,6,23,.28);">' +
+                    '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e2e8f0;">' +
+                        '<h3 id="hmf-oe-title" style="margin:0;font-size:18px;">Edit Order</h3>' +
+                        '<button id="hmf-oe-close" class="hm-btn hm-btn--secondary" type="button">Close</button>' +
+                    '</div>' +
+                    '<div style="padding:14px 18px;">' +
+                        '<div style="display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:10px;margin-bottom:12px;">' +
+                            '<div><label style="display:block;font-size:12px;color:#64748b;">Fitting Date</label><input id="hmf-oe-fitting-date" type="date" class="hm-input"></div>' +
+                            '<label style="display:flex;align-items:center;gap:8px;"><input id="hmf-oe-prsi-left" type="checkbox"> PRSI Left</label>' +
+                            '<label style="display:flex;align-items:center;gap:8px;"><input id="hmf-oe-prsi-right" type="checkbox"> PRSI Right</label>' +
+                            '<div><strong>Subtotal:</strong> <span id="hmf-oe-subtotal">EUR0.00</span></div>' +
+                            '<div><strong>Grand:</strong> <span id="hmf-oe-grand">EUR0.00</span></div>' +
+                        '</div>' +
+                        '<div style="overflow:auto;border:1px solid #e2e8f0;border-radius:8px;">' +
+                            '<table class="hm-table" style="margin:0;min-width:980px;">' +
+                                '<thead><tr><th>#</th><th>Description</th><th>Ear</th><th>Qty</th><th>Unit Price (inc VAT)</th><th>VAT %</th><th>Line Total</th></tr></thead>' +
+                                '<tbody id="hmf-oe-lines"></tbody>' +
+                            '</table>' +
+                        '</div>' +
+                        '<div style="margin-top:10px;">' +
+                            '<label style="display:block;font-size:12px;color:#64748b;margin-bottom:5px;">Order Notes</label>' +
+                            '<textarea id="hmf-oe-notes" class="hm-input" rows="3" style="width:100%;"></textarea>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #e2e8f0;">' +
+                        '<button id="hmf-oe-cancel" class="hm-btn hm-btn--secondary" type="button">Cancel</button>' +
+                        '<button id="hmf-oe-save" class="hm-btn hm-btn--primary" type="button">Save Order</button>' +
+                    '</div>' +
+                '</div>';
+            document.body.appendChild(wrap);
+
+            var self = this;
+            var closeFn = function() { self.closeOrderEdit(); };
+            document.getElementById('hmf-oe-close').addEventListener('click', closeFn);
+            document.getElementById('hmf-oe-cancel').addEventListener('click', closeFn);
+            wrap.addEventListener('click', function(e) {
+                if (e.target === wrap) closeFn();
+            });
+            document.getElementById('hmf-oe-save').addEventListener('click', function() {
+                self.saveOrderEdit();
+            });
+            document.getElementById('hmf-oe-prsi-left').addEventListener('change', function() { self.recalcOrderEditTotals(); });
+            document.getElementById('hmf-oe-prsi-right').addEventListener('change', function() { self.recalcOrderEditTotals(); });
+        },
+
+        closeOrderEdit: function() {
+            var modal = document.getElementById('hmf-order-edit-modal');
+            if (modal) modal.style.display = 'none';
+        },
+
+        recalcOrderEditTotals: function() {
+            var rows = document.querySelectorAll('#hmf-oe-lines tr');
+            var subtotalNet = 0;
+            var vatTotal = 0;
+            rows.forEach(function(row) {
+                var qty = Math.max(1, parseInt(row.querySelector('.hmf-oe-qty').value || '1', 10));
+                var unit = Math.max(0, parseFloat(row.querySelector('.hmf-oe-unit').value || '0'));
+                var vatRate = Math.max(0, parseFloat(row.querySelector('.hmf-oe-vat').value || '0'));
+                var line = qty * unit;
+                var vat = vatRate > 0 ? (line - (line / (1 + vatRate / 100))) : 0;
+                subtotalNet += (line - vat);
+                vatTotal += vat;
+                row.querySelector('.hmf-oe-line-total').textContent = 'EUR' + line.toFixed(2);
+            });
+
+            var perEar = parseFloat((this.orderEditData && this.orderEditData.prsi_per_ear) || 500);
+            var pl = document.getElementById('hmf-oe-prsi-left').checked;
+            var pr = document.getElementById('hmf-oe-prsi-right').checked;
+            var prsiAmount = (pl ? perEar : 0) + (pr ? perEar : 0);
+            var grand = Math.max(0, subtotalNet + vatTotal - prsiAmount);
+
+            document.getElementById('hmf-oe-subtotal').textContent = 'EUR' + subtotalNet.toFixed(2);
+            document.getElementById('hmf-oe-grand').textContent = 'EUR' + grand.toFixed(2);
+        },
+
         editAwaiting: function(orderId) {
             var order = this.orders.find(function(o) { return o.id === orderId; });
             if (!order) return;
@@ -634,32 +716,103 @@ function hm_render_fitting_page() {
                 return;
             }
 
-            var currentDate = String(order.fitting_date_raw || '').substring(0, 10);
-            var nextDate = prompt('Edit fitting date (YYYY-MM-DD). Leave blank to keep current date.', currentDate);
-            if (nextDate === null) return;
-            nextDate = String(nextDate).trim();
-            if (nextDate && !/^\d{4}-\d{2}-\d{2}$/.test(nextDate)) {
-                alert('Date must be in YYYY-MM-DD format.');
-                return;
-            }
+            var self = this;
+            self.ensureOrderEditModal();
 
-            var currentNotes = String(order.notes || '');
-            var nextNotes = prompt('Edit order notes (optional).', currentNotes);
-            if (nextNotes === null) return;
+            jQuery.post(HM.ajax_url, {
+                action: 'hm_get_awaiting_order_edit',
+                nonce: HM.nonce,
+                order_id: orderId
+            }, function(r) {
+                if (!r || !r.success || !r.data) {
+                    alert((r && r.data && r.data.msg) ? r.data.msg : 'Could not load editable order data.');
+                    return;
+                }
+                self.orderEditData = r.data;
+
+                document.getElementById('hmf-oe-title').textContent = 'Edit Order ' + (r.data.order_number || '');
+                document.getElementById('hmf-oe-notes').value = r.data.notes || '';
+                document.getElementById('hmf-oe-fitting-date').value = r.data.fitting_date || '';
+                document.getElementById('hmf-oe-prsi-left').checked = !!r.data.prsi_left;
+                document.getElementById('hmf-oe-prsi-right').checked = !!r.data.prsi_right;
+
+                var body = document.getElementById('hmf-oe-lines');
+                var html = '';
+                function attrEsc(v) {
+                    return String(v || '')
+                        .replace(/&/g, '&amp;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+                }
+
+                (r.data.items || []).forEach(function(it, idx) {
+                    var ear = String(it.ear_side || '');
+                    html += '<tr data-line-id="' + parseInt(it.id, 10) + '">' +
+                        '<td>' + (idx + 1) + '</td>' +
+                        '<td><input class="hm-input hmf-oe-desc" style="min-width:260px;" value="' + attrEsc(it.description || '') + '"></td>' +
+                        '<td><select class="hm-input hmf-oe-ear"><option value="">-</option><option value="Left"' + (ear === 'Left' ? ' selected' : '') + '>Left</option><option value="Right"' + (ear === 'Right' ? ' selected' : '') + '>Right</option><option value="Binaural"' + (ear === 'Binaural' ? ' selected' : '') + '>Binaural</option></select></td>' +
+                        '<td><input type="number" min="1" step="1" class="hm-input hmf-oe-qty" value="' + parseInt(it.qty || 1, 10) + '" style="width:90px;"></td>' +
+                        '<td><input type="number" min="0" step="0.01" class="hm-input hmf-oe-unit" value="' + parseFloat(it.unit_price || 0).toFixed(2) + '" style="width:130px;"></td>' +
+                        '<td><input type="number" min="0" step="0.01" class="hm-input hmf-oe-vat" value="' + parseFloat(it.vat_rate || 0).toFixed(2) + '" style="width:90px;"></td>' +
+                        '<td class="hmf-oe-line-total">EUR0.00</td>' +
+                    '</tr>';
+                });
+                body.innerHTML = html;
+
+                body.querySelectorAll('input,select').forEach(function(el) {
+                    el.addEventListener('input', function() { self.recalcOrderEditTotals(); });
+                    el.addEventListener('change', function() { self.recalcOrderEditTotals(); });
+                });
+
+                self.recalcOrderEditTotals();
+                document.getElementById('hmf-order-edit-modal').style.display = 'block';
+            });
+        },
+
+        saveOrderEdit: function() {
+            if (!this.orderEditData || !this.orderEditData.order_id) return;
+
+            var rows = document.querySelectorAll('#hmf-oe-lines tr');
+            var items = [];
+            rows.forEach(function(row) {
+                items.push({
+                    id: parseInt(row.getAttribute('data-line-id'), 10),
+                    description: row.querySelector('.hmf-oe-desc').value,
+                    ear_side: row.querySelector('.hmf-oe-ear').value,
+                    qty: parseInt(row.querySelector('.hmf-oe-qty').value || '1', 10),
+                    unit_price: parseFloat(row.querySelector('.hmf-oe-unit').value || '0'),
+                    vat_rate: parseFloat(row.querySelector('.hmf-oe-vat').value || '0')
+                });
+            });
 
             var self = this;
+            var saveBtn = document.getElementById('hmf-oe-save');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
             jQuery.post(HM.ajax_url, {
-                action: 'hm_update_awaiting_fitting_order',
+                action: 'hm_save_awaiting_order_edit',
                 nonce: HM.nonce,
-                order_id: orderId,
-                fitting_date: nextDate,
-                notes: nextNotes
+                order_id: this.orderEditData.order_id,
+                notes: document.getElementById('hmf-oe-notes').value,
+                fitting_date: document.getElementById('hmf-oe-fitting-date').value,
+                prsi_left: document.getElementById('hmf-oe-prsi-left').checked ? 1 : 0,
+                prsi_right: document.getElementById('hmf-oe-prsi-right').checked ? 1 : 0,
+                items_json: JSON.stringify(items)
             }, function(r) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Order';
                 if (r && r.success) {
+                    self.closeOrderEdit();
                     self.load();
                 } else {
-                    alert((r && r.data && r.data.msg) ? r.data.msg : 'Could not update order.');
+                    alert((r && r.data && r.data.msg) ? r.data.msg : 'Could not save order edits.');
                 }
+            }).fail(function() {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Order';
+                alert('Network error while saving order edits.');
             });
         },
 
