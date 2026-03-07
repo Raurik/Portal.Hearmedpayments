@@ -131,24 +131,6 @@ class HearMed_Admin_Manage_Users {
         <style>
         /* Staff page specific styles */
         .hm-staff-table th, .hm-staff-table td { vertical-align:middle; }
-        .hm-staff-table th, .hm-staff-table td { white-space:nowrap; }
-        .hm-staff-table .hm-staff-member-line {
-            display:flex;
-            align-items:center;
-            gap:10px;
-            min-width:0;
-            flex-wrap:nowrap;
-        }
-        .hm-staff-table .hm-staff-member-name { font-weight:700; color:var(--hm-navy,#0f172a); }
-        .hm-staff-table .hm-staff-chip {
-            font-size:12px;
-            color:var(--hm-text-light,#64748b);
-            background:#f8fafc;
-            border:1px solid #e2e8f0;
-            border-radius:999px;
-            padding:2px 8px;
-            line-height:1.4;
-        }
         .hm-staff-meta { font-size:12px; color:var(--hm-text-light,#64748b); line-height:1.4; }
         .hm-staff-meta strong { color:var(--hm-text,#1e293b); }
         .hm-auth-badges { display:flex; gap:4px; flex-wrap:wrap; }
@@ -192,6 +174,9 @@ class HearMed_Admin_Manage_Users {
                 <thead>
                     <tr>
                         <th>Staff Member</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Employee #</th>
                         <th>Role</th>
                         <th>Clinics</th>
                         <th>Primary Clinic</th>
@@ -211,13 +196,11 @@ class HearMed_Admin_Manage_Users {
                 ?>
                     <tr class="<?php echo $row_class; ?>">
                         <td>
-                            <div class="hm-staff-member-line">
-                                <span class="hm-staff-member-name"><?php echo esc_html($name); ?></span>
-                                <?php if (!empty($u['email'])): ?><span class="hm-staff-chip"><?php echo esc_html($u['email']); ?></span><?php endif; ?>
-                                <?php if (!empty($u['phone'])): ?><span class="hm-staff-chip"><?php echo esc_html($u['phone']); ?></span><?php endif; ?>
-                                <?php if (!empty($u['employee_number'])): ?><span class="hm-staff-chip">Emp #<?php echo esc_html($u['employee_number']); ?></span><?php endif; ?>
-                            </div>
+                            <strong><?php echo esc_html($name); ?></strong>
                         </td>
+                        <td><?php echo !empty($u['email']) ? esc_html($u['email']) : '<span style="color:var(--hm-text-light)">—</span>'; ?></td>
+                        <td><?php echo !empty($u['phone']) ? esc_html($u['phone']) : '<span style="color:var(--hm-text-light)">—</span>'; ?></td>
+                        <td><?php echo !empty($u['employee_number']) ? ('Emp #' . esc_html($u['employee_number'])) : '<span style="color:var(--hm-text-light)">—</span>'; ?></td>
                         <td>
                             <?php
                             // Find display name from roles
