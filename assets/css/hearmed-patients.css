@@ -510,8 +510,60 @@
   white-space: normal;
 }
 
+.hm-account-table--tx .hm-col-date { width: 14%; }
+.hm-account-table--tx .hm-col-type { width: 12%; }
+.hm-account-table--tx .hm-col-money { width: 11%; }
+.hm-account-table--tx .hm-col-invoice { width: 14%; }
+.hm-account-table--tx .hm-col-staff { width: 15%; }
+.hm-account-table--tx .hm-col-notes { width: 34%; }
+
+.hm-account-table--tx td.hm-col-notes,
+.hm-account-table--tx th.hm-col-notes {
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.hm-account-table--tx td.hm-col-money,
+.hm-account-table--tx th.hm-col-money {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Activity table: lock each column to stop visual drift between header/body. */
+.hm-activity-table {
+  table-layout: fixed;
+}
+
+.hm-activity-table .hm-col-activity-date { width: 14%; }
+.hm-activity-table .hm-col-activity-user { width: 18%; }
+.hm-activity-table .hm-col-activity-action { width: 16%; }
+.hm-activity-table .hm-col-activity-entity { width: 12%; }
+.hm-activity-table .hm-col-activity-details { width: 40%; }
+
+.hm-activity-table td,
+.hm-activity-table th {
+  vertical-align: middle;
+}
+
+.hm-activity-table td:nth-child(1),
+.hm-activity-table td:nth-child(2),
+.hm-activity-table td:nth-child(3),
+.hm-activity-table td:nth-child(4) {
+  white-space: nowrap;
+}
+
+.hm-activity-table td:nth-child(5),
+.hm-activity-table th:nth-child(5) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 1200px) {
   .hm-account-table {
+    table-layout: auto;
+  }
+
+  .hm-activity-table {
     table-layout: auto;
   }
 }

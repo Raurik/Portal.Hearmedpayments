@@ -1570,7 +1570,7 @@ function initProfile(){
                 return out;
             }
             if(!a.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.audit+'</div><div class="hm-empty-text">No audit entries</div></div>';
-            else{h+='<table class="hm-table"><thead><tr><th>Date / time</th><th>User</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody>'+renderRows(main,'')+renderRows(detail,'hm-audit-detail')+'</tbody></table>';}
+            else{h+='<table class="hm-table hm-activity-table"><colgroup><col class="hm-col-activity-date"><col class="hm-col-activity-user"><col class="hm-col-activity-action"><col class="hm-col-activity-entity"><col class="hm-col-activity-details"></colgroup><thead><tr><th class="hm-col-activity-date">Date / time</th><th class="hm-col-activity-user">User</th><th class="hm-col-activity-action">Action</th><th class="hm-col-activity-entity">Entity</th><th class="hm-col-activity-details">Details</th></tr></thead><tbody>'+renderRows(main,'')+renderRows(detail,'hm-audit-detail')+'</tbody></table>';}
             $c.html(h+'</div>');
             // Hide detail rows by default
             $('.hm-audit-detail').hide();
@@ -1698,7 +1698,7 @@ function initProfile(){
                     '<tr><td colspan="6" class="hm-muted" style="text-align:center;padding:20px;">Loading\u2026</td></tr>'+
                 '</tbody></table>'+
                 '<h4 style="font-size:13px;font-weight:600;color:var(--hm-text);margin:20px 0 8px;">Transaction History</h4>'+
-                '<table class="hm-table hm-account-table" id="hm-transactions-table">'+
+                '<table class="hm-table hm-account-table hm-account-table--tx" id="hm-transactions-table">'+
                 '<colgroup>'+
                     '<col class="hm-col-date"><col class="hm-col-type"><col class="hm-col-money"><col class="hm-col-invoice"><col class="hm-col-staff"><col class="hm-col-notes">'+
                 '</colgroup>'+
