@@ -4569,7 +4569,7 @@ class HearMed_Orders {
     // AJAX: Get awaiting fitting queue
     // ═══════════════════════════════════════════════════════════════════════
     private static function can_manage_awaiting_fitting_actions() : bool {
-        $role = HearMed_Auth::current_role();
+        $role = strtolower( str_replace( '-', '_', (string) HearMed_Auth::current_role() ) );
         return in_array( $role, [ 'finance', 'c_level' ], true );
     }
 
@@ -4708,8 +4708,8 @@ class HearMed_Orders {
         if ( ! $order ) {
             wp_send_json_error( [ 'msg' => 'Order not found.' ] );
         }
-        if ( $order->current_status !== 'Awaiting Fitting' ) {
-            wp_send_json_error( [ 'msg' => 'Only Awaiting Fitting orders can be edited here.' ] );
+        if ( ! in_array( $order->current_status, [ 'Ordered', 'Awaiting Fitting' ], true ) ) {
+            wp_send_json_error( [ 'msg' => 'Only Ordered or Awaiting Fitting orders can be edited here.' ] );
         }
 
         $db->update( 'hearmed_core.orders', [
@@ -4760,8 +4760,8 @@ class HearMed_Orders {
             [ $order_id ]
         );
         if ( ! $order ) wp_send_json_error( [ 'msg' => 'Order not found.' ] );
-        if ( $order->current_status !== 'Awaiting Fitting' ) {
-            wp_send_json_error( [ 'msg' => 'Order is no longer in Awaiting Fitting.' ] );
+        if ( ! in_array( $order->current_status, [ 'Approved', 'Ordered', 'Awaiting Fitting' ], true ) ) {
+            wp_send_json_error( [ 'msg' => 'Pre-fit cancellation is only available before fitting.' ] );
         }
 
         $paid_amount = 0.0;

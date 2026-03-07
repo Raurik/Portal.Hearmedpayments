@@ -314,6 +314,11 @@ function hm_render_fitting_page() {
         orders: [],
         filtered: [],
 
+        canManagePrefit: function() {
+            var role = String(HM.user_role || '').toLowerCase().replace('-', '_');
+            return role === 'finance' || role === 'c_level';
+        },
+
         // ── PRSI CYCLE DATE HELPERS ──
         // Returns the Nth weekday (0=Sun..6=Sat) of a given month/year
         nthWeekday: function(year, month, weekday, n) {
@@ -471,12 +476,25 @@ function hm_render_fitting_page() {
                     : '<span class="hmf-fitting-date none">Not booked</span>';
 
                 var actions = '';
+                var canManage = !!o.can_manage_awaiting;
                 if (o.current_status === 'Ordered') {
                     actions = '<button class="hm-btn hm-btn-receive" onclick="hmFitting.openSerial(' + o.id + ')">Receive in Branch</button>';
+                    if (canManage) {
+                        actions += ' <button class="hm-btn hm-btn--secondary" style="font-size:11px;padding:6px 10px;" onclick="hmFitting.editAwaiting(' + o.id + ')">Edit</button>';
+                        actions += ' <button class="hm-btn hm-btn-danger" style="font-size:11px;padding:6px 10px;" onclick="hmFitting.prefitCancel(' + o.id + ')">Pre-Fit Cancel</button>';
+                    }
                 } else if (o.current_status === 'Awaiting Fitting') {
                     actions = '<button class="hm-btn hm-btn--primary" style="font-size:12px;padding:6px 14px;" onclick="hmFitting.openPayment(' + o.id + ')">Fitted / Pay</button>';
+                    if (canManage) {
+                        actions += ' <button class="hm-btn hm-btn--secondary" style="font-size:11px;padding:6px 10px;" onclick="hmFitting.editAwaiting(' + o.id + ')">Edit</button>';
+                        actions += ' <button class="hm-btn hm-btn-danger" style="font-size:11px;padding:6px 10px;" onclick="hmFitting.prefitCancel(' + o.id + ')">Pre-Fit Cancel</button>';
+                    }
                 } else {
-                    actions = '<span style="color:var(--hm-text-muted);font-size:11px;">Awaiting finance</span>';
+                    if (canManage && o.current_status === 'Approved') {
+                        actions = '<button class="hm-btn hm-btn--secondary" style="font-size:11px;padding:6px 10px;" onclick="hmFitting.prefitCancel(' + o.id + ')">Pre-Fit Cancel</button>';
+                    } else {
+                        actions = '<span style="color:var(--hm-text-muted);font-size:11px;">Awaiting finance</span>';
+                    }
                 }
 
                 html += '<tr>';
@@ -606,6 +624,76 @@ function hm_render_fitting_page() {
                 recInput.value = new Date().toISOString().slice(0, 10);
             }
             document.getElementById('hmf-serial-modal').classList.add('open');
+        },
+
+        editAwaiting: function(orderId) {
+            var order = this.orders.find(function(o) { return o.id === orderId; });
+            if (!order) return;
+            if (!order.can_manage_awaiting) {
+                alert('Only Finance and C-Level can edit this order.');
+                return;
+            }
+
+            var currentDate = String(order.fitting_date_raw || '').substring(0, 10);
+            var nextDate = prompt('Edit fitting date (YYYY-MM-DD). Leave blank to keep current date.', currentDate);
+            if (nextDate === null) return;
+            nextDate = String(nextDate).trim();
+            if (nextDate && !/^\d{4}-\d{2}-\d{2}$/.test(nextDate)) {
+                alert('Date must be in YYYY-MM-DD format.');
+                return;
+            }
+
+            var currentNotes = String(order.notes || '');
+            var nextNotes = prompt('Edit order notes (optional).', currentNotes);
+            if (nextNotes === null) return;
+
+            var self = this;
+            jQuery.post(HM.ajax_url, {
+                action: 'hm_update_awaiting_fitting_order',
+                nonce: HM.nonce,
+                order_id: orderId,
+                fitting_date: nextDate,
+                notes: nextNotes
+            }, function(r) {
+                if (r && r.success) {
+                    self.load();
+                } else {
+                    alert((r && r.data && r.data.msg) ? r.data.msg : 'Could not update order.');
+                }
+            });
+        },
+
+        prefitCancel: function(orderId) {
+            var order = this.orders.find(function(o) { return o.id === orderId; });
+            if (!order) return;
+            if (!order.can_manage_awaiting) {
+                alert('Only Finance and C-Level can pre-fit cancel.');
+                return;
+            }
+
+            var reason = prompt('Pre-fit cancellation reason:');
+            if (reason === null) return;
+            reason = String(reason).trim();
+            if (!reason) {
+                alert('Cancellation reason is required.');
+                return;
+            }
+            if (!confirm('Cancel this order before fitting and return stock?')) return;
+
+            var self = this;
+            jQuery.post(HM.ajax_url, {
+                action: 'hm_prefit_cancel',
+                nonce: HM.nonce,
+                order_id: orderId,
+                reason: reason
+            }, function(r) {
+                if (r && r.success) {
+                    alert((r.data && r.data.msg) ? r.data.msg : 'Order cancelled.');
+                    self.load();
+                } else {
+                    alert((r && r.data && r.data.msg) ? r.data.msg : 'Could not cancel order.');
+                }
+            });
         },
 
         closeSerial: function() {
@@ -920,7 +1008,7 @@ function hm_ajax_fitting_load() {
     $orders = $db->get_results(
         "SELECT o.id, o.order_number, o.patient_id, o.current_status,
                 o.prsi_applicable, o.subtotal, o.prsi_amount, o.prsi_left, o.prsi_right,
-                o.grand_total, o.deposit_amount, o.order_date, o.invoice_id,
+            o.grand_total, o.deposit_amount, o.order_date, o.invoice_id, o.notes,
                 o.clinic_id, o.staff_id,
                 p.patient_number, p.first_name AS p_first, p.last_name AS p_last,
                 c.clinic_name,
@@ -958,6 +1046,9 @@ function hm_ajax_fitting_load() {
              END,
              o.created_at ASC"
     );
+
+    $role = strtolower( str_replace( '-', '_', (string) HearMed_Auth::current_role() ) );
+    $can_manage_awaiting = in_array( $role, [ 'finance', 'c_level' ], true );
 
     $result = [];
     foreach ($orders ?: [] as $o) {
@@ -1010,6 +1101,8 @@ function hm_ajax_fitting_load() {
             'prsi_amount'     => $prsi_computed,
             'grand_total'     => (float)($o->grand_total ?? 0),
             'invoice_id'      => $o->invoice_id ? (int)$o->invoice_id : null,
+            'notes'           => $o->notes ?? '',
+            'can_manage_awaiting' => $can_manage_awaiting,
             'items'           => $items,
         ];
 
