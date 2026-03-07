@@ -2793,6 +2793,45 @@ function hm_ajax_get_patient_account() {
         $transactions = array_slice( $transactions, 0, 100 );
     }
 
+    // Enrich credits with credit-note details (number + patient/prsi split)
+    // so the Account tab can show exactly how much is exchangeable vs PRSI.
+    $credit_note_map = [];
+    $credit_note_ids = [];
+    foreach ( ( $credits ?: [] ) as $cr ) {
+        $cn_id = intval( $cr->credit_note_id ?? 0 );
+        if ( $cn_id > 0 ) {
+            $credit_note_ids[ $cn_id ] = true;
+        }
+    }
+
+    if ( ! empty( $credit_note_ids ) ) {
+        $ids_csv = implode( ',', array_map( 'intval', array_keys( $credit_note_ids ) ) );
+        $cn_rows = $db->get_results(
+            "SELECT id, credit_note_number,
+                    COALESCE(patient_refund_amount, amount, 0) AS patient_portion,
+                    COALESCE(prsi_amount, 0) AS prsi_portion
+             FROM hearmed_core.credit_notes
+             WHERE id IN ({$ids_csv})"
+        );
+        foreach ( ( $cn_rows ?: [] ) as $cn ) {
+            $credit_note_map[ (int) $cn->id ] = $cn;
+        }
+    }
+
+    foreach ( ( $credits ?: [] ) as $idx => $cr ) {
+        $cn_id = intval( $cr->credit_note_id ?? 0 );
+        if ( $cn_id > 0 && isset( $credit_note_map[ $cn_id ] ) ) {
+            $cn = $credit_note_map[ $cn_id ];
+            $cr->credit_note_number = $cn->credit_note_number ?: ( $cr->credit_note_number ?? '' );
+            $cr->patient_portion    = (float) $cn->patient_portion;
+            $cr->prsi_portion       = (float) $cn->prsi_portion;
+        } else {
+            $cr->patient_portion    = (float) ( $cr->amount ?? 0 );
+            $cr->prsi_portion       = 0.0;
+        }
+        $credits[ $idx ] = $cr;
+    }
+
     // Available balance
     $balance = class_exists( 'HearMed_Finance' )
         ? HearMed_Finance::get_patient_credit_balance( $patient_id )

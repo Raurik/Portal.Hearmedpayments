@@ -1689,14 +1689,14 @@ function initProfile(){
                     '</div>'+
                 '</div>'+
                 '<h4 style="font-size:13px;font-weight:600;color:var(--hm-text);margin:20px 0 8px;">Credits</h4>'+
-                '<table class="hm-table hm-account-table" id="hm-credits-table">'+
+                '<table class="hm-table hm-account-table hm-account-table--credits" id="hm-credits-table">'+
                 '<colgroup>'+
-                    '<col class="hm-col-note"><col class="hm-col-date"><col class="hm-col-money"><col class="hm-col-money"><col class="hm-col-money"><col class="hm-col-status">'+
+                    '<col class="hm-col-note"><col class="hm-col-date"><col class="hm-col-money"><col class="hm-col-money"><col class="hm-col-money"><col class="hm-col-money"><col class="hm-col-status">'+
                 '</colgroup>'+
                 '<thead><tr>'+
-                    '<th class="hm-col-note">Credit Note</th><th class="hm-col-date">Date</th><th class="hm-col-money hm-ta-right">Original</th><th class="hm-col-money hm-ta-right">Used</th><th class="hm-col-money hm-ta-right">Remaining</th><th class="hm-col-status">Status</th>'+
+                    '<th class="hm-col-note">Credit Note</th><th class="hm-col-date">Date</th><th class="hm-col-money hm-ta-right">Patient Portion</th><th class="hm-col-money hm-ta-right">PRSI Portion</th><th class="hm-col-money hm-ta-right">Used</th><th class="hm-col-money hm-ta-right">Remaining</th><th class="hm-col-status">Status</th>'+
                 '</tr></thead><tbody id="hm-credits-tbody">'+
-                    '<tr><td colspan="6" class="hm-muted" style="text-align:center;padding:20px;">Loading\u2026</td></tr>'+
+                    '<tr><td colspan="7" class="hm-muted" style="text-align:center;padding:20px;">Loading\u2026</td></tr>'+
                 '</tbody></table>'+
                 '<h4 style="font-size:13px;font-weight:600;color:var(--hm-text);margin:20px 0 8px;">Transaction History</h4>'+
                 '<table class="hm-table hm-account-table hm-account-table--tx" id="hm-transactions-table">'+
@@ -1712,7 +1712,7 @@ function initProfile(){
         );
         $.post(_hm.ajax,{action:'hm_get_patient_account',nonce:_hm.nonce,patient_id:pid},function(res){
             if(!res.success){
-                $('#hm-credits-tbody').html('<tr><td colspan="6" class="hm-muted" style="text-align:center;">Failed to load</td></tr>');
+                $('#hm-credits-tbody').html('<tr><td colspan="7" class="hm-muted" style="text-align:center;">Failed to load</td></tr>');
                 $('#hm-transactions-tbody').html('<tr><td colspan="6" class="hm-muted" style="text-align:center;">Failed to load</td></tr>');
                 return;
             }
@@ -1728,18 +1728,21 @@ function initProfile(){
             if(d.credits&&d.credits.length){
                 d.credits.forEach(function(c){
                     var remaining=parseFloat(c.remaining_amount||0);
+                    var patientPortion=parseFloat(c.patient_portion!=null?c.patient_portion:c.amount||0);
+                    var prsiPortion=parseFloat(c.prsi_portion||0);
                     var statusClass=c.status==='active'?'hm-badge--green':c.status==='exhausted'?'hm-badge--amber':'';
                     html+='<tr>'+
                         '<td class="hm-col-note">'+esc(c.credit_note_number||'\u2014')+'</td>'+
                         '<td class="hm-col-date">'+fmtDate((c.created_at||'').substring(0,10))+'</td>'+
-                        '<td class="hm-col-money hm-ta-right">\u20ac'+parseFloat(c.amount).toFixed(2)+'</td>'+
+                        '<td class="hm-col-money hm-ta-right">\u20ac'+patientPortion.toFixed(2)+'</td>'+
+                        '<td class="hm-col-money hm-ta-right">\u20ac'+prsiPortion.toFixed(2)+'</td>'+
                         '<td class="hm-col-money hm-ta-right">\u20ac'+parseFloat(c.used_amount).toFixed(2)+'</td>'+
                         '<td class="hm-col-money hm-ta-right" style="font-weight:600;">\u20ac'+remaining.toFixed(2)+'</td>'+
                         '<td class="hm-col-status"><span class="hm-badge '+statusClass+'">'+esc(c.status)+'</span></td>'+
                     '</tr>';
                 });
             } else {
-                html='<tr><td colspan="6" class="hm-muted" style="text-align:center;padding:16px;">No credits on this account</td></tr>';
+                html='<tr><td colspan="7" class="hm-muted" style="text-align:center;padding:16px;">No credits on this account</td></tr>';
             }
             $('#hm-credits-tbody').html(html);
             html='';

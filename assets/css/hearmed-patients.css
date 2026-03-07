@@ -528,6 +528,16 @@
   font-variant-numeric: tabular-nums;
 }
 
+.hm-account-table--credits .hm-col-note { width: 20%; }
+.hm-account-table--credits .hm-col-date { width: 12%; }
+.hm-account-table--credits .hm-col-money { width: 13%; }
+.hm-account-table--credits .hm-col-status { width: 10%; }
+
+.hm-account-table--credits td.hm-col-money,
+.hm-account-table--credits th.hm-col-money {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Activity table: lock each column to stop visual drift between header/body. */
 .hm-activity-table {
   table-layout: fixed;
