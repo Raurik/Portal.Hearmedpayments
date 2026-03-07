@@ -1575,6 +1575,8 @@ function initProfile(){
     }
 
     /* ── ACTIVITY ── */
+    var _activitySubTab='all';
+
     function loadActivity($c){
         $.post(_hm.ajax,{action:'hm_get_patient_audit',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty">'+(r.data||'Access denied')+'</div>');return;}
@@ -1601,49 +1603,59 @@ function initProfile(){
                 return ent==='notification'||ent==='sms'||ent==='message'||act.indexOf('NOTIFICATION')!==-1||act.indexOf('SMS')!==-1||act.indexOf('MESSAGE')!==-1;
             }
 
-            var grouped={
-                financial:[],
-                appointment:[],
-                file_changes:[],
-                notifications:[]
-            };
-
+            var grouped={all:[],financial:[],appointment:[],file_changes:[],notifications:[]};
             a.forEach(function(x){
+                grouped.all.push(x);
                 if(isFinancial(x))grouped.financial.push(x);
                 else if(isAppointment(x))grouped.appointment.push(x);
                 else if(isNotification(x))grouped.notifications.push(x);
                 else grouped.file_changes.push(x);
             });
 
+            var tabMeta={
+                all:'All',
+                financial:'Financial',
+                appointment:'Appointment',
+                file_changes:'Patient File',
+                notifications:'Notifications'
+            };
+            if(!tabMeta[_activitySubTab])_activitySubTab='all';
+            var filtered=grouped[_activitySubTab]||[];
+
             function renderRows(items){
                 var out='';
                 items.forEach(function(x){
                     var det=detPreview(x);
                     var isDanger=String(x.action||'').toUpperCase().indexOf('ERASURE')!==-1||String(x.action||'').toUpperCase().indexOf('CANCEL')!==-1;
-                    out+='<tr class="hm-audit-row"><td style="white-space:nowrap;font-size:12px;">'+fmtDateTime(x.created_at)+'</td><td style="font-size:13px;">'+esc(x.user)+'</td><td><span class="hm-badge hm-badge--sm '+(isDanger?'hm-badge--red':'hm-badge--grey')+'">'+esc(x.action)+'</span></td><td style="font-size:13px;color:#64748b;">'+esc(x.entity_type)+(x.entity_id?' #'+x.entity_id:'')+'</td><td style="font-size:12px;color:#94a3b8;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(det)+'">'+esc(det||'—')+'</td></tr>';
+                    out+='<tr class="hm-audit-row"><td style="white-space:nowrap;font-size:12px;">'+fmtDateTime(x.created_at)+'</td><td style="font-size:13px;">'+esc(x.user)+'</td><td><span class="hm-badge hm-badge--sm '+(isDanger?'hm-badge--red':'hm-badge--grey')+'">'+esc(x.action)+'</span></td><td style="font-size:13px;color:#64748b;">'+esc(x.entity_type)+(x.entity_id?' #'+x.entity_id:'')+'</td><td style="font-size:12px;color:#94a3b8;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(det)+'">'+esc(det||'-')+'</td></tr>';
                 });
                 return out;
-            }
-
-            function renderSection(title,items,icon){
-                var h='<div class="hm-tab-section" style="margin-top:14px;"><div class="hm-section-header"><h3>'+icon+' '+title+' ('+items.length+')</h3></div>';
-                if(!items.length){h+='<div class="hm-empty" style="padding:14px;"><div class="hm-empty-text">No entries</div></div>';
-                }else{
-                    h+='<table class="hm-table hm-activity-table"><thead><tr><th>Date / time</th><th>User</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody>'+renderRows(items)+'</tbody></table>';
-                }
-                return h+'</div>';
             }
 
             var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Activity Log ('+a.length+')</h3></div>';
             if(!a.length){
                 h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.audit+'</div><div class="hm-empty-text">No audit entries</div></div>';
             }else{
-                h+=renderSection('Financial Logs',grouped.financial,'FIN');
-                h+=renderSection('Appointment Logs',grouped.appointment,'APPT');
-                h+=renderSection('Patient File Change Logs',grouped.file_changes,'FILE');
-                h+=renderSection('Patient Notification Logs',grouped.notifications,'MSG');
+                h+='<div class="hm-notes-subtabs">';
+                ['all','financial','appointment','file_changes','notifications'].forEach(function(k){
+                    h+='<button class="hm-notes-subtab hm-activity-subtab'+(_activitySubTab===k?' active':'')+'" data-act-cat="'+k+'">'+tabMeta[k]+' <span class="hm-notes-count">'+(grouped[k]||[]).length+'</span></button>';
+                });
+                h+='</div>';
+
+                if(!filtered.length){
+                    h+='<div class="hm-empty" style="margin-top:16px;"><div class="hm-empty-text">No '+tabMeta[_activitySubTab].toLowerCase()+' log entries</div></div>';
+                }else{
+                    h+='<table class="hm-table hm-activity-table" style="margin-top:10px;"><thead><tr><th>Date / time</th><th>User</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody>'+renderRows(filtered)+'</tbody></table>';
+                }
             }
             $c.html(h+'</div>');
+        });
+
+        // Avoid old Notes sub-tab handler collisions on shared container
+        $c.off('click','.hm-notes-subtab');
+        $c.off('click','.hm-activity-subtab').on('click','.hm-activity-subtab',function(){
+            _activitySubTab=$(this).data('act-cat')||'all';
+            loadActivity($('#hm-tab-content'));
         });
     }
 
