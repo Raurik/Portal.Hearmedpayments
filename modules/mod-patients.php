@@ -619,7 +619,9 @@ function hm_ajax_get_patient() {
     $active_dev = $db->get_row(
         "SELECT MIN(warranty_expiry) AS earliest_expiry
          FROM hearmed_core.patient_devices
-         WHERE patient_id = \$1 AND device_status = 'Active' AND warranty_expiry IS NOT NULL",
+         WHERE patient_id = \$1
+           AND COALESCE(device_status, 'Active') IN ('Active', 'Pending Return')
+           AND warranty_expiry IS NOT NULL",
         [ $pid ]
     );
     if ( $active_dev && $active_dev->earliest_expiry ) {

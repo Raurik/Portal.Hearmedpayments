@@ -390,9 +390,9 @@ function initProfile(){
         if(p.warranty_status&&p.warranty_status!=='none'){
             var wc=p.warranty_status==='expired'?'hm-badge--red':p.warranty_status==='expiring'?'hm-badge--amber':'hm-badge--green';
             var wl;
-            if(p.warranty_status==='expired'){wl='<span class="hm-dot-red"></span> Warranty Expired';}
-            else if(p.warranty_status==='expiring'){wl='<span class="hm-dot-amber"></span> Warranty '+fmtDaysRemaining(p.warranty_days);}
-            else{wl='<span class="hm-dot-green"></span> In Warranty';}
+            if(p.warranty_status==='expired'){wl='<span class="hm-dot-red"></span> Out of Warranty';}
+            else if(p.warranty_status==='expiring'){wl='<span class="hm-dot-amber"></span> Warranty ends in '+fmtDaysRemaining(p.warranty_days);}
+            else{wl='<span class="hm-dot-green"></span> Under Warranty';}
             wh='<span class="hm-badge '+wc+'">'+wl+'</span>';
         }
         // Active/inactive indicator light
