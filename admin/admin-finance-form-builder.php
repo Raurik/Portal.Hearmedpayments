@@ -541,11 +541,6 @@ class HearMed_Admin_Finance_Form_Builder {
                     html += '<tr class="total-row"><td colspan="7">Total Due</td><td class="money" style="color:'+accent+';">'+esc(d.total)+'</td></tr>';
                     html += '</tfoot></table>';
 
-                    /* Serial numbers */
-                    if (s.serials !== false) {
-                        html += '<div class="p-serials"><strong>Serial Numbers:</strong> Left: <code>'+esc(d.serial_left)+'</code> &nbsp; Right: <code>'+esc(d.serial_right)+'</code></div>';
-                    }
-
                     /* Payments */
                     if (s.payments !== false) {
                         html += '<div class="p-payments"><h4>Payment Breakdown</h4>';
@@ -808,7 +803,6 @@ class HearMed_Admin_Finance_Form_Builder {
                 $t['patient']        = ['label' => 'Patient Info',         'value' => $s['patient'] ?? true];
                 $t['patientAddress'] = ['label' => 'Patient Address',      'value' => $s['patientAddress'] ?? true];
                 $t['prsi']           = ['label' => 'PRSI Grant Line',      'value' => $s['prsi'] ?? true];
-                $t['serials']        = ['label' => 'Serial Numbers',       'value' => $s['serials'] ?? true];
                 $t['payments']       = ['label' => 'Payment Breakdown',    'value' => $s['payments'] ?? true];
                 break;
             case 'order':

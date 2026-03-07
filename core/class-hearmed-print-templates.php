@@ -41,14 +41,14 @@ class HearMed_Print_Templates {
             'tableSize'      => 11,
             'vatLabel'       => 'VAT',
             'prsi'           => true,
-            'serials'        => true,
+            'serials'        => false,
             'payments'       => true,
             'footerLine1'    => 'Thank you for choosing HearMed.',
             'footerLine2'    => '',
             'footerFont'     => 'Source Sans 3',
             'footerSize'     => 9,
             'footerColor'    => '#94a3b8',
-            'sections'       => ['companyHeader','patient','patientAddress','itemsTable','prsi','serials','payments','footer'],
+            'sections'       => ['companyHeader','patient','patientAddress','itemsTable','prsi','payments','footer'],
         ],
         'order' => [
             'companyName'    => 'HearMed Acoustic Health Care Ltd',
@@ -599,18 +599,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
     private static function section_invoice_accentBar() { return ''; }
 
     private static function section_invoice_serials(array $s, object $d): string {
-        if (!($s['serials'] ?? true) || empty($d->devices)) return '';
-        ob_start(); ?>
-        <div class="hm-print-serials">
-            <strong>Device Serial Numbers:</strong><br>
-            <?php foreach ($d->devices as $dev): ?>
-                <?php echo esc_html($dev->product_name ?? 'Device'); ?>:
-                <?php if (!empty($dev->serial_number_left)): ?> L: <code><?php echo esc_html($dev->serial_number_left); ?></code><?php endif; ?>
-                <?php if (!empty($dev->serial_number_right)): ?> R: <code><?php echo esc_html($dev->serial_number_right); ?></code><?php endif; ?>
-                <br>
-            <?php endforeach; ?>
-        </div>
-        <?php return ob_get_clean();
+        return '';
     }
 
     private static function section_invoice_payments(array $s, object $d): string {

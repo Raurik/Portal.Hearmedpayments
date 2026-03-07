@@ -955,7 +955,10 @@ class HearMed_Invoice {
         $expanded_items = [];
         foreach ( $tpl->items as $it ) {
             $prod_cat = $it->product_vat_category ?? $it->vat_category ?? '';
-            $resolved_vat = self::vat_rate_for_category( $prod_cat );
+            $item_desc = (string) ( $it->item_description ?? $it->product_name ?? '' );
+            $is_bundled_item = strtolower( (string) ( $it->product_item_type ?? '' ) ) === 'bundled'
+                || stripos( $item_desc, '(bundled)' ) !== false;
+            $resolved_vat = $is_bundled_item ? 0.0 : self::vat_rate_for_category( $prod_cat );
             $it->display_vat_rate = $resolved_vat;
 
             $serial = '';
@@ -996,10 +999,22 @@ class HearMed_Invoice {
             $qty = (int) ( $it->quantity ?? 1 );
 
             // Render binaural hearing aids as one line per ear for clarity.
-            if ( ( $it->item_type ?? '' ) === 'product' && $is_binaural && $qty === 1 ) {
-                foreach ( [ 'Left', 'Right' ] as $ear_label ) {
+            if ( ( $it->item_type ?? '' ) === 'product' && $is_binaural ) {
+                $unit_total = (float) ( $it->unit_price ?? 0 ) * max( 1, $qty );
+                $vat_total = (float) ( $it->vat_amount ?? 0 );
+                $line_total = (float) ( $it->line_total ?? 0 );
+
+                $left_unit_total = round( $unit_total / 2, 2 );
+                $right_unit_total = round( $unit_total - $left_unit_total, 2 );
+                $left_vat_total = round( $vat_total / 2, 2 );
+                $right_vat_total = round( $vat_total - $left_vat_total, 2 );
+                $left_line_total = round( $line_total / 2, 2 );
+                $right_line_total = round( $line_total - $left_line_total, 2 );
+
+                foreach ( [ 'Left', 'Right' ] as $index => $ear_label ) {
                     $clone = clone $it;
                     $clone->ear_side = $ear_label;
+                    $clone->display_vat_rate = $resolved_vat;
 
                     if ( ! empty( $tpl->devices ) && ! empty( $clone->product_id ) ) {
                         foreach ( $tpl->devices as $dev ) {
@@ -1014,9 +1029,9 @@ class HearMed_Invoice {
                     }
 
                     $clone->quantity = 1;
-                    $clone->unit_price = round( (float) ( $it->unit_price ?? 0 ) / 2, 2 );
-                    $clone->vat_amount = round( (float) ( $it->vat_amount ?? 0 ) / 2, 2 );
-                    $clone->line_total = round( (float) ( $it->line_total ?? 0 ) / 2, 2 );
+                    $clone->unit_price = $index === 0 ? $left_unit_total : $right_unit_total;
+                    $clone->vat_amount = $index === 0 ? $left_vat_total : $right_vat_total;
+                    $clone->line_total = $index === 0 ? $left_line_total : $right_line_total;
                     $clone->prsi_line_amount = 0.0;
                     if ( $order_meta ) {
                         if ( $ear_label === 'Left' && ! empty( $order_meta->prsi_left ) && $order_meta->prsi_left !== 'f' ) {
