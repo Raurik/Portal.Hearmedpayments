@@ -822,6 +822,16 @@ function initProfile(){
                 else if(wdays<=90) wbadge='<span class="hm-badge hm-badge--sm hm-badge--amber"><span class="hm-dot-amber"></span> Warranty '+fmtDaysRemaining(wdays)+'</span>';
                 else wbadge='<span class="hm-badge hm-badge--sm hm-badge--green"><span class="hm-dot-green"></span> In Warranty ('+fmtDaysRemaining(wdays)+')</span>';
             }
+            // 60-day guarantee badge (derived from invoice payment date on backend)
+            var gbadge='';
+            if(pr.guarantee_end_date){
+                var gexp=new Date(pr.guarantee_end_date),gnow=new Date();
+                var parsedGDays=parseInt(pr.guarantee_days,10);
+                var gdays=Number.isFinite(parsedGDays)?parsedGDays:Math.ceil((gexp-gnow)/(1000*60*60*24));
+                if(gdays<0) gbadge='<span class="hm-badge hm-badge--sm hm-badge--red" title="60 day guarantee end date: '+esc(fmtDate(pr.guarantee_end_date))+'"><span class="hm-dot-red"></span> 60 day guarantee ended '+fmtDaysRemaining(gdays)+' ago</span>';
+                else if(gdays<=14) gbadge='<span class="hm-badge hm-badge--sm hm-badge--amber" title="60 day guarantee end date: '+esc(fmtDate(pr.guarantee_end_date))+'"><span class="hm-dot-amber"></span> 60 day guarantee ends in '+fmtDaysRemaining(gdays)+'</span>';
+                else gbadge='<span class="hm-badge hm-badge--sm hm-badge--green" title="60 day guarantee end date: '+esc(fmtDate(pr.guarantee_end_date))+'"><span class="hm-dot-green"></span> 60 day guarantee ends in '+fmtDaysRemaining(gdays)+'</span>';
+            }
             var inactiveDot=sc==='hm-badge--red'?'<span class="hm-dot-red"></span> ':'<span class="hm-dot-amber"></span> ';
             var isPendingReturn = pr.status==='Pending Return';
             var activeBadge = isAct
@@ -836,10 +846,13 @@ function initProfile(){
             card+='<div class="hm-ha-card-header">';
             card+='<div class="hm-ha-card-title">';
             var displayName=hearingAidLabel(pr);
-            card+='<strong>'+esc(displayName)+'</strong> '+activeBadge+' '+wbadge;
+            card+='<strong>'+esc(displayName)+'</strong> '+activeBadge+' '+gbadge+' '+wbadge;
             card+='</div>';
             card+='<div class="hm-ha-card-meta">'+esc(pr.manufacturer)+(pr.style?' · '+esc(pr.style):'')+'</div>';
-            card+='<div class="hm-ha-card-dates">Fitted: '+fmtDate(pr.fitting_date)+' · Warranty: '+fmtDate(pr.warranty_expiry)+'</div>';
+            var dates='Fitted: '+fmtDate(pr.fitting_date);
+            if(pr.guarantee_end_date) dates+=' · Guarantee: '+fmtDate(pr.guarantee_end_date);
+            dates+=' · Warranty: '+fmtDate(pr.warranty_expiry);
+            card+='<div class="hm-ha-card-dates">'+dates+'</div>';
             if(pr.inactive_reason) card+='<div class="hm-ha-card-dates" style="color:#e53e3e;">Reason: '+esc(pr.inactive_reason)+'</div>';
             card+='</div>';
 

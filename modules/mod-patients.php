@@ -1239,9 +1239,39 @@ function hm_ajax_get_patient_products() {
         ? "(SELECT COUNT(*) FROM hearmed_core.returns ret WHERE ret.device_id = pd.id AND COALESCE(ret.refund_status,'pending') = 'pending') AS pending_returns,"
         : "0::int AS pending_returns,";
 
+    $has_order_id_col = $db->get_var(
+        "SELECT 1 FROM information_schema.columns WHERE table_schema = 'hearmed_core' AND table_name = 'patient_devices' AND column_name = 'order_id'"
+    );
+    $has_return_until_col = $db->get_var(
+        "SELECT 1 FROM information_schema.columns WHERE table_schema = 'hearmed_core' AND table_name = 'patient_devices' AND column_name = 'return_guarantee_until'"
+    );
+
+    $invoice_payment_col = $has_order_id_col
+        ? "(SELECT MAX(pay.payment_date)
+             FROM hearmed_core.orders o
+             LEFT JOIN hearmed_core.invoices inv ON inv.id = o.invoice_id
+             LEFT JOIN hearmed_core.payments pay ON pay.invoice_id = inv.id AND COALESCE(pay.is_refund, false) = false
+             WHERE o.id = pd.order_id) AS invoice_payment_date,"
+        : "NULL::date AS invoice_payment_date,";
+
+    $invoice_date_col = $has_order_id_col
+        ? "(SELECT inv.invoice_date
+             FROM hearmed_core.orders o
+             LEFT JOIN hearmed_core.invoices inv ON inv.id = o.invoice_id
+             WHERE o.id = pd.order_id
+             LIMIT 1) AS invoice_date,"
+        : "NULL::date AS invoice_date,";
+
+    $return_until_col = $has_return_until_col
+        ? "pd.return_guarantee_until,"
+        : "NULL::date AS return_guarantee_until,";
+
     $rows = $db->get_results(
         "SELECT pd.id, pd.product_id, pd.serial_number_left, pd.serial_number_right,
                 pd.fitting_date, pd.device_status, pd.inactive_reason, pd.warranty_expiry,
+                {$invoice_payment_col}
+                {$invoice_date_col}
+                {$return_until_col}
                 {$pending_col}
                 COALESCE(pr.product_name, 'Unknown') AS product_name,
                 COALESCE(m.name, '') AS manufacturer,
@@ -1279,6 +1309,37 @@ function hm_ajax_get_patient_products() {
             $inactive_reason = '';
         }
 
+        $guarantee_end = '';
+        $guarantee_days = null;
+        $guarantee_base = $r->invoice_payment_date ?: ( $r->invoice_date ?: '' );
+        if ( ! $guarantee_base && ! empty( $r->return_guarantee_until ) ) {
+            try {
+                $end = new DateTime( (string) $r->return_guarantee_until );
+                $guarantee_end = $end->format( 'Y-m-d' );
+            } catch ( \Exception $e ) {
+                $guarantee_end = '';
+            }
+        } elseif ( $guarantee_base ) {
+            try {
+                $base = new DateTime( (string) $guarantee_base );
+                $end = clone $base;
+                $end->modify( '+60 days' );
+                $guarantee_end = $end->format( 'Y-m-d' );
+            } catch ( \Exception $e ) {
+                $guarantee_end = '';
+            }
+        }
+        if ( $guarantee_end ) {
+            try {
+                $today = new DateTime( 'today' );
+                $gend  = new DateTime( $guarantee_end );
+                $diff  = $today->diff( $gend );
+                $guarantee_days = (int) $diff->format( '%r%a' );
+            } catch ( \Exception $e ) {
+                $guarantee_days = null;
+            }
+        }
+
         $out[] = [
             '_ID'            => (int) $r->id,
             'product_id'     => $r->product_id ? (int) $r->product_id : null,
@@ -1292,6 +1353,8 @@ function hm_ajax_get_patient_products() {
             'serial_right'   => $r->serial_number_right ?: '',
             'fitting_date'   => $r->fitting_date,
             'warranty_expiry'=> $r->warranty_expiry,
+            'guarantee_end_date' => $guarantee_end,
+            'guarantee_days' => $guarantee_days,
             'status'         => $status,
             'inactive_reason'=> $inactive_reason,
             'pending_returns'=> $pending_count,
