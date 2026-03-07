@@ -115,6 +115,8 @@ add_action( 'wp_ajax_hm_get_patient_open_orders', function() {
 // ---------------------------------------------------------------------------
 class HearMed_Orders {
 
+    private static $tracking_schema_ensured = false;
+
     // ═══════════════════════════════════════════════════════════════════════
     // LIST VIEW — Two white-bubble tables: Awaiting Order + Ordered
     // ═══════════════════════════════════════════════════════════════════════
@@ -2174,8 +2176,9 @@ class HearMed_Orders {
 
                     <div id="hm-prsi-balance-row" style="display:none;margin-bottom:14px">
                         <div style="padding:12px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;color:#1e3a8a;">
-                            PRSI entitlement available: <strong>€<span id="hm-prsi-balance-display">0.00</span></strong>.
-                            This is tracked separately from cash credit and is not auto-applied as patient cash.
+                            <div>PRSI entitlement available: <strong>€<span id="hm-prsi-balance-display">0.00</span></strong> (L: €<span id="hm-prsi-left-balance-display">0.00</span>, R: €<span id="hm-prsi-right-balance-display">0.00</span>).</div>
+                            <div id="hm-prsi-next-eligible" style="margin-top:4px;opacity:.9;display:none;"></div>
+                            <div style="margin-top:4px;">PRSI is tracked separately from cash credit and is not auto-applied as patient cash.</div>
                         </div>
                     </div>
 
@@ -2337,6 +2340,16 @@ class HearMed_Orders {
                     if (prsiBalance > 0) {
                         document.getElementById('hm-prsi-balance-row').style.display = '';
                         document.getElementById('hm-prsi-balance-display').textContent = prsiBalance.toFixed(2);
+                        document.getElementById('hm-prsi-left-balance-display').textContent = parseFloat(res.data.prsi_left_balance || 0).toFixed(2);
+                        document.getElementById('hm-prsi-right-balance-display').textContent = parseFloat(res.data.prsi_right_balance || 0).toFixed(2);
+                    }
+
+                    var leftNext = res.data.prsi_next_left_eligible || '';
+                    var rightNext = res.data.prsi_next_right_eligible || '';
+                    if (leftNext || rightNext) {
+                        var nextBox = document.getElementById('hm-prsi-next-eligible');
+                        nextBox.style.display = '';
+                        nextBox.textContent = 'Next PRSI claim eligibility - Left: ' + (leftNext || 'Now') + ', Right: ' + (rightNext || 'Now');
                     }
 
                     if (creditBalance <= 0) return;
@@ -2665,6 +2678,7 @@ class HearMed_Orders {
 
     public static function ajax_create_order() {
         check_ajax_referer('hm_nonce','nonce');
+        self::ensure_tracking_schema();
 
         $patient_id      = intval($_POST['patient_id'] ?? 0);
         $payment_method  = sanitize_text_field($_POST['payment_method'] ?? '');
@@ -2692,8 +2706,10 @@ class HearMed_Orders {
             $subtotal  += $gross - floatval($item['vat_amount']); // net (ex-VAT)
         }
 
+        $prsi_sources = self::resolve_prsi_sources_for_order( $patient_id, $prsi_left, $prsi_right );
+        $prsi_per_ear = self::prsi_per_ear_amount();
         $prsi_applicable = $prsi_left || $prsi_right;
-        $prsi_amount     = ($prsi_left ? 500 : 0) + ($prsi_right ? 500 : 0);
+        $prsi_amount     = ( $prsi_left ? $prsi_per_ear : 0 ) + ( $prsi_right ? $prsi_per_ear : 0 );
         // Prices are VAT-inclusive, so grand = net + vat - PRSI = gross - PRSI
         $grand_total     = max(0, $subtotal + $vat_total - $prsi_amount);
 
@@ -2729,6 +2745,8 @@ class HearMed_Orders {
             'prsi_amount'     => $prsi_amount,
             'prsi_left'       => $prsi_left,
             'prsi_right'      => $prsi_right,
+            'prsi_left_source'=> $prsi_sources['left'],
+            'prsi_right_source'=> $prsi_sources['right'],
             'payment_method'  => $payment_method,
             'deposit_amount'  => $deposit_amount > 0 ? $deposit_amount : 0,
             'deposit_method'  => $deposit_amount > 0 ? $deposit_method : null,
@@ -3090,6 +3108,7 @@ class HearMed_Orders {
 
     public static function ajax_save_serials() {
         check_ajax_referer('hm_nonce','nonce');
+        self::ensure_tracking_schema();
 
         $order_id = intval($_POST['order_id'] ?? 0);
         $items    = $_POST['items'] ?? [];
@@ -3132,12 +3151,16 @@ class HearMed_Orders {
             $serial_right = sanitize_text_field($data['right'] ?? '');
 
             if ($product_id && ($serial_left || $serial_right)) {
+                $coverage = self::build_device_coverage_dates( $product_id, date( 'Y-m-d' ) );
                 $db->insert('hearmed_core.patient_devices', [
                     'patient_id'          => $order->patient_id,
                     'product_id'          => $product_id,
                     'order_id'            => $order_id,
                     'serial_number_left'  => $serial_left  ?: null,
                     'serial_number_right' => $serial_right ?: null,
+                    'warranty_start_date' => $coverage['warranty_start_date'],
+                    'warranty_expiry'     => $coverage['warranty_expiry'],
+                    'return_guarantee_until' => $coverage['return_guarantee_until'],
                     'device_status'       => 'Active',
                     'created_by'          => $user->id ?? null,
                 ]);
@@ -3170,6 +3193,7 @@ class HearMed_Orders {
 
     public static function ajax_complete_order() {
         check_ajax_referer('hm_nonce','nonce');
+        self::ensure_tracking_schema();
 
         $order_id = intval($_POST['order_id'] ?? 0);
         $fit_date = sanitize_text_field($_POST['fit_date'] ?? date('Y-m-d'));
@@ -3229,12 +3253,16 @@ class HearMed_Orders {
                 $left  = sanitize_text_field($s['left']  ?? '');
                 $right = sanitize_text_field($s['right'] ?? '');
                 if ($pid && ($left || $right)) {
+                    $coverage = self::build_device_coverage_dates( $pid, $fit_date );
                     $db->insert('hearmed_core.patient_devices', [
                         'patient_id'          => $order->patient_id,
                         'product_id'          => $pid,
                         'order_id'            => $order_id,
                         'serial_number_left'  => $left  ?: null,
                         'serial_number_right' => $right ?: null,
+                        'warranty_start_date' => $coverage['warranty_start_date'],
+                        'warranty_expiry'     => $coverage['warranty_expiry'],
+                        'return_guarantee_until' => $coverage['return_guarantee_until'],
                         'device_status'       => 'Active',
                         'created_by'          => $user->id ?? null,
                     ]);
@@ -3359,6 +3387,9 @@ class HearMed_Orders {
         }
 
         $effective_invoice_id = $fitting_invoice_id ?: ( $order->invoice_id ?: null );
+
+        // Record per-ear PRSI entitlement consumption for auditable 4-year tracking.
+        self::record_prsi_entitlement_usage( $order, $effective_invoice_id, $user->id ?? null, $fit_date );
 
         // Ensure deposit is attached to this invoice once (deposit is order-specific, not reusable credit).
         if ( $deposit_paid > 0 && $effective_invoice_id ) {
@@ -3560,6 +3591,262 @@ class HearMed_Orders {
     // ═══════════════════════════════════════════════════════════════════════
     // HELPERS
     // ═══════════════════════════════════════════════════════════════════════
+
+    private static function ensure_tracking_schema() {
+        if ( self::$tracking_schema_ensured ) {
+            return;
+        }
+        self::$tracking_schema_ensured = true;
+
+        $db = HearMed_DB::instance();
+
+        $db->query( "ALTER TABLE hearmed_core.orders ADD COLUMN IF NOT EXISTS prsi_left_source VARCHAR(20)" );
+        $db->query( "ALTER TABLE hearmed_core.orders ADD COLUMN IF NOT EXISTS prsi_right_source VARCHAR(20)" );
+
+        $db->query( "ALTER TABLE hearmed_core.patient_devices ADD COLUMN IF NOT EXISTS warranty_start_date DATE" );
+        $db->query( "ALTER TABLE hearmed_core.patient_devices ADD COLUMN IF NOT EXISTS return_guarantee_until DATE" );
+
+        $db->query( "ALTER TABLE hearmed_reference.products ADD COLUMN IF NOT EXISTS warranty_months INTEGER" );
+        $db->query( "ALTER TABLE hearmed_reference.products ADD COLUMN IF NOT EXISTS return_guarantee_days INTEGER" );
+        $db->query( "UPDATE hearmed_reference.products SET return_guarantee_days = 60 WHERE return_guarantee_days IS NULL" );
+
+        $db->query(
+            "CREATE TABLE IF NOT EXISTS hearmed_core.prsi_entitlement_usage (
+                id BIGSERIAL PRIMARY KEY,
+                patient_id BIGINT NOT NULL,
+                order_id BIGINT,
+                invoice_id BIGINT,
+                ear_side VARCHAR(10) NOT NULL,
+                amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+                source_credit_note_id BIGINT,
+                status VARCHAR(20) NOT NULL DEFAULT 'applied',
+                applied_by BIGINT,
+                applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                notes TEXT
+            )"
+        );
+
+        $db->query(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_prsi_usage_order_ear_applied
+             ON hearmed_core.prsi_entitlement_usage(order_id, ear_side)
+             WHERE status = 'applied'"
+        );
+    }
+
+    private static function prsi_per_ear_amount() {
+        return (float) HearMed_Settings::get( 'hm_prsi_amount_per_ear', '500' );
+    }
+
+    private static function get_prsi_entitlement_by_ear( $patient_id ) {
+        $db = HearMed_DB::instance();
+
+        $issued = $db->get_row(
+            "SELECT
+                COALESCE(SUM(CASE
+                    WHEN LOWER(COALESCE(r.side, 'both')) = 'left' THEN COALESCE(cn.prsi_amount, 0)
+                    WHEN LOWER(COALESCE(r.side, 'both')) IN ('both', 'binaural') THEN COALESCE(cn.prsi_amount, 0) / 2.0
+                    ELSE 0
+                END), 0) AS left_issued,
+                COALESCE(SUM(CASE
+                    WHEN LOWER(COALESCE(r.side, 'both')) = 'right' THEN COALESCE(cn.prsi_amount, 0)
+                    WHEN LOWER(COALESCE(r.side, 'both')) IN ('both', 'binaural') THEN COALESCE(cn.prsi_amount, 0) / 2.0
+                    ELSE 0
+                END), 0) AS right_issued
+             FROM hearmed_core.credit_notes cn
+             LEFT JOIN hearmed_core.returns r ON r.credit_note_id = cn.id
+             WHERE cn.patient_id = $1
+               AND COALESCE(cn.refund_type, '') = 'credit'
+               AND COALESCE(cn.prsi_amount, 0) > 0",
+            [ (int) $patient_id ]
+        );
+
+        $used = $db->get_row(
+            "SELECT
+                COALESCE(SUM(CASE WHEN ear_side = 'left' THEN amount ELSE 0 END), 0) AS left_used,
+                COALESCE(SUM(CASE WHEN ear_side = 'right' THEN amount ELSE 0 END), 0) AS right_used
+             FROM hearmed_core.prsi_entitlement_usage
+             WHERE patient_id = $1 AND status = 'applied'",
+            [ (int) $patient_id ]
+        );
+
+        return [
+            'left'  => max( 0, (float) ( $issued->left_issued ?? 0 ) - (float) ( $used->left_used ?? 0 ) ),
+            'right' => max( 0, (float) ( $issued->right_issued ?? 0 ) - (float) ( $used->right_used ?? 0 ) ),
+        ];
+    }
+
+    private static function get_prsi_last_new_claim_dates( $patient_id ) {
+        $row = HearMed_DB::get_row(
+            "SELECT
+                MAX(CASE WHEN o.prsi_left IS TRUE
+                            AND COALESCE(o.prsi_left_source, 'new_claim') = 'new_claim'
+                         THEN COALESCE(o.fitted_at::date, o.order_date)
+                    END) AS left_last,
+                MAX(CASE WHEN o.prsi_right IS TRUE
+                            AND COALESCE(o.prsi_right_source, 'new_claim') = 'new_claim'
+                         THEN COALESCE(o.fitted_at::date, o.order_date)
+                    END) AS right_last
+             FROM hearmed_core.orders o
+             WHERE o.patient_id = $1
+               AND COALESCE(o.current_status, '') <> 'Cancelled'",
+            [ (int) $patient_id ]
+        );
+
+        return [
+            'left'  => $row->left_last ?? null,
+            'right' => $row->right_last ?? null,
+        ];
+    }
+
+    private static function next_prsi_date( $last_date ) {
+        if ( ! $last_date ) {
+            return null;
+        }
+        try {
+            $d = new DateTime( $last_date );
+            $d->modify( '+4 years' );
+            return $d->format( 'Y-m-d' );
+        } catch ( \Exception $e ) {
+            return null;
+        }
+    }
+
+    private static function resolve_prsi_sources_for_order( $patient_id, $prsi_left, $prsi_right ) {
+        $per_ear = self::prsi_per_ear_amount();
+        $pool = self::get_prsi_entitlement_by_ear( $patient_id );
+        $claims = self::get_prsi_last_new_claim_dates( $patient_id );
+
+        $sources = [ 'left' => null, 'right' => null ];
+
+        foreach ( [ 'left' => $prsi_left, 'right' => $prsi_right ] as $ear => $selected ) {
+            if ( ! $selected ) {
+                continue;
+            }
+
+            $available_entitlement = (float) ( $pool[ $ear ] ?? 0 );
+            if ( $available_entitlement + 0.009 >= $per_ear ) {
+                $sources[ $ear ] = 'entitlement';
+                $pool[ $ear ] = max( 0, $available_entitlement - $per_ear );
+                continue;
+            }
+
+            $next_date = self::next_prsi_date( $claims[ $ear ] ?? null );
+            if ( $next_date ) {
+                $today = new DateTime( 'today' );
+                $eligible = new DateTime( $next_date );
+                if ( $today < $eligible ) {
+                    $label = ucfirst( $ear );
+                    wp_send_json_error( $label . ' ear is not PRSI-eligible until ' . $next_date . '. Use available entitlement credit for that ear or remove PRSI for this order.' );
+                }
+            }
+
+            $sources[ $ear ] = 'new_claim';
+        }
+
+        return $sources;
+    }
+
+    private static function record_prsi_entitlement_usage( $order, $invoice_id, $staff_id, $fit_date ) {
+        $db = HearMed_DB::instance();
+        $per_ear = self::prsi_per_ear_amount();
+
+        $ear_map = [
+            'left'  => [ in_array( ( $order->prsi_left ?? false ), [ true, 1, '1', 't', 'true' ], true ), (string) ( $order->prsi_left_source ?? '' ) ],
+            'right' => [ in_array( ( $order->prsi_right ?? false ), [ true, 1, '1', 't', 'true' ], true ), (string) ( $order->prsi_right_source ?? '' ) ],
+        ];
+
+        foreach ( $ear_map as $ear => $cfg ) {
+            list( $enabled, $source ) = $cfg;
+            if ( ! $enabled || $source !== 'entitlement' ) {
+                continue;
+            }
+
+            $exists = (int) $db->get_var(
+                "SELECT id FROM hearmed_core.prsi_entitlement_usage
+                 WHERE order_id = $1 AND ear_side = $2 AND status = 'applied'
+                 LIMIT 1",
+                [ (int) $order->id, $ear ]
+            );
+            if ( $exists ) {
+                continue;
+            }
+
+            $db->insert( 'hearmed_core.prsi_entitlement_usage', [
+                'patient_id' => (int) $order->patient_id,
+                'order_id'   => (int) $order->id,
+                'invoice_id' => $invoice_id ? (int) $invoice_id : null,
+                'ear_side'   => $ear,
+                'amount'     => $per_ear,
+                'applied_by' => $staff_id ?: null,
+                'applied_at' => ( $fit_date ?: date( 'Y-m-d' ) ) . ' 00:00:00',
+                'status'     => 'applied',
+                'notes'      => 'Applied to fitting as PRSI entitlement reuse',
+            ] );
+        }
+    }
+
+    private static function get_product_coverage_terms( $product_id ) {
+        $db = HearMed_DB::instance();
+        $row = $db->get_row(
+            "SELECT p.warranty_months, p.return_guarantee_days,
+                    COALESCE(m.warranty_terms, '') AS manufacturer_warranty_terms
+             FROM hearmed_reference.products p
+             LEFT JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
+             WHERE p.id = $1",
+            [ (int) $product_id ]
+        );
+
+        $warranty_months = (int) ( $row->warranty_months ?? 0 );
+        if ( $warranty_months <= 0 ) {
+            $terms = (string) ( $row->manufacturer_warranty_terms ?? '' );
+            if ( $terms && preg_match( '/(\d+)\s*month/i', $terms, $mm ) ) {
+                $warranty_months = (int) $mm[1];
+            } elseif ( $terms && preg_match( '/(\d+)\s*year/i', $terms, $my ) ) {
+                $warranty_months = (int) $my[1] * 12;
+            }
+        }
+
+        $return_days = (int) ( $row->return_guarantee_days ?? 60 );
+        if ( $return_days <= 0 ) {
+            $return_days = 60;
+        }
+
+        return [
+            'warranty_months' => $warranty_months,
+            'return_days'     => $return_days,
+        ];
+    }
+
+    private static function build_device_coverage_dates( $product_id, $fit_date ) {
+        $terms = self::get_product_coverage_terms( $product_id );
+        $fit = $fit_date ?: date( 'Y-m-d' );
+
+        $warranty_start = $fit;
+        $warranty_expiry = null;
+        $return_until = null;
+
+        try {
+            $base = new DateTime( $fit );
+            $ret = clone $base;
+            $ret->modify( '+' . (int) $terms['return_days'] . ' days' );
+            $return_until = $ret->format( 'Y-m-d' );
+
+            $months = (int) $terms['warranty_months'];
+            if ( $months > 0 ) {
+                $w = clone $base;
+                $w->modify( '+' . $months . ' months' );
+                $warranty_expiry = $w->format( 'Y-m-d' );
+            }
+        } catch ( \Exception $e ) {
+            // Keep null dates if parsing fails.
+        }
+
+        return [
+            'warranty_start_date'    => $warranty_start,
+            'warranty_expiry'        => $warranty_expiry,
+            'return_guarantee_until' => $return_until,
+        ];
+    }
 
     private static function log_status_change( $order_id, $from, $to, $changed_by, $notes = '' ) {
         HearMed_DB::instance()->insert('hearmed_core.order_status_history', [
@@ -4389,6 +4676,7 @@ class HearMed_Orders {
      */
     public static function ajax_get_patient_credit_balance() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
+        self::ensure_tracking_schema();
         $patient_id = intval( $_POST['patient_id'] ?? 0 );
         if ( ! $patient_id ) wp_send_json_error( 'No patient.' );
 
@@ -4396,19 +4684,20 @@ class HearMed_Orders {
             ? HearMed_Finance::get_patient_credit_balance( $patient_id )
             : 0;
 
-        // PRSI credits are reported separately from spendable cash credit.
-        $prsi_balance = (float) HearMed_DB::get_var(
-            "SELECT COALESCE(SUM(GREATEST(COALESCE(cn.prsi_amount, 0), 0)), 0)
-               FROM hearmed_core.credit_notes cn
-              WHERE cn.patient_id = $1
-                AND COALESCE(cn.refund_type, '') = 'credit'",
-            [ $patient_id ]
-        );
+        $prsi_pool = self::get_prsi_entitlement_by_ear( $patient_id );
+        $prsi_balance = (float) ( $prsi_pool['left'] + $prsi_pool['right'] );
+        $claims = self::get_prsi_last_new_claim_dates( $patient_id );
+        $left_next = self::next_prsi_date( $claims['left'] ?? null );
+        $right_next = self::next_prsi_date( $claims['right'] ?? null );
 
         wp_send_json_success( [
             'balance'      => number_format( $cash_balance, 2, '.', '' ),
             'cash_balance' => number_format( $cash_balance, 2, '.', '' ),
             'prsi_balance' => number_format( $prsi_balance, 2, '.', '' ),
+            'prsi_left_balance'  => number_format( (float) $prsi_pool['left'], 2, '.', '' ),
+            'prsi_right_balance' => number_format( (float) $prsi_pool['right'], 2, '.', '' ),
+            'prsi_next_left_eligible'  => $left_next,
+            'prsi_next_right_eligible' => $right_next,
         ] );
     }
 
