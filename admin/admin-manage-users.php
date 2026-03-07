@@ -131,6 +131,24 @@ class HearMed_Admin_Manage_Users {
         <style>
         /* Staff page specific styles */
         .hm-staff-table th, .hm-staff-table td { vertical-align:middle; }
+        .hm-staff-table th, .hm-staff-table td { white-space:nowrap; }
+        .hm-staff-table .hm-staff-member-line {
+            display:flex;
+            align-items:center;
+            gap:10px;
+            min-width:0;
+            flex-wrap:nowrap;
+        }
+        .hm-staff-table .hm-staff-member-name { font-weight:700; color:var(--hm-navy,#0f172a); }
+        .hm-staff-table .hm-staff-chip {
+            font-size:12px;
+            color:var(--hm-text-light,#64748b);
+            background:#f8fafc;
+            border:1px solid #e2e8f0;
+            border-radius:999px;
+            padding:2px 8px;
+            line-height:1.4;
+        }
         .hm-staff-meta { font-size:12px; color:var(--hm-text-light,#64748b); line-height:1.4; }
         .hm-staff-meta strong { color:var(--hm-text,#1e293b); }
         .hm-auth-badges { display:flex; gap:4px; flex-wrap:wrap; }
@@ -176,6 +194,7 @@ class HearMed_Admin_Manage_Users {
                         <th>Staff Member</th>
                         <th>Role</th>
                         <th>Clinics</th>
+                        <th>Primary Clinic</th>
                         <th>Auth Status</th>
                         <th style="width:130px"></th>
                     </tr>
@@ -185,14 +204,18 @@ class HearMed_Admin_Manage_Users {
                     $payload_json = json_encode($u, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
                     $name = trim($u['first_name'] . ' ' . $u['last_name']);
                     $row_class = $u['is_active'] ? '' : ' hm-staff-row--inactive';
+                    $primary_clinic_name = '—';
+                    if (!empty($u['primary_clinic_id']) && isset($clinic_map[(int)$u['primary_clinic_id']])) {
+                        $primary_clinic_name = $clinic_map[(int)$u['primary_clinic_id']];
+                    }
                 ?>
                     <tr class="<?php echo $row_class; ?>">
                         <td>
-                            <strong><?php echo esc_html($name); ?></strong>
-                            <div class="hm-staff-meta">
-                                <?php echo esc_html($u['email']); ?>
-                                <?php if ($u['phone']): ?><br><?php echo esc_html($u['phone']); ?><?php endif; ?>
-                                <?php if ($u['employee_number']): ?><br>Emp #<?php echo esc_html($u['employee_number']); ?><?php endif; ?>
+                            <div class="hm-staff-member-line">
+                                <span class="hm-staff-member-name"><?php echo esc_html($name); ?></span>
+                                <?php if (!empty($u['email'])): ?><span class="hm-staff-chip"><?php echo esc_html($u['email']); ?></span><?php endif; ?>
+                                <?php if (!empty($u['phone'])): ?><span class="hm-staff-chip"><?php echo esc_html($u['phone']); ?></span><?php endif; ?>
+                                <?php if (!empty($u['employee_number'])): ?><span class="hm-staff-chip">Emp #<?php echo esc_html($u['employee_number']); ?></span><?php endif; ?>
                             </div>
                         </td>
                         <td>
@@ -212,6 +235,7 @@ class HearMed_Admin_Manage_Users {
                                 <span style="color:var(--hm-text-light)">—</span>
                             <?php endif; ?>
                         </td>
+                        <td><?php echo esc_html($primary_clinic_name); ?></td>
                         <td>
                             <div class="hm-auth-badges">
                                 <?php if (!$u['is_active']): ?>
