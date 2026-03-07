@@ -958,10 +958,24 @@
 .hm-modal-ft {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 14px 22px;
   border-top: 1px solid #e2e8f0;
   background: #f8fafc;
+}
+
+.hm-modal-ft .hm-modal-acts {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.hm-modal-ft > :first-child:not(.hm-btn):not(.hm-modal-acts) {
+  margin-right: auto;
 }
 
 /* Form rows (side-by-side fields) */

@@ -1242,15 +1242,23 @@
 .hm-modal-ft {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 14px 20px;
   border-top: 1px solid var(--hm-border, #e2e8f0);
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .hm-modal-acts {
   display: flex;
   gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.hm-modal-ft > :first-child:not(.hm-btn):not(.hm-modal-acts) {
+  margin-right: auto;
 }
 
 /* ── Form Elements ── */

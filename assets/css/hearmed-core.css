@@ -472,9 +472,10 @@
   padding: 12px 20px;
   border-top: 1px solid var(--hm-border);
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 #hm-app .hm-close {
   width: 28px;
@@ -644,15 +645,24 @@
   padding: 12px 20px;
   border-top: 1px solid var(--hm-border, #e2e8f0);
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .hm-modal-ft .hm-modal-acts,
 .hm-modal-ft > :last-child {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+.hm-modal-ft .hm-modal-acts {
+  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.hm-modal-ft > :first-child:not(.hm-btn):not(.hm-modal-acts) {
+  margin-right: auto;
 }
 .hm-modal-ft .hm-btn { flex-shrink: 0; white-space: nowrap; }
 
