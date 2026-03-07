@@ -43,6 +43,57 @@ function hm_repairs_render() {
 
 class HearMed_Repairs {
 
+    /**
+     * Resolve the terminal repair status value accepted by the live DB check constraint.
+     */
+    private static function resolve_completion_status( $db ): string {
+        static $cached = null;
+        if ( is_string( $cached ) && $cached !== '' ) {
+            return $cached;
+        }
+
+        $candidates = [ 'Completed', 'Complete', 'Collected', 'Returned', 'Closed' ];
+        $known      = array_fill_keys( array_merge( [ 'Booked', 'Sent', 'Received' ], $candidates ), true );
+
+        $defs = $db->get_results(
+            "SELECT pg_get_constraintdef(c.oid) AS def
+             FROM pg_constraint c
+             JOIN pg_class t ON c.conrelid = t.oid
+             JOIN pg_namespace n ON n.oid = t.relnamespace
+             WHERE n.nspname = 'hearmed_core'
+               AND t.relname = 'repairs'
+               AND c.contype = 'c'"
+        );
+
+        $allowed = [];
+        if ( is_array( $defs ) ) {
+            foreach ( $defs as $d ) {
+                $def = (string) ( $d->def ?? '' );
+                if ( stripos( $def, 'repair_status' ) === false ) {
+                    continue;
+                }
+                if ( preg_match_all( "/'([^']+)'/", $def, $m ) ) {
+                    foreach ( $m[1] as $lit ) {
+                        if ( isset( $known[ $lit ] ) ) {
+                            $allowed[ $lit ] = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach ( $candidates as $candidate ) {
+            if ( isset( $allowed[ $candidate ] ) ) {
+                $cached = $candidate;
+                return $cached;
+            }
+        }
+
+        // Safe fallback if constraint introspection is unavailable.
+        $cached = 'Complete';
+        return $cached;
+    }
+
     public static function init() {
         add_shortcode("hearmed_repairs", [__CLASS__, "render"]);
         add_action("wp_ajax_hm_get_all_repairs",       [__CLASS__, "ajax_get_all"]);
@@ -237,16 +288,17 @@ class HearMed_Repairs {
         $rid    = intval( $_POST['_ID']    ?? 0 );
         $status = sanitize_text_field( $_POST['status'] ?? '' );
 
-        // UI may send either label; DB check constraint expects "Complete".
-        if ( $status === 'Completed' ) {
-            $status = 'Complete';
-        }
-
         if ( ! $rid )    wp_send_json_error('Missing repair ID');
         if ( ! $status ) wp_send_json_error('Missing status');
 
         $db      = HearMed_DB::instance();
         $user_id = PortalAuth::staff_id();
+        $completion_status = self::resolve_completion_status( $db );
+
+        // UI may send either label; map to DB-accepted terminal status value.
+        if ( $status === 'Completed' || $status === 'Complete' ) {
+            $status = $completion_status;
+        }
 
         $repair = $db->get_row(
             "SELECT id, repair_status FROM hearmed_core.repairs WHERE id = \$1",
@@ -260,7 +312,7 @@ class HearMed_Repairs {
         $valid = [
             'Booked'   => 'Sent',
             'Sent'     => 'Received',
-            'Received' => 'Complete',
+            'Received' => $completion_status,
         ];
         if ( ! isset( $valid[ $from ] ) || $valid[ $from ] !== $status ) {
             wp_send_json_error( "Invalid transition: {$from} → {$status}" );
@@ -300,7 +352,7 @@ class HearMed_Repairs {
         } elseif ( $status === 'Received' ) {
             $fields['date_received'] = date('Y-m-d');
 
-        } elseif ( $status === 'Complete' ) {
+        } elseif ( $status === $completion_status ) {
             $has_completed = $db->get_var(
                 "SELECT 1 FROM information_schema.columns
                  WHERE table_schema='hearmed_core' AND table_name='repairs' AND column_name='completed_date'"

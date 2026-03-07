@@ -2950,14 +2950,16 @@ function hm_ajax_update_repair_status() {
     $id     = intval( $_POST['_ID'] ?? 0 );
     $status = sanitize_text_field( $_POST['status'] ?? '' );
 
-    // Accept both labels; DB check constraint expects "Complete".
-    if ( $status === 'Completed' ) {
-        $status = 'Complete';
+    $db = HearMed_DB::instance();
+    $completion_status = hm_resolve_repair_completion_status( $db );
+
+    // Accept both labels and map to the DB-allowed terminal status value.
+    if ( $status === 'Completed' || $status === 'Complete' ) {
+        $status = $completion_status;
     }
 
     if ( ! $id || ! $status ) wp_send_json_error( 'Missing repair ID or status' );
 
-    $db       = HearMed_DB::instance();
     $staff_id = hm_patient_staff_id();
 
     $update = [
@@ -2972,7 +2974,7 @@ function hm_ajax_update_repair_status() {
     } elseif ( $status === 'Received' ) {
         $update['date_received'] = sanitize_text_field( $_POST['date_received'] ?? date( 'Y-m-d' ) );
         $update['received_by']   = $staff_id ?: null;
-    } elseif ( $status === 'Complete' ) {
+    } elseif ( $status === $completion_status ) {
         // If complete is clicked directly after Received, preserve return date if already set.
         $update['date_received'] = sanitize_text_field( $_POST['date_received'] ?? date( 'Y-m-d' ) );
 
@@ -2991,7 +2993,7 @@ function hm_ajax_update_repair_status() {
         wp_send_json_error( 'Failed to update repair status: ' . ( HearMed_DB::last_error() ?: 'Unknown error' ) );
     }
 
-    if ( $status === 'Complete' ) {
+    if ( $status === $completion_status ) {
         $repair = $db->get_row(
             "SELECT id, patient_id, repair_number, COALESCE(date_received::text, '') AS date_received
              FROM hearmed_core.repairs
@@ -3030,6 +3032,56 @@ function hm_ajax_update_repair_status() {
 
     hm_patient_audit( 'UPDATE_REPAIR_STATUS', 'repair', $id, [ 'status' => $status ] );
     wp_send_json_success( true );
+}
+
+/**
+ * Resolve the terminal repair status supported by the live DB check constraint.
+ */
+function hm_resolve_repair_completion_status( $db ) {
+    static $cached = null;
+    if ( is_string( $cached ) && $cached !== '' ) {
+        return $cached;
+    }
+
+    $candidates = [ 'Completed', 'Complete', 'Collected', 'Returned', 'Closed' ];
+    $known      = array_fill_keys( array_merge( [ 'Booked', 'Sent', 'Received' ], $candidates ), true );
+
+    $defs = $db->get_results(
+        "SELECT pg_get_constraintdef(c.oid) AS def
+         FROM pg_constraint c
+         JOIN pg_class t ON c.conrelid = t.oid
+         JOIN pg_namespace n ON n.oid = t.relnamespace
+         WHERE n.nspname = 'hearmed_core'
+           AND t.relname = 'repairs'
+           AND c.contype = 'c'"
+    );
+
+    $allowed = [];
+    if ( is_array( $defs ) ) {
+        foreach ( $defs as $d ) {
+            $def = (string) ( $d->def ?? '' );
+            if ( stripos( $def, 'repair_status' ) === false ) {
+                continue;
+            }
+            if ( preg_match_all( "/'([^']+)'/", $def, $m ) ) {
+                foreach ( $m[1] as $lit ) {
+                    if ( isset( $known[ $lit ] ) ) {
+                        $allowed[ $lit ] = true;
+                    }
+                }
+            }
+        }
+    }
+
+    foreach ( $candidates as $candidate ) {
+        if ( isset( $allowed[ $candidate ] ) ) {
+            $cached = $candidate;
+            return $cached;
+        }
+    }
+
+    $cached = 'Complete';
+    return $cached;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
