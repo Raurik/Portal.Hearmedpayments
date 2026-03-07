@@ -2142,12 +2142,12 @@ class HearMed_Orders {
                         </div>
                     </div>
 
-                    <!-- Patient credit application -->
+                    <!-- Patient cash credit application -->
                     <div id="hm-credit-available-row" style="display:none;margin-bottom:14px">
                         <div style="padding:12px 16px;background:#f0fdfe;border:1px solid #a5f3fc;border-radius:8px;margin-bottom:4px;">
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <div>
-                                    <span style="font-size:13px;font-weight:600;color:#0e7490;">Patient has available credit</span>
+                                    <span style="font-size:13px;font-weight:600;color:#0e7490;">Patient cash credit available</span>
                                     <span style="font-size:16px;font-weight:700;color:#0e7490;margin-left:8px;">
                                         €<span id="hm-credit-balance-display">0.00</span>
                                     </span>
@@ -2170,6 +2170,13 @@ class HearMed_Orders {
                             </div>
                         </div>
                         <input type="hidden" id="hm-credit-apply-value" name="credit_apply_amount" value="0">
+                    </div>
+
+                    <div id="hm-prsi-balance-row" style="display:none;margin-bottom:14px">
+                        <div style="padding:12px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;color:#1e3a8a;">
+                            PRSI entitlement available: <strong>€<span id="hm-prsi-balance-display">0.00</span></strong>.
+                            This is tracked separately from cash credit and is not auto-applied as patient cash.
+                        </div>
                     </div>
 
                     <?php if ($has_missing_serials) : ?>
@@ -2320,10 +2327,19 @@ class HearMed_Orders {
                 .then(function(r){return r.json();})
                 .then(function(res){
                     if (!res.success) return;
-                    var creditBalance = parseFloat(res.data.balance);
+                    var creditBalance = parseFloat(res.data.cash_balance || res.data.balance || 0);
+                    var prsiBalance = parseFloat(res.data.prsi_balance || 0);
+                    if (creditBalance > 0) {
+                        document.getElementById('hm-credit-available-row').style.display = '';
+                        document.getElementById('hm-credit-balance-display').textContent = creditBalance.toFixed(2);
+                    }
+
+                    if (prsiBalance > 0) {
+                        document.getElementById('hm-prsi-balance-row').style.display = '';
+                        document.getElementById('hm-prsi-balance-display').textContent = prsiBalance.toFixed(2);
+                    }
+
                     if (creditBalance <= 0) return;
-                    document.getElementById('hm-credit-available-row').style.display = '';
-                    document.getElementById('hm-credit-balance-display').textContent = creditBalance.toFixed(2);
 
                     document.getElementById('hm-apply-credit-cb').addEventListener('change', function(){
                         var detail = document.getElementById('hm-credit-apply-detail');
@@ -4376,11 +4392,24 @@ class HearMed_Orders {
         $patient_id = intval( $_POST['patient_id'] ?? 0 );
         if ( ! $patient_id ) wp_send_json_error( 'No patient.' );
 
-        $balance = class_exists( 'HearMed_Finance' )
+        $cash_balance = class_exists( 'HearMed_Finance' )
             ? HearMed_Finance::get_patient_credit_balance( $patient_id )
             : 0;
 
-        wp_send_json_success( [ 'balance' => number_format( $balance, 2, '.', '' ) ] );
+        // PRSI credits are reported separately from spendable cash credit.
+        $prsi_balance = (float) HearMed_DB::get_var(
+            "SELECT COALESCE(SUM(GREATEST(COALESCE(cn.prsi_amount, 0), 0)), 0)
+               FROM hearmed_core.credit_notes cn
+              WHERE cn.patient_id = $1
+                AND COALESCE(cn.refund_type, '') = 'credit'",
+            [ $patient_id ]
+        );
+
+        wp_send_json_success( [
+            'balance'      => number_format( $cash_balance, 2, '.', '' ),
+            'cash_balance' => number_format( $cash_balance, 2, '.', '' ),
+            'prsi_balance' => number_format( $prsi_balance, 2, '.', '' ),
+        ] );
     }
 
     public static function ajax_get_order_products() {

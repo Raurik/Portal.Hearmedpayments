@@ -132,18 +132,11 @@ class HearMed_Finance {
      */
     public static function get_patient_credit_balance( $patient_id ) {
         $val = HearMed_DB::get_var(
-            "SELECT COALESCE(SUM(
-                    GREATEST(
-                        (COALESCE(cn.patient_refund_amount, pc.amount, 0) + COALESCE(cn.prsi_amount, 0))
-                        - COALESCE(pc.used_amount, 0),
-                        0
-                    )
-                ), 0)
-               FROM hearmed_core.patient_credits pc
-               LEFT JOIN hearmed_core.credit_notes cn ON cn.id = pc.credit_note_id
-              WHERE pc.patient_id = $1
-                AND pc.status = 'active'
-                AND (pc.notes IS NULL OR pc.notes NOT ILIKE 'Deposit at order creation%')",
+            "SELECT COALESCE(SUM(GREATEST(amount - COALESCE(used_amount, 0), 0)), 0)
+               FROM hearmed_core.patient_credits
+              WHERE patient_id = $1
+                AND status = 'active'
+                AND (notes IS NULL OR notes NOT ILIKE 'Deposit at order creation%')",
             [ (int) $patient_id ]
         );
         return (float) $val;
@@ -163,10 +156,8 @@ class HearMed_Finance {
         if ( $status === 'all' ) {
             return HearMed_DB::get_results(
                 "SELECT pc.*, o.order_number,
-                        (COALESCE(cn.patient_refund_amount, pc.amount, 0) + COALESCE(cn.prsi_amount, 0)) AS total_credit_amount,
-                        GREATEST((COALESCE(cn.patient_refund_amount, pc.amount, 0) + COALESCE(cn.prsi_amount, 0)) - COALESCE(pc.used_amount, 0), 0) AS remaining_amount
+                        GREATEST(pc.amount - COALESCE(pc.used_amount, 0), 0) AS remaining_amount
                    FROM hearmed_core.patient_credits pc
-                   LEFT JOIN hearmed_core.credit_notes cn ON cn.id = pc.credit_note_id
                    LEFT JOIN hearmed_core.orders o ON o.id = pc.order_id
                                     WHERE pc.patient_id = $1
                                         AND (pc.notes IS NULL OR pc.notes NOT ILIKE 'Deposit at order creation%')
@@ -177,10 +168,8 @@ class HearMed_Finance {
 
         return HearMed_DB::get_results(
             "SELECT pc.*, o.order_number,
-                    (COALESCE(cn.patient_refund_amount, pc.amount, 0) + COALESCE(cn.prsi_amount, 0)) AS total_credit_amount,
-                    GREATEST((COALESCE(cn.patient_refund_amount, pc.amount, 0) + COALESCE(cn.prsi_amount, 0)) - COALESCE(pc.used_amount, 0), 0) AS remaining_amount
+                    GREATEST(pc.amount - COALESCE(pc.used_amount, 0), 0) AS remaining_amount
                FROM hearmed_core.patient_credits pc
-               LEFT JOIN hearmed_core.credit_notes cn ON cn.id = pc.credit_note_id
                LEFT JOIN hearmed_core.orders o ON o.id = pc.order_id
                             WHERE pc.patient_id = $1
                                 AND pc.status = $2
@@ -270,16 +259,12 @@ class HearMed_Finance {
 
                 // 1. Fetch active credits oldest-first (FIFO)
                 $credits = HearMed_DB::get_results(
-                        "SELECT pc.id,
-                                        pc.amount,
-                                        COALESCE(pc.used_amount, 0) AS used_amount,
-                                        (COALESCE(cn.patient_refund_amount, pc.amount, 0) + COALESCE(cn.prsi_amount, 0)) AS total_credit_amount
-                             FROM hearmed_core.patient_credits pc
-                             LEFT JOIN hearmed_core.credit_notes cn ON cn.id = pc.credit_note_id
-                            WHERE pc.patient_id = $1
-                                AND pc.status = 'active'
-                                AND (pc.notes IS NULL OR pc.notes NOT ILIKE 'Deposit at order creation%')
-                            ORDER BY pc.created_at ASC",
+                        "SELECT id, amount, COALESCE(used_amount, 0) AS used_amount
+                             FROM hearmed_core.patient_credits
+                            WHERE patient_id = $1
+                                AND status = 'active'
+                                AND (notes IS NULL OR notes NOT ILIKE 'Deposit at order creation%')
+                            ORDER BY created_at ASC",
             [ $patient_id ]
         );
 
@@ -291,7 +276,7 @@ class HearMed_Finance {
             foreach ( $credits as $credit ) {
                 if ( $remaining <= 0 ) break;
 
-                $credit_amount = (float) ( $credit->total_credit_amount ?? $credit->amount );
+                $credit_amount = (float) $credit->amount;
                 $used_amount   = (float) ( $credit->used_amount ?? 0 );
                 $available     = max( 0, $credit_amount - $used_amount );
                 if ( $available <= 0 ) {
