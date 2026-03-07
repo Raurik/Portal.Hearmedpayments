@@ -616,6 +616,7 @@ function hm_ajax_get_patient() {
     // Warranty status for active devices (green/yellow/red)
     $warranty_status = 'none';
     $warranty_days   = null;
+    $warranty_end_date = '';
     $active_dev = $db->get_row(
         "SELECT MIN(warranty_expiry) AS earliest_expiry
          FROM hearmed_core.patient_devices
@@ -630,6 +631,7 @@ function hm_ajax_get_patient() {
         $wdiff = $now->diff( $wexp );
         $wdays = (int) $wdiff->format( '%r%a' );
         $warranty_days = $wdays;
+        $warranty_end_date = $wexp->format( 'Y-m-d' );
         if ( $wdays < 0 )        $warranty_status = 'expired';
         elseif ( $wdays <= 90 )  $warranty_status = 'expiring';
         else                      $warranty_status = 'active';
@@ -708,6 +710,7 @@ function hm_ajax_get_patient() {
         'show_audit'            => $is_admin,
         'warranty_status'       => $warranty_status,
         'warranty_days'         => $warranty_days,
+        'warranty_end_date'     => $warranty_end_date,
         'last_prsi_claim_date'  => $last_prsi_claim,
         'next_prsi_eligible_date' => $next_prsi_date,
     ];

@@ -390,10 +390,11 @@ function initProfile(){
         if(p.warranty_status&&p.warranty_status!=='none'){
             var wc=p.warranty_status==='expired'?'hm-badge--red':p.warranty_status==='expiring'?'hm-badge--amber':'hm-badge--green';
             var wl;
+            var warrantyTitle=p.warranty_end_date?'Warranty ends on '+fmtDate(p.warranty_end_date):'Warranty status';
             if(p.warranty_status==='expired'){wl='<span class="hm-dot-red"></span> Out of Warranty';}
             else if(p.warranty_status==='expiring'){wl='<span class="hm-dot-amber"></span> Warranty ends in '+fmtDaysRemaining(p.warranty_days);}
             else{wl='<span class="hm-dot-green"></span> Under Warranty';}
-            wh='<span class="hm-badge '+wc+'">'+wl+'</span>';
+            wh='<span class="hm-badge '+wc+'" title="'+esc(warrantyTitle)+'">'+wl+'</span>';
         }
         // Active/inactive indicator light
         var statusLight='<span class="hm-status-light '+(p.is_active?'hm-status-active':'hm-status-inactive')+'"></span>';
