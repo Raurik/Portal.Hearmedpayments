@@ -12,7 +12,12 @@ function euro(v){return '€'+parseFloat(v||0).toFixed(2);}
 function esc(s){if(!s)return '';var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 function fmtDate(d){if(!d)return '—';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
 function fmtDateTime(d){if(!d)return '—';var dt=new Date(d);return dt.toLocaleDateString('en-IE')+' '+dt.toLocaleTimeString('en-IE',{hour:'2-digit',minute:'2-digit'});}
-function fmtDaysRemaining(days){if(days===null||days===undefined)return '';days=Math.abs(parseInt(days,10));if(days>=365){var y=Math.floor(days/365);return y+'yr'+(y>1?'s':'');}if(days>=30){var m=Math.floor(days/30);return m+'mo';}return days+'d';}
+function fmtDaysRemaining(days){
+    if(days===null||days===undefined)return '';
+    days=Math.abs(parseInt(days,10));
+    if(!Number.isFinite(days))return '';
+    return days+' day'+(days===1?'':'s');
+}
 function hearingAidLabel(item){
     if(!item)return '';
     var name=(item.display_name||item.product_name||item.item_description||'').trim();
