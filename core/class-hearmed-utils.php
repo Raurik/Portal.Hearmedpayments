@@ -92,6 +92,34 @@ class HearMed_Utils {
     public static function money( $amount, $currency = '€' ) {
         return $currency . number_format( (float) $amount, 2 );
     }
+
+    /**
+     * Format a hearing-aid label as model + tech level.
+     *
+     * Avoids duplicating the tech level if it is already present in the base name.
+     *
+     * @param string $product_name Base product/model name.
+     * @param string $tech_level   Technology level.
+     * @return string
+     */
+    public static function format_hearing_aid_label( $product_name, $tech_level = '' ) {
+        $product_name = trim( (string) $product_name );
+        $tech_level   = trim( (string) $tech_level );
+
+        if ( $product_name === '' ) {
+            return $tech_level;
+        }
+
+        if ( $tech_level === '' ) {
+            return $product_name;
+        }
+
+        if ( stripos( $product_name, $tech_level ) !== false ) {
+            return $product_name;
+        }
+
+        return trim( $product_name . ' ' . $tech_level );
+    }
     
     /**
      * Get clinic name by ID

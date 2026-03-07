@@ -21,6 +21,14 @@
     console.log('[HM Repairs] Using ajaxUrl:', ajaxUrl, 'nonce:', nonce ? 'present' : 'MISSING');
 
     function esc(s) { return $('<span>').text(s || '').html(); }
+    function hearingAidLabel(item) {
+        if (!item) return '';
+        var name = String(item.display_name || item.product_name || '').trim();
+        var tech = String(item.tech_level || '').trim();
+        if (!name) return tech;
+        if (!tech) return name;
+        return name.toLowerCase().indexOf(tech.toLowerCase()) !== -1 ? name : (name + ' ' + tech);
+    }
     function fmtDate(d) {
         if (!d || d === 'null') return '—';
         var p = String(d).split('-');
@@ -109,7 +117,7 @@
             if (status && x.status !== status) return false;
             if (clinic && String(x.clinic_id) !== String(clinic)) return false;
             if (q) {
-                var hay = (x.repair_number || '') + ' ' + (x.patient_name || '') + ' ' + (x.patient_number || '') + ' ' + (x.product_name || '') + ' ' + (x.manufacturer_name || '');
+                var hay = (x.repair_number || '') + ' ' + (x.patient_name || '') + ' ' + (x.patient_number || '') + ' ' + hearingAidLabel(x) + ' ' + (x.manufacturer_name || '');
                 if (hay.toLowerCase().indexOf(q) === -1) return false;
             }
             return true;
@@ -142,7 +150,7 @@
                 '<td><code class="hm-pt-hnum">' + esc(x.repair_number || '—') + '</code></td>' +
                 '<td><a href="/patients/?id=' + x.patient_id + '" style="color:var(--hm-teal);">' + esc(x.patient_name) + '</a>' + (x.patient_number ? ' <span style="color:#94a3b8;font-size:11px;">' + esc(x.patient_number) + '</span>' : '') + '</td>' +
                 '<td style="font-size:12px;">' + esc(x.clinic_name || '—') + '</td>' +
-                '<td>' + esc(x.product_name || '—') + '</td>' +
+                '<td>' + esc(hearingAidLabel(x) || '—') + '</td>' +
                 '<td>' + esc(x.manufacturer_name || '—') + '</td>' +
                 '<td style="font-size:12px;font-family:monospace;">' + esc(x.serial_number || '—') + '</td>' +
                 '<td style="font-size:13px;">' + esc(x.repair_reason || '—') + '</td>' +

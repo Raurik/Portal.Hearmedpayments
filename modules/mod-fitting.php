@@ -572,7 +572,7 @@ function hm_render_fitting_page() {
                     var earClass = earLabel === 'Left' ? 'hmf-serial-ear-left' : (earLabel === 'Right' ? 'hmf-serial-ear-right' : 'hmf-serial-ear-binaural');
 
                     html += '<div class="hmf-serial-item">';
-                    html += '<div class="hmf-serial-item-title">' + hmFE(it.product_name) + ' <span class="hmf-serial-ear ' + earClass + '">' + hmFE(earLabel) + '</span></div>';
+                    html += '<div class="hmf-serial-item-title">' + hmFE(it.display_name || it.product_name) + ' <span class="hmf-serial-ear ' + earClass + '">' + hmFE(earLabel) + '</span></div>';
 
                     if (earLabel === 'Left' || earLabel === 'Binaural') {
                         html += '<div class="hm-form-group">';
@@ -966,7 +966,8 @@ function hm_ajax_fitting_load() {
         if ($o->current_status === 'Ordered') {
             $items_raw = $db->get_results(
                 "SELECT oi.id, oi.item_id AS product_id, oi.ear_side,
-                        COALESCE(pr.product_name, oi.item_description) AS product_name
+                    COALESCE(pr.product_name, oi.item_description) AS product_name,
+                    COALESCE(pr.tech_level, '') AS tech_level
                  FROM hearmed_core.order_items oi
                  LEFT JOIN hearmed_reference.products pr ON pr.id = oi.item_id AND oi.item_type = 'product'
                  WHERE oi.order_id = \$1 AND oi.item_type = 'product'
@@ -979,6 +980,8 @@ function hm_ajax_fitting_load() {
                     'product_id'   => (int)$it->product_id,
                     'ear_side'     => $it->ear_side ?? '',
                     'product_name' => $it->product_name ?? '',
+                    'display_name' => HearMed_Utils::format_hearing_aid_label( $it->product_name ?? '', $it->tech_level ?? '' ),
+                    'tech_level'   => $it->tech_level ?? '',
                 ];
             }
         }
@@ -1573,7 +1576,8 @@ function hm_ajax_fitting_receipt() {
     $inv_number = $invoice ? $invoice->invoice_number : $order->order_number;
 
     $items = $db->get_results(
-        "SELECT ii.*, COALESCE(pr.product_name, ii.item_description) AS product_name
+        "SELECT ii.*, COALESCE(pr.product_name, ii.item_description) AS product_name,
+                COALESCE(pr.tech_level, '') AS tech_level
          FROM hearmed_core.invoice_items ii
          LEFT JOIN hearmed_reference.products pr ON pr.id = ii.item_id AND ii.item_type = 'product'
          WHERE ii.invoice_id = \$1
@@ -1585,13 +1589,20 @@ function hm_ajax_fitting_receipt() {
         $items = $db->get_results(
             "SELECT oi.line_number, oi.item_description, oi.quantity, oi.unit_retail_price AS unit_price,
                     oi.line_total, oi.ear_side, oi.item_type, oi.item_id,
-                    COALESCE(pr.product_name, oi.item_description) AS product_name
+                    COALESCE(pr.product_name, oi.item_description) AS product_name,
+                    COALESCE(pr.tech_level, '') AS tech_level
              FROM hearmed_core.order_items oi
              LEFT JOIN hearmed_reference.products pr ON pr.id = oi.item_id AND oi.item_type = 'product'
              WHERE oi.order_id = \$1
              ORDER BY oi.line_number",
             [$order_id]
         );
+    }
+
+    foreach ( (array) $items as $item ) {
+        $item->display_name = ( $item->item_type ?? '' ) === 'product'
+            ? HearMed_Utils::format_hearing_aid_label( $item->product_name ?? $item->item_description ?? '', $item->tech_level ?? '' )
+            : ( $item->item_description ?? $item->product_name ?? '' );
     }
 
     $payments = $db->get_results(

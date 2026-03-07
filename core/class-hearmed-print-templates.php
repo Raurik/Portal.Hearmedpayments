@@ -560,7 +560,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
                 $prsi_line = floatval($it->prsi_line_amount ?? 0);
             ?>
             <tr>
-                <td><?php echo esc_html($it->product_name ?: ($it->item_description ?? '')); ?></td>
+                <td><?php echo esc_html($it->display_name ?? ($it->product_name ?: ($it->item_description ?? ''))); ?></td>
                 <td><?php echo esc_html($it->ear_side ?: '—'); ?></td>
                 <td><?php echo esc_html($serial ?: '—'); ?></td>
                 <td class="money"><?php echo $prsi_line > 0 ? ('-€' . number_format($prsi_line, 2)) : '—'; ?></td>
@@ -725,9 +725,8 @@ tfoot td { font-weight: 600; border-bottom: none; }
                 ?>
                     <tr style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:8px 10px;font-weight:600;">
-                            <?php echo esc_html( $it->product_name ?? $it->item_description ?? '' ); ?>
+                            <?php echo esc_html( $it->display_name ?? $it->product_name ?? $it->item_description ?? '' ); ?>
                             <?php if ( $it->product_code ) : ?><br><span style="color:#94a3b8;font-size:10px;">Code: <?php echo esc_html( $it->product_code ); ?></span><?php endif; ?>
-                            <?php if ( $it->tech_level ) : ?><br><span style="color:#94a3b8;font-size:10px;">Tech: <?php echo esc_html( $it->tech_level ); ?></span><?php endif; ?>
                         </td>
                         <td style="padding:8px 10px;">
                             <?php if ( $type_label ) : ?>
@@ -831,7 +830,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
             <?php if ($s['device'] ?? true): ?>
             <div class="hm-print-box">
                 <div class="hm-print-box-label">Device</div>
-                <strong><?php echo esc_html($d->product_name ?? ''); ?></strong>
+                <strong><?php echo esc_html($d->display_name ?? HearMed_Utils::format_hearing_aid_label( $d->product_name ?? '', $d->tech_level ?? '' )); ?></strong>
                 <div class="sub">Manufacturer: <?php echo esc_html($d->manufacturer_name ?? '—'); ?></div>
                 <div class="sub">Serial: <code><?php echo esc_html($d->serial_number ?? '—'); ?></code></div>
             </div>
@@ -993,7 +992,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
             <?php foreach ($items as $it): ?>
             <?php $amt = (float)($it->line_total ?? 0); ?>
             <tr>
-                <td><?php echo esc_html($it->product_name ?? $it->item_description ?? ''); ?></td>
+                <td><?php echo esc_html($it->display_name ?? $it->product_name ?? $it->item_description ?? ''); ?></td>
                 <td><?php echo (int)($it->quantity ?? 1); ?></td>
                 <td class="money"><?php echo $amt < 0 ? '-€' : '€'; ?><?php echo number_format(abs($amt), 2); ?></td>
             </tr>
@@ -1090,7 +1089,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
             <tbody>
             <?php foreach ($items as $it): ?>
             <tr style="color:#991b1b;text-decoration:line-through;">
-                <td><?php echo esc_html($it->description ?? $it->product_name ?? ''); ?></td>
+                <td><?php echo esc_html($it->display_name ?? $it->description ?? $it->product_name ?? ''); ?></td>
                 <td><code><?php echo esc_html($it->serial ?? ''); ?></code></td>
                 <td class="money">−€<?php echo number_format((float)($it->amount ?? 0), 2); ?></td>
             </tr>
@@ -1113,7 +1112,7 @@ tfoot td { font-weight: 600; border-bottom: none; }
             <tbody>
             <?php foreach ($items as $it): ?>
             <tr>
-                <td><?php echo esc_html($it->description ?? $it->product_name ?? ''); ?></td>
+                <td><?php echo esc_html($it->display_name ?? $it->description ?? $it->product_name ?? ''); ?></td>
                 <td><?php echo esc_html($it->quantity ?? 1); ?></td>
                 <td class="money">€<?php echo number_format((float)($it->unit_price ?? $it->line_total ?? 0), 2); ?></td>
             </tr>

@@ -1181,10 +1181,6 @@ function hm_ajax_get_patient_products() {
 
     $db   = HearMed_DB::instance();
 
-    // Check if model/tech_level columns exist in products table
-    $model_col = "'' AS model,";
-    $tech_col  = "'' AS tech_level,";
-
     $has_returns = $db->get_var(
         "SELECT 1 FROM information_schema.tables WHERE table_schema = 'hearmed_core' AND table_name = 'returns'"
     );
@@ -1199,8 +1195,7 @@ function hm_ajax_get_patient_products() {
                 COALESCE(pr.product_name, 'Unknown') AS product_name,
                 COALESCE(m.name, '') AS manufacturer,
                 pr.style,
-                $model_col
-                $tech_col
+                COALESCE(pr.tech_level, '') AS tech_level,
                 '' AS product_image
          FROM hearmed_core.patient_devices pd
          LEFT JOIN hearmed_reference.products pr ON pr.id = pd.product_id
@@ -1237,9 +1232,10 @@ function hm_ajax_get_patient_products() {
             '_ID'            => (int) $r->id,
             'product_id'     => $r->product_id ? (int) $r->product_id : null,
             'product_name'   => $r->product_name,
+            'display_name'   => HearMed_Utils::format_hearing_aid_label( $r->product_name, $r->tech_level ?? '' ),
             'manufacturer'   => $r->manufacturer,
             'style'          => $r->style ?: '',
-            'model'          => $r->model ?: '',
+            'model'          => $r->product_name ?: '',
             'tech_level'     => $r->tech_level ?: '',
             'serial_left'    => $r->serial_number_left ?: '',
             'serial_right'   => $r->serial_number_right ?: '',
@@ -1601,6 +1597,7 @@ function hm_ajax_get_patient_repairs() {
                 r.repair_status AS status, r.warranty_status, r.repair_notes,
                 r.repair_reason, r.under_warranty, r.sent_to,
                 COALESCE(pr.product_name, 'Unknown') AS product_name,
+                COALESCE(pr.tech_level, '') AS tech_level,
                 COALESCE(m.name, '') AS manufacturer_name,
                 r.created_at
          FROM hearmed_core.repairs r
@@ -1625,6 +1622,8 @@ function hm_ajax_get_patient_repairs() {
             '_ID'              => (int) $r->id,
             'repair_number'    => $r->repair_number ?: '',
             'product_name'     => $r->product_name,
+            'display_name'     => HearMed_Utils::format_hearing_aid_label( $r->product_name, $r->tech_level ?? '' ),
+            'tech_level'       => $r->tech_level ?: '',
             'manufacturer'     => $r->manufacturer_name,
             'serial_number'    => $r->serial_number ?: '',
             'date_booked'      => $r->date_booked,
@@ -1729,6 +1728,7 @@ function hm_ajax_create_patient_repair() {
                     r.repair_status, r.warranty_status, r.under_warranty,
                     r.repair_reason, r.repair_notes, r.sent_to,
                     COALESCE(pr.product_name, 'Unknown') AS product_name,
+                    COALESCE(pr.tech_level, '') AS tech_level,
                     COALESCE(m.name, '') AS manufacturer_name,
                     m.warranty_terms,
                     CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
@@ -1813,6 +1813,7 @@ function hm_ajax_get_patient_returns() {
                          WHERE oi.order_id = ret.order_id AND oi.item_type = 'product'),
                         'N/A'
                     ) AS product_name,
+                    COALESCE(pd.tech_level, '') AS tech_level,
                     o.grand_total AS order_grand_total,
                     o.prsi_amount AS order_prsi_amount,
                     o.order_number,
@@ -1908,6 +1909,8 @@ function hm_ajax_get_patient_returns() {
                 'patient_refund_amount'=> (float) ($r->patient_refund_amount ?? $r->ret_patient_amt ?? 0),
                 'prsi_amount'          => (float) ($r->prsi_amount ?? $r->ret_prsi_amt ?? 0),
                 'product_name'         => $r->product_name ?? 'N/A',
+                'display_name'         => HearMed_Utils::format_hearing_aid_label( $r->product_name ?? 'N/A', $r->tech_level ?? '' ),
+                'tech_level'           => $r->tech_level ?? '',
                 'credit_date'          => $r->credit_date,
                 'cheque_sent'          => $has_cn ? hm_pg_bool( $r->cheque_sent ) : false,
                 'cheque_sent_date'     => $r->cheque_sent_date,
@@ -1949,6 +1952,8 @@ function hm_ajax_get_patient_returns() {
                 'patient_refund_amount'=> (float) ($r->patient_refund_amount ?? $r->refund_amount),
                 'prsi_amount'          => (float) ($r->prsi_amount ?? 0),
                 'product_name'         => $r->product_name ?? 'N/A',
+                'display_name'         => $r->product_name ?? 'N/A',
+                'tech_level'           => '',
                 'credit_date'          => $r->credit_date,
                 'cheque_sent'          => hm_pg_bool( $r->cheque_sent ),
                 'cheque_sent_date'     => $r->cheque_sent_date,
@@ -2551,7 +2556,6 @@ function hm_ajax_get_ai_document_types() {
             'category' => $r->category ?? 'clinical',
         ];
     }
-
     wp_send_json_success( $data );
 }
 

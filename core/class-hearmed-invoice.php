@@ -158,9 +158,11 @@ class HearMed_Invoice {
                             THEN COALESCE(pr.vat_category, 'Hearing Aids')
                         ELSE COALESCE(svc.vat_category, 'Services')
                     END AS vat_category,
+                    pr.product_name,
+                    COALESCE(pr.tech_level, '') AS tech_level,
                     CASE
                         WHEN oi.item_type = 'product'
-                            THEN CONCAT(m.name,' ',pr.product_name,' ',pr.style)
+                            THEN pr.product_name
                         ELSE svc.service_name
                     END AS item_name
              FROM hearmed_core.order_items oi
@@ -228,7 +230,9 @@ class HearMed_Invoice {
                 'line_number'      => $line++,
                 'item_type'        => $item->item_type,
                 'item_id'          => $item->item_id,
-                'item_description' => $item->item_name ?? $item->item_description,
+                'item_description' => $item->item_type === 'product'
+                    ? HearMed_Utils::format_hearing_aid_label( $item->product_name ?? $item->item_name ?? $item->item_description, $item->tech_level ?? '' )
+                    : ( $item->item_name ?? $item->item_description ),
                 'ear_side'         => $item->ear_side ?? null,
                 'quantity'         => intval( $item->quantity ),
                 'unit_price'       => floatval( $item->unit_retail_price ),
@@ -546,6 +550,7 @@ class HearMed_Invoice {
 
         $items = $db->get_results(
             "SELECT ii.*, COALESCE(pr.product_name, ii.item_description) AS product_name,
+                COALESCE(pr.tech_level, '') AS tech_level,
                     pr.id AS product_id,
                     pr.item_type AS product_item_type,
                     pr.vat_category AS product_vat_category
@@ -555,6 +560,12 @@ class HearMed_Invoice {
              ORDER BY ii.line_number",
             [ $invoice_id ]
         );
+
+        foreach ( $items as $item ) {
+            $item->display_name = ( $item->item_type ?? '' ) === 'product'
+                ? HearMed_Utils::format_hearing_aid_label( $item->product_name ?? $item->item_description, $item->tech_level ?? '' )
+                : ( $item->item_description ?? $item->product_name ?? '' );
+        }
 
         $invoice->items        = $items;
         $invoice->vat_breakdown = $invoice->vat_breakdown
@@ -693,7 +704,7 @@ class HearMed_Invoice {
         $rate = floatval( $item->vat_rate );
     ?>
     <tr>
-        <td><?php echo esc_html( $item->item_description ); ?></td>
+        <td><?php echo esc_html( $item->display_name ?? $item->item_description ); ?></td>
         <td><?php echo esc_html( $item->ear_side ?: '—' ); ?></td>
         <td style="text-align:center;"><?php echo intval( $item->quantity ); ?></td>
         <td class="text-right">€<?php echo number_format( $item->unit_price, 2 ); ?></td>
@@ -960,6 +971,9 @@ class HearMed_Invoice {
                 || stripos( $item_desc, '(bundled)' ) !== false;
             $resolved_vat = $is_bundled_item ? 0.0 : self::vat_rate_for_category( $prod_cat );
             $it->display_vat_rate = $resolved_vat;
+            $it->display_name = ( $it->item_type ?? '' ) === 'product'
+                ? HearMed_Utils::format_hearing_aid_label( $it->product_name ?? $it->item_description, $it->tech_level ?? '' )
+                : ( $it->item_description ?? $it->product_name ?? '' );
 
             $serial = '';
             if ( ! empty( $tpl->devices ) && ! empty( $it->product_id ) ) {

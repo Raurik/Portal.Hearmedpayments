@@ -979,6 +979,15 @@ class HearMed_Orders {
             $('#hm-oc-pr-style').on('change',function(){ refreshPathA(); });
             $('#hm-oc-pr-tech').on('change',function(){ refreshPathA(); });
 
+            function hearingAidLabel(p){
+                if(!p) return '';
+                var name=String(p.product_name||'').trim();
+                var tech=String(p.tech_level||'').trim();
+                if(!name) return tech;
+                if(!tech) return name;
+                return name.toLowerCase().indexOf(tech.toLowerCase())!==-1?name:(name+' '+tech);
+            }
+
             function refreshPathA(){
                 var rid=$('#hm-oc-hmrange').val();
                 var mfr=$('#hm-oc-pr-mfr').val();
@@ -1004,7 +1013,8 @@ class HearMed_Orders {
                 var $p=$('#hm-oc-pr-prod').empty().append('<option value="">— Select Model —</option>');
                 poolFinal.forEach(function(p){
                     var price=parseFloat(p.retail_price||0);
-                    $p.append('<option value="'+p.id+'" data-price="'+price+'" data-vat="'+(p.vat_category==='standard'?23:0)+'" data-name="'+esc(p.product_name)+'" data-mfr="'+p.manufacturer_id+'">'+esc(p.product_name)+' — €'+price.toFixed(2)+'</option>');
+                    var label=hearingAidLabel(p);
+                    $p.append('<option value="'+p.id+'" data-price="'+price+'" data-vat="'+(p.vat_category==='standard'?23:0)+'" data-name="'+esc(label)+'" data-mfr="'+p.manufacturer_id+'">'+esc(label)+' — €'+price.toFixed(2)+'</option>');
                 });
                 if(poolFinal.length) $('#hm-oc-pr-prod-wrap').show();
                 handleHAProdChange('#hm-oc-pr-prod');
@@ -1064,7 +1074,8 @@ class HearMed_Orders {
                         var $pp=$('#hm-oc-pm-prod').empty().append('<option value="">— Select Product —</option>');
                         fPool.forEach(function(p){
                             var pr=parseFloat(p.retail_price||0);
-                            $pp.append('<option value="'+p.id+'" data-price="'+pr+'" data-vat="'+(p.vat_category==='standard'?23:0)+'" data-name="'+esc(p.product_name)+'" data-mfr="'+p.manufacturer_id+'">'+esc(p.product_name)+' — €'+pr.toFixed(2)+'</option>');
+                            var label=hearingAidLabel(p);
+                            $pp.append('<option value="'+p.id+'" data-price="'+pr+'" data-vat="'+(p.vat_category==='standard'?23:0)+'" data-name="'+esc(label)+'" data-mfr="'+p.manufacturer_id+'">'+esc(label)+' — €'+pr.toFixed(2)+'</option>');
                         });
                         $('#hm-oc-pm-prod-wrap').show();
                     } else {
@@ -1159,7 +1170,7 @@ class HearMed_Orders {
                 var gross=price*qty;
                 var vatAmt=vatRate>0?Math.round((gross-gross/(1+vatRate/100))*100)/100:0;
                 /* Hearing aid */
-                orderItems.push({id:parseInt(p.id),type:'product',name:p.product_name,unit_price:price,qty:qty,ear:ear,vat_rate:vatRate,vat_amount:vatAmt,line_total:gross});
+                orderItems.push({id:parseInt(p.id),type:'product',name:hearingAidLabel(p),unit_price:price,qty:qty,ear:ear,vat_rate:vatRate,vat_amount:vatAmt,line_total:gross});
                 /* Charger (free) */
                 if($('input[name="hm-oc-charger"]:checked').val()==='yes'){
                     var cid=$('#hm-oc-charger-sel').val();
@@ -1234,9 +1245,10 @@ class HearMed_Orders {
                 applyFilters(allProducts,f,'').forEach(function(p){
                     var price=parseFloat(p.retail_price||0);
                     var vat=p.vat_category==='standard'?23:0;
+                    var label=hearingAidLabel(p);
                     $p.append('<option value="'+p.id+'"'+(String(p.id)===curProd?' selected':'')+
-                        ' data-price="'+price+'" data-vat="'+vat+'" data-name="'+esc(p.product_name)+'">'+
-                        esc(p.product_name)+' — €'+price.toFixed(2)+'</option>');
+                        ' data-price="'+price+'" data-vat="'+vat+'" data-name="'+esc(label)+'">'+
+                        esc(label)+' — €'+price.toFixed(2)+'</option>');
                 });
 
                 if($('#hm-oc-prod').val()){$('#hm-oc-ear-wrap,#hm-oc-add-wrap').show();}
@@ -1510,7 +1522,7 @@ class HearMed_Orders {
             "SELECT oi.*,
                     CASE
                         WHEN oi.item_type = 'product'
-                            THEN CONCAT(m.name,' ',p.product_name,' ',p.style)
+                            THEN p.product_name
                         ELSE s.service_name
                     END AS item_name,
                     p.tech_level
@@ -1521,9 +1533,15 @@ class HearMed_Orders {
              WHERE oi.order_id = \$1 ORDER BY oi.line_number", [$order_id]
         );
 
+        foreach ( $items as $item ) {
+            if ( ( $item->item_type ?? '' ) === 'product' ) {
+                $item->item_name = HearMed_Utils::format_hearing_aid_label( $item->item_name ?? '', $item->tech_level ?? '' );
+            }
+        }
+
         // Serial numbers from patient_devices
         $serials = $db->get_results(
-            "SELECT pd.*, p.product_name
+            "SELECT pd.*, p.product_name, COALESCE(p.tech_level, '') AS tech_level
              FROM hearmed_core.patient_devices pd
              LEFT JOIN hearmed_reference.products p ON p.id = pd.product_id
              WHERE pd.fitting_date IS NULL
@@ -1638,7 +1656,7 @@ class HearMed_Orders {
                         <strong>Serials:</strong>
                         <?php foreach ($serials as $sd) : ?>
                         <span class="hm-mono" style="margin-right:1rem;">
-                            <?php echo esc_html($sd->product_name); ?>:
+                            <?php echo esc_html( HearMed_Utils::format_hearing_aid_label( $sd->product_name ?? '', $sd->tech_level ?? '' ) ); ?>:
                             <?php if ($sd->serial_number_left)  echo 'L: '.esc_html($sd->serial_number_left); ?>
                             <?php if ($sd->serial_number_right) echo ' R: '.esc_html($sd->serial_number_right); ?>
                         </span>
@@ -1932,13 +1950,18 @@ class HearMed_Orders {
         // Get product items only — services have no serials
         $ha_items = $db->get_results(
             "SELECT oi.id, oi.item_id AS product_id, oi.ear_side,
-                    CONCAT(m.name,' ',p.product_name,' ',p.style) AS item_name
+                    p.product_name AS item_name,
+                    COALESCE(p.tech_level, '') AS tech_level
              FROM hearmed_core.order_items oi
              JOIN hearmed_reference.products p      ON p.id = oi.item_id
              JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
              WHERE oi.order_id = \$1 AND oi.item_type = 'product'
              ORDER BY oi.line_number", [$order_id]
         );
+
+        foreach ( $ha_items as $item ) {
+            $item->item_name = HearMed_Utils::format_hearing_aid_label( $item->item_name ?? '', $item->tech_level ?? '' );
+        }
 
         ob_start(); ?>
         <div class="hm-content hm-serials-form">
@@ -2086,7 +2109,8 @@ class HearMed_Orders {
         // ── Check for hearing-aid products that still have NO serial numbers ──
         $missing_serials = $db->get_results(
             "SELECT oi.id AS order_item_id, oi.item_id AS product_id, oi.ear_side,
-                    CONCAT(m.name,' ',p.product_name,' ',p.style) AS item_name
+                    p.product_name AS item_name,
+                    COALESCE(p.tech_level, '') AS tech_level
              FROM hearmed_core.order_items oi
              JOIN hearmed_reference.products p      ON p.id = oi.item_id
              JOIN hearmed_reference.manufacturers m ON m.id = p.manufacturer_id
@@ -2100,6 +2124,9 @@ class HearMed_Orders {
              ORDER BY oi.line_number",
             [$order_id, $order->patient_id]
         );
+        foreach ( $missing_serials as $item ) {
+            $item->item_name = HearMed_Utils::format_hearing_aid_label( $item->item_name ?? '', $item->tech_level ?? '' );
+        }
         $has_missing_serials = !empty($missing_serials);
 
         $deposit_already_paid = floatval( $order->deposit_amount ?? 0 );
@@ -2648,6 +2675,12 @@ class HearMed_Orders {
              WHERE oi.order_id = \$1
              ORDER BY oi.line_number", [$order_id]
         );
+
+        foreach ( $items as $item ) {
+            if ( ( $item->item_type ?? '' ) === 'product' ) {
+                $item->display_name = HearMed_Utils::format_hearing_aid_label( $item->product_name ?? '', $item->tech_level ?? '' );
+            }
+        }
 
         $tpl_data = clone $order;
         $tpl_data->items = $items ?: [];

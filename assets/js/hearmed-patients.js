@@ -13,6 +13,14 @@ function esc(s){if(!s)return '';var d=document.createElement('div');d.textConten
 function fmtDate(d){if(!d)return '—';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
 function fmtDateTime(d){if(!d)return '—';var dt=new Date(d);return dt.toLocaleDateString('en-IE')+' '+dt.toLocaleTimeString('en-IE',{hour:'2-digit',minute:'2-digit'});}
 function fmtDaysRemaining(days){if(days===null||days===undefined)return '';days=Math.abs(parseInt(days,10));if(days>=365){var y=Math.floor(days/365);return y+'yr'+(y>1?'s':'');}if(days>=30){var m=Math.floor(days/30);return m+'mo';}return days+'d';}
+function hearingAidLabel(item){
+    if(!item)return '';
+    var name=(item.display_name||item.product_name||item.item_description||'').trim();
+    var tech=(item.tech_level||'').trim();
+    if(!name)return tech;
+    if(!tech)return name;
+    return name.toLowerCase().indexOf(tech.toLowerCase())!==-1?name:(name+' '+tech);
+}
 function initials(n){if(!n)return '?';var p=n.trim().split(' ');return(p[0][0]+(p.length>1?p[p.length-1][0]:'')).toUpperCase();}
 function toast(msg,type){var t=$('<div class="hm-toast hm-toast-'+(type||'success')+'">'+esc(msg)+'</div>');$('body').append(t);setTimeout(function(){t.fadeOut(300,function(){t.remove();});},3000);}
 function closeModal(){$('#hm-modal-overlay').remove();}
@@ -471,7 +479,7 @@ function initProfile(){
         $.post(_hm.ajax,{action:'hm_get_patient_products',nonce:_hm.nonce,patient_id:pid},function(r){
             var $w=$('#hm-ov-aids');if(!r.success||!r.data.length){$w.find('div').last().text('No active hearing aids');return;}
             var act=r.data.filter(function(x){return x.status==='Active';});if(!act.length){$w.find('div').last().text('No active hearing aids');return;}
-            var h='';act.forEach(function(pr){var mt=[];if(pr.model)mt.push(esc(pr.model));if(pr.tech_level)mt.push(esc(pr.tech_level));var mtStr=mt.length?' · '+mt.join(' '):'';h+='<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;">'+(pr.product_image?'<img src="'+esc(pr.product_image)+'" style="width:36px;height:36px;object-fit:contain;">':'<div style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;">'+HM_ICONS.hearing+'</div>')+'<div><div style="font-size:14px;font-weight:500;">'+esc(pr.product_name)+mtStr+'</div><div style="font-size:12px;color:#94a3b8;">'+esc(pr.manufacturer)+' · Fitted '+fmtDate(pr.fitting_date)+'</div></div></div>';});
+            var h='';act.forEach(function(pr){h+='<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;">'+(pr.product_image?'<img src="'+esc(pr.product_image)+'" style="width:36px;height:36px;object-fit:contain;">':'<div style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;">'+HM_ICONS.hearing+'</div>')+'<div><div style="font-size:14px;font-weight:500;">'+esc(hearingAidLabel(pr))+'</div><div style="font-size:12px;color:#94a3b8;">'+esc(pr.manufacturer)+' · Fitted '+fmtDate(pr.fitting_date)+'</div></div></div>';});
             $w.find('div').last().replaceWith(h);
         });
         $.post(_hm.ajax,{action:'hm_get_patient_appointments',nonce:_hm.nonce,patient_id:pid},function(r){
@@ -826,10 +834,10 @@ function initProfile(){
             // Card header
             card+='<div class="hm-ha-card-header">';
             card+='<div class="hm-ha-card-title">';
-            card+='<strong>'+esc(pr.product_name)+'</strong> '+activeBadge+' '+wbadge;
+            var displayName=hearingAidLabel(pr);
+            card+='<strong>'+esc(displayName)+'</strong> '+activeBadge+' '+wbadge;
             card+='</div>';
-            var mtParts=[];if(pr.model)mtParts.push(esc(pr.model));if(pr.tech_level)mtParts.push(esc(pr.tech_level));
-            card+='<div class="hm-ha-card-meta">'+esc(pr.manufacturer)+(mtParts.length?' · '+mtParts.join(' '):'')+(pr.style?' · '+esc(pr.style):'')+'</div>';
+            card+='<div class="hm-ha-card-meta">'+esc(pr.manufacturer)+(pr.style?' · '+esc(pr.style):'')+'</div>';
             card+='<div class="hm-ha-card-dates">Fitted: '+fmtDate(pr.fitting_date)+' · Warranty: '+fmtDate(pr.warranty_expiry)+'</div>';
             if(pr.inactive_reason) card+='<div class="hm-ha-card-dates" style="color:#e53e3e;">Reason: '+esc(pr.inactive_reason)+'</div>';
             card+='</div>';
@@ -848,9 +856,9 @@ function initProfile(){
             }
             if(isAct && pr.serial_left){
                 card+='<div class="hm-ha-side-actions">';
-                card+='<button class="hm-link-btn hm-link-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_left||'')+'">Repair</button>';
-                card+='<button class="hm-link-btn hm-link-red hm-return-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+' (Left)">Return</button>';
-                card+='<button class="hm-link-btn hm-link-muted hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(pr.product_name)+' (Left)">Inactive</button>';
+                card+='<button class="hm-link-btn hm-link-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(displayName)+'" data-serial="'+esc(pr.serial_left||'')+'">Repair</button>';
+                card+='<button class="hm-link-btn hm-link-red hm-return-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(displayName)+' (Left)">Return</button>';
+                card+='<button class="hm-link-btn hm-link-muted hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="left" data-name="'+esc(displayName)+' (Left)">Inactive</button>';
                 card+='</div>';
             }
             card+='</div>';
@@ -866,9 +874,9 @@ function initProfile(){
             }
             if(isAct && pr.serial_right){
                 card+='<div class="hm-ha-side-actions">';
-                card+='<button class="hm-link-btn hm-link-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+'" data-serial="'+esc(pr.serial_right||'')+'">Repair</button>';
-                card+='<button class="hm-link-btn hm-link-red hm-return-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+' (Right)">Return</button>';
-                card+='<button class="hm-link-btn hm-link-muted hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(pr.product_name)+' (Right)">Inactive</button>';
+                card+='<button class="hm-link-btn hm-link-teal hm-log-repair-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(displayName)+'" data-serial="'+esc(pr.serial_right||'')+'">Repair</button>';
+                card+='<button class="hm-link-btn hm-link-red hm-return-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(displayName)+' (Right)">Return</button>';
+                card+='<button class="hm-link-btn hm-link-muted hm-mark-inactive-side" data-id="'+pr._ID+'" data-side="right" data-name="'+esc(displayName)+' (Right)">Inactive</button>';
                 card+='</div>';
             }
             card+='</div>';
@@ -878,8 +886,8 @@ function initProfile(){
             // Both devices action row (only for active)
             if(isAct && pr.serial_left && pr.serial_right){
                 card+='<div class="hm-ha-both-row">';
-                card+='<button class="hm-link-btn hm-link-teal hm-log-repair" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+'" data-sl="'+esc(pr.serial_left)+'" data-sr="'+esc(pr.serial_right)+'">Repair Both</button>';
-                card+='<button class="hm-link-btn hm-link-red hm-return-both" data-id="'+pr._ID+'" data-name="'+esc(pr.product_name)+' (Both)">Return Both</button>';
+                card+='<button class="hm-link-btn hm-link-teal hm-log-repair" data-id="'+pr._ID+'" data-name="'+esc(displayName)+'" data-sl="'+esc(pr.serial_left)+'" data-sr="'+esc(pr.serial_right)+'">Repair Both</button>';
+                card+='<button class="hm-link-btn hm-link-red hm-return-both" data-id="'+pr._ID+'" data-name="'+esc(displayName)+' (Both)">Return Both</button>';
                 card+='<button class="hm-link-btn hm-link-muted hm-mark-inactive" data-id="'+pr._ID+'">Inactive Both</button>';
                 card+='</div>';
             }
@@ -1013,23 +1021,23 @@ function initProfile(){
             act.forEach(function(d){
                 if(d.serial_left){
                     h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
-                        '<input type="radio" name="hm-ret-pick" class="hm-return-radio" value="'+d._ID+'" data-side="left" data-name="'+esc(d.product_name)+' (Left)" style="width:18px;height:18px;accent-color:#dc2626;">'+
-                        '<div><strong>'+esc(d.product_name)+' — LEFT</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · Serial: '+esc(d.serial_left)+'</div></div></label>';
+                        '<input type="radio" name="hm-ret-pick" class="hm-return-radio" value="'+d._ID+'" data-side="left" data-name="'+esc(hearingAidLabel(d))+' (Left)" style="width:18px;height:18px;accent-color:#dc2626;">'+
+                        '<div><strong>'+esc(hearingAidLabel(d))+' — LEFT</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · Serial: '+esc(d.serial_left)+'</div></div></label>';
                 }
                 if(d.serial_right){
                     h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
-                        '<input type="radio" name="hm-ret-pick" class="hm-return-radio" value="'+d._ID+'" data-side="right" data-name="'+esc(d.product_name)+' (Right)" style="width:18px;height:18px;accent-color:#dc2626;">'+
-                        '<div><strong>'+esc(d.product_name)+' — RIGHT</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · Serial: '+esc(d.serial_right)+'</div></div></label>';
+                        '<input type="radio" name="hm-ret-pick" class="hm-return-radio" value="'+d._ID+'" data-side="right" data-name="'+esc(hearingAidLabel(d))+' (Right)" style="width:18px;height:18px;accent-color:#dc2626;">'+
+                        '<div><strong>'+esc(hearingAidLabel(d))+' — RIGHT</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · Serial: '+esc(d.serial_right)+'</div></div></label>';
                 }
                 if(d.serial_left && d.serial_right){
                     h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #fef2f2;border-radius:8px;margin-bottom:8px;cursor:pointer;background:#fef2f2;">'+
-                        '<input type="radio" name="hm-ret-pick" class="hm-return-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(d.product_name)+' (Both)" style="width:18px;height:18px;accent-color:#dc2626;">'+
-                        '<div><strong>'+esc(d.product_name)+' — BOTH SIDES</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · L: '+esc(d.serial_left)+' · R: '+esc(d.serial_right)+'</div></div></label>';
+                        '<input type="radio" name="hm-ret-pick" class="hm-return-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(hearingAidLabel(d))+' (Both)" style="width:18px;height:18px;accent-color:#dc2626;">'+
+                        '<div><strong>'+esc(hearingAidLabel(d))+' — BOTH SIDES</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · L: '+esc(d.serial_left)+' · R: '+esc(d.serial_right)+'</div></div></label>';
                 }
                 if(!d.serial_left && !d.serial_right){
                     h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;cursor:pointer;">'+
-                        '<input type="radio" name="hm-ret-pick" class="hm-return-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(d.product_name)+'" style="width:18px;height:18px;accent-color:#dc2626;">'+
-                        '<div><strong>'+esc(d.product_name)+'</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · No serial on file</div></div></label>';
+                        '<input type="radio" name="hm-ret-pick" class="hm-return-radio" value="'+d._ID+'" data-side="both" data-name="'+esc(hearingAidLabel(d))+'" style="width:18px;height:18px;accent-color:#dc2626;">'+
+                        '<div><strong>'+esc(hearingAidLabel(d))+'</strong><div style="font-size:12px;color:#94a3b8;">'+esc(d.manufacturer)+' · No serial on file</div></div></label>';
                 }
             });
             h+='</div><div class="hm-modal-ft"><button class="hm-btn hm-btn--secondary hm-close">Cancel</button><button class="hm-btn hm-btn-danger" id="return-next">Continue →</button></div></div></div>';
@@ -1096,7 +1104,7 @@ function initProfile(){
                 else if(st==='Sent')actions+='<button class="hm-btn hm-btn--secondary hm-btn--sm hm-repair-receive" data-id="'+x._ID+'">Received Back</button>';
                 var recBack = x.date_received ? fmtDate(x.date_received) : '—';
                 var daysCell = (st==='Booked'||st==='Sent') ? (x.days_open||'—') : '—';
-                h+='<tr'+rowClass+'><td style="white-space:nowrap;"><code class="hm-pt-hnum">'+esc(x.repair_number||'—')+'</code></td><td>'+esc(x.product_name)+((x.manufacturer_name||x.manufacturer)?' <span style="color:#94a3b8;font-size:12px;">('+esc(x.manufacturer_name||x.manufacturer)+')</span>':'')+'</td><td style="font-size:13px;">'+esc(x.repair_reason||'—')+'</td><td>'+fmtDate(x.date_booked)+'</td><td><span class="hm-badge hm-badge--sm '+sc+'">'+esc(st)+'</span></td><td>'+recBack+'</td><td style="text-align:center;">'+daysCell+'</td><td>'+(x.under_warranty?'<span class="hm-badge hm-badge--sm hm-badge--green"><span class="hm-dot-green"></span> Yes</span>':'<span class="hm-badge hm-badge--sm hm-badge--red"><span class="hm-dot-red"></span> '+(x.warranty_status||'No')+'</span>')+'</td><td style="white-space:nowrap;">'+actions+'</td></tr>'+
+                h+='<tr'+rowClass+'><td style="white-space:nowrap;"><code class="hm-pt-hnum">'+esc(x.repair_number||'—')+'</code></td><td>'+esc(hearingAidLabel(x))+((x.manufacturer_name||x.manufacturer)?' <span style="color:#94a3b8;font-size:12px;">('+esc(x.manufacturer_name||x.manufacturer)+')</span>':'')+'</td><td style="font-size:13px;">'+esc(x.repair_reason||'—')+'</td><td>'+fmtDate(x.date_booked)+'</td><td><span class="hm-badge hm-badge--sm '+sc+'">'+esc(st)+'</span></td><td>'+recBack+'</td><td style="text-align:center;">'+daysCell+'</td><td>'+(x.under_warranty?'<span class="hm-badge hm-badge--sm hm-badge--green"><span class="hm-dot-green"></span> Yes</span>':'<span class="hm-badge hm-badge--sm hm-badge--red"><span class="hm-dot-red"></span> '+(x.warranty_status||'No')+'</span>')+'</td><td style="white-space:nowrap;">'+actions+'</td></tr>'+
                 (x.repair_notes?'<tr'+rowClass+'><td colspan="9"><div class="hm-appt-note">'+esc(x.repair_notes)+'</div></td></tr>':'');
             });h+='</tbody></table>';}
             $c.html(h+'</div>');
@@ -1156,7 +1164,7 @@ function initProfile(){
                         actions='<button class="hm-btn hm-btn--primary hm-btn--sm hm-create-cn" data-return-id="'+x.return_id+'">Create Credit Note</button>';
                     }
 
-                    h+='<tr><td>'+fmtDate(x.return_date)+'</td><td>'+esc(x.product_name)+'</td><td>'+sideLabel+'</td><td>'+orderCol+'</td><td style="font-size:13px;">'+esc(x.reason)+'</td><td>'+statusBadge+'</td><td>'+cnCol+'</td><td>'+refundCol+'</td><td>'+chequeCol+'</td><td style="white-space:nowrap;">'+actions+'</td></tr>';
+                    h+='<tr><td>'+fmtDate(x.return_date)+'</td><td>'+esc(hearingAidLabel(x))+'</td><td>'+sideLabel+'</td><td>'+orderCol+'</td><td style="font-size:13px;">'+esc(x.reason)+'</td><td>'+statusBadge+'</td><td>'+cnCol+'</td><td>'+refundCol+'</td><td>'+chequeCol+'</td><td style="white-space:nowrap;">'+actions+'</td></tr>';
                 });
                 h+='</tbody></table>';
             }
@@ -1909,7 +1917,7 @@ function initProfile(){
                 return true;
             });
             if(matches.length===1){
-                $('#ap-match-info').html('<span style="color:#10b981;">✓ Matched: <strong>'+esc(matches[0].manufacturer_name)+' '+esc(matches[0].product_name)+'</strong></span>');
+                $('#ap-match-info').html('<span style="color:#10b981;">✓ Matched: <strong>'+esc(matches[0].manufacturer_name)+' '+esc(hearingAidLabel(matches[0]))+'</strong></span>');
             } else if(matches.length>1){
                 $('#ap-match-info').html(matches.length+' products match — refine selections to narrow down');
             } else if(mfr||mdl||tech||sty){
