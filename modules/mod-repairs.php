@@ -237,9 +237,9 @@ class HearMed_Repairs {
         $rid    = intval( $_POST['_ID']    ?? 0 );
         $status = sanitize_text_field( $_POST['status'] ?? '' );
 
-        // Backward compatibility: old clients may still post "Complete".
-        if ( $status === 'Complete' ) {
-            $status = 'Completed';
+        // UI may send either label; DB check constraint expects "Complete".
+        if ( $status === 'Completed' ) {
+            $status = 'Complete';
         }
 
         if ( ! $rid )    wp_send_json_error('Missing repair ID');
@@ -260,7 +260,7 @@ class HearMed_Repairs {
         $valid = [
             'Booked'   => 'Sent',
             'Sent'     => 'Received',
-            'Received' => 'Completed',
+            'Received' => 'Complete',
         ];
         if ( ! isset( $valid[ $from ] ) || $valid[ $from ] !== $status ) {
             wp_send_json_error( "Invalid transition: {$from} → {$status}" );
@@ -300,7 +300,7 @@ class HearMed_Repairs {
         } elseif ( $status === 'Received' ) {
             $fields['date_received'] = date('Y-m-d');
 
-        } elseif ( $status === 'Completed' ) {
+        } elseif ( $status === 'Complete' ) {
             $has_completed = $db->get_var(
                 "SELECT 1 FROM information_schema.columns
                  WHERE table_schema='hearmed_core' AND table_name='repairs' AND column_name='completed_date'"
