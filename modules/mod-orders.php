@@ -79,6 +79,7 @@ add_action( 'wp_ajax_hm_get_order_products',          [ 'HearMed_Orders', 'ajax_
 add_action( 'wp_ajax_hm_update_order_status',         [ 'HearMed_Orders', 'ajax_update_order_status' ] );
 add_action( 'wp_ajax_hm_get_pending_orders',          [ 'HearMed_Orders', 'ajax_get_pending_orders' ] );
 add_action( 'wp_ajax_hm_get_awaiting_fitting',        [ 'HearMed_Orders', 'ajax_get_awaiting_fitting' ] );
+add_action( 'wp_ajax_hm_update_awaiting_fitting_order', [ 'HearMed_Orders', 'ajax_update_awaiting_fitting_order' ] );
 add_action( 'wp_ajax_hm_prefit_cancel',               [ 'HearMed_Orders', 'ajax_prefit_cancel' ] );
 add_action( 'wp_ajax_hm_get_patient_credit_balance',  [ 'HearMed_Orders', 'ajax_get_patient_credit_balance' ] );
 add_action( 'wp_ajax_hm_record_order_deposit',        [ 'HearMed_Orders', 'ajax_record_order_deposit' ] );
@@ -4567,6 +4568,53 @@ class HearMed_Orders {
     // ═══════════════════════════════════════════════════════════════════════
     // AJAX: Get awaiting fitting queue
     // ═══════════════════════════════════════════════════════════════════════
+    private static function can_manage_awaiting_fitting_actions() : bool {
+        $role = HearMed_Auth::current_role();
+        return in_array( $role, [ 'finance', 'c_level' ], true );
+    }
+
+    private static function has_prefit_cancellation_queue_table() : bool {
+        $db = HearMed_DB::instance();
+        return (bool) $db->get_var(
+            "SELECT 1 FROM information_schema.tables WHERE table_schema = 'hearmed_core' AND table_name = 'prefit_cancellation_queue'"
+        );
+    }
+
+    private static function queue_prefit_cancellation( int $order_id, int $patient_id, ?int $invoice_id, ?int $cancelled_by, string $reason, float $paid_amount, float $refund_due ) : void {
+        $db = HearMed_DB::instance();
+        $now = date( 'Y-m-d H:i:s' );
+        $credit_required = $refund_due > 0 ? 'true' : 'false';
+        $refund_status = $refund_due > 0 ? 'pending_review' : 'not_required';
+
+        $db->query(
+            "INSERT INTO hearmed_core.prefit_cancellation_queue
+                (order_id, patient_id, invoice_id, cancelled_by, cancellation_reason, cancelled_at, paid_amount, refund_due, credit_note_required, refund_status, created_at, updated_at)
+             VALUES
+                (\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8, {$credit_required}, \$9, \$6, \$6)
+             ON CONFLICT (order_id)
+             DO UPDATE SET
+                cancellation_reason = EXCLUDED.cancellation_reason,
+                cancelled_by        = EXCLUDED.cancelled_by,
+                cancelled_at        = EXCLUDED.cancelled_at,
+                paid_amount         = EXCLUDED.paid_amount,
+                refund_due          = EXCLUDED.refund_due,
+                credit_note_required= EXCLUDED.credit_note_required,
+                refund_status       = EXCLUDED.refund_status,
+                updated_at          = EXCLUDED.updated_at",
+            [
+                $order_id,
+                $patient_id,
+                $invoice_id,
+                $cancelled_by,
+                $reason,
+                $now,
+                $paid_amount,
+                $refund_due,
+                $refund_status,
+            ]
+        );
+    }
+
     public static function ajax_get_awaiting_fitting() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
 
@@ -4593,7 +4641,7 @@ class HearMed_Orders {
 
         $rows = $db->get_results(
             "SELECT o.id AS order_id, o.order_number, o.grand_total AS total_price,
-                    o.prsi_applicable, o.prsi_amount, o.created_at,
+                    o.prsi_applicable, o.prsi_amount, o.created_at, o.notes,
                     p.first_name || ' ' || p.last_name AS patient_name,
                     p.patient_number,
                     c.clinic_name,
@@ -4611,6 +4659,7 @@ class HearMed_Orders {
             $params
         ) ?: [];
 
+        $can_manage = self::can_manage_awaiting_fitting_actions();
         $data = [];
         foreach ( $rows as $r ) {
             $data[] = [
@@ -4625,6 +4674,8 @@ class HearMed_Orders {
                 'prsi_applicable'     => (bool) $r->prsi_applicable,
                 'prsi_amount'         => (float) ( $r->prsi_amount ?? 0 ),
                 'fitting_date'        => $r->fitting_date,
+                'order_notes'         => $r->notes ?? '',
+                'can_manage'          => $can_manage,
             ];
         }
 
@@ -4632,10 +4683,68 @@ class HearMed_Orders {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // AJAX: Edit order from Awaiting Fitting queue (Finance/C-Level only)
+    // ═══════════════════════════════════════════════════════════════════════
+    public static function ajax_update_awaiting_fitting_order() {
+        check_ajax_referer( 'hm_nonce', 'nonce' );
+
+        if ( ! self::can_manage_awaiting_fitting_actions() ) {
+            wp_send_json_error( [ 'msg' => 'Only Finance and C-Level can edit Awaiting Fitting orders.' ] );
+        }
+
+        $order_id = intval( $_POST['order_id'] ?? 0 );
+        $fitting_date = sanitize_text_field( $_POST['fitting_date'] ?? '' );
+        $notes = sanitize_textarea_field( $_POST['notes'] ?? '' );
+        $db = HearMed_DB::instance();
+
+        if ( ! $order_id ) {
+            wp_send_json_error( [ 'msg' => 'Missing order ID.' ] );
+        }
+        if ( $fitting_date && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $fitting_date ) ) {
+            wp_send_json_error( [ 'msg' => 'Fitting date must be YYYY-MM-DD.' ] );
+        }
+
+        $order = $db->get_row( "SELECT id, current_status FROM hearmed_core.orders WHERE id = \$1", [ $order_id ] );
+        if ( ! $order ) {
+            wp_send_json_error( [ 'msg' => 'Order not found.' ] );
+        }
+        if ( $order->current_status !== 'Awaiting Fitting' ) {
+            wp_send_json_error( [ 'msg' => 'Only Awaiting Fitting orders can be edited here.' ] );
+        }
+
+        $db->update( 'hearmed_core.orders', [
+            'notes'      => $notes,
+            'updated_at' => date( 'Y-m-d H:i:s' ),
+        ], [ 'id' => $order_id ] );
+
+        if ( $fitting_date ) {
+            $updated = $db->query(
+                "UPDATE hearmed_core.fitting_queue
+                 SET fitting_date = \$1
+                 WHERE order_id = \$2",
+                [ $fitting_date, $order_id ]
+            );
+            if ( ! $updated ) {
+                $db->insert( 'hearmed_core.fitting_queue', [
+                    'order_id'     => $order_id,
+                    'fitting_date' => $fitting_date,
+                    'queue_status' => 'Awaiting Fitting',
+                ] );
+            }
+        }
+
+        wp_send_json_success( [ 'msg' => 'Awaiting Fitting order updated.' ] );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // AJAX: Pre-fit cancel (cancel order from Awaiting Fitting)
     // ═══════════════════════════════════════════════════════════════════════
     public static function ajax_prefit_cancel() {
         check_ajax_referer( 'hm_nonce', 'nonce' );
+
+        if ( ! self::can_manage_awaiting_fitting_actions() ) {
+            wp_send_json_error( [ 'msg' => 'Only Finance and C-Level can pre-fit cancel.' ] );
+        }
 
         $order_id = intval( $_POST['order_id'] ?? 0 );
         $reason   = sanitize_textarea_field( $_POST['reason'] ?? '' );
@@ -4646,10 +4755,30 @@ class HearMed_Orders {
         if ( ! $reason )   wp_send_json_error( [ 'msg' => 'A cancellation reason is required.' ] );
 
         $order = $db->get_row(
-            "SELECT current_status FROM hearmed_core.orders WHERE id = \$1",
+            "SELECT current_status, patient_id, invoice_id, grand_total, COALESCE(deposit_amount, 0) AS deposit_amount
+             FROM hearmed_core.orders WHERE id = \$1",
             [ $order_id ]
         );
         if ( ! $order ) wp_send_json_error( [ 'msg' => 'Order not found.' ] );
+        if ( $order->current_status !== 'Awaiting Fitting' ) {
+            wp_send_json_error( [ 'msg' => 'Order is no longer in Awaiting Fitting.' ] );
+        }
+
+        $paid_amount = 0.0;
+        if ( ! empty( $order->invoice_id ) ) {
+            $paid_amount = (float) $db->get_var(
+                "SELECT COALESCE(SUM(amount), 0)
+                 FROM hearmed_core.payments
+                 WHERE invoice_id = \$1
+                   AND COALESCE(is_refund, false) = false",
+                [ (int) $order->invoice_id ]
+            );
+        }
+        if ( $paid_amount <= 0 && (float) $order->deposit_amount > 0 ) {
+            $paid_amount = (float) $order->deposit_amount;
+        }
+        $order_total = (float) ( $order->grand_total ?? 0 );
+        $refund_due  = max( 0.0, min( $paid_amount, $order_total > 0 ? $order_total : $paid_amount ) );
 
         // Update order to Cancelled
         $db->update( 'hearmed_core.orders', [
@@ -4669,7 +4798,36 @@ class HearMed_Orders {
 
         self::log_status_change( $order_id, $order->current_status, 'Cancelled', $user->id ?? null, 'Pre-fit cancel: ' . $reason );
 
-        wp_send_json_success( 'Order cancelled.' );
+        $queued = false;
+        if ( self::has_prefit_cancellation_queue_table() ) {
+            self::queue_prefit_cancellation(
+                $order_id,
+                (int) ( $order->patient_id ?? 0 ),
+                ! empty( $order->invoice_id ) ? (int) $order->invoice_id : null,
+                isset( $user->id ) ? (int) $user->id : null,
+                $reason,
+                round( $paid_amount, 2 ),
+                round( $refund_due, 2 )
+            );
+            $queued = true;
+        }
+
+        $msg = 'Order cancelled and stock returned.';
+        if ( $refund_due > 0 ) {
+            $msg .= ' Refund due: €' . number_format( $refund_due, 2 ) . '.';
+            if ( $queued ) {
+                $msg .= ' Credit note/refund has been queued for Finance review.';
+            } else {
+                $msg .= ' Create the pre-fit queue table to track credit note/refund workflow.';
+            }
+        }
+
+        wp_send_json_success( [
+            'msg'                  => $msg,
+            'refund_due'           => round( $refund_due, 2 ),
+            'credit_note_required' => $refund_due > 0,
+            'queue_recorded'       => $queued,
+        ] );
     }
 
     /**

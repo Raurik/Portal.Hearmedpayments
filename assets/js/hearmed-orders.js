@@ -954,12 +954,24 @@
         return new Date(d).toLocaleDateString('en-IE', {day:'2-digit', month:'short', year:'numeric'});
     }
     function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function escAttr(s) {
+        return String(s || '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+    function isFinanceOrCLevel() {
+        var role = String(HM.user_role || '').toLowerCase();
+        return role === 'finance' || role === 'c_level' || role === 'c-level';
+    }
 
     function loadAwaitingFitting() {
         if (!$('#hm-af-tbody').length) return;
 
         $('#hm-af-loading').show();
-        $('#hm-af-tbody').html('<tr><td colspan="9" style="text-align:center;padding:2rem;color:#94a3b8;">Loading…</td></tr>');
+        $('#hm-af-tbody').html('<tr><td colspan="9" style="text-align:center;padding:2rem;color:#94a3b8;">Loading...</td></tr>');
         $('#hm-af-empty').hide();
 
         $.post(HM.ajax_url, {
@@ -982,6 +994,7 @@
             var today  = new Date(); today.setHours(0,0,0,0);
             var html   = '';
             rows.forEach(function (row) {
+                var canManage = !!row.can_manage && isFinanceOrCLevel();
                 var fittingCell;
                 if (row.fitting_date) {
                     var fd   = new Date(row.fitting_date);
@@ -990,6 +1003,17 @@
                         fmtDate(row.fitting_date) + (past ? ' !' : '') + '</span>';
                 } else {
                     fittingCell = '<span style="color:#d97706;">Not scheduled</span>';
+                }
+
+                var actions = '—';
+                if (canManage) {
+                    actions = '' +
+                        '<button class="hm-btn hm-btn--secondary hm-btn--sm hm-af-edit-btn" ' +
+                            'data-order-id="' + row.order_id + '" ' +
+                            'data-fitting-date="' + escAttr(row.fitting_date || '') + '" ' +
+                            'data-order-notes="' + escAttr(row.order_notes || '') + '" ' +
+                            'style="margin-right:6px;">Edit</button>' +
+                        '<button class="hm-btn hm-btn-danger hm-btn--sm hm-prefit-cancel-btn" data-order-id="' + row.order_id + '">Pre-Fit Cancel</button>';
                 }
 
                 html += '<tr>' +
@@ -1001,7 +1025,7 @@
                     '<td>' + eur(row.total_price) + '</td>' +
                     '<td>' + (row.prsi_applicable ? '<span class="hm-badge hm-badge-teal">−' + eur(row.prsi_amount) + '</span>' : '—') + '</td>' +
                     '<td>' + fittingCell + '</td>' +
-                    '<td><button class="hm-btn hm-btn-danger hm-btn--sm hm-prefit-cancel-btn" data-order-id="' + row.order_id + '">Pre-Fit Cancel</button></td>' +
+                        '<td>' + actions + '</td>' +
                     '</tr>';
             });
             $('#hm-af-tbody').html(html);
@@ -1018,6 +1042,43 @@
 
         $(document).on('change', '#hm-af-clinic, #hm-af-date-from, #hm-af-date-to', loadAwaitingFitting);
         $(document).on('click', '#hm-af-refresh', loadAwaitingFitting);
+
+        $(document).on('click', '.hm-af-edit-btn', function () {
+            var id = parseInt($(this).data('order-id'), 10);
+            if (!id) return;
+
+            var currentDate = String($(this).data('fitting-date') || '');
+            currentDate = currentDate ? currentDate.substring(0, 10) : '';
+            var currentNotes = String($(this).data('order-notes') || '');
+
+            var nextDate = window.prompt('Edit fitting date (YYYY-MM-DD). Leave blank to keep current date.', currentDate);
+            if (nextDate === null) return;
+            nextDate = $.trim(nextDate);
+            if (nextDate && !/^\d{4}-\d{2}-\d{2}$/.test(nextDate)) {
+                HM.toast('Date must be in YYYY-MM-DD format.', 'error');
+                return;
+            }
+
+            var nextNotes = window.prompt('Edit order notes (optional).', currentNotes);
+            if (nextNotes === null) return;
+
+            $.post(HM.ajax_url, {
+                action: 'hm_update_awaiting_fitting_order',
+                nonce: HM.nonce,
+                order_id: id,
+                fitting_date: nextDate,
+                notes: nextNotes
+            }, function (r) {
+                if (r.success) {
+                    HM.toast((r.data && r.data.msg) || 'Order updated.', 'success');
+                    loadAwaitingFitting();
+                } else {
+                    HM.toast((r.data && r.data.msg) || 'Could not update order.', 'error');
+                }
+            }).fail(function () {
+                HM.toast('Network error.', 'error');
+            });
+        });
 
         // Pre-Fit Cancel modal
         $(document).on('click', '.hm-prefit-cancel-btn', function () {
@@ -1036,7 +1097,7 @@
             $.post(HM.ajax_url, { action: 'hm_prefit_cancel', nonce: HM.nonce, order_id: id, reason: reason }, function (r) {
                 $('#hm-prefit-cancel-confirm').prop('disabled', false).text('Confirm Cancellation');
                 $('#hm-prefit-cancel-modal-bg').fadeOut(150);
-                if (r.success) { HM.toast('Order cancelled and removed from Awaiting Fitting.', 'success'); loadAwaitingFitting(); }
+                if (r.success) { HM.toast((r.data && r.data.msg) || 'Order cancelled and removed from Awaiting Fitting.', 'success'); loadAwaitingFitting(); }
                 else HM.toast(r.data.msg || 'Error cancelling.', 'error');
             });
         });
