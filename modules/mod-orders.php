@@ -4801,12 +4801,15 @@ class HearMed_Orders {
         }
 
         $existing_ids = $db->get_results(
-            "SELECT id FROM hearmed_core.order_items WHERE order_id = \$1",
+            "SELECT id, line_number FROM hearmed_core.order_items WHERE order_id = \$1 ORDER BY line_number ASC, id ASC",
             [ $order_id ]
         ) ?: [];
         $allowed_ids = [];
+        $line_to_id = [];
         foreach ( $existing_ids as $row ) {
-            $allowed_ids[] = (int) $row->id;
+            $rid = (int) $row->id;
+            $allowed_ids[] = $rid;
+            $line_to_id[ (int) ( $row->line_number ?? 0 ) ] = $rid;
         }
 
         $subtotal = 0.0;
@@ -4815,7 +4818,13 @@ class HearMed_Orders {
         foreach ( $items as $idx => $it ) {
             $line_id = (int) ( $it['id'] ?? 0 );
             if ( ! $line_id || ! in_array( $line_id, $allowed_ids, true ) ) {
-                wp_send_json_error( [ 'msg' => 'Invalid line item supplied.' ] );
+                $ln = (int) ( $it['line_number'] ?? 0 );
+                if ( $ln > 0 && isset( $line_to_id[ $ln ] ) ) {
+                    $line_id = (int) $line_to_id[ $ln ];
+                }
+            }
+            if ( ! $line_id || ! in_array( $line_id, $allowed_ids, true ) ) {
+                wp_send_json_error( [ 'msg' => 'Invalid line item supplied on row ' . ( $idx + 1 ) . '.' ] );
             }
 
             $qty = max( 1, (int) ( $it['qty'] ?? 1 ) );

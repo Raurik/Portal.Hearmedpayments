@@ -797,6 +797,7 @@ function hm_render_fitting_page() {
             rows.forEach(function(row) {
                 items.push({
                     id: parseInt(row.getAttribute('data-line-id'), 10),
+                    line_number: parseInt(row.children[0].textContent || '0', 10),
                     description: row.querySelector('.hmf-oe-desc').value,
                     ear_side: row.querySelector('.hmf-oe-ear').value,
                     qty: parseInt(row.querySelector('.hmf-oe-qty').value || '1', 10),
@@ -825,7 +826,13 @@ function hm_render_fitting_page() {
                     self.closeOrderEdit();
                     self.load();
                 } else {
-                    alert((r && r.data && r.data.msg) ? r.data.msg : 'Could not save order edits.');
+                    var msg = 'Could not save order edits.';
+                    if (r && r.data) {
+                        if (typeof r.data === 'string') msg = r.data;
+                        else if (r.data.msg) msg = r.data.msg;
+                        else if (r.data.message) msg = r.data.message;
+                    }
+                    alert(msg);
                 }
             }).fail(function() {
                 saveBtn.disabled = false;
