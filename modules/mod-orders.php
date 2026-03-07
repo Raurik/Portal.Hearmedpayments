@@ -4704,10 +4704,8 @@ class HearMed_Orders {
             "SELECT id, order_number, current_status, notes,
                     COALESCE(prsi_left, false) AS prsi_left,
                     COALESCE(prsi_right, false) AS prsi_right,
-                    prsi_amount, subtotal, vat_total, grand_total,
-                    (SELECT fq.fitting_date::date FROM hearmed_core.fitting_queue fq WHERE fq.order_id = o.id LIMIT 1) AS fitting_date
-             FROM hearmed_core.orders
-             o
+                    prsi_amount, subtotal, vat_total, grand_total
+             FROM hearmed_core.orders o
              WHERE id = \$1",
             [ $order_id ]
         );
@@ -4754,7 +4752,6 @@ class HearMed_Orders {
             'order_number' => (string) ( $order->order_number ?? '' ),
             'status'       => (string) ( $order->current_status ?? '' ),
             'notes'        => (string) ( $order->notes ?? '' ),
-            'fitting_date' => ! empty( $order->fitting_date ) ? date( 'Y-m-d', strtotime( (string) $order->fitting_date ) ) : '',
             'prsi_left'    => (bool) $order->prsi_left,
             'prsi_right'   => (bool) $order->prsi_right,
             'prsi_per_ear' => (float) self::prsi_per_ear_amount(),
@@ -4778,16 +4775,12 @@ class HearMed_Orders {
 
         $order_id = intval( $_POST['order_id'] ?? 0 );
         $notes = sanitize_textarea_field( $_POST['notes'] ?? '' );
-        $fitting_date = sanitize_text_field( $_POST['fitting_date'] ?? '' );
         $prsi_left = ! empty( $_POST['prsi_left'] );
         $prsi_right = ! empty( $_POST['prsi_right'] );
         $items = json_decode( wp_unslash( $_POST['items_json'] ?? '[]' ), true );
 
         if ( ! $order_id ) {
             wp_send_json_error( [ 'msg' => 'Missing order ID.' ] );
-        }
-        if ( $fitting_date && ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $fitting_date ) ) {
-            wp_send_json_error( [ 'msg' => 'Fitting date must be YYYY-MM-DD.' ] );
         }
         if ( ! is_array( $items ) || empty( $items ) ) {
             wp_send_json_error( [ 'msg' => 'At least one line item is required.' ] );
@@ -4871,22 +4864,6 @@ class HearMed_Orders {
             'grand_total'       => $grand_total,
             'updated_at'        => date( 'Y-m-d H:i:s' ),
         ], [ 'id' => $order_id ] );
-
-        if ( $fitting_date ) {
-            $updated = $db->query(
-                "UPDATE hearmed_core.fitting_queue
-                 SET fitting_date = \$1
-                 WHERE order_id = \$2",
-                [ $fitting_date, $order_id ]
-            );
-            if ( ! $updated ) {
-                $db->insert( 'hearmed_core.fitting_queue', [
-                    'order_id'     => $order_id,
-                    'fitting_date' => $fitting_date,
-                    'queue_status' => 'Awaiting Fitting',
-                ] );
-            }
-        }
 
         wp_send_json_success( [
             'msg'        => 'Order updated successfully.',

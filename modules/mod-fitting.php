@@ -125,6 +125,27 @@ function hm_render_fitting_page() {
     .hmf-summary-line.hmf-summary-total{border-top:2px solid #334155;margin-top:4px;padding-top:8px;}
     .hmf-summary-line.hmf-summary-total .hmf-summary-line-label{font-weight:700;color:#0f172a;font-size:14px;}
     .hmf-summary-line.hmf-summary-total .hmf-summary-line-val{font-size:16px;font-weight:800;color:#0f172a;}
+
+    /* Edit order modal */
+    .hmf-oe-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10050;padding:24px;overflow:auto;}
+    .hmf-oe-panel{max-width:1080px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 30px 80px rgba(2,6,23,.28);border:1px solid #e2e8f0;}
+    .hmf-oe-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e2e8f0;}
+    .hmf-oe-head h3{margin:0;font-size:18px;color:#0f172a;}
+    .hmf-oe-body{padding:14px 18px;}
+    .hmf-oe-grid{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:12px;align-items:center;margin-bottom:12px;}
+    .hmf-oe-check{display:flex;align-items:center;gap:8px;font-size:13px;color:#334155;font-weight:600;}
+    .hmf-oe-kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:12px;color:#475569;}
+    .hmf-oe-kpi strong{color:#0f172a;}
+    .hmf-oe-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:10px;background:#fff;}
+    .hmf-oe-wrap .hm-table{margin:0;min-width:960px;}
+    .hmf-oe-wrap .hm-table th{font-size:12px;background:#f8fafc;color:#475569;}
+    .hmf-oe-wrap .hm-table td{vertical-align:middle;padding-top:7px;padding-bottom:7px;}
+    .hmf-oe-wrap .hm-input{height:34px;font-size:13px;}
+    .hmf-oe-line-total{font-weight:700;color:#0f172a;white-space:nowrap;}
+    .hmf-oe-notes{margin-top:12px;}
+    .hmf-oe-notes label{display:block;font-size:12px;color:#64748b;margin-bottom:5px;}
+    .hmf-oe-notes textarea{width:100%;min-height:92px;resize:vertical;}
+    .hmf-oe-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #e2e8f0;background:#f8fafc;border-radius:0 0 12px 12px;}
     </style>
 
     <div class="hm-calendar" data-module="admin" data-view="fitting">
@@ -631,33 +652,32 @@ function hm_render_fitting_page() {
 
             var wrap = document.createElement('div');
             wrap.id = 'hmf-order-edit-modal';
-            wrap.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10050;padding:24px;overflow:auto;';
+            wrap.className = 'hmf-oe-bg';
             wrap.innerHTML = '' +
-                '<div style="max-width:1120px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 30px 80px rgba(2,6,23,.28);">' +
-                    '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e2e8f0;">' +
-                        '<h3 id="hmf-oe-title" style="margin:0;font-size:18px;">Edit Order</h3>' +
+                '<div class="hmf-oe-panel">' +
+                    '<div class="hmf-oe-head">' +
+                        '<h3 id="hmf-oe-title">Edit Order</h3>' +
                         '<button id="hmf-oe-close" class="hm-btn hm-btn--secondary" type="button">Close</button>' +
                     '</div>' +
-                    '<div style="padding:14px 18px;">' +
-                        '<div style="display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:10px;margin-bottom:12px;">' +
-                            '<div><label style="display:block;font-size:12px;color:#64748b;">Fitting Date</label><input id="hmf-oe-fitting-date" type="date" class="hm-input"></div>' +
-                            '<label style="display:flex;align-items:center;gap:8px;"><input id="hmf-oe-prsi-left" type="checkbox"> PRSI Left</label>' +
-                            '<label style="display:flex;align-items:center;gap:8px;"><input id="hmf-oe-prsi-right" type="checkbox"> PRSI Right</label>' +
-                            '<div><strong>Subtotal:</strong> <span id="hmf-oe-subtotal">EUR0.00</span></div>' +
-                            '<div><strong>Grand:</strong> <span id="hmf-oe-grand">EUR0.00</span></div>' +
+                    '<div class="hmf-oe-body">' +
+                        '<div class="hmf-oe-grid">' +
+                            '<label class="hmf-oe-check"><input id="hmf-oe-prsi-left" type="checkbox"> PRSI Left</label>' +
+                            '<label class="hmf-oe-check"><input id="hmf-oe-prsi-right" type="checkbox"> PRSI Right</label>' +
+                            '<div class="hmf-oe-kpi"><span>Subtotal</span><br><strong id="hmf-oe-subtotal">EUR0.00</strong></div>' +
+                            '<div class="hmf-oe-kpi"><span>Grand Total</span><br><strong id="hmf-oe-grand">EUR0.00</strong></div>' +
                         '</div>' +
-                        '<div style="overflow:auto;border:1px solid #e2e8f0;border-radius:8px;">' +
-                            '<table class="hm-table" style="margin:0;min-width:980px;">' +
+                        '<div class="hmf-oe-wrap">' +
+                            '<table class="hm-table">' +
                                 '<thead><tr><th>#</th><th>Description</th><th>Ear</th><th>Qty</th><th>Unit Price (inc VAT)</th><th>VAT %</th><th>Line Total</th></tr></thead>' +
                                 '<tbody id="hmf-oe-lines"></tbody>' +
                             '</table>' +
                         '</div>' +
-                        '<div style="margin-top:10px;">' +
-                            '<label style="display:block;font-size:12px;color:#64748b;margin-bottom:5px;">Order Notes</label>' +
-                            '<textarea id="hmf-oe-notes" class="hm-input" rows="3" style="width:100%;"></textarea>' +
+                        '<div class="hmf-oe-notes">' +
+                            '<label>Order Notes</label>' +
+                            '<textarea id="hmf-oe-notes" class="hm-input" rows="3"></textarea>' +
                         '</div>' +
                     '</div>' +
-                    '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #e2e8f0;">' +
+                    '<div class="hmf-oe-foot">' +
                         '<button id="hmf-oe-cancel" class="hm-btn hm-btn--secondary" type="button">Cancel</button>' +
                         '<button id="hmf-oe-save" class="hm-btn hm-btn--primary" type="button">Save Order</button>' +
                     '</div>' +
@@ -732,7 +752,6 @@ function hm_render_fitting_page() {
 
                 document.getElementById('hmf-oe-title').textContent = 'Edit Order ' + (r.data.order_number || '');
                 document.getElementById('hmf-oe-notes').value = r.data.notes || '';
-                document.getElementById('hmf-oe-fitting-date').value = r.data.fitting_date || '';
                 document.getElementById('hmf-oe-prsi-left').checked = !!r.data.prsi_left;
                 document.getElementById('hmf-oe-prsi-right').checked = !!r.data.prsi_right;
 
@@ -796,7 +815,6 @@ function hm_render_fitting_page() {
                 nonce: HM.nonce,
                 order_id: this.orderEditData.order_id,
                 notes: document.getElementById('hmf-oe-notes').value,
-                fitting_date: document.getElementById('hmf-oe-fitting-date').value,
                 prsi_left: document.getElementById('hmf-oe-prsi-left').checked ? 1 : 0,
                 prsi_right: document.getElementById('hmf-oe-prsi-right').checked ? 1 : 0,
                 items_json: JSON.stringify(items)
