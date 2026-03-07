@@ -3645,17 +3645,19 @@ function hm_ajax_create_return_credit_note() {
             throw new \Exception( 'Failed to update return record: ' . HearMed_DB::last_error() );
         }
 
-        // 5. Create patient credit (spendable on future orders / refundable)
-        if ( $patient_refund > 0 && $settlement_type === 'credit' ) {
+        // 5. Create patient credit (spendable on future orders).
+        // Include both patient and PRSI portions so exchanges can reuse full entitlement.
+        $total_credit_amount = $patient_refund + $prsi_amount;
+        if ( $total_credit_amount > 0 && $settlement_type === 'credit' ) {
             $pc_id = $db->insert( 'hearmed_core.patient_credits', [
                 'patient_id'          => $pid,
                 'credit_note_id'      => $cn_id,
                 'original_invoice_id' => $inv_id,
                 'original_order_id'   => $ord_id,
-                'amount'              => $patient_refund,
+                'amount'              => $total_credit_amount,
                 'used_amount'         => 0,
                 'status'              => 'active',
-                'notes'               => "Return ({$side}): {$reason}. Credit note {$cn_number}.",
+                'notes'               => "Return ({$side}): {$reason}. Credit note {$cn_number}. Patient EUR " . number_format( $patient_refund, 2 ) . ", PRSI EUR " . number_format( $prsi_amount, 2 ) . ".",
                 'created_by'          => $staff_id ?: null,
             ]);
             if ( ! $pc_id ) {
