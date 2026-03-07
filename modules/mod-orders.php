@@ -4747,13 +4747,16 @@ class HearMed_Orders {
             ];
         }
 
+        $prsi_left_val = in_array( strtolower( trim( (string) ( $order->prsi_left ?? '' ) ) ), [ '1', 't', 'true', 'y', 'yes' ], true );
+        $prsi_right_val = in_array( strtolower( trim( (string) ( $order->prsi_right ?? '' ) ) ), [ '1', 't', 'true', 'y', 'yes' ], true );
+
         wp_send_json_success( [
             'order_id'     => (int) $order->id,
             'order_number' => (string) ( $order->order_number ?? '' ),
             'status'       => (string) ( $order->current_status ?? '' ),
             'notes'        => (string) ( $order->notes ?? '' ),
-            'prsi_left'    => (bool) $order->prsi_left,
-            'prsi_right'   => (bool) $order->prsi_right,
+            'prsi_left'    => $prsi_left_val,
+            'prsi_right'   => $prsi_right_val,
             'prsi_per_ear' => (float) self::prsi_per_ear_amount(),
             'subtotal'     => (float) ( $order->subtotal ?? 0 ),
             'vat_total'    => (float) ( $order->vat_total ?? 0 ),
