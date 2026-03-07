@@ -1656,9 +1656,10 @@ function initProfile(){
                     var paidInFull=bal<=0.009;
                     var statusText=paidInFull?'Paid in Full':'Balance Outstanding';
                     var bc=paidInFull?'hm-badge--green':'hm-badge--amber';
+                    var invDate = inv.invoice_date || inv.created_at || '';
                     h+='<tr>'+
                         '<td><code class="hm-pt-hnum">'+esc(inv.invoice_number)+'</code></td>'+
-                        '<td>'+fmtDate((inv.created_at||'').split(' ')[0])+'</td>'+
+                        '<td>'+fmtDate(String(invDate).split(' ')[0])+'</td>'+
                         '<td><span class="hm-badge hm-badge--sm '+bc+'">'+statusText+'</span></td>';
                     if(showAmts)h+='<td style="font-weight:500;">'+euro(inv.grand_total)+'</td><td style="color:'+(parseFloat(inv.balance||0)>0?'#e53e3e':'#10b981')+';font-weight:500;">'+euro(inv.balance)+'</td>';
                     h+='<td><a href="#" class="hm-dl-invoice hm-btn hm-btn--secondary hm-btn--sm" data-id="'+inv._ID+'" data-num="'+esc(inv.invoice_number)+'">Download</a></td></tr>';
