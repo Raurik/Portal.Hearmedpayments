@@ -2980,7 +2980,11 @@ function hm_ajax_get_patient_audit() {
          LEFT JOIN hearmed_reference.staff s ON s.wp_user_id = al.user_id
          WHERE (al.entity_type = 'patient' AND al.entity_id = \$1)
             OR (al.details::text LIKE '%\"patient_id\":' || \$1::text || '%'
-                AND al.entity_type IN ('patient_note','patient_document','patient_form','patient_device','repair','credit_note','invoice','notification'))
+                AND al.entity_type IN (
+                    'patient_note','patient_document','patient_form','patient_device',
+                    'repair','credit_note','invoice','notification','order','appointment',
+                    'payment','refund','sms','message'
+                ))
          ORDER BY al.created_at DESC
          LIMIT 100",
         [ $pid ]

@@ -1579,31 +1579,71 @@ function initProfile(){
         $.post(_hm.ajax,{action:'hm_get_patient_audit',nonce:_hm.nonce,patient_id:pid},function(r){
             if(!r.success){$c.html('<div class="hm-empty">'+(r.data||'Access denied')+'</div>');return;}
             var a=r.data;
-            // Split into main actions and detail actions
-            var mainActions=['CREATE','UPDATE','ERASURE','EXPORT','STATUS_CHANGE','EXCHANGE','REPAIR','REFUND','NOTE','PRODUCT'];
-            var main=[],detail=[];
+
+            function detPreview(x){
+                var det='';
+                try{det=JSON.stringify(JSON.parse(x.details),null,0).replace(/[{}]/g,'').substr(0,140);}catch(e){det=x.details||'';}
+                return det;
+            }
+            function isFinancial(x){
+                var act=String(x.action||'').toUpperCase();
+                var ent=String(x.entity_type||'').toLowerCase();
+                return ent==='invoice'||ent==='payment'||ent==='credit_note'||ent==='refund'||ent==='order'||act.indexOf('ORDER')!==-1||act.indexOf('REFUND')!==-1||act.indexOf('INVOICE')!==-1||act.indexOf('PAY')!==-1;
+            }
+            function isAppointment(x){
+                var act=String(x.action||'').toUpperCase();
+                var ent=String(x.entity_type||'').toLowerCase();
+                return ent==='appointment'||act.indexOf('APPOINT')!==-1||act.indexOf('BOOKING')!==-1;
+            }
+            function isNotification(x){
+                var act=String(x.action||'').toUpperCase();
+                var ent=String(x.entity_type||'').toLowerCase();
+                return ent==='notification'||ent==='sms'||ent==='message'||act.indexOf('NOTIFICATION')!==-1||act.indexOf('SMS')!==-1||act.indexOf('MESSAGE')!==-1;
+            }
+
+            var grouped={
+                financial:[],
+                appointment:[],
+                file_changes:[],
+                notifications:[]
+            };
+
             a.forEach(function(x){
-                var isMain=false;
-                mainActions.forEach(function(m){if(x.action&&x.action.indexOf(m)!==-1)isMain=true;});
-                if(isMain)main.push(x);else detail.push(x);
+                if(isFinancial(x))grouped.financial.push(x);
+                else if(isAppointment(x))grouped.appointment.push(x);
+                else if(isNotification(x))grouped.notifications.push(x);
+                else grouped.file_changes.push(x);
             });
-            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Activity Log ('+a.length+')</h3>'+
-                '<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#64748b;cursor:pointer;"><input type="checkbox" id="hm-show-detail-log"'+(detail.length?'':' disabled')+'>Show detailed log ('+detail.length+')</label></div>';
-            function renderRows(items,cls){
+
+            function renderRows(items){
                 var out='';
-                items.forEach(function(x){var det='';try{det=JSON.stringify(JSON.parse(x.details),null,0).replace(/[{}]/g,'').substr(0,80);}catch(e){det=x.details||'';}
-                    out+='<tr class="hm-audit-row'+(cls?' '+cls:'')+'"><td style="white-space:nowrap;font-size:12px;">'+fmtDateTime(x.created_at)+'</td><td style="font-size:13px;">'+esc(x.user)+'</td><td><span class="hm-badge hm-badge--sm '+(x.action.indexOf('ERASURE')!==-1?'hm-badge--red':'hm-badge--grey')+'">'+esc(x.action)+'</span></td><td style="font-size:13px;color:#64748b;">'+esc(x.entity_type)+(x.entity_id?' #'+x.entity_id:'')+'</td><td style="font-size:12px;color:#94a3b8;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(det)+'">'+esc(det)+'</td></tr>';
+                items.forEach(function(x){
+                    var det=detPreview(x);
+                    var isDanger=String(x.action||'').toUpperCase().indexOf('ERASURE')!==-1||String(x.action||'').toUpperCase().indexOf('CANCEL')!==-1;
+                    out+='<tr class="hm-audit-row"><td style="white-space:nowrap;font-size:12px;">'+fmtDateTime(x.created_at)+'</td><td style="font-size:13px;">'+esc(x.user)+'</td><td><span class="hm-badge hm-badge--sm '+(isDanger?'hm-badge--red':'hm-badge--grey')+'">'+esc(x.action)+'</span></td><td style="font-size:13px;color:#64748b;">'+esc(x.entity_type)+(x.entity_id?' #'+x.entity_id:'')+'</td><td style="font-size:12px;color:#94a3b8;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(det)+'">'+esc(det||'—')+'</td></tr>';
                 });
                 return out;
             }
-            if(!a.length)h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.audit+'</div><div class="hm-empty-text">No audit entries</div></div>';
-            else{h+='<table class="hm-table hm-activity-table"><colgroup><col class="hm-col-activity-date"><col class="hm-col-activity-user"><col class="hm-col-activity-action"><col class="hm-col-activity-entity"><col class="hm-col-activity-details"></colgroup><thead><tr><th class="hm-col-activity-date">Date / time</th><th class="hm-col-activity-user">User</th><th class="hm-col-activity-action">Action</th><th class="hm-col-activity-entity">Entity</th><th class="hm-col-activity-details">Details</th></tr></thead><tbody>'+renderRows(main,'')+renderRows(detail,'hm-audit-detail')+'</tbody></table>';}
+
+            function renderSection(title,items,icon){
+                var h='<div class="hm-tab-section" style="margin-top:14px;"><div class="hm-section-header"><h3>'+icon+' '+title+' ('+items.length+')</h3></div>';
+                if(!items.length){h+='<div class="hm-empty" style="padding:14px;"><div class="hm-empty-text">No entries</div></div>';
+                }else{
+                    h+='<table class="hm-table hm-activity-table"><thead><tr><th>Date / time</th><th>User</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody>'+renderRows(items)+'</tbody></table>';
+                }
+                return h+'</div>';
+            }
+
+            var h='<div class="hm-tab-section"><div class="hm-section-header"><h3>Activity Log ('+a.length+')</h3></div>';
+            if(!a.length){
+                h+='<div class="hm-empty"><div class="hm-empty-icon">'+HM_ICONS.audit+'</div><div class="hm-empty-text">No audit entries</div></div>';
+            }else{
+                h+=renderSection('Financial Logs',grouped.financial,'FIN');
+                h+=renderSection('Appointment Logs',grouped.appointment,'APPT');
+                h+=renderSection('Patient File Change Logs',grouped.file_changes,'FILE');
+                h+=renderSection('Patient Notification Logs',grouped.notifications,'MSG');
+            }
             $c.html(h+'</div>');
-            // Hide detail rows by default
-            $('.hm-audit-detail').hide();
-            $c.off('change','#hm-show-detail-log').on('change','#hm-show-detail-log',function(){
-                if(this.checked)$('.hm-audit-detail').show();else $('.hm-audit-detail').hide();
-            });
         });
     }
 

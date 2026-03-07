@@ -4865,6 +4865,18 @@ class HearMed_Orders {
             'updated_at'        => date( 'Y-m-d H:i:s' ),
         ], [ 'id' => $order_id ] );
 
+        if ( function_exists( 'hm_patient_audit' ) ) {
+            hm_patient_audit( 'UPDATE_ORDER_PREFIT', 'order', $order_id, [
+                'patient_id'   => (int) $order->patient_id,
+                'source'       => 'awaiting_fitting_edit',
+                'lines_edited' => count( $items ),
+                'subtotal'     => round( $subtotal, 2 ),
+                'vat_total'    => round( $vat_total, 2 ),
+                'prsi_amount'  => round( $prsi_amount, 2 ),
+                'grand_total'  => $grand_total,
+            ] );
+        }
+
         wp_send_json_success( [
             'msg'        => 'Order updated successfully.',
             'subtotal'   => round( $subtotal, 2 ),
@@ -4989,6 +5001,15 @@ class HearMed_Orders {
         self::return_cancelled_order_to_stock( $order_id, 'Pre-fit cancellation: ' . $reason, $user->id ?? null );
 
         self::log_status_change( $order_id, $order->current_status, 'Cancelled', $user->id ?? null, 'Pre-fit cancel: ' . $reason );
+
+        if ( function_exists( 'hm_patient_audit' ) ) {
+            hm_patient_audit( 'PREFIT_CANCEL_ORDER', 'order', $order_id, [
+                'patient_id'          => (int) ( $order->patient_id ?? 0 ),
+                'reason'              => $reason,
+                'refund_due'          => round( $refund_due, 2 ),
+                'credit_note_required'=> $refund_due > 0,
+            ] );
+        }
 
         $queued = false;
         if ( self::has_prefit_cancellation_queue_table() ) {
