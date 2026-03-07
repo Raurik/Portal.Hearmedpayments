@@ -446,6 +446,8 @@
 /* Keep Patient Account tables aligned with explicit per-table columns. */
 .hm-account-table {
   table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 .hm-account-table .hm-ta-right {
@@ -455,6 +457,15 @@
 .hm-account-table th,
 .hm-account-table td {
   white-space: nowrap;
+  vertical-align: middle;
+}
+
+.hm-account-table--credits {
+  min-width: 920px;
+}
+
+.hm-account-table--tx {
+  min-width: 1120px;
 }
 
 /* Credits table */
@@ -496,6 +507,14 @@
 .hm-account-table--tx th.hm-col-tx-notes {
   white-space: normal;
   line-height: 1.35;
+}
+
+.hm-account-table--tx td.hm-col-tx-document,
+.hm-account-table--tx th.hm-col-tx-document,
+.hm-account-table--tx td.hm-col-tx-staff,
+.hm-account-table--tx th.hm-col-tx-staff {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Activity table: lock each column to stop visual drift between header/body. */

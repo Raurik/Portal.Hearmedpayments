@@ -41,6 +41,7 @@ class HearMed_Finance {
      * ===================================================================== */
     private static $ft_table_ensured = false;
     private static $ca_table_ensured = false;
+    private static $ca_columns = null;
 
     // ─────────────────────────────────────────────────────────────────────
     // METHOD 1: record()
@@ -131,15 +132,14 @@ class HearMed_Finance {
      * @return float
      */
     public static function get_patient_credit_balance( $patient_id ) {
-        $val = HearMed_DB::get_var(
-            "SELECT COALESCE(SUM(GREATEST(amount - COALESCE(used_amount, 0), 0)), 0)
-               FROM hearmed_core.patient_credits
-              WHERE patient_id = $1
-                AND status = 'active'
-                AND (notes IS NULL OR notes NOT ILIKE 'Deposit at order creation%')",
-            [ (int) $patient_id ]
-        );
-        return (float) $val;
+        $credits = self::get_patient_credits( $patient_id, 'active' );
+        $balance = 0.0;
+
+        foreach ( $credits as $credit ) {
+            $balance += (float) ( $credit->remaining_amount ?? 0 );
+        }
+
+        return round( $balance, 2 );
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -153,30 +153,50 @@ class HearMed_Finance {
      * @return array  Array of row objects.
      */
     public static function get_patient_credits( $patient_id, $status = 'active' ) {
-        if ( $status === 'all' ) {
-            return HearMed_DB::get_results(
-                "SELECT pc.*, o.order_number,
-                        GREATEST(pc.amount - COALESCE(pc.used_amount, 0), 0) AS remaining_amount
-                   FROM hearmed_core.patient_credits pc
-                   LEFT JOIN hearmed_core.orders o ON o.id = pc.order_id
-                                    WHERE pc.patient_id = $1
-                                        AND (pc.notes IS NULL OR pc.notes NOT ILIKE 'Deposit at order creation%')
-                  ORDER BY pc.created_at DESC",
-                [ (int) $patient_id ]
-            );
-        }
-
-        return HearMed_DB::get_results(
+        $rows = HearMed_DB::get_results(
             "SELECT pc.*, o.order_number,
                     GREATEST(pc.amount - COALESCE(pc.used_amount, 0), 0) AS remaining_amount
                FROM hearmed_core.patient_credits pc
                LEFT JOIN hearmed_core.orders o ON o.id = pc.order_id
-                            WHERE pc.patient_id = $1
-                                AND pc.status = $2
-                                AND (pc.notes IS NULL OR pc.notes NOT ILIKE 'Deposit at order creation%')
+              WHERE pc.patient_id = $1
+                AND (pc.notes IS NULL OR pc.notes NOT ILIKE 'Deposit at order creation%')
               ORDER BY pc.created_at DESC",
-            [ (int) $patient_id, $status ]
+            [ (int) $patient_id ]
         );
+
+        if ( empty( $rows ) ) {
+            return [];
+        }
+
+        $applied_by_credit = self::get_credit_application_totals_by_credit( $patient_id );
+        $out = [];
+
+        foreach ( $rows as $row ) {
+            $amount = (float) ( $row->amount ?? 0 );
+            $stored_used = (float) ( $row->used_amount ?? 0 );
+            $applied_used = (float) ( $applied_by_credit[ (int) $row->id ] ?? 0 );
+            $effective_used = min( $amount, max( $stored_used, $applied_used ) );
+            $remaining = max( 0, $amount - $effective_used );
+            $raw_status = strtolower( trim( (string) ( $row->status ?? 'active' ) ) );
+
+            if ( $raw_status === 'expired' ) {
+                $effective_status = 'expired';
+            } else {
+                $effective_status = $remaining <= 0.009 ? 'used' : 'active';
+            }
+
+            $row->used_amount = round( $effective_used, 2 );
+            $row->remaining_amount = round( $remaining, 2 );
+            $row->status = $effective_status;
+
+            if ( $status !== 'all' && $effective_status !== $status ) {
+                continue;
+            }
+
+            $out[] = $row;
+        }
+
+        return $out;
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -415,5 +435,64 @@ class HearMed_Finance {
         );
 
         self::$ca_table_ensured = true;
+    }
+
+    private static function get_credit_application_totals_by_credit( $patient_id ) {
+        $patient_id = (int) $patient_id;
+        if ( $patient_id <= 0 ) {
+            return [];
+        }
+
+        self::ensure_credit_applications_table();
+
+        $columns = self::get_credit_application_columns();
+        if ( empty( $columns['credit'] ) || empty( $columns['amount'] ) ) {
+            return [];
+        }
+
+        $credit_col = $columns['credit'];
+        $amount_col = $columns['amount'];
+
+        $rows = HearMed_DB::get_results(
+            "SELECT ca.{$credit_col} AS credit_id,
+                    COALESCE(SUM(ca.{$amount_col}), 0) AS applied_total
+               FROM hearmed_core.credit_applications ca
+               JOIN hearmed_core.patient_credits pc ON pc.id = ca.{$credit_col}
+              WHERE pc.patient_id = $1
+              GROUP BY ca.{$credit_col}",
+            [ $patient_id ]
+        );
+
+        $totals = [];
+        foreach ( $rows as $row ) {
+            $totals[ (int) $row->credit_id ] = (float) $row->applied_total;
+        }
+
+        return $totals;
+    }
+
+    private static function get_credit_application_columns() {
+        if ( is_array( self::$ca_columns ) ) {
+            return self::$ca_columns;
+        }
+
+        $cols = HearMed_DB::get_results(
+            "SELECT column_name
+               FROM information_schema.columns
+              WHERE table_schema = 'hearmed_core'
+                AND table_name = 'credit_applications'"
+        );
+
+        $names = [];
+        foreach ( $cols as $col ) {
+            $names[] = (string) ( $col->column_name ?? '' );
+        }
+
+        self::$ca_columns = [
+            'credit' => in_array( 'credit_id', $names, true ) ? 'credit_id' : ( in_array( 'patient_credit_id', $names, true ) ? 'patient_credit_id' : null ),
+            'amount' => in_array( 'amount_applied', $names, true ) ? 'amount_applied' : ( in_array( 'amount', $names, true ) ? 'amount' : null ),
+        ];
+
+        return self::$ca_columns;
     }
 }

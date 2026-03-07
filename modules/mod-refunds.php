@@ -931,14 +931,32 @@ class HearMed_Refunds {
         if ( ! $patient_id ) wp_send_json_error('No patient.');
 
         $rows = HearMed_DB::instance()->get_results(
-            "SELECT id, invoice_number, grand_total, invoice_date, payment_status
+            "SELECT id, invoice_number, grand_total, invoice_date,
+                    COALESCE(balance_remaining, grand_total, 0) AS balance,
+                    payment_status, pdf_url, created_at
              FROM hearmed_core.invoices
              WHERE patient_id = \$1
-             ORDER BY invoice_date DESC
-             LIMIT 20",
+               AND payment_status != 'Void'
+             ORDER BY COALESCE(invoice_date, created_at::date) DESC, created_at DESC",
             [ $patient_id ]
         );
-        wp_send_json_success( $rows ?: [] );
+
+        $out = [];
+        foreach ( ( $rows ?: [] ) as $row ) {
+            $out[] = [
+                '_ID'            => (int) ( $row->id ?? 0 ),
+                'id'             => (int) ( $row->id ?? 0 ),
+                'invoice_number' => (string) ( $row->invoice_number ?? '' ),
+                'invoice_date'   => (string) ( $row->invoice_date ?? '' ),
+                'grand_total'    => (float) ( $row->grand_total ?? 0 ),
+                'balance'        => (float) ( $row->balance ?? 0 ),
+                'status'         => (string) ( $row->payment_status ?? '' ),
+                'pdf_url'        => (string) ( $row->pdf_url ?? '' ),
+                'created_at'     => (string) ( $row->created_at ?? '' ),
+            ];
+        }
+
+        wp_send_json_success( $out );
     }
 
     /**
