@@ -443,7 +443,7 @@
 
 .hm-tab-section { padding: 4px 0; }
 
-/* Keep Patient Account table headers and body columns perfectly aligned. */
+/* Keep Patient Account tables aligned with explicit per-table columns. */
 .hm-account-table {
   table-layout: fixed;
 }
@@ -452,90 +452,50 @@
   text-align: right;
 }
 
-.hm-account-table .hm-col-note { width: 22%; }
-.hm-account-table .hm-col-date { width: 14%; }
-.hm-account-table .hm-col-money { width: 13%; }
-.hm-account-table .hm-col-status { width: 12%; }
-
-.hm-account-table .hm-col-type { width: 12%; }
-.hm-account-table .hm-col-invoice { width: 14%; }
-.hm-account-table .hm-col-staff { width: 15%; }
-.hm-account-table .hm-col-notes { width: 31%; }
-
-/* Apply widths/alignment to both header and body cells explicitly. */
-.hm-account-table th.hm-col-note,
-.hm-account-table td.hm-col-note { width: 22%; }
-
-.hm-account-table th.hm-col-date,
-.hm-account-table td.hm-col-date { width: 14%; }
-
-.hm-account-table th.hm-col-money,
-.hm-account-table td.hm-col-money {
-  width: 13%;
-  text-align: right;
-}
-
-/* Lock transaction Amount column directly under its heading. */
-.hm-account-table col.hm-col-amount,
-.hm-account-table th.hm-col-amount,
-.hm-account-table td.hm-col-amount {
-  width: 132px !important;
-  min-width: 132px;
-  max-width: 132px;
-  text-align: right !important;
-  font-variant-numeric: tabular-nums;
-}
-
-.hm-account-table th.hm-col-status,
-.hm-account-table td.hm-col-status { width: 12%; }
-
-.hm-account-table th.hm-col-type,
-.hm-account-table td.hm-col-type { width: 12%; }
-
-.hm-account-table th.hm-col-invoice,
-.hm-account-table td.hm-col-invoice { width: 14%; }
-
-.hm-account-table th.hm-col-staff,
-.hm-account-table td.hm-col-staff { width: 15%; }
-
-.hm-account-table th.hm-col-notes,
-.hm-account-table td.hm-col-notes { width: 31%; }
-
 .hm-account-table th,
 .hm-account-table td {
   white-space: nowrap;
 }
 
-.hm-account-table td:last-child {
-  white-space: normal;
+/* Credits table */
+.hm-account-table--credits .hm-col-credit-note { width: 22%; }
+.hm-account-table--credits .hm-col-credit-date { width: 12%; }
+.hm-account-table--credits .hm-col-credit-patient { width: 13%; }
+.hm-account-table--credits .hm-col-credit-prsi { width: 13%; }
+.hm-account-table--credits .hm-col-credit-used { width: 13%; }
+.hm-account-table--credits .hm-col-credit-remaining { width: 15%; }
+.hm-account-table--credits .hm-col-credit-status { width: 12%; }
+
+.hm-account-table--credits td.hm-col-credit-patient,
+.hm-account-table--credits th.hm-col-credit-patient,
+.hm-account-table--credits td.hm-col-credit-prsi,
+.hm-account-table--credits th.hm-col-credit-prsi,
+.hm-account-table--credits td.hm-col-credit-used,
+.hm-account-table--credits th.hm-col-credit-used,
+.hm-account-table--credits td.hm-col-credit-remaining,
+.hm-account-table--credits th.hm-col-credit-remaining {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
-.hm-account-table--tx .hm-col-date { width: 14%; }
-.hm-account-table--tx .hm-col-type { width: 12%; }
-.hm-account-table--tx .hm-col-money { width: 11%; }
-.hm-account-table--tx .hm-col-invoice { width: 14%; }
-.hm-account-table--tx .hm-col-staff { width: 15%; }
-.hm-account-table--tx .hm-col-notes { width: 34%; }
+/* Transactions table */
+.hm-account-table--tx .hm-col-tx-date { width: 14%; }
+.hm-account-table--tx .hm-col-tx-type { width: 12%; }
+.hm-account-table--tx .hm-col-tx-amount { width: 11%; }
+.hm-account-table--tx .hm-col-tx-document { width: 14%; }
+.hm-account-table--tx .hm-col-tx-staff { width: 15%; }
+.hm-account-table--tx .hm-col-tx-notes { width: 34%; }
 
-.hm-account-table--tx td.hm-col-notes,
-.hm-account-table--tx th.hm-col-notes {
+.hm-account-table--tx td.hm-col-tx-amount,
+.hm-account-table--tx th.hm-col-tx-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.hm-account-table--tx td.hm-col-tx-notes,
+.hm-account-table--tx th.hm-col-tx-notes {
   white-space: normal;
   line-height: 1.35;
-}
-
-.hm-account-table--tx td.hm-col-money,
-.hm-account-table--tx th.hm-col-money {
-  font-variant-numeric: tabular-nums;
-}
-
-.hm-account-table--credits .hm-col-note { width: 20%; }
-.hm-account-table--credits .hm-col-date { width: 12%; }
-.hm-account-table--credits .hm-col-money { width: 13%; }
-.hm-account-table--credits .hm-col-status { width: 10%; }
-
-.hm-account-table--credits td.hm-col-money,
-.hm-account-table--credits th.hm-col-money {
-  font-variant-numeric: tabular-nums;
 }
 
 /* Activity table: lock each column to stop visual drift between header/body. */
