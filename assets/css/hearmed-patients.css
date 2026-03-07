@@ -520,6 +520,7 @@
 /* Activity table: lock each column to stop visual drift between header/body. */
 .hm-activity-table {
   table-layout: fixed;
+  width: 100%;
 }
 
 .hm-activity-table .hm-col-activity-date { width: 14%; }
@@ -531,6 +532,13 @@
 .hm-activity-table td,
 .hm-activity-table th {
   vertical-align: middle;
+  padding: 11px 12px;
+  text-align: left;
+}
+
+.hm-activity-table th {
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .hm-activity-table td:nth-child(1),
@@ -542,9 +550,23 @@
 
 .hm-activity-table td:nth-child(5),
 .hm-activity-table th:nth-child(5) {
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
+  word-break: break-word;
+}
+
+.hm-activity-table .hm-audit-row {
+  display: table-row;
+}
+
+.hm-activity-table .hm-audit-row td {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.hm-activity-table .hm-audit-row:last-child td {
+  border-bottom: none;
 }
 
 @media (max-width: 1200px) {

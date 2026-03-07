@@ -1627,7 +1627,7 @@ function initProfile(){
                 items.forEach(function(x){
                     var det=detPreview(x);
                     var isDanger=String(x.action||'').toUpperCase().indexOf('ERASURE')!==-1||String(x.action||'').toUpperCase().indexOf('CANCEL')!==-1;
-                    out+='<tr class="hm-audit-row"><td style="white-space:nowrap;font-size:12px;">'+fmtDateTime(x.created_at)+'</td><td style="font-size:13px;">'+esc(x.user)+'</td><td><span class="hm-badge hm-badge--sm '+(isDanger?'hm-badge--red':'hm-badge--grey')+'">'+esc(x.action)+'</span></td><td style="font-size:13px;color:#64748b;">'+esc(x.entity_type)+(x.entity_id?' #'+x.entity_id:'')+'</td><td style="font-size:12px;color:#94a3b8;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(det)+'">'+esc(det||'-')+'</td></tr>';
+                    out+='<tr class="hm-audit-row"><td class="hm-col-activity-date" style="font-size:12px;">'+fmtDateTime(x.created_at)+'</td><td class="hm-col-activity-user" style="font-size:13px;">'+esc(x.user)+'</td><td class="hm-col-activity-action"><span class="hm-badge hm-badge--sm '+(isDanger?'hm-badge--red':'hm-badge--grey')+'">'+esc(x.action)+'</span></td><td class="hm-col-activity-entity" style="font-size:13px;color:#64748b;">'+esc(x.entity_type)+(x.entity_id?' #'+x.entity_id:'')+'</td><td class="hm-col-activity-details" style="font-size:12px;color:#94a3b8;" title="'+esc(det)+'">'+esc(det||'-')+'</td></tr>';
                 });
                 return out;
             }
@@ -1645,7 +1645,15 @@ function initProfile(){
                 if(!filtered.length){
                     h+='<div class="hm-empty" style="margin-top:16px;"><div class="hm-empty-text">No '+tabMeta[_activitySubTab].toLowerCase()+' log entries</div></div>';
                 }else{
-                    h+='<table class="hm-table hm-activity-table" style="margin-top:10px;"><thead><tr><th>Date / time</th><th>User</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody>'+renderRows(filtered)+'</tbody></table>';
+                    h+='<table class="hm-table hm-activity-table" style="margin-top:10px;">'+
+                        '<colgroup>'+
+                            '<col class="hm-col-activity-date">'+
+                            '<col class="hm-col-activity-user">'+
+                            '<col class="hm-col-activity-action">'+
+                            '<col class="hm-col-activity-entity">'+
+                            '<col class="hm-col-activity-details">'+
+                        '</colgroup>'+
+                        '<thead><tr><th>Date / time</th><th>User</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody>'+renderRows(filtered)+'</tbody></table>';
                 }
             }
             $c.html(h+'</div>');
