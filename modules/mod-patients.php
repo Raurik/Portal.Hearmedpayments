@@ -4225,6 +4225,7 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null, $
     $style      = $product->style ?? '';
     $tech_level = $product->tech_level ?? '';
     $mfr_name   = $product->manufacturer_name ?? '';
+    $resolved_product_id = ! empty( $product->product_id ) ? (int) $product->product_id : ( $target_product_id ?: 0 );
     $today      = date( 'Y-m-d H:i:s' );
 
     // Collect serial numbers from the device
@@ -4273,11 +4274,23 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null, $
                 if ( $has_col( 'item_category' ) ) {
                     $update_data['item_category'] = 'hearing_aid';
                 }
+                if ( $has_col( 'item_type' ) ) {
+                    $update_data['item_type'] = 'product';
+                }
+                if ( $has_col( 'item_id' ) && $resolved_product_id > 0 ) {
+                    $update_data['item_id'] = $resolved_product_id;
+                }
                 if ( $has_col( 'reserved_for_patient_id' ) ) {
                     $update_data['reserved_for_patient_id'] = null;
                 }
                 if ( $has_col( 'fitted_to_patient_id' ) ) {
                     $update_data['fitted_to_patient_id'] = null;
+                }
+                if ( $has_col( 'quantity_on_hand' ) ) {
+                    $update_data['quantity_on_hand'] = 1;
+                }
+                if ( $has_col( 'quantity_reserved' ) ) {
+                    $update_data['quantity_reserved'] = 0;
                 }
                 if ( $has_col( 'return_reason' ) ) {
                     $update_data['return_reason'] = $reason;
@@ -4318,7 +4331,14 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null, $
         if ( ! $stock_id ) {
             $insert_data = [];
 
+            if ( $has_col( 'item_id' ) && $resolved_product_id <= 0 ) {
+                error_log( '[HearMed] Stock return skipped: could not resolve required item_id for serial=' . ( $serial ?: 'none' ) . ', device=' . ( $device->id ?? '?' ) );
+                continue;
+            }
+
             if ( $has_col( 'item_category' ) )    $insert_data['item_category'] = 'hearing_aid';
+            if ( $has_col( 'item_type' ) )        $insert_data['item_type'] = 'product';
+            if ( $has_col( 'item_id' ) )          $insert_data['item_id'] = $resolved_product_id;
             if ( $has_col( 'manufacturer_id' ) )  $insert_data['manufacturer_id'] = $manufacturer_id ?: null;
             if ( $has_col( 'model_name' ) )       $insert_data['model_name'] = $model_name;
             if ( $has_col( 'style' ) )            $insert_data['style'] = $style ?: null;
@@ -4327,11 +4347,13 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null, $
             if ( $has_col( 'serial_number' ) )    $insert_data['serial_number'] = $serial !== '' ? $serial : null;
             if ( $has_col( 'clinic_id' ) )        $insert_data['clinic_id'] = $clinic_id ?: null;
             if ( $has_col( 'quantity' ) )         $insert_data['quantity'] = 1;
+            if ( $has_col( 'quantity_on_hand' ) ) $insert_data['quantity_on_hand'] = 1;
+            if ( $has_col( 'quantity_reserved' ) )$insert_data['quantity_reserved'] = 0;
             if ( $has_col( 'status' ) )           $insert_data['status'] = 'Available';
             if ( $has_col( 'return_reason' ) )    $insert_data['return_reason'] = $reason;
             if ( $has_col( 'reserved_for_patient_id' ) ) $insert_data['reserved_for_patient_id'] = null;
             if ( $has_col( 'fitted_to_patient_id' ) )    $insert_data['fitted_to_patient_id'] = null;
-            if ( $has_col( 'product_id' ) )       $insert_data['product_id'] = ! empty( $product->product_id ) ? (int) $product->product_id : ( $target_product_id ?: null );
+            if ( $has_col( 'product_id' ) )       $insert_data['product_id'] = $resolved_product_id > 0 ? $resolved_product_id : null;
             if ( $has_col( 'product_name' ) )     $insert_data['product_name'] = $product->product_name ?? $model_name;
             if ( $has_col( 'created_at' ) )       $insert_data['created_at'] = $today;
             if ( $has_col( 'updated_at' ) )       $insert_data['updated_at'] = $today;
@@ -4371,6 +4393,8 @@ function hm_return_order_charger_to_stock( $order_id, $credit_note_id = 0, $staf
 
     $charger = $db->get_row(
         "SELECT oi.quantity,
+                oi.item_id,
+                oi.item_type,
                 COALESCE(pr.product_name, oi.item_description, 'Charger') AS charger_name,
                 pr.manufacturer_id,
                 o.clinic_id
@@ -4393,6 +4417,23 @@ function hm_return_order_charger_to_stock( $order_id, $credit_note_id = 0, $staf
     $qty = max( 1, (int) ( $charger->quantity ?? 1 ) );
     $reason = 'Return (both aids)' . ( $credit_note_id ? ' — Credit Note #' . $credit_note_id : '' );
 
+    static $stock_columns = null;
+    if ( $stock_columns === null ) {
+        $stock_columns = [];
+        $cols = $db->get_results(
+            "SELECT column_name
+             FROM information_schema.columns
+             WHERE table_schema = 'hearmed_reference' AND table_name = 'inventory_stock'"
+        ) ?: [];
+        foreach ( $cols as $col ) {
+            $name = strtolower( (string) ( $col->column_name ?? '' ) );
+            if ( $name !== '' ) $stock_columns[ $name ] = true;
+        }
+    }
+    $has_col = static function( string $name ) use ( $stock_columns ) : bool {
+        return isset( $stock_columns[ strtolower( $name ) ] );
+    };
+
     $staff_name = '';
     if ( $staff_id ) {
         $sn_row = $db->get_row( "SELECT first_name, last_name FROM hearmed_reference.staff WHERE id = \$1", [ $staff_id ] );
@@ -4409,15 +4450,35 @@ function hm_return_order_charger_to_stock( $order_id, $credit_note_id = 0, $staf
     }
     $resolved_clinic = $primary_clinic_id ?: ( ! empty( $charger->clinic_id ) ? (int) $charger->clinic_id : ( $order_patient->clinic_id ?? null ) );
 
-    $stock_id = $db->insert( 'hearmed_reference.inventory_stock', [
+    $charger_item_id = (int) ( $charger->item_id ?? 0 );
+    if ( $charger_item_id <= 0 ) {
+        return 0;
+    }
+
+    $insert_data = [
         'item_category'   => 'charger_accessory',
         'manufacturer_id' => ! empty( $charger->manufacturer_id ) ? (int) $charger->manufacturer_id : null,
         'model_name'      => (string) ( $charger->charger_name ?? 'Charger' ),
         'clinic_id'       => $resolved_clinic,
-        'quantity'        => $qty,
         'status'          => 'Available',
         'return_reason'   => $reason,
-    ] );
+    ];
+
+    if ( $has_col( 'item_type' ) ) {
+        $insert_data['item_type'] = in_array( (string) ( $charger->item_type ?? '' ), [ 'charger', 'accessory' ], true )
+            ? (string) $charger->item_type
+            : 'charger';
+    }
+    if ( $has_col( 'item_id' ) ) {
+        $insert_data['item_id'] = $charger_item_id;
+    }
+
+    // Support both legacy and newer quantity columns.
+    if ( $has_col( 'quantity' ) )          $insert_data['quantity'] = $qty;
+    if ( $has_col( 'quantity_on_hand' ) )  $insert_data['quantity_on_hand'] = $qty;
+    if ( $has_col( 'quantity_reserved' ) ) $insert_data['quantity_reserved'] = 0;
+
+    $stock_id = $db->insert( 'hearmed_reference.inventory_stock', $insert_data );
 
     if ( ! $stock_id ) {
         error_log( '[HearMed] Charger stock return failed for order #' . $order_id . ': ' . HearMed_DB::last_error() );
