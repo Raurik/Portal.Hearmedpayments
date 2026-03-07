@@ -33,14 +33,26 @@ class HearMed_Invoice {
         return floatval( HearMed_Settings::get( 'hm_prsi_amount_per_ear', '500' ) );
     }
 
+    private static function normalize_vat_category( $category ) {
+        $cat = trim( (string) $category );
+        if ( $cat === '' ) {
+            return '';
+        }
+        // Admin UI often stores category labels like "Chargers (0%)".
+        $cat = preg_replace( '/\s*\([^\)]*\)\s*$/', '', $cat );
+        return trim( $cat );
+    }
+
     /**
      * Map a product vat_category to the configured VAT rate.
      * Categories match exactly what's stored in products.vat_category.
      */
     private static function vat_rate_for_category( $category ) {
+        $category = self::normalize_vat_category( $category );
         $map = [
             'Hearing Aids'       => floatval( HearMed_Settings::get( 'hm_vat_hearing_aids', '0' ) ),
             'Accessories'        => floatval( HearMed_Settings::get( 'hm_vat_accessories',  '0' ) ),
+            'Chargers'           => floatval( HearMed_Settings::get( 'hm_vat_accessories',  '0' ) ),
             'Services'           => floatval( HearMed_Settings::get( 'hm_vat_services',    '13.5' ) ),
             'Consumables'        => floatval( HearMed_Settings::get( 'hm_vat_consumables', '23' ) ),
             'Bundled Items'      => floatval( HearMed_Settings::get( 'hm_vat_bundled',     '0' ) ),
@@ -533,7 +545,10 @@ class HearMed_Invoice {
         if ( ! $invoice ) return null;
 
         $items = $db->get_results(
-            "SELECT ii.*, COALESCE(pr.product_name, ii.item_description) AS product_name
+            "SELECT ii.*, COALESCE(pr.product_name, ii.item_description) AS product_name,
+                    pr.id AS product_id,
+                    pr.item_type AS product_item_type,
+                    pr.vat_category AS product_vat_category
              FROM hearmed_core.invoice_items ii
              LEFT JOIN hearmed_reference.products pr ON pr.id = ii.item_id AND ii.item_type = 'product'
              WHERE ii.invoice_id = $1
@@ -853,6 +868,16 @@ class HearMed_Invoice {
         // Items already on $inv->items
         $tpl->items = $inv->items ?? [];
 
+        $order_meta = null;
+        if ( ! empty( $inv->order_id ) ) {
+            $order_meta = $db->get_row(
+                "SELECT prsi_left, prsi_right
+                 FROM hearmed_core.orders
+                 WHERE id = $1",
+                [ (int) $inv->order_id ]
+            );
+        }
+
         // Payments
         $tpl->payments = $db->get_results(
             "SELECT * FROM hearmed_core.payments WHERE invoice_id = \$1 ORDER BY payment_date",
@@ -918,13 +943,96 @@ class HearMed_Invoice {
 
         // Patient devices (serials) — only those linked to THIS invoice's order
         $tpl->devices = $db->get_results(
-            "SELECT pd.serial_number_left, pd.serial_number_right, pr.product_name
+            "SELECT pd.product_id, pd.serial_number_left, pd.serial_number_right, pr.product_name
              FROM hearmed_core.patient_devices pd
              LEFT JOIN hearmed_reference.products pr ON pr.id = pd.product_id
              WHERE pd.order_id = \$1
              ORDER BY pd.created_at DESC",
             [ $inv->order_id ]
         );
+
+        $per_ear_prsi = self::get_prsi_per_ear();
+        $expanded_items = [];
+        foreach ( $tpl->items as $it ) {
+            $prod_cat = $it->product_vat_category ?? $it->vat_category ?? '';
+            $resolved_vat = self::vat_rate_for_category( $prod_cat );
+            $it->display_vat_rate = $resolved_vat;
+
+            $serial = '';
+            if ( ! empty( $tpl->devices ) && ! empty( $it->product_id ) ) {
+                foreach ( $tpl->devices as $dev ) {
+                    if ( (int) ( $dev->product_id ?? 0 ) !== (int) ( $it->product_id ?? 0 ) ) {
+                        continue;
+                    }
+                    $ear = strtolower( trim( (string) ( $it->ear_side ?? '' ) ) );
+                    if ( $ear === 'left' ) {
+                        $serial = (string) ( $dev->serial_number_left ?? '' );
+                    } elseif ( $ear === 'right' ) {
+                        $serial = (string) ( $dev->serial_number_right ?? '' );
+                    } else {
+                        $left = (string) ( $dev->serial_number_left ?? '' );
+                        $right = (string) ( $dev->serial_number_right ?? '' );
+                        $serial = trim( $left . ( $left && $right ? ' / ' : '' ) . $right );
+                    }
+                    if ( $serial !== '' ) {
+                        break;
+                    }
+                }
+            }
+            $it->display_serial_number = $serial;
+
+            $it->prsi_line_amount = 0.0;
+            if ( ( $it->item_type ?? '' ) === 'product' && $order_meta ) {
+                $ear = strtolower( trim( (string) ( $it->ear_side ?? '' ) ) );
+                if ( $ear === 'left' && ! empty( $order_meta->prsi_left ) && $order_meta->prsi_left !== 'f' ) {
+                    $it->prsi_line_amount = $per_ear_prsi;
+                } elseif ( $ear === 'right' && ! empty( $order_meta->prsi_right ) && $order_meta->prsi_right !== 'f' ) {
+                    $it->prsi_line_amount = $per_ear_prsi;
+                }
+            }
+
+            $ear_norm = strtolower( trim( (string) ( $it->ear_side ?? '' ) ) );
+            $is_binaural = in_array( $ear_norm, [ 'both', 'binaural' ], true );
+            $qty = (int) ( $it->quantity ?? 1 );
+
+            // Render binaural hearing aids as one line per ear for clarity.
+            if ( ( $it->item_type ?? '' ) === 'product' && $is_binaural && $qty === 1 ) {
+                foreach ( [ 'Left', 'Right' ] as $ear_label ) {
+                    $clone = clone $it;
+                    $clone->ear_side = $ear_label;
+
+                    if ( ! empty( $tpl->devices ) && ! empty( $clone->product_id ) ) {
+                        foreach ( $tpl->devices as $dev ) {
+                            if ( (int) ( $dev->product_id ?? 0 ) !== (int) ( $clone->product_id ?? 0 ) ) {
+                                continue;
+                            }
+                            $clone->display_serial_number = $ear_label === 'Left'
+                                ? (string) ( $dev->serial_number_left ?? '' )
+                                : (string) ( $dev->serial_number_right ?? '' );
+                            break;
+                        }
+                    }
+
+                    $clone->quantity = 1;
+                    $clone->unit_price = round( (float) ( $it->unit_price ?? 0 ) / 2, 2 );
+                    $clone->vat_amount = round( (float) ( $it->vat_amount ?? 0 ) / 2, 2 );
+                    $clone->line_total = round( (float) ( $it->line_total ?? 0 ) / 2, 2 );
+                    $clone->prsi_line_amount = 0.0;
+                    if ( $order_meta ) {
+                        if ( $ear_label === 'Left' && ! empty( $order_meta->prsi_left ) && $order_meta->prsi_left !== 'f' ) {
+                            $clone->prsi_line_amount = $per_ear_prsi;
+                        } elseif ( $ear_label === 'Right' && ! empty( $order_meta->prsi_right ) && $order_meta->prsi_right !== 'f' ) {
+                            $clone->prsi_line_amount = $per_ear_prsi;
+                        }
+                    }
+                    $expanded_items[] = $clone;
+                }
+                continue;
+            }
+
+            $expanded_items[] = $it;
+        }
+        $tpl->items = $expanded_items;
 
         return $tpl;
     }

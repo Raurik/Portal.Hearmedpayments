@@ -283,10 +283,10 @@ class HearMed_Admin_Finance_Form_Builder {
                     clinic_address: 'Bridge Centre, Tullamore, Co. Offaly',
                     audiologist: 'Dr. Sarah Byrne',
                     items: [
-                        {desc:'Phonak Audéo L90-R (Right)',qty:1,price:'€2,150.00'},
-                        {desc:'Phonak Audéo L90-R (Left)',qty:1,price:'€2,150.00'},
-                        {desc:'Custom Ear Moulds (Pair)',qty:1,price:'€120.00'},
-                        {desc:'Fitting & Programming',qty:1,price:'€0.00'}
+                        {desc:'Phonak Audeo L90-R',ear:'Right',serial:'SN-44820194',prsi:'-€500.00',qty:1,unit:'€2,150.00',vat:'0.0%',amount:'€2,150.00'},
+                        {desc:'Phonak Audeo L90-R',ear:'Left',serial:'SN-44820193',prsi:'-€500.00',qty:1,unit:'€2,150.00',vat:'0.0%',amount:'€2,150.00'},
+                        {desc:'Custom Ear Mould',ear:'Right',serial:'—',prsi:'—',qty:1,unit:'€120.00',vat:'13.5%',amount:'€136.20'},
+                        {desc:'Fitting & Programming',ear:'—',serial:'—',prsi:'—',qty:1,unit:'€0.00',vat:'13.5%',amount:'€0.00'}
                     ],
                     subtotal: '€4,420.00',
                     prsi_grant: '−€1,000.00',
@@ -312,9 +312,9 @@ class HearMed_Admin_Finance_Form_Builder {
                     clinic_phone: '057 868 1234',
                     audiologist: 'Dr. Eoin Kelly',
                     items: [
-                        {desc:'Oticon Real 1 miniRITE (Right)',qty:1,price:'€2,450.00'},
-                        {desc:'Oticon Real 1 miniRITE (Left)',qty:1,price:'€2,450.00'},
-                        {desc:'Accessories Pack',qty:1,price:'€89.00'}
+                        {desc:'Oticon Real 1 miniRITE',ear:'Right',serial:'Pending',prsi:'-€500.00',qty:1,unit:'€2,450.00',vat:'0.0%',amount:'€2,450.00'},
+                        {desc:'Oticon Real 1 miniRITE',ear:'Left',serial:'Pending',prsi:'-€500.00',qty:1,unit:'€2,450.00',vat:'0.0%',amount:'€2,450.00'},
+                        {desc:'Accessories Pack',ear:'—',serial:'—',prsi:'—',qty:1,unit:'€89.00',vat:'23.0%',amount:'€109.47'}
                     ],
                     subtotal: '€4,989.00',
                     discount: '−€489.00',
@@ -531,14 +531,14 @@ class HearMed_Admin_Finance_Form_Builder {
                 if (type === 'invoice') {
                     /* Items table */
                     html += '<div class="p-section-title">Items</div>';
-                    html += '<table class="p-table"><thead><tr><th>Description</th><th>Qty</th><th class="money">Amount</th></tr></thead><tbody>';
+                    html += '<table class="p-table"><thead><tr><th>Description</th><th>Ear</th><th>Serial #</th><th class="money">PRSI</th><th>Qty</th><th class="money">Unit Price</th><th class="money">VAT Rate</th><th class="money">Amount</th></tr></thead><tbody>';
                     d.items.forEach(function(it){
-                        html += '<tr><td>'+esc(it.desc)+'</td><td>'+it.qty+'</td><td class="money">'+esc(it.price)+'</td></tr>';
+                        html += '<tr><td>'+esc(it.desc)+'</td><td>'+esc(it.ear || '—')+'</td><td>'+esc(it.serial || '—')+'</td><td class="money">'+esc(it.prsi || '—')+'</td><td>'+esc(it.qty)+'</td><td class="money">'+esc(it.unit || '€0.00')+'</td><td class="money">'+esc(it.vat || '0.0%')+'</td><td class="money">'+esc(it.amount || '€0.00')+'</td></tr>';
                     });
                     html += '</tbody><tfoot>';
-                    html += '<tr><td colspan="2">Subtotal</td><td class="money">'+esc(d.subtotal)+'</td></tr>';
-                    if (s.prsi !== false) html += '<tr><td colspan="2">PRSI Grant</td><td class="money" style="color:#059669;">'+esc(d.prsi_grant)+'</td></tr>';
-                    html += '<tr class="total-row"><td colspan="2">Total Due</td><td class="money" style="color:'+accent+';">'+esc(d.total)+'</td></tr>';
+                    html += '<tr><td colspan="7">Subtotal</td><td class="money">'+esc(d.subtotal)+'</td></tr>';
+                    if (s.prsi !== false) html += '<tr><td colspan="7">PRSI Grant</td><td class="money" style="color:#059669;">'+esc(d.prsi_grant)+'</td></tr>';
+                    html += '<tr class="total-row"><td colspan="7">Total Due</td><td class="money" style="color:'+accent+';">'+esc(d.total)+'</td></tr>';
                     html += '</tfoot></table>';
 
                     /* Serial numbers */
@@ -558,15 +558,15 @@ class HearMed_Admin_Finance_Form_Builder {
                 } else if (type === 'order') {
                     /* Items table */
                     html += '<div class="p-section-title">Order Items</div>';
-                    html += '<table class="p-table"><thead><tr><th>Description</th><th>Qty</th><th class="money">Price</th></tr></thead><tbody>';
+                    html += '<table class="p-table"><thead><tr><th>Description</th><th>Ear</th><th>Serial #</th><th class="money">PRSI</th><th>Qty</th><th class="money">Unit Price</th><th class="money">VAT Rate</th><th class="money">Amount</th></tr></thead><tbody>';
                     d.items.forEach(function(it){
-                        html += '<tr><td>'+esc(it.desc)+'</td><td>'+it.qty+'</td><td class="money">'+esc(it.price)+'</td></tr>';
+                        html += '<tr><td>'+esc(it.desc)+'</td><td>'+esc(it.ear || '—')+'</td><td>'+esc(it.serial || '—')+'</td><td class="money">'+esc(it.prsi || '—')+'</td><td>'+esc(it.qty)+'</td><td class="money">'+esc(it.unit || '€0.00')+'</td><td class="money">'+esc(it.vat || '0.0%')+'</td><td class="money">'+esc(it.amount || '€0.00')+'</td></tr>';
                     });
                     html += '</tbody>';
                     if (s.pricing !== false) {
-                        html += '<tfoot><tr><td colspan="2">Subtotal</td><td class="money">'+esc(d.subtotal)+'</td></tr>';
-                        html += '<tr><td colspan="2">Discount</td><td class="money" style="color:#059669;">'+esc(d.discount)+'</td></tr>';
-                        html += '<tr class="total-row"><td colspan="2">Order Total</td><td class="money" style="color:'+accent+';">'+esc(d.total)+'</td></tr></tfoot>';
+                        html += '<tfoot><tr><td colspan="7">Subtotal</td><td class="money">'+esc(d.subtotal)+'</td></tr>';
+                        html += '<tr><td colspan="7">Discount</td><td class="money" style="color:#059669;">'+esc(d.discount)+'</td></tr>';
+                        html += '<tr class="total-row"><td colspan="7">Order Total</td><td class="money" style="color:'+accent+';">'+esc(d.total)+'</td></tr></tfoot>';
                     }
                     html += '</table>';
 

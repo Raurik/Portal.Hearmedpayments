@@ -551,40 +551,43 @@ tfoot td { font-weight: 600; border-bottom: none; }
         <div class="hm-print-section-title">Items</div>
         <table>
             <thead><tr>
-                <th>Description</th><th>Ear</th><th>Qty</th><th class="money">Unit Price</th><th class="money">VAT Rate</th><th class="money">VAT</th><th class="money">Total</th>
+                <th>Description</th><th>Ear</th><th>Serial #</th><th class="money">PRSI</th><th>Qty</th><th class="money">Unit Price</th><th class="money">VAT Rate</th><th class="money">Amount</th>
             </tr></thead>
             <tbody>
             <?php foreach ($items as $it):
-                $vr = floatval($it->vat_rate ?? 0);
+                $vr = floatval($it->display_vat_rate ?? $it->vat_rate ?? 0);
+                $serial = $it->display_serial_number ?? '';
+                $prsi_line = floatval($it->prsi_line_amount ?? 0);
             ?>
             <tr>
                 <td><?php echo esc_html($it->product_name ?: ($it->item_description ?? '')); ?></td>
                 <td><?php echo esc_html($it->ear_side ?: '—'); ?></td>
+                <td><?php echo esc_html($serial ?: '—'); ?></td>
+                <td class="money"><?php echo $prsi_line > 0 ? ('-€' . number_format($prsi_line, 2)) : '—'; ?></td>
                 <td><?php echo esc_html($it->quantity ?? 1); ?></td>
                 <td class="money">€<?php echo number_format((float)($it->unit_price ?? $it->unit_retail_price ?? 0), 2); ?></td>
                 <td class="money"><?php echo number_format($vr, 1); ?>%</td>
-                <td class="money">€<?php echo number_format((float)($it->vat_amount ?? 0), 2); ?></td>
                 <td class="money">€<?php echo number_format((float)($it->line_total ?? 0), 2); ?></td>
             </tr>
             <?php endforeach; ?>
             </tbody>
             <tfoot>
-                <tr><td colspan="6" class="money">Subtotal</td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->subtotal : ($order->subtotal ?? 0)), 2); ?></td></tr>
+                <tr><td colspan="7" class="money">Subtotal</td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->subtotal : ($order->subtotal ?? 0)), 2); ?></td></tr>
                 <?php if ((float)($invoice ? $invoice->discount_total : ($order->discount_total ?? 0)) > 0): ?>
-                <tr><td colspan="6" class="money">Discount</td><td class="money">-€<?php echo number_format((float)($invoice ? $invoice->discount_total : $order->discount_total), 2); ?></td></tr>
+                <tr><td colspan="7" class="money">Discount</td><td class="money">-€<?php echo number_format((float)($invoice ? $invoice->discount_total : $order->discount_total), 2); ?></td></tr>
                 <?php endif; ?>
-                <tr><td colspan="6" class="money"><?php echo esc_html($s['vatLabel'] ?? 'VAT'); ?></td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->vat_total : ($order->vat_total ?? 0)), 2); ?></td></tr>
+                <tr><td colspan="7" class="money"><?php echo esc_html($s['vatLabel'] ?? 'VAT'); ?></td><td class="money">€<?php echo number_format((float)($invoice ? $invoice->vat_total : ($order->vat_total ?? 0)), 2); ?></td></tr>
                 <?php if (($s['prsi'] ?? true) && !empty($order->prsi_applicable)): ?>
-                <tr><td colspan="6" class="money" style="color:var(--hm-accent);">PRSI Grant</td><td class="money" style="color:var(--hm-accent);">-€<?php echo number_format((float)($order->prsi_amount ?? 0), 2); ?></td></tr>
+                <tr><td colspan="7" class="money" style="color:var(--hm-accent);">PRSI Grant</td><td class="money" style="color:var(--hm-accent);">-€<?php echo number_format((float)($order->prsi_amount ?? 0), 2); ?></td></tr>
                 <?php endif; ?>
                 <?php if ((float)($invoice ? ($invoice->credit_applied ?? 0) : 0) > 0): ?>
-                <tr><td colspan="6" class="money" style="color:#059669;">Credit Applied</td><td class="money" style="color:#059669;">-€<?php echo number_format((float)($invoice ? ($invoice->credit_applied ?? 0) : 0), 2); ?></td></tr>
+                <tr><td colspan="7" class="money" style="color:#059669;">Credit Applied</td><td class="money" style="color:#059669;">-€<?php echo number_format((float)($invoice ? ($invoice->credit_applied ?? 0) : 0), 2); ?></td></tr>
                 <?php endif; ?>
-                <tr class="total-row"><td colspan="6" class="money">Invoice Total</td><td class="money">€<?php echo number_format( $grand_total, 2 ); ?></td></tr>
-                <tr><td colspan="6" class="money">Amount Paid</td><td class="money">€<?php echo number_format( $amount_paid, 2 ); ?></td></tr>
-                <tr><td colspan="6" class="money">Balance</td><td class="money">€<?php echo number_format( $balance_remaining, 2 ); ?></td></tr>
+                <tr class="total-row"><td colspan="7" class="money">Invoice Total</td><td class="money">€<?php echo number_format( $grand_total, 2 ); ?></td></tr>
+                <tr><td colspan="7" class="money">Amount Paid</td><td class="money">€<?php echo number_format( $amount_paid, 2 ); ?></td></tr>
+                <tr><td colspan="7" class="money">Balance</td><td class="money">€<?php echo number_format( $balance_remaining, 2 ); ?></td></tr>
                 <?php if ( $is_paid_in_full ) : ?>
-                <tr><td colspan="6" class="money" style="color:#059669;font-weight:700;">Status</td><td class="money" style="color:#059669;font-weight:700;">Paid in full</td></tr>
+                <tr><td colspan="7" class="money" style="color:#059669;font-weight:700;">Status</td><td class="money" style="color:#059669;font-weight:700;">Paid in full</td></tr>
                 <?php endif; ?>
             </tfoot>
         </table>
