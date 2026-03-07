@@ -2553,7 +2553,28 @@ class HearMed_Orders {
                     msg.className='hm-notice hm-notice--success';
                     msg.dataset.mode='';
                     msg.innerHTML='<div class="hm-notice-body"><span class="hm-notice-icon">✓</span> '+d.data.message+'</div>';
-                    if (d.data && d.data.print_url) {
+                    var printUrl = '';
+                    if (d.data && typeof d.data.print_url === 'string') {
+                        printUrl = d.data.print_url;
+                    }
+
+                    // Guard against malformed URLs like "&_ID=undefined" from stale client/server payloads.
+                    if (printUrl && /(?:\?|&)_ID=undefined(?:&|$)/i.test(printUrl)) {
+                        printUrl = '';
+                    }
+
+                    if (!printUrl && d.data) {
+                        var invoiceId = parseInt(d.data.invoice_id, 10);
+                        if (Number.isFinite(invoiceId) && invoiceId > 0) {
+                            printUrl = '<?php echo esc_js( admin_url('admin-ajax.php') ); ?>'
+                                + '?action=hm_download_invoice'
+                                + '&nonce=' + encodeURIComponent(btn.dataset.nonce || '')
+                                + '&_ID=' + invoiceId
+                                + '&auto_print=1';
+                        }
+                    }
+
+                    if (printUrl) {
                         var iframe = document.createElement('iframe');
                         iframe.style.position = 'fixed';
                         iframe.style.right = '0';
@@ -2563,7 +2584,7 @@ class HearMed_Orders {
                         iframe.style.border = '0';
                         iframe.style.opacity = '0';
                         iframe.setAttribute('aria-hidden', 'true');
-                        iframe.src = d.data.print_url;
+                        iframe.src = printUrl;
                         document.body.appendChild(iframe);
                     }
                     setTimeout(()=>window.location=(d.data.next_redirect || d.data.redirect), 1200);
