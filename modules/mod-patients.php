@@ -1185,9 +1185,17 @@ function hm_ajax_get_patient_products() {
     $model_col = "'' AS model,";
     $tech_col  = "'' AS tech_level,";
 
+    $has_returns = $db->get_var(
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'hearmed_core' AND table_name = 'returns'"
+    );
+    $pending_col = $has_returns
+        ? "(SELECT COUNT(*) FROM hearmed_core.returns ret WHERE ret.device_id = pd.id AND COALESCE(ret.refund_status,'pending') = 'pending') AS pending_returns,"
+        : "0::int AS pending_returns,";
+
     $rows = $db->get_results(
         "SELECT pd.id, pd.product_id, pd.serial_number_left, pd.serial_number_right,
                 pd.fitting_date, pd.device_status, pd.inactive_reason, pd.warranty_expiry,
+                {$pending_col}
                 COALESCE(pr.product_name, 'Unknown') AS product_name,
                 COALESCE(m.name, '') AS manufacturer,
                 pr.style,
@@ -1205,6 +1213,26 @@ function hm_ajax_get_patient_products() {
 
     $out = [];
     foreach ( $rows as $r ) {
+        $raw_status    = $r->device_status ?: 'Active';
+        $pending_count = intval( $r->pending_returns ?? 0 );
+        $status        = $raw_status;
+
+        // Source of truth: an open return record means pending return.
+        if ( $pending_count > 0 ) {
+            $status = 'Pending Return';
+        } elseif ( $raw_status === 'Pending Return' ) {
+            // Recover from stale status if no open returns remain.
+            $has_left  = ! empty( $r->serial_number_left );
+            $has_right = ! empty( $r->serial_number_right );
+            $status = ( $has_left || $has_right ) ? 'Active' : 'Returned';
+        }
+
+        $inactive_reason = $r->inactive_reason ?: '';
+        if ( $status === 'Active' ) {
+            // Do not display stale inactive reasons for active devices.
+            $inactive_reason = '';
+        }
+
         $out[] = [
             '_ID'            => (int) $r->id,
             'product_id'     => $r->product_id ? (int) $r->product_id : null,
@@ -1217,8 +1245,9 @@ function hm_ajax_get_patient_products() {
             'serial_right'   => $r->serial_number_right ?: '',
             'fitting_date'   => $r->fitting_date,
             'warranty_expiry'=> $r->warranty_expiry,
-            'status'         => $r->device_status ?: 'Active',
-            'inactive_reason'=> $r->inactive_reason ?: '',
+            'status'         => $status,
+            'inactive_reason'=> $inactive_reason,
+            'pending_returns'=> $pending_count,
             'product_image'  => $r->product_image ?: '',
         ];
     }
