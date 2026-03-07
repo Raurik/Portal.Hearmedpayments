@@ -617,16 +617,53 @@ function hm_ajax_get_patient() {
     $warranty_status = 'none';
     $warranty_days   = null;
     $warranty_end_date = '';
-    $active_dev = $db->get_row(
-        "SELECT MIN(warranty_expiry) AS earliest_expiry
-         FROM hearmed_core.patient_devices
-         WHERE patient_id = \$1
-           AND COALESCE(device_status, 'Active') IN ('Active', 'Pending Return')
-           AND warranty_expiry IS NOT NULL",
+    $active_devices = $db->get_results(
+        "SELECT pd.warranty_expiry,
+                COALESCE(pd.warranty_start_date, pd.fitting_date) AS warranty_base_date,
+                COALESCE(m.warranty_terms, '') AS manufacturer_warranty_terms
+         FROM hearmed_core.patient_devices pd
+         LEFT JOIN hearmed_reference.products pr ON pr.id = pd.product_id
+         LEFT JOIN hearmed_reference.manufacturers m ON m.id = pr.manufacturer_id
+         WHERE pd.patient_id = \$1
+           AND COALESCE(pd.device_status, 'Active') IN ('Active', 'Pending Return')",
         [ $pid ]
-    );
-    if ( $active_dev && $active_dev->earliest_expiry ) {
-        $wexp  = new DateTime( $active_dev->earliest_expiry );
+    ) ?: [];
+
+    $earliest_expiry = null;
+    foreach ( $active_devices as $device ) {
+        $candidate = ! empty( $device->warranty_expiry ) ? (string) $device->warranty_expiry : '';
+
+        if ( $candidate === '' && ! empty( $device->warranty_base_date ) && ! empty( $device->manufacturer_warranty_terms ) ) {
+            $months = 0;
+            $terms = (string) $device->manufacturer_warranty_terms;
+            if ( preg_match( '/(\d+)\s*month/i', $terms, $m ) ) {
+                $months = (int) $m[1];
+            } elseif ( preg_match( '/(\d+)\s*year/i', $terms, $m ) ) {
+                $months = (int) $m[1] * 12;
+            }
+
+            if ( $months > 0 ) {
+                try {
+                    $base = new DateTime( (string) $device->warranty_base_date );
+                    $base->modify( '+' . $months . ' months' );
+                    $candidate = $base->format( 'Y-m-d' );
+                } catch ( \Exception $e ) {
+                    $candidate = '';
+                }
+            }
+        }
+
+        if ( $candidate === '' ) {
+            continue;
+        }
+
+        if ( $earliest_expiry === null || strcmp( $candidate, $earliest_expiry ) < 0 ) {
+            $earliest_expiry = $candidate;
+        }
+    }
+
+    if ( $earliest_expiry ) {
+        $wexp  = new DateTime( $earliest_expiry );
         $now   = new DateTime();
         $wdiff = $now->diff( $wexp );
         $wdays = (int) $wdiff->format( '%r%a' );
