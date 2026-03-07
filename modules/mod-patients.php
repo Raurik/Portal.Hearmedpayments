@@ -1674,17 +1674,23 @@ function hm_ajax_create_patient_repair() {
 
     if ( ! $id ) wp_send_json_error( 'Failed to create repair — ' . HearMed_DB::last_error() );
 
-    // Generate HMREP number — try sequence, fallback to MAX+1
-    $prefix = HearMed_Settings::get( 'hm_repair_prefix', 'HMREP' );
+    // Generate repair number using the configured finance prefix.
+    $prefix = trim( (string) HearMed_Settings::get( 'hm_repair_prefix', 'HMREP-' ) );
+    if ( $prefix === '' ) {
+        $prefix = 'HMREP-';
+    }
     $seq    = $db->get_var( "SELECT nextval('hearmed_core.repair_number_seq')" );
     if ( ! $seq ) {
         // Sequence may not exist yet — fallback
         $seq = $db->get_var( "SELECT COALESCE(MAX(id), 0) FROM hearmed_core.repairs" );
     }
-    $repair_number = $prefix . '-' . str_pad( $seq, 4, '0', STR_PAD_LEFT );
+    $repair_number = $prefix . str_pad( (int) $seq, 4, '0', STR_PAD_LEFT );
 
     // Try to update repair_number — may fail if column doesn't exist yet
     $db->update( 'hearmed_core.repairs', [ 'repair_number' => $repair_number ], [ 'id' => $id ] );
+
+    // Keep finance settings preview counters in sync with generated repair numbers.
+    HearMed_Settings::set( 'hm_repair_last_number', (string) (int) $seq );
 
     // Always auto-save repair docket to patient documents at creation time.
     try {

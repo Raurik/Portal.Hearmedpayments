@@ -290,6 +290,7 @@
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 12px; font-weight: 600; color: #0BB4C4;
   background: #f0fdfa; padding: 3px 8px; border-radius: 4px;
+  white-space: nowrap;
 }
 
 
