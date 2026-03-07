@@ -4120,6 +4120,26 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null, $
     $db = HearMed_DB::instance();
     $returned_count = 0;
 
+    // Ensure stock tables/columns are present before attempting writes.
+    hm_ensure_stock_tables_for_return();
+
+    static $stock_columns = null;
+    if ( $stock_columns === null ) {
+        $stock_columns = [];
+        $cols = $db->get_results(
+            "SELECT column_name
+             FROM information_schema.columns
+             WHERE table_schema = 'hearmed_reference' AND table_name = 'inventory_stock'"
+        ) ?: [];
+        foreach ( $cols as $col ) {
+            $name = strtolower( (string) ( $col->column_name ?? '' ) );
+            if ( $name !== '' ) $stock_columns[ $name ] = true;
+        }
+    }
+    $has_col = static function( string $name ) use ( $stock_columns ) : bool {
+        return isset( $stock_columns[ strtolower( $name ) ] );
+    };
+
     // ── Product lookup: invoice → order → device ("the flow") ──
     $product         = null;
     $manufacturer_id = null;
@@ -4231,25 +4251,98 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null, $
     }
 
     foreach ( $serials_to_add as $entry ) {
-        $insert_data = [
-            'item_category'    => 'hearing_aid',
-            'manufacturer_id'  => $manufacturer_id,
-            'model_name'       => $model_name,
-            'style'            => $style ?: null,
-            'technology_level' => $tech_level ?: null,
-            'serial_number'    => $entry['serial'] ?: null,
-            'clinic_id'        => $clinic_id,
-            'quantity'         => 1,
-            'status'           => 'Available',
-            'return_reason'    => $reason,
-        ];
+        $serial = trim( (string) ( $entry['serial'] ?? '' ) );
+        $stock_id = 0;
 
-        $stock_id = $db->insert( 'hearmed_reference.inventory_stock', $insert_data );
+        // Prefer reactivating an existing serial row to avoid duplicate-key failures.
+        if ( $serial !== '' ) {
+            $existing = $db->get_row(
+                "SELECT id, clinic_id, manufacturer_id, model_name, style, technology_level
+                 FROM hearmed_reference.inventory_stock
+                 WHERE serial_number = \$1
+                 ORDER BY id DESC
+                 LIMIT 1",
+                [ $serial ]
+            );
 
-        if ( $stock_id ) {
+            if ( $existing ) {
+                $update_data = [
+                    'status' => 'Available',
+                ];
+
+                if ( $has_col( 'item_category' ) ) {
+                    $update_data['item_category'] = 'hearing_aid';
+                }
+                if ( $has_col( 'reserved_for_patient_id' ) ) {
+                    $update_data['reserved_for_patient_id'] = null;
+                }
+                if ( $has_col( 'fitted_to_patient_id' ) ) {
+                    $update_data['fitted_to_patient_id'] = null;
+                }
+                if ( $has_col( 'return_reason' ) ) {
+                    $update_data['return_reason'] = $reason;
+                }
+                if ( $has_col( 'updated_at' ) ) {
+                    $update_data['updated_at'] = $today;
+                }
+                if ( $clinic_id && $has_col( 'clinic_id' ) ) {
+                    $update_data['clinic_id'] = $clinic_id;
+                }
+                if ( $manufacturer_id && $has_col( 'manufacturer_id' ) ) {
+                    $update_data['manufacturer_id'] = $manufacturer_id;
+                }
+                if ( $model_name && $has_col( 'model_name' ) ) {
+                    $update_data['model_name'] = $model_name;
+                }
+                if ( $style && $has_col( 'style' ) ) {
+                    $update_data['style'] = $style;
+                }
+                if ( $tech_level ) {
+                    if ( $has_col( 'technology_level' ) ) {
+                        $update_data['technology_level'] = $tech_level;
+                    } elseif ( $has_col( 'tech_level' ) ) {
+                        $update_data['tech_level'] = $tech_level;
+                    }
+                }
+
+                $updated = $db->update( 'hearmed_reference.inventory_stock', $update_data, [ 'id' => (int) $existing->id ] );
+                if ( $updated !== false ) {
+                    $stock_id = (int) $existing->id;
+                } else {
+                    error_log( '[HearMed] Stock reactivation FAILED for serial=' . $serial . ': ' . HearMed_DB::last_error() );
+                }
+            }
+        }
+
+        // If no existing serial row could be reused, insert a fresh stock row.
+        if ( ! $stock_id ) {
+            $insert_data = [];
+
+            if ( $has_col( 'item_category' ) )    $insert_data['item_category'] = 'hearing_aid';
+            if ( $has_col( 'manufacturer_id' ) )  $insert_data['manufacturer_id'] = $manufacturer_id ?: null;
+            if ( $has_col( 'model_name' ) )       $insert_data['model_name'] = $model_name;
+            if ( $has_col( 'style' ) )            $insert_data['style'] = $style ?: null;
+            if ( $has_col( 'technology_level' ) ) $insert_data['technology_level'] = $tech_level ?: null;
+            if ( $has_col( 'tech_level' ) )       $insert_data['tech_level'] = $tech_level ?: null;
+            if ( $has_col( 'serial_number' ) )    $insert_data['serial_number'] = $serial !== '' ? $serial : null;
+            if ( $has_col( 'clinic_id' ) )        $insert_data['clinic_id'] = $clinic_id ?: null;
+            if ( $has_col( 'quantity' ) )         $insert_data['quantity'] = 1;
+            if ( $has_col( 'status' ) )           $insert_data['status'] = 'Available';
+            if ( $has_col( 'return_reason' ) )    $insert_data['return_reason'] = $reason;
+            if ( $has_col( 'reserved_for_patient_id' ) ) $insert_data['reserved_for_patient_id'] = null;
+            if ( $has_col( 'fitted_to_patient_id' ) )    $insert_data['fitted_to_patient_id'] = null;
+            if ( $has_col( 'product_id' ) )       $insert_data['product_id'] = ! empty( $product->product_id ) ? (int) $product->product_id : ( $target_product_id ?: null );
+            if ( $has_col( 'product_name' ) )     $insert_data['product_name'] = $product->product_name ?? $model_name;
+            if ( $has_col( 'created_at' ) )       $insert_data['created_at'] = $today;
+            if ( $has_col( 'updated_at' ) )       $insert_data['updated_at'] = $today;
+
+            $stock_id = (int) $db->insert( 'hearmed_reference.inventory_stock', $insert_data );
+        }
+
+        if ( $stock_id > 0 ) {
             $db->insert( 'hearmed_reference.stock_movements', [
                 'stock_id'       => $stock_id,
-                'movement_type'  => strtolower( $reason ),
+                'movement_type'  => 'return',
                 'to_clinic_id'   => $clinic_id,
                 'quantity'       => 1,
                 'notes'          => "{$reason}: {$mfr_name} {$model_name} ({$entry['side']}) — Serial: " . ( $entry['serial'] ?: 'N/A' ),
@@ -4261,7 +4354,7 @@ function hm_return_device_to_stock( $device, $side, $reason, $staff_id = null, $
         } else {
             $db_err = HearMed_DB::last_error();
             error_log( '[HearMed] Stock insert FAILED for device #' . ($device->id ?? '?') . ' (' . $entry['side'] . '): ' . $db_err );
-            error_log( '[HearMed] Stock insert data: ' . json_encode( $insert_data ) );
+            error_log( '[HearMed] Stock return context: serial=' . ($entry['serial'] ?: 'none') . ', model=' . $model_name . ', reason=' . $reason );
         }
     }
 
