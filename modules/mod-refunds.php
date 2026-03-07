@@ -931,13 +931,38 @@ class HearMed_Refunds {
         if ( ! $patient_id ) wp_send_json_error('No patient.');
 
         $rows = HearMed_DB::instance()->get_results(
-            "SELECT id, invoice_number, grand_total, invoice_date,
-                    COALESCE(balance_remaining, grand_total, 0) AS balance,
-                    payment_status, pdf_url, created_at
-             FROM hearmed_core.invoices
-             WHERE patient_id = \$1
-               AND payment_status != 'Void'
-             ORDER BY COALESCE(invoice_date, created_at::date) DESC, created_at DESC",
+            "SELECT i.id,
+                    i.invoice_number,
+                    i.grand_total,
+                    i.invoice_date,
+                    GREATEST(
+                        COALESCE(i.grand_total, 0)
+                        - COALESCE(pay.total_paid, 0)
+                        - COALESCE(i.credit_applied, 0),
+                        0
+                    ) AS balance,
+                    CASE
+                        WHEN GREATEST(
+                            COALESCE(i.grand_total, 0)
+                            - COALESCE(pay.total_paid, 0)
+                            - COALESCE(i.credit_applied, 0),
+                            0
+                        ) <= 0.009 THEN 'Paid'
+                        WHEN COALESCE(pay.total_paid, 0) > 0 OR COALESCE(i.credit_applied, 0) > 0 THEN 'Partial'
+                        ELSE COALESCE(i.payment_status, 'Unpaid')
+                    END AS payment_status,
+                    i.pdf_url,
+                    i.created_at
+             FROM hearmed_core.invoices i
+             LEFT JOIN (
+                SELECT invoice_id, COALESCE(SUM(amount), 0) AS total_paid
+                FROM hearmed_core.payments
+                WHERE is_refund = false
+                GROUP BY invoice_id
+             ) pay ON pay.invoice_id = i.id
+             WHERE i.patient_id = \$1
+               AND COALESCE(i.payment_status, '') != 'Void'
+             ORDER BY COALESCE(i.invoice_date, i.created_at::date) DESC, i.created_at DESC",
             [ $patient_id ]
         );
 
