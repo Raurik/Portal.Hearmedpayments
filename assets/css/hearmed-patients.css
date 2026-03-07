@@ -954,7 +954,8 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
-.hm-close {
+.hm-modal-hd .hm-close,
+.hm-close:not(.hm-btn) {
   background: none;
   border: none;
   font-size: 22px;
@@ -965,7 +966,8 @@
   border-radius: 4px;
   transition: all 0.15s ease;
 }
-.hm-close:hover {
+.hm-modal-hd .hm-close:hover,
+.hm-close:not(.hm-btn):hover {
   background: #f1f5f9;
   color: #334155;
 }

@@ -1221,7 +1221,8 @@
   margin: 0;
 }
 
-.hm-close {
+.hm-modal-hd .hm-close,
+.hm-close:not(.hm-btn) {
   background: none;
   border: none;
   color: var(--hm-text-muted, #94a3b8);
@@ -1231,7 +1232,8 @@
   display: flex;
 }
 
-.hm-close:hover {
+.hm-modal-hd .hm-close:hover,
+.hm-close:not(.hm-btn):hover {
   color: var(--hm-text, #334155);
 }
 

@@ -841,7 +841,8 @@
     margin-right: auto;
 }
 
-.hm-close {
+.hm-modal-hd .hm-close,
+.hm-close:not(.hm-btn) {
     border: none;
     background: none;
     font-size: 18px;
@@ -853,7 +854,8 @@
     transition: background 0.12s, color 0.12s;
 }
 
-.hm-close:hover {
+.hm-modal-hd .hm-close:hover,
+.hm-close:not(.hm-btn):hover {
     background: rgba(148, 163, 184, 0.12);
     color: #64748b;
 }

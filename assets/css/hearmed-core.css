@@ -625,7 +625,8 @@
   color: var(--hm-navy, #151B33);
   margin: 0;
 }
-.hm-close {
+.hm-modal-hd .hm-close,
+.hm-close:not(.hm-btn) {
   width: 28px; height: 28px;
   display: flex; align-items: center; justify-content: center;
   border-radius: 6px;
@@ -634,7 +635,8 @@
   border: none; cursor: pointer; font-size: 16px;
   transition: all 0.15s;
 }
-.hm-close:hover {
+.hm-modal-hd .hm-close:hover,
+.hm-close:not(.hm-btn):hover {
   background: var(--hm-border, #e2e8f0);
   color: var(--hm-red, #e53e3e);
 }
