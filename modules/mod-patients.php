@@ -625,7 +625,7 @@ function hm_ajax_get_patient() {
          LEFT JOIN hearmed_reference.products pr ON pr.id = pd.product_id
          LEFT JOIN hearmed_reference.manufacturers m ON m.id = pr.manufacturer_id
          WHERE pd.patient_id = \$1
-           AND COALESCE(pd.device_status, 'Active') IN ('Active', 'Pending Return')",
+                     AND LOWER(COALESCE(NULLIF(TRIM(pd.device_status), ''), 'Active')) NOT IN ('returned', 'inactive', 'lost', 'replaced')",
         [ $pid ]
     ) ?: [];
 
@@ -633,13 +633,22 @@ function hm_ajax_get_patient() {
     foreach ( $active_devices as $device ) {
         $candidate = ! empty( $device->warranty_expiry ) ? (string) $device->warranty_expiry : '';
 
-        if ( $candidate === '' && ! empty( $device->warranty_base_date ) && ! empty( $device->manufacturer_warranty_terms ) ) {
+        if ( $candidate === '' && ! empty( $device->warranty_base_date ) ) {
             $months = 0;
             $terms = (string) $device->manufacturer_warranty_terms;
             if ( preg_match( '/(\d+)\s*month/i', $terms, $m ) ) {
                 $months = (int) $m[1];
             } elseif ( preg_match( '/(\d+)\s*year/i', $terms, $m ) ) {
                 $months = (int) $m[1] * 12;
+            } elseif ( preg_match( '/(\d+)/', $terms, $m ) ) {
+                $n = (int) $m[1];
+                // Treat small bare numbers as years (e.g. "4").
+                $months = $n > 0 && $n <= 10 ? ( $n * 12 ) : $n;
+            }
+
+            // Fallback for legacy rows with missing/unclear terms.
+            if ( $months <= 0 ) {
+                $months = 48;
             }
 
             if ( $months > 0 ) {
